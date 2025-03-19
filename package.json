@@ -1,0 +1,44 @@
+{
+  "author": "olisehgenesis",
+  "bugs": {
+    "url": "https://github.com/celo-org/celo-composer/issues"
+  },
+  "description": "Custom Celo Composer project.",
+  "homepage": "https://github.com/celo-org/celo-composer/blob/main/README.md",
+  "keywords": [
+    "celo-composer",
+    "celo"
+  ],
+  "license": "MIT",
+  "name": "sovereign-seas",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/celo-org/celo-composer.git"
+  },
+  "resolutions": {
+    "@wagmi/connectors": "5.7.7",
+    "@wagmi/core": "2.16.7",
+    "viem": "2.23.2",
+    "wagmi": "2.14.11"
+  },
+  "scripts": {
+    "react-app:dev": "yarn workspace @sovereign-seas/react-app dev",
+    "react-app:build": "yarn workspace @sovereign-seas/react-app build",
+    "react-app:start": "yarn workspace @sovereign-seas/react-app start",
+    "react-app:lint": "yarn workspace @sovereign-seas/react-app lint",
+    "hardhat:postinstall": "yarn workspace @sovereign-seas/hardhat postinstall",
+    "hardhat:compile": "yarn workspace @sovereign-seas/hardhat compile",
+    "hardhat:tsc": "yarn workspace @sovereign-seas/hardhat tsc",
+    "hardhat:build": "yarn workspace @sovereign-seas/hardhat build",
+    "hardhat:clean": "yarn workspace @sovereign-seas/hardhat clean",
+    "hardhat:run:node": "yarn workspace @sovereign-seas/hardhat run:node",
+    "hardhat:test": "yarn workspace @sovereign-seas/hardhat test",
+    "hardhat:prettier": "yarn workspace @sovereign-seas/hardhat prettier",
+    "hardhat:sync:abis": "yarn workspace @sovereign-seas/hardhat sync:abis"
+  },
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/*"
+  ]
+}
