@@ -1,3 +1,4 @@
+// hardhat.config.ts
 import '@nomicfoundation/hardhat-toolbox';
 import '@nomicfoundation/hardhat-verify';
 import { config as dotEnvConfig } from 'dotenv';
@@ -7,12 +8,39 @@ dotEnvConfig();
 
 const config: HardhatUserConfig = {
   networks: {
+    hardhat: {
+      chainId: 1337,
+      mining: {
+        auto: true,
+        interval: 5000
+      }
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545",
+      chainId: 1337
+    },
     alfajores: {
-      accounts: [process.env.PRIVATE_KEY ?? '0x0'],
+      accounts: [
+        process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_ADMIN ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_PROJECT_OWNER_1 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_PROJECT_OWNER_2 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_VOTER_1 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_VOTER_2 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_VOTER_3 ?? process.env.PRIVATE_KEY ?? '0x0',
+      ].filter(key => key !== '0x0'),
       url: 'https://alfajores-forno.celo-testnet.org',
     },
     celo: {
-      accounts: [process.env.PRIVATE_KEY ?? '0x0'],
+      accounts: [
+        process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_ADMIN ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_PROJECT_OWNER_1 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_PROJECT_OWNER_2 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_VOTER_1 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_VOTER_2 ?? process.env.PRIVATE_KEY ?? '0x0',
+        process.env.PRIVATE_KEY_VOTER_3 ?? process.env.PRIVATE_KEY ?? '0x0',
+      ].filter(key => key !== '0x0'),
       url: 'https://forno.celo.org',
     },
   },
@@ -43,7 +71,24 @@ const config: HardhatUserConfig = {
   sourcify: {
     enabled: false,
   },
-  solidity: '0.8.24',
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
+  },
+  mocha: {
+    timeout: 40000
+  }
 };
 
 export default config;
