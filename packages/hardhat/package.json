@@ -2,6 +2,7 @@
   "name": "@sovereign-seas/hardhat",
   "license": "MIT",
   "version": "1.0.0",
+ 
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
@@ -34,6 +35,8 @@
     "compile": "hardhat compile && node sync-abis.js",
     "tsc": "npx tsc -p . && cp typechain/*.d.ts dist/typechain/",
     "build": "yarn compile && yarn tsc",
+    "mint": "pnpm hardhat run scripts/mint.ts --network alfajores",
+
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",
