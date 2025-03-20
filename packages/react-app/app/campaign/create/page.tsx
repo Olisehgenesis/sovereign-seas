@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { CalendarRange, ChevronDown, Clock, Coins, Settings, Users, Waves, Check, X, HelpCircle } from 'lucide-react';
-import { useSovereignSeas } from '../../hooks/useSovereignSeas';
+import { useSovereignSeas } from '../../../hooks/useSovereignSeas';
 
 // Placeholder for the contract addresses - replace with your actual addresses
 //get const CONTRACT_ADDRESS AND CELO_TOKEN_ADDRESS  FRON  ,env next.js

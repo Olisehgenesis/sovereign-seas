@@ -119,7 +119,7 @@ export default function Header() {
                         onMouseLeave={() => setShowDropdown(false)}
                       >
                         <Link
-                          href="/dashboard"
+                          href="/campaigns/mycampaigns"
                           className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white"
                         >
                           <Globe className="mr-2 h-4 w-4 text-lime-500" />
@@ -132,13 +132,13 @@ export default function Header() {
                           <Award className="mr-2 h-4 w-4 text-yellow-500" />
                           My Votes
                         </Link>
-                        <Link
+                        {/* <Link
                           href="/settings"
                           className="flex items-center px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white"
                         >
                           <Settings className="mr-2 h-4 w-4 text-slate-400" />
                           Settings
-                        </Link>
+                        </Link> */}
                       </div>
                     </Transition>
                   </div>
