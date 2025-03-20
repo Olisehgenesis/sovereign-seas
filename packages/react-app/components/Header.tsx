@@ -93,12 +93,12 @@ export default function Header() {
               </div>
               
               {/* Right side - Connect Wallet & User Menu */}
-              <div className="absolute inset-y-0 right-0 flex items-center sm:static sm:inset-auto">
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
                 {isConnected && (
                   <div className="relative mr-3">
                     <button
                       onClick={() => setShowDropdown(!showDropdown)}
-                      className="flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg py-1.5 px-3 text-sm transition-colors"
+                      className="flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-full py-1.5 px-3 text-sm transition-colors"
                     >
                       My Dashboard
                       <ChevronDown className={`ml-1 h-4 w-4 transform transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
@@ -152,11 +152,11 @@ export default function Header() {
                         largeScreen: true,
                       }}
                       chainStatus={{
-                        smallScreen: "icon",
-                        largeScreen: "full",
+                        smallScreen: "none",
+                        largeScreen: "icon",
                       }}
                       accountStatus={{
-                        smallScreen: "address",
+                        smallScreen: "avatar",
                         largeScreen: "full",
                       }}
                     />

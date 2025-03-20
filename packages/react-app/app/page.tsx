@@ -2,18 +2,55 @@
 
 import { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { ArrowRight, Anchor, Activity, Award, Droplets, Globe, Waves } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Anchor, Activity, Award, Droplets, Globe, Waves, Clock } from 'lucide-react';
+import Image from 'next/image';
+import { useSovereignSeas } from '../hooks/useSovereignSeas';
+
+// Contract addresses - replace with actual addresses
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` || 
+  '0x35128A5Ee461943fA6403672b3574346Ba7E4530' as `0x${string}`;
+const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` || 
+  '0x3FC1f6138F4b0F5Da3E1927412Afe5c68ed4527b' as `0x${string}`;
+
+// Featured campaign type
+type FeaturedCampaign = {
+  id: string;
+  name: string;
+  description: string;
+  totalFunds: string;
+  isActive: boolean;
+  endsIn?: string;
+  startsIn?: string;
+};
 
 export default function Home() {
+  const router = useRouter();
   const [userAddress, setUserAddress] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const { address, isConnected } = useAccount();
   
-  // Active campaigns example data
-  const [activeCampaigns, setActiveCampaigns] = useState(4);
-  const [totalProjects, setTotalProjects] = useState(36);
-  const [totalVotes, setTotalVotes] = useState('1,284');
-  const [totalFunds, setTotalFunds] = useState('24,590');
+  // Stats state
+  const [activeCampaigns, setActiveCampaigns] = useState(0);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [totalVotes, setTotalVotes] = useState('0');
+  const [totalFunds, setTotalFunds] = useState('0');
+  const [featuredCampaigns, setFeaturedCampaigns] = useState<FeaturedCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Use the hook to interact with the contract
+  const {
+    isInitialized,
+    loadCampaigns,
+    formatTokenAmount,
+    loadProjects,
+    formatCampaignTime,
+    getCampaignTimeRemaining,
+    isCampaignActive,
+  } = useSovereignSeas({
+    contractAddress: CONTRACT_ADDRESS,
+    celoTokenAddress: CELO_TOKEN_ADDRESS,
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -24,6 +61,107 @@ export default function Home() {
       setUserAddress(address);
     }
   }, [address, isConnected]);
+
+  // Load data from the blockchain
+  useEffect(() => {
+    if (isInitialized) {
+      fetchData();
+    }
+  }, [isInitialized]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all campaigns
+      const campaigns = await loadCampaigns();
+      
+      if (Array.isArray(campaigns)) {
+        // Process campaign data for stats
+        const now = Math.floor(Date.now() / 1000);
+        const active = campaigns.filter(c => 
+          c.active && 
+          Number(c.startTime) <= now && 
+          Number(c.endTime) >= now
+        );
+        
+        setActiveCampaigns(active.length);
+        
+        // Load projects for each campaign to count total projects and votes
+        let projectCount = 0;
+        let voteCount = 0;
+        let fundCount = 0;
+        
+        // Process campaigns for featured section
+        const featured: FeaturedCampaign[] = [];
+        
+        // Sort campaigns by total funds
+        const sortedCampaigns = [...campaigns].sort((a, b) => 
+          Number(b.totalFunds) - Number(a.totalFunds)
+        );
+        
+        // Take up to 3 campaigns for featured section
+        const topCampaigns = sortedCampaigns.slice(0, 3);
+        
+        for (const campaign of campaigns) {
+          try {
+            // Each campaign's projects
+            const projects = await loadProjects(campaign.id);
+            projectCount += projects.length;
+            
+            // Sum up votes and funds
+            for (const project of projects) {
+              voteCount += Number(formatTokenAmount(project.voteCount));
+            }
+            
+            fundCount += Number(formatTokenAmount(campaign.totalFunds));
+          } catch (error) {
+            console.error(`Error loading projects for campaign ${campaign.id}:`, error);
+          }
+          
+          // Process for featured campaigns
+          if (topCampaigns.includes(campaign)) {
+            const isActive = isCampaignActive(campaign);
+            const timeRemaining = getCampaignTimeRemaining(campaign);
+            const now = Math.floor(Date.now() / 1000);
+            const hasStarted = now >= Number(campaign.startTime);
+            
+            featured.push({
+              id: campaign.id.toString(),
+              name: campaign.name,
+              description: campaign.description,
+              totalFunds: formatTokenAmount(campaign.totalFunds),
+              isActive: isActive,
+              endsIn: hasStarted ? `${timeRemaining.days}d ${timeRemaining.hours}h` : undefined,
+              startsIn: !hasStarted ? formatCampaignTime(campaign.startTime) : undefined
+            });
+          }
+        }
+        
+        // Update state with calculated values
+        setTotalProjects(projectCount);
+        setTotalVotes(voteCount.toLocaleString());
+        setTotalFunds(fundCount.toLocaleString());
+        setFeaturedCampaigns(featured);
+      }
+    } catch (error) {
+      console.error('Error fetching campaign data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Functions to navigate
+  const navigateToCampaigns = () => {
+    router.push('/campaigns');
+  };
+
+  const navigateToCreateCampaign = () => {
+    router.push('/campaign/create');
+  };
+
+  const navigateToCampaignDetails = (campaignId: string) => {
+    router.push(`/campaign/${campaignId}/dashboard`);
+  };
 
   if (!isMounted) {
     return null;
@@ -49,7 +187,18 @@ export default function Home() {
         <div className="container mx-auto px-6 py-24 relative z-10">
           <div className="flex flex-col items-center justify-center text-center space-y-8">
             <div className="flex items-center mb-2">
-              <Anchor className="h-10 w-10 text-lime-500 mr-2" />
+              <div className="relative h-12 w-12 mr-3">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-lime-500 to-yellow-500 animate-pulse-slow opacity-40"></div>
+                <div className="absolute inset-0.5 rounded-full bg-slate-900 flex items-center justify-center">
+                  <Image 
+                    src="/logo.svg" 
+                    alt="Sovereign Seas Logo"
+                    width={24}
+                    height={24}
+                    className="h-6 w-6"
+                  />
+                </div>
+              </div>
               <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
                 Sovereign <span className="text-yellow-400">Seas</span>
               </h1>
@@ -60,10 +209,16 @@ export default function Home() {
             </h2>
             
             <div className="flex flex-wrap justify-center gap-4 mt-8">
-              <button className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all flex items-center">
+              <button 
+                onClick={navigateToCampaigns}
+                className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all flex items-center"
+              >
                 Explore Campaigns <ArrowRight className="ml-2 h-5 w-5" />
               </button>
-              <button className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all flex items-center">
+              <button 
+                onClick={navigateToCreateCampaign}
+                className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all flex items-center"
+              >
                 Start a Campaign <Waves className="ml-2 h-5 w-5" />
               </button>
             </div>
@@ -83,39 +238,45 @@ export default function Home() {
       
       {/* Stats Section */}
       <div className="container mx-auto px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
-            <div className="flex items-center mb-2">
-              <Activity className="h-6 w-6 text-lime-500 mr-2" />
-              <h3 className="text-white font-semibold">Active Campaigns</h3>
-            </div>
-            <p className="text-3xl font-bold text-yellow-400">{activeCampaigns}</p>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-lime-500"></div>
           </div>
-          
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
-            <div className="flex items-center mb-2">
-              <Globe className="h-6 w-6 text-lime-500 mr-2" />
-              <h3 className="text-white font-semibold">Total Projects</h3>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
+              <div className="flex items-center mb-2">
+                <Activity className="h-6 w-6 text-lime-500 mr-2" />
+                <h3 className="text-white font-semibold">Active Campaigns</h3>
+              </div>
+              <p className="text-3xl font-bold text-yellow-400">{activeCampaigns}</p>
             </div>
-            <p className="text-3xl font-bold text-yellow-400">{totalProjects}</p>
-          </div>
-          
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
-            <div className="flex items-center mb-2">
-              <Award className="h-6 w-6 text-lime-500 mr-2" />
-              <h3 className="text-white font-semibold">Total Votes</h3>
+            
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
+              <div className="flex items-center mb-2">
+                <Globe className="h-6 w-6 text-lime-500 mr-2" />
+                <h3 className="text-white font-semibold">Total Projects</h3>
+              </div>
+              <p className="text-3xl font-bold text-yellow-400">{totalProjects}</p>
             </div>
-            <p className="text-3xl font-bold text-yellow-400">{totalVotes}</p>
-          </div>
-          
-          <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
-            <div className="flex items-center mb-2">
-              <Droplets className="h-6 w-6 text-lime-500 mr-2" />
-              <h3 className="text-white font-semibold">Total CELO</h3>
+            
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
+              <div className="flex items-center mb-2">
+                <Award className="h-6 w-6 text-lime-500 mr-2" />
+                <h3 className="text-white font-semibold">Total Votes</h3>
+              </div>
+              <p className="text-3xl font-bold text-yellow-400">{totalVotes}</p>
             </div>
-            <p className="text-3xl font-bold text-yellow-400">{totalFunds}</p>
+            
+            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-lime-500/20 transform hover:-translate-y-1 transition-all">
+              <div className="flex items-center mb-2">
+                <Droplets className="h-6 w-6 text-lime-500 mr-2" />
+                <h3 className="text-white font-semibold">Total CELO</h3>
+              </div>
+              <p className="text-3xl font-bold text-yellow-400">{totalFunds}</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
       {/* Featured Campaigns */}
@@ -125,76 +286,101 @@ export default function Home() {
           Featured Campaigns
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Campaign 1 */}
-          <div className="bg-slate-800/40 backdrop-blur-md rounded-xl overflow-hidden border border-lime-600/20 hover:border-lime-500/50 transition-all">
-            <div className="h-40 bg-gradient-to-r from-lime-600/40 to-yellow-600/40 relative">
-              <div className="absolute bottom-4 left-4 px-3 py-1 bg-yellow-400 text-slate-900 text-sm font-semibold rounded-full">
-                Active
-              </div>
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-white mb-2">Coral Reef Restoration</h3>
-              <p className="text-slate-300 mb-4">Restore damaged coral reefs in the Pacific Ocean using innovative techniques.</p>
-              <div className="flex justify-between items-center">
-                <div className="text-lime-400 font-medium">8,240 CELO</div>
-                <button className="px-4 py-2 rounded-full bg-lime-500/20 text-lime-300 hover:bg-lime-500/30 transition-all text-sm">
-                  View Details
-                </button>
-              </div>
-            </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-lime-500"></div>
           </div>
-          
-          {/* Campaign 2 */}
-          <div className="bg-slate-800/40 backdrop-blur-md rounded-xl overflow-hidden border border-lime-600/20 hover:border-lime-500/50 transition-all">
-            <div className="h-40 bg-gradient-to-r from-lime-600/40 to-yellow-600/40 relative">
-              <div className="absolute bottom-4 left-4 px-3 py-1 bg-yellow-400 text-slate-900 text-sm font-semibold rounded-full">
-                Active
+        ) : featuredCampaigns.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuredCampaigns.map((campaign, idx) => (
+              <div 
+                key={campaign.id}
+                className="bg-slate-800/40 backdrop-blur-md rounded-xl overflow-hidden border border-lime-600/20 hover:border-lime-500/50 transition-all cursor-pointer"
+                onClick={() => navigateToCampaignDetails(campaign.id)}
+              >
+                <div className="h-40 bg-gradient-to-r from-lime-600/40 to-yellow-600/40 relative">
+                  <div className={`absolute bottom-4 left-4 px-3 py-1 ${
+                    campaign.isActive 
+                      ? 'bg-yellow-400 text-slate-900' 
+                      : campaign.startsIn 
+                        ? 'bg-slate-300 text-slate-900' 
+                        : 'bg-slate-700 text-slate-300'
+                  } text-sm font-semibold rounded-full`}>
+                    {campaign.isActive 
+                      ? 'Active' 
+                      : campaign.startsIn 
+                        ? 'Coming Soon' 
+                        : 'Ended'}
+                  </div>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-white mb-2">{campaign.name}</h3>
+                  <p className="text-slate-300 mb-4">{campaign.description}</p>
+                  <div className="flex justify-between items-center">
+                    {campaign.isActive ? (
+                      <div className="text-lime-400 font-medium flex items-center">
+                        <Droplets className="h-4 w-4 mr-1" />
+                        {campaign.totalFunds} CELO
+                      </div>
+                    ) : campaign.startsIn ? (
+                      <div className="text-slate-400 font-medium flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        Starts soon
+                      </div>
+                    ) : (
+                      <div className="text-slate-400 font-medium flex items-center">
+                        <Award className="h-4 w-4 mr-1" />
+                        {campaign.totalFunds} CELO
+                      </div>
+                    )}
+                    <button 
+                      className="px-4 py-2 rounded-full bg-lime-500/20 text-lime-300 hover:bg-lime-500/30 transition-all text-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateToCampaignDetails(campaign.id);
+                      }}
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-white mb-2">Ocean Cleanup Initiative</h3>
-              <p className="text-slate-300 mb-4">Deploy advanced technologies to remove plastic pollution from the Atlantic Ocean.</p>
-              <div className="flex justify-between items-center">
-                <div className="text-lime-400 font-medium">12,650 CELO</div>
-                <button className="px-4 py-2 rounded-full bg-lime-500/20 text-lime-300 hover:bg-lime-500/30 transition-all text-sm">
-                  View Details
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
-          
-          {/* Campaign 3 */}
-          <div className="bg-slate-800/40 backdrop-blur-md rounded-xl overflow-hidden border border-lime-600/20 hover:border-lime-500/50 transition-all">
-            <div className="h-40 bg-gradient-to-r from-lime-600/40 to-yellow-600/40 relative">
-              <div className="absolute bottom-4 left-4 px-3 py-1 bg-slate-300 text-slate-900 text-sm font-semibold rounded-full">
-                Coming Soon
-              </div>
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-white mb-2">Sustainable Fishing</h3>
-              <p className="text-slate-300 mb-4">Promote sustainable fishing practices and protect marine biodiversity worldwide.</p>
-              <div className="flex justify-between items-center">
-                <div className="text-slate-400 font-medium">Starts in 2 days</div>
-                <button className="px-4 py-2 rounded-full bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30 transition-all text-sm">
-                  Reminder
-                </button>
-              </div>
-            </div>
+        ) : (
+          <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-8 text-center">
+            <p className="text-slate-300 mb-4">No campaigns found. Be the first to create a campaign!</p>
+            <button 
+              onClick={navigateToCreateCampaign}
+              className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all inline-flex items-center"
+            >
+              Start a Campaign <Waves className="ml-2 h-5 w-5" />
+            </button>
           </div>
-        </div>
+        )}
         
-        <div className="flex justify-center mt-10">
-          <button className="px-6 py-3 rounded-full bg-slate-700/50 text-white font-semibold hover:bg-slate-700 transition-all flex items-center">
-            View All Campaigns <ArrowRight className="ml-2 h-5 w-5" />
-          </button>
-        </div>
+        {featuredCampaigns.length > 0 && (
+          <div className="flex justify-center mt-10">
+            <button 
+              onClick={navigateToCampaigns}
+              className="px-6 py-3 rounded-full bg-slate-700/50 text-white font-semibold hover:bg-slate-700 transition-all flex items-center"
+            >
+              View All Campaigns <ArrowRight className="ml-2 h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
       
       {/* How It Works */}
       <div className="container mx-auto px-6 py-12">
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 flex items-center">
-          <Anchor className="h-7 w-7 text-lime-500 mr-3" />
+          <Image 
+            src="/logo.svg" 
+            alt="Sovereign Seas Logo"
+            width={28}
+            height={28}
+            className="h-7 w-7 mr-3 text-lime-500"
+          />
           How It Works
         </h2>
         
@@ -229,10 +415,16 @@ export default function Home() {
                 <p className="text-lime-100">Join Sovereign Seas today and help protect our oceans through decentralized voting.</p>
               </div>
               <div className="flex flex-wrap gap-4">
-                <button className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all">
+                <button 
+                  onClick={navigateToCreateCampaign}
+                  className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all"
+                >
                   Get Started
                 </button>
-                <button className="px-6 py-3 rounded-full bg-transparent border border-lime-400 text-lime-400 font-semibold hover:bg-lime-500/10 transition-all">
+                <button 
+                  onClick={navigateToCampaigns}
+                  className="px-6 py-3 rounded-full bg-transparent border border-lime-400 text-lime-400 font-semibold hover:bg-lime-500/10 transition-all"
+                >
                   Learn More
                 </button>
               </div>

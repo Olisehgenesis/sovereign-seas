@@ -2,57 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Add this to your globals.css file */
+
+
+/* Add this to your globals.css file to style the Connect Button */
 
 /* Custom Connect Button Styling */
 .custom-connect-button [data-rk] {
-    --rk-colors-accentColor: rgb(132, 204, 22) !important;
-    --rk-colors-accentColorForeground: rgb(15, 23, 42) !important;
-    --rk-colors-actionButtonBorder: rgba(132, 204, 22, 0.3) !important;
-    --rk-colors-actionButtonBorderMobile: rgba(132, 204, 22, 0.2) !important;
-    --rk-colors-actionButtonSecondaryBackground: rgb(51, 65, 85) !important;
-    --rk-colors-connectButtonBackground: rgba(132, 204, 22, 0.9) !important;
-    --rk-colors-connectButtonBackgroundError: rgba(239, 68, 68, 0.9) !important;
-    --rk-colors-connectButtonInnerBackground: rgb(15, 23, 42) !important;
-    --rk-colors-connectButtonText: white !important;
-    --rk-colors-connectButtonTextError: white !important;
-    --rk-colors-error: rgb(239, 68, 68) !important;
-    --rk-colors-generalBorderDim: rgb(51, 65, 85) !important;
-    --rk-shadows-connectButton: 0px 4px 12px rgba(132, 204, 22, 0.1) !important;
-    --rk-radii-connectButton: 0.5rem !important;
-  }
-  
-  /* Animation for logo pulse effect */
-  @keyframes pulse-slow {
-    0% {
-      opacity: 0.3;
-    }
-    50% {
-      opacity: 0.5;
-    }
-    100% {
-      opacity: 0.3;
-    }
-  }
-  
-  .animate-pulse-slow {
-    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  
-  /* Add blur effect on scroll */
-  .nav-blur {
-    backdrop-filter: blur(12px);
-  }
-  
-  /* Make sure rainbow kit modal is above other elements */
-  [data-rk] .rk-modal {
-    z-index: 100;
-  }
-  
-  /* Mobile adjustments */
-  @media (max-width: 640px) {
-    .custom-connect-button [data-rk] button {
-      font-size: 14px;
-      padding: 8px 12px;
-    }
-  }
+  --rk-colors-accentColor: rgb(132, 204, 22) !important;
+  --rk-colors-accentColorForeground: rgb(15, 23, 42) !important;
+  --rk-colors-actionButtonBorder: rgba(132, 204, 22, 0.3) !important;
+  --rk-colors-actionButtonBorderMobile: rgba(132, 204, 22, 0.2) !important;
+  --rk-colors-actionButtonSecondaryBackground: rgb(51, 65, 85) !important;
+  --rk-colors-connectButtonBackground: rgba(132, 204, 22, 0.9) !important;
+  --rk-colors-connectButtonBackgroundError: rgba(239, 68, 68, 0.9) !important;
+  --rk-colors-connectButtonInnerBackground: rgb(15, 23, 42) !important;
+  --rk-colors-connectButtonText: white !important;
+  --rk-colors-connectButtonTextError: white !important;
+  --rk-colors-error: rgb(239, 68, 68) !important;
+  --rk-colors-generalBorderDim: rgb(51, 65, 85) !important;
+  --rk-shadows-connectButton: 0px 4px 12px rgba(132, 204, 22, 0.1) !important;
+  --rk-radii-connectButton: 0.5rem !important;
+  --rk-fonts-body: inherit !important;
+}
+
+/* Smaller font size for Connect Button */
+.custom-connect-button [data-rk] button {
+  font-size: 13px !important;
+  border-radius: 9999px !important; /* round buttons */
+}
+
+/* Make the balance display smaller */
+.custom-connect-button [data-rk] div span {
+  font-size: 13px !important;
+}
+
+/* Fix icon size on the connect button */
+.custom-connect-button [data-rk] button svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Add slight glow effect to match the design language */
+.custom-connect-button [data-rk] button:not([disabled]):hover {
+  box-shadow: 0 0 10px rgba(132, 204, 22, 0.4) !important;
+}
+
+/* Styling for the connected button to match theme */
+.custom-connect-button [data-rk] div:has(button:not([disabled])) {
+  background: rgba(30, 41, 59, 0.8) !important;
+  border: 1px solid rgba(132, 204, 22, 0.3) !important;
+  backdrop-filter: blur(4px) !important;
+  border-radius: 9999px !important;
+}
