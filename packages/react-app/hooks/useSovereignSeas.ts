@@ -102,13 +102,13 @@ export const useSovereignSeas = ({
     const sovereignSeasContract = getContract({
       address: contractAddress,
       abi: sovereignSeasAbi,
-      publicClient,
+      client: publicClient,
     });
     
     const celoTokenContract = getContract({
       address: celoTokenAddress,
       abi: celoTokenAbi,
-      publicClient,
+      client: publicClient,
     });
     
     setContract(sovereignSeasContract);

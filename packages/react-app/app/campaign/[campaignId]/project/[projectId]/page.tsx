@@ -109,7 +109,7 @@ export default function ProjectDetails() {
           }
           
           // Load projects for this campaign
-          const projectsData = await loadProjects(campaignId);
+          const projectsData = await loadProjects(Number(campaignId));
           
           if (Array.isArray(projectsData) && projectsData.length > 0) {
             // Find the specific project
@@ -120,8 +120,11 @@ export default function ProjectDetails() {
               
               // Get user votes for this project
               if (isConnected && address) {
-                const votes = await getUserVotesForProject(campaignId, projectId);
-                setUserVotes(votes);
+                if (campaignId && projectId) {
+                  const votes = await getUserVotesForProject(Number(campaignId), Number(projectId));
+                  setUserVotes(votes);
+                }
+                // setUserVotes(votes);
               }
             } else {
               setStatusMessage({ 
@@ -152,7 +155,7 @@ export default function ProjectDetails() {
     if (!voteAmount || parseFloat(voteAmount) <= 0) return;
     
     try {
-      await vote(campaignId, projectId, voteAmount);
+      await vote(Number(campaignId), Number(projectId), BigInt(voteAmount).toString());
       setVoteModalVisible(false);
       setVoteAmount('');
       setStatusMessage({ 
@@ -172,7 +175,7 @@ export default function ProjectDetails() {
     if (!isAdmin) return;
     
     try {
-      await approveProject(campaignId, projectId);
+      await approveProject(Number(campaignId), Number(projectId));
       setStatusMessage({ 
         text: 'Project approved successfully!', 
         type: 'success' 

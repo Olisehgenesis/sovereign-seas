@@ -19,7 +19,8 @@ import {
   Waves,
   Award,
   Droplets,
-  X
+  X,
+  Eye
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
 
@@ -60,6 +61,7 @@ export default function CampaignDashboard() {
     loadCampaigns,
     loadProjects,
     getSortedProjects,
+    approveProject,
     vote,
     submitProject,
     distributeFunds,
@@ -110,10 +112,13 @@ export default function CampaignDashboard() {
           }
           
           // Load projects - THIS IS THE MISSING PART
-          const projectsData = await loadProjects(campaignId);
-          // or if you want sorted projects:
-          // const projectsData = await getSortedProjects(campaignId);
-          setProjects(projectsData);
+          if (campaignId) {
+            const projectsData = await loadProjects(Number(campaignId));
+            setProjects(projectsData);
+          } else {
+            console.error('Campaign ID is undefined');
+          }
+       
         } else {
           console.error('Campaign not found');
         }
@@ -130,10 +135,10 @@ export default function CampaignDashboard() {
  
   
   const handleVote = async () => {
-    if (!selectedProject || !voteAmount || parseFloat(voteAmount) <= 0) return;
+    if (!selectedProject || !voteAmount || parseFloat(voteAmount) <= 0 || !campaignId) return;
     
     try {
-      await vote(campaignId, selectedProject.id, voteAmount);
+      await vote(Number(campaignId), selectedProject.id, Number(voteAmount).toString());
       setVoteModalVisible(false);
       setVoteAmount('');
     } catch (error) {
@@ -141,14 +146,14 @@ export default function CampaignDashboard() {
     }
   };
   
-  const handleSubmitProject = async (e) => {
+  const handleSubmitProject = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     
     if (!newProject.name || !newProject.description) return;
     
     try {
       await submitProject(
-        campaignId,
+        Number(campaignId),
         newProject.name,
         newProject.description,
         newProject.githubLink,
@@ -172,7 +177,7 @@ export default function CampaignDashboard() {
     if (!canDistributeFunds) return;
     
     try {
-      await distributeFunds(campaignId);
+      await distributeFunds(Number(campaignId));
     } catch (error) {
       console.error('Error distributing funds:', error);
     }
@@ -513,6 +518,13 @@ export default function CampaignDashboard() {
                             </div>
                             <div className="text-xs text-slate-400 mt-1">VOTES</div>
                           </div>
+                           <button
+                                                      onClick={() => router.push(`/campaign/${campaignId}/project/${project.id}`)}
+                                                      className="px-3 py-2 bg-slate-600 text-slate-200 rounded-lg text-sm hover:bg-slate-500 transition-colors flex items-center flex-1 justify-center"
+                                                    >
+                                                      <Eye className="h-4 w-4 mr-1" />
+                                                      View
+                                                    </button>
                           
                           {isActive && project.approved && (
                             <button
