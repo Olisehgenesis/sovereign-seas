@@ -15,7 +15,17 @@ import {
   Activity,
   Circle,
   CheckCircle,
-  XCircle
+  XCircle,
+  TrendingUp,
+  BarChart,
+  Sparkles,
+  Globe,
+  Award,
+  ArrowRight,
+  HeartOff,
+  Tag,
+  PlusCircle,
+  Zap
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSovereignSeas } from '../../hooks/useSovereignSeas';
@@ -58,12 +68,15 @@ export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalActive, setTotalActive] = useState(0);
+  const [totalUpcoming, setTotalUpcoming] = useState(0);
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'upcoming' | 'ended'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'endingSoon' | 'mostFunded'>('newest');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [showFilters, setShowFilters] = useState(false);
   
   // Use the hook to interact with the contract
   const {
@@ -130,6 +143,10 @@ export default function Campaigns() {
             };
           })
         );
+        
+        // Set stats
+        setTotalActive(processedCampaigns.filter(c => c.status === 'active').length);
+        setTotalUpcoming(processedCampaigns.filter(c => c.status === 'upcoming').length);
         
         setCampaigns(processedCampaigns);
       }
@@ -216,9 +233,9 @@ export default function Campaigns() {
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'active':
-        return 'bg-lime-500 text-slate-900';
+        return 'bg-emerald-500 text-slate-900';
       case 'upcoming':
-        return 'bg-yellow-400 text-slate-900';
+        return 'bg-amber-400 text-slate-900';
       case 'ended':
         return 'bg-slate-600 text-white';
       default:
@@ -230,13 +247,13 @@ export default function Campaigns() {
   const getStatusIcon = (status: string | undefined) => {
     switch (status) {
       case 'active':
-        return <Activity className="h-4 w-4 mr-1" />;
+        return <Zap className="h-3.5 w-3.5 mr-1" />;
       case 'upcoming':
-        return <Clock className="h-4 w-4 mr-1" />;
+        return <Clock className="h-3.5 w-3.5 mr-1" />;
       case 'ended':
-        return <CheckCircle className="h-4 w-4 mr-1" />;
+        return <CheckCircle className="h-3.5 w-3.5 mr-1" />;
       default:
-        return <Circle className="h-4 w-4 mr-1" />;
+        return <Circle className="h-3.5 w-3.5 mr-1" />;
     }
   };
 
@@ -246,121 +263,232 @@ export default function Campaigns() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
+      {/* Hero Section */}
       <div className="relative overflow-hidden">
-        {/* Background Wave Effect */}
-        <div className="absolute inset-0 z-0 opacity-20">
-          <svg className="w-full h-full" viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#84cc16" fillOpacity="1" d="M0,96L48,112C96,128,192,160,288,165.3C384,171,480,149,576,149.3C672,149,768,171,864,176C960,181,1056,171,1152,154.7C1248,139,1344,117,1392,106.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
-          </svg>
+        {/* Animated Background Effects */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-20 left-10 w-64 h-64 bg-lime-500/10 rounded-full filter blur-3xl animate-blob"></div>
+          <div className="absolute top-40 right-10 w-72 h-72 bg-yellow-500/10 rounded-full filter blur-3xl animate-blob animation-delay-2000"></div>
+          <div className="absolute bottom-10 left-1/3 w-80 h-80 bg-teal-500/10 rounded-full filter blur-3xl animate-blob animation-delay-4000"></div>
         </div>
         
         {/* Content */}
-        <div className="container mx-auto px-6 py-16 relative z-10">
-          <div className="flex flex-col items-center justify-center text-center space-y-6">
-            <div className="flex items-center mb-2">
-              <Waves className="h-8 w-8 text-lime-500 mr-3" />
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-                Explore <span className="text-yellow-400">Campaigns</span>
+        <div className="container mx-auto px-4 py-8 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center">
+                <Globe className="h-7 w-7 text-lime-500 mr-2" />
+                Ocean Conservation <span className="text-yellow-400 ml-2">Campaigns</span> 🌊
               </h1>
+              <p className="text-slate-300 mt-2 max-w-2xl">
+                Discover and support impactful projects dedicated to protecting our oceans. Vote with CELO tokens to make waves of change.
+              </p>
             </div>
             
-            <p className="text-lg text-lime-100 max-w-2xl">
-              Browse and join ocean conservation campaigns. Support projects with your votes and help make a difference.
-            </p>
-            
-            <button 
-              onClick={navigateToCreateCampaign}
-              className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all flex items-center"
-            >
-              Create New Campaign <Waves className="ml-2 h-5 w-5" />
-            </button>
+            {/* Quick stats */}
+            <div className="flex flex-wrap gap-3">
+              <div className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-lime-500/20 flex items-center">
+                <Zap className="h-4 w-4 text-emerald-500 mr-1.5" />
+                <span className="text-sm"><span className="text-emerald-400 font-semibold">{totalActive}</span> Active</span>
+              </div>
+              <div className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-lime-500/20 flex items-center">
+                <Clock className="h-4 w-4 text-amber-400 mr-1.5" />
+                <span className="text-sm"><span className="text-amber-400 font-semibold">{totalUpcoming}</span> Upcoming</span>
+              </div>
+              <button 
+                onClick={navigateToCreateCampaign}
+                className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-lime-500/20 text-lime-400 flex items-center text-sm hover:bg-lime-500/10 transition-colors"
+              >
+                <PlusCircle className="h-4 w-4 mr-1.5" />
+                Create New
+              </button>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Filters Section */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20">
-          <div className="flex flex-col lg:flex-row gap-4">
+      {/* Filter Bar - Compact Version */}
+      <div className="container mx-auto px-4">
+        <div className="bg-slate-800/40 backdrop-blur-md rounded-lg p-3 border border-lime-600/20 shadow-lg">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Search */}
-            <div className="flex-grow">
+            <div className="flex-grow min-w-[200px]">
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search campaigns by name or description..."
+                  placeholder="Search campaigns..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-700/60 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-lime-500"
+                  className="w-full pl-8 pr-3 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-lime-500 text-sm"
                 />
-                <Search className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
               </div>
             </div>
             
-            {/* Status Filter */}
-            <div className="w-full lg:w-64">
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                  className="w-full appearance-none pl-10 pr-10 py-3 rounded-lg bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500"
-                >
-                  <option value="all">All Campaigns</option>
-                  <option value="active">Active</option>
-                  <option value="upcoming">Upcoming</option>
-                  <option value="ended">Ended</option>
-                </select>
-                <Filter className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-slate-400" />
-              </div>
+            {/* Quick Filters */}
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-2 rounded-md text-xs font-medium ${
+                  statusFilter === 'all'
+                    ? 'bg-lime-600 text-white'
+                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setStatusFilter('active')}
+                className={`px-3 py-2 rounded-md text-xs font-medium flex items-center ${
+                  statusFilter === 'active'
+                    ? 'bg-emerald-600/70 text-white'
+                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Zap className="h-3 w-3 mr-1" />
+                Active
+              </button>
+              <button
+                onClick={() => setStatusFilter('upcoming')}
+                className={`px-3 py-2 rounded-md text-xs font-medium flex items-center ${
+                  statusFilter === 'upcoming'
+                    ? 'bg-amber-600/70 text-white'
+                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                Upcoming
+              </button>
+              <button
+                onClick={() => setStatusFilter('ended')}
+                className={`px-3 py-2 rounded-md text-xs font-medium flex items-center ${
+                  statusFilter === 'ended'
+                    ? 'bg-slate-600 text-white'
+                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Ended
+              </button>
             </div>
             
-            {/* Sort By */}
-            <div className="w-full lg:w-72">
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full appearance-none pl-10 pr-10 py-3 rounded-lg bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="endingSoon">Ending Soon</option>
-                  <option value="mostFunded">Most Funded</option>
-                </select>
-                <Calendar className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                <button 
-                  onClick={toggleSortDirection}
-                  className="absolute right-3 top-3.5"
-                >
-                  {sortDirection === 'desc' 
-                    ? <ChevronDown className="h-5 w-5 text-slate-400" />
-                    : <ChevronUp className="h-5 w-5 text-slate-400" />
-                  }
-                </button>
-              </div>
+            {/* Sort Dropdown */}
+            <div className="relative min-w-[140px]">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full appearance-none pl-8 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+              >
+                <option value="newest">Newest First</option>
+                <option value="endingSoon">Ending Soon</option>
+                <option value="mostFunded">Most Funded</option>
+              </select>
+              <Filter className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <button 
+                onClick={toggleSortDirection}
+                className="absolute right-2.5 top-2.5"
+              >
+                {sortDirection === 'desc' 
+                  ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                  : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+                }
+              </button>
             </div>
+            
+            {/* Advanced Filters Toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-3 py-2 rounded-md bg-slate-700/60 text-slate-300 hover:bg-slate-700 transition-colors text-xs flex items-center"
+            >
+              <BarChart className="h-3.5 w-3.5 mr-1.5" />
+              {showFilters ? 'Hide Filters' : 'More Filters'}
+              {showFilters ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
+            </button>
           </div>
+          
+          {/* Advanced Filters - Expanded */}
+          {showFilters && (
+            <div className="mt-3 pt-3 border-t border-slate-700/50 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-slate-400 mb-1 text-xs">Distribution Method</label>
+                <select
+                  className="w-full appearance-none pl-3 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+                >
+                  <option value="all">All Methods</option>
+                  <option value="quadratic">Quadratic Distribution</option>
+                  <option value="linear">Linear Distribution</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-slate-400 mb-1 text-xs">Vote Multiplier</label>
+                <select
+                  className="w-full appearance-none pl-3 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+                >
+                  <option value="all">Any Multiplier</option>
+                  <option value="1">1x</option>
+                  <option value="2">2x</option>
+                  <option value="3">3x or more</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-slate-400 mb-1 text-xs">Funding Amount</label>
+                <select
+                  className="w-full appearance-none pl-3 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+                >
+                  <option value="all">Any Amount</option>
+                  <option value="low">Less than 100 CELO</option>
+                  <option value="medium">100-1000 CELO</option>
+                  <option value="high">1000+ CELO</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Campaigns List */}
-      <div className="container mx-auto px-6 py-8">
+      {/* Results Count + Create Button */}
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="text-slate-300 text-sm">
+          {loading ? (
+            <span className="flex items-center">
+              <div className="w-4 h-4 border-t-2 border-lime-500 rounded-full animate-spin mr-2"></div>
+              Loading campaigns...
+            </span>
+          ) : (
+            <span>{filteredCampaigns.length} campaigns found</span>
+          )}
+        </div>
+        
+        <button 
+          onClick={navigateToCreateCampaign}
+          className="text-lime-400 hover:text-lime-300 text-sm transition-colors flex items-center"
+        >
+          <PlusCircle className="h-4 w-4 mr-1.5" />
+          Create Campaign
+        </button>
+      </div>
+      
+      {/* Campaigns Grid */}
+      <div className="container mx-auto px-4 py-4">
         {loading ? (
           // Loading state
           <div className="flex justify-center items-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-lime-500"></div>
           </div>
         ) : filteredCampaigns.length > 0 ? (
-          // Campaigns grid
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredCampaigns.map((campaign) => (
               <div 
                 key={campaign.id.toString()}
-                className="bg-slate-800/40 backdrop-blur-md rounded-xl overflow-hidden border border-lime-600/20 hover:border-lime-500/50 transition-all cursor-pointer transform hover:-translate-y-1"
+                className="bg-slate-800/40 backdrop-blur-md rounded-lg overflow-hidden border border-slate-700 hover:border-lime-500/50 transition-all cursor-pointer shadow-lg hover:shadow-lime-500/5"
                 onClick={() => navigateToCampaign(campaign.id.toString())}
               >
-                <div className="h-40 bg-gradient-to-r from-lime-600/40 to-yellow-600/40 relative">
-                  <div className={`absolute bottom-4 left-4 px-3 py-1 ${getStatusColor(campaign.status)} text-sm font-semibold rounded-full flex items-center`}>
+                {/* Campaign Header */}
+                <div className="h-28 bg-gradient-to-r from-slate-700/80 to-slate-700/40 relative overflow-hidden">
+                  {/* Status Badge */}
+                  <div className={`absolute top-3 right-3 px-2 py-0.5 ${getStatusColor(campaign.status)} text-xs font-medium rounded-md flex items-center`}>
                     {getStatusIcon(campaign.status)}
                     {campaign.status === 'active' 
                       ? 'Active' 
@@ -369,62 +497,70 @@ export default function Campaigns() {
                         : 'Ended'}
                   </div>
                   
+                  {/* Campaign ID */}
+                  <div className="absolute top-3 left-3 px-2 py-0.5 bg-slate-800/80 backdrop-blur-sm text-xs text-slate-400 rounded-md">
+                    ID: {campaign.id.toString()}
+                  </div>
+                  
+                  {/* Time Remaining */}
                   {campaign.status === 'active' && campaign.timeRemaining && (
-                    <div className="absolute bottom-4 right-4 px-3 py-1 bg-slate-800/80 text-white text-sm font-semibold rounded-full flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {campaign.timeRemaining.days}d {campaign.timeRemaining.hours}h
+                    <div className="absolute bottom-3 right-3 px-2 py-0.5 bg-slate-900/80 backdrop-blur-sm text-white text-xs rounded-md flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {campaign.timeRemaining.days}d {campaign.timeRemaining.hours}h remaining
                     </div>
                   )}
-                </div>
-                
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl font-bold text-white">{campaign.name}</h3>
-                    <div className="text-xs text-slate-400 bg-slate-700/50 px-2 py-1 rounded">
-                      ID: {campaign.id.toString()}
-                    </div>
-                  </div>
                   
-                  <p className="text-slate-300 mb-4 line-clamp-2">{campaign.description}</p>
-                  
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="text-lime-400 font-medium flex items-center">
-                      <Droplets className="h-4 w-4 mr-1" />
-                      {formatTokenAmount(campaign.totalFunds)} CELO
-                    </div>
-                    <div className="text-slate-400 text-sm flex items-center">
-                      <Image 
-                        src="/logo.svg" 
-                        alt="Projects"
-                        width={16}
-                        height={16}
-                        className="mr-1"
-                      />
-                      {campaign.projectCount} Projects
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="text-xs text-slate-400">
-                      {campaign.useQuadraticDistribution 
-                        ? 'Quadratic Distribution' 
-                        : 'Linear Distribution'}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      Vote Multiplier: {campaign.voteMultiplier.toString()}x
-                    </div>
+                  {/* Decoration */}
+                  <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-gradient-to-r from-lime-500/20 to-yellow-500/20 blur-xl"></div>
+                  <div className="absolute top-4 left-1/2 text-lime-500/10">
+                    <Waves className="h-32 w-32" />
                   </div>
                 </div>
                 
-                <div className="px-6 pb-6">
+                {/* Campaign Content */}
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">{campaign.name}</h3>
+                  <p className="text-slate-300 text-xs mb-3 line-clamp-2">{campaign.description}</p>
+                  
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="bg-slate-700/30 rounded-md p-2 flex items-center">
+                      <Droplets className="h-3.5 w-3.5 text-lime-500 mr-1.5" />
+                      <div>
+                        <div className="text-xs text-slate-400">Total Funds</div>
+                        <div className="text-lime-400 text-sm font-medium">{formatTokenAmount(campaign.totalFunds)} CELO</div>
+                      </div>
+                    </div>
+                    <div className="bg-slate-700/30 rounded-md p-2 flex items-center">
+                      <Globe className="h-3.5 w-3.5 text-lime-500 mr-1.5" />
+                      <div>
+                        <div className="text-xs text-slate-400">Projects</div>
+                        <div className="text-white text-sm font-medium">{campaign.projectCount || 0}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <div className="px-2 py-0.5 bg-slate-700/50 rounded-md text-xs text-slate-300 flex items-center">
+                      <Tag className="h-3 w-3 mr-1 text-yellow-500" />
+                      {campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'} 
+                    </div>
+                    <div className="px-2 py-0.5 bg-slate-700/50 rounded-md text-xs text-slate-300 flex items-center">
+                      <Award className="h-3 w-3 mr-1 text-yellow-500" />
+                      {campaign.voteMultiplier.toString()}x Votes
+                    </div>
+                  </div>
+                  
+                  {/* Action Button */}
                   <button 
-                    className="w-full py-2 rounded-full bg-lime-500/20 text-lime-300 hover:bg-lime-500/30 transition-all text-sm font-medium"
+                    className="w-full py-1.5 rounded-md bg-gradient-to-r from-lime-600/60 to-lime-500/60 hover:from-lime-600 hover:to-lime-500 text-white text-xs font-medium transition-all flex items-center justify-center"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigateToCampaign(campaign.id.toString());
                     }}
                   >
-                    View Campaign
+                    Explore Campaign <ArrowRight className="ml-1.5 h-3 w-3" />
                   </button>
                 </div>
               </div>
@@ -432,91 +568,110 @@ export default function Campaigns() {
           </div>
         ) : (
           // No campaigns found
-          <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-8 text-center my-12">
+          <div className="bg-slate-800/30 backdrop-blur-md rounded-lg p-8 text-center my-8 border border-slate-700">
             <div className="flex justify-center mb-4">
-              <XCircle className="h-16 w-16 text-slate-500" />
+              <XCircle className="h-14 w-14 text-slate-500" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No Campaigns Found</h3>
-            <p className="text-slate-300 mb-6">
+            <p className="text-slate-300 mb-6 max-w-lg mx-auto">
               {searchQuery 
                 ? `No campaigns match "${searchQuery}". Try a different search term or filter.` 
                 : 'No campaigns found with the current filters. Try adjusting your filters or create a new campaign.'}
             </p>
-            <button 
-              onClick={navigateToCreateCampaign}
-              className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all inline-flex items-center"
-            >
-              Create New Campaign <Waves className="ml-2 h-5 w-5" />
-            </button>
+            <div className="flex justify-center">
+              <button 
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setSortBy('newest');
+                }}
+                className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-all mr-3"
+              >
+                Reset Filters
+              </button>
+              <button 
+                onClick={navigateToCreateCampaign}
+                className="px-4 py-2 rounded-lg bg-lime-600 text-white hover:bg-lime-500 transition-all flex items-center"
+              >
+                <PlusCircle className="h-4 w-4 mr-1.5" />
+                Create Campaign
+              </button>
+            </div>
           </div>
         )}
       </div>
       
-      {/* Pagination (if needed) */}
-      {filteredCampaigns.length > 0 && filteredCampaigns.length > 12 && (
-        <div className="container mx-auto px-6 py-8 flex justify-center">
-          <div className="flex space-x-2">
-            <button className="px-4 py-2 rounded-lg bg-slate-700/60 text-white hover:bg-slate-700 transition-all">
+      {/* Pagination (if needed) - Simplified */}
+      {filteredCampaigns.length > 12 && (
+        <div className="container mx-auto px-4 py-6 flex justify-center">
+          <div className="flex space-x-1.5">
+            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
               Previous
             </button>
-            <button className="px-4 py-2 rounded-lg bg-lime-500 text-slate-900 font-semibold">
+            <button className="px-3 py-1.5 rounded-md bg-lime-600 text-white text-xs">
               1
             </button>
-            <button className="px-4 py-2 rounded-lg bg-slate-700/60 text-white hover:bg-slate-700 transition-all">
+            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
               2
             </button>
-            <button className="px-4 py-2 rounded-lg bg-slate-700/60 text-white hover:bg-slate-700 transition-all">
+            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
+              3
+            </button>
+            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
               Next
             </button>
           </div>
         </div>
       )}
       
-      {/* No Wallet Connected Warning */}
+      {/* No Wallet Connected Warning - Subtle */}
       {!isConnected && (
-        <div className="container mx-auto px-6 py-8">
-          <div className="bg-yellow-500/10 backdrop-blur-md rounded-xl p-6 border border-yellow-500/30 text-center">
-            <p className="text-yellow-300 mb-2">
-              You are not connected to a wallet. Connect your wallet to interact with campaigns.
+        <div className="container mx-auto px-4 py-4">
+          <div className="bg-yellow-500/10 backdrop-blur-md rounded-lg p-3 border border-yellow-500/20 flex flex-wrap items-center justify-between">
+            <p className="text-yellow-300 text-sm">
+              💡 Connect your wallet to vote for projects and contribute to campaigns
             </p>
-            <button className="px-4 py-2 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all text-sm">
+            <button className="px-3 py-1.5 rounded-md bg-yellow-500 text-slate-900 font-medium hover:bg-yellow-400 transition-all text-xs">
               Connect Wallet
             </button>
           </div>
         </div>
       )}
       
-      {/* CTA Section */}
-      <div className="py-16">
-        <div className="container mx-auto px-6">
-          <div className="bg-gradient-to-r from-lime-900/40 to-yellow-900/40 backdrop-blur-md rounded-2xl p-8 border border-lime-500/30">
-            <div className="flex flex-col md:flex-row items-center justify-between">
-              <div className="mb-6 md:mb-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                  Make a splash in ocean conservation
-                </h2>
-                <p className="text-lime-100">
-                  Create your own campaign or contribute to existing ones. Every vote counts!
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-4">
-                <button 
-                  onClick={navigateToCreateCampaign}
-                  className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all"
-                >
-                  Start a Campaign
-                </button>
-                <button 
-                  onClick={() => router.push('/')}
-                  className="px-6 py-3 rounded-full bg-transparent border border-lime-400 text-lime-400 font-semibold hover:bg-lime-500/10 transition-all"
-                >
-                  Learn More
-                </button>
-              </div>
+      {/* CTA Section - Compact */}
+      <div className="container mx-auto px-4 py-10">
+        <div className="bg-gradient-to-r from-lime-900/30 to-yellow-900/30 backdrop-blur-md rounded-lg p-5 border border-lime-500/20 shadow-lg">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-center md:text-left">
+              <h2 className="text-xl font-bold text-white mb-2 flex items-center">
+                <Sparkles className="h-5 w-5 text-yellow-400 mr-2" />
+                Make waves in ocean conservation 🌊
+              </h2>
+              <p className="text-lime-100 text-sm">
+                Every vote helps fund vital projects. Join our community of changemakers today!
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={navigateToCreateCampaign}
+                className="px-4 py-2 rounded-lg bg-yellow-500 text-slate-900 font-medium hover:bg-yellow-400 transition-all text-sm flex items-center shadow-md shadow-yellow-500/20"
+              >
+                <PlusCircle className="h-4 w-4 mr-1.5" />
+                Start Campaign
+              </button>
+              <button 
+                onClick={() => router.push('/')}
+                className="px-4 py-2 rounded-lg bg-transparent border border-lime-400 text-lime-400 font-medium hover:bg-lime-500/10 transition-all text-sm"
+              >
+                Learn More
+              </button>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Category Highlights (Optional) */}
+      
     </div>
   );
 }
