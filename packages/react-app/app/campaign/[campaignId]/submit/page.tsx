@@ -165,7 +165,7 @@ export default function SubmitProject() {
     return isValid;
   };
   
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     setErrorMessage('');
     
@@ -180,7 +180,7 @@ export default function SubmitProject() {
     
     try {
       await submitProject(
-        campaignId,
+        Number(campaignId),
         projectName,
         description,
         githubLink,

@@ -20,7 +20,12 @@ import {
   Award,
   Droplets,
   X,
-  Eye
+  Eye,
+  TrendingUp,
+  ChevronUp,
+  ChevronDown,
+  Info,
+  AlertTriangle
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
 
@@ -43,6 +48,7 @@ export default function CampaignDashboard() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canDistributeFunds, setCanDistributeFunds] = useState(false);
+  const [fundsDistributed, setFundsDistributed] = useState(false);
   const [voteModalVisible, setVoteModalVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [voteAmount, setVoteAmount] = useState('');
@@ -54,6 +60,7 @@ export default function CampaignDashboard() {
     socialLink: '',
     testingLink: '',
   });
+  const [distributionTableVisible, setDistributionTableVisible] = useState(false);
   
   // Contract interaction
   const {
@@ -86,6 +93,7 @@ export default function CampaignDashboard() {
       loadCampaignData();
     }
   }, [isInitialized, campaignId, address, isTxSuccess]);
+  
   const loadCampaignData = async () => {
     setLoading(true);
     try {
@@ -111,9 +119,21 @@ export default function CampaignDashboard() {
             setCanDistributeFunds(isAdmin);
           }
           
-          // Load projects - THIS IS THE MISSING PART
+          // Load projects
           if (campaignId) {
             const projectsData = await loadProjects(Number(campaignId));
+            
+            // Check if funds have been distributed
+            const hasDistributed = !campaignData.active || 
+                                  projectsData.some(p => Number(p.fundsReceived) > 0);
+            setFundsDistributed(hasDistributed);
+            setCanDistributeFunds(isAdmin && !hasDistributed && now > Number(campaignData.endTime));
+            
+            // Show distribution table if funds were distributed
+            if (hasDistributed) {
+              setDistributionTableVisible(true);
+            }
+            
             setProjects(projectsData);
           } else {
             console.error('Campaign ID is undefined');
@@ -131,8 +151,6 @@ export default function CampaignDashboard() {
       setLoading(false);
     }
   };
-  
- 
   
   const handleVote = async () => {
     if (!selectedProject || !voteAmount || parseFloat(voteAmount) <= 0 || !campaignId) return;
@@ -178,6 +196,13 @@ export default function CampaignDashboard() {
     
     try {
       await distributeFunds(Number(campaignId));
+      
+      // After funds are distributed, refresh the data and show distribution table
+      setTimeout(() => {
+        loadCampaignData();
+        setDistributionTableVisible(true);
+      }, 5000); // Wait a bit for the transaction to be mined
+      
     } catch (error) {
       console.error('Error distributing funds:', error);
     }
@@ -216,6 +241,23 @@ export default function CampaignDashboard() {
   const approvedProjects = projects.filter(p => p.approved).length;
   const totalVotes = projects.reduce((sum, project) => sum + Number(formatTokenAmount(project.voteCount)), 0);
   const totalFunds = formatTokenAmount(campaign.totalFunds);
+  
+  // Sort projects by fund received (for distribution table)
+  const sortedByFundsProjects = [...projects]
+    .filter(p => Number(p.fundsReceived) > 0)
+    .sort((a, b) => Number(b.fundsReceived) - Number(a.fundsReceived));
+  
+  // Calculate distribution fees
+  const platformFeeAmount = Number(totalFunds) * 0.15; // 15% platform fee
+  const adminFeeAmount = Number(totalFunds) * Number(campaign.adminFeePercentage) / 100;
+  const distributedToProjects = Number(totalFunds) - platformFeeAmount - adminFeeAmount;
+  
+  // Create distribution summary
+  const distributionSummary = [
+    { name: "Platform Fee (15%)", amount: platformFeeAmount.toFixed(2) },
+    { name: `Admin Fee (${campaign.adminFeePercentage}%)`, amount: adminFeeAmount.toFixed(2) },
+    { name: "Distributed to Projects", amount: distributedToProjects.toFixed(2) },
+  ];
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -256,6 +298,13 @@ export default function CampaignDashboard() {
                   <Droplets className="h-3.5 w-3.5 mr-1" />
                   {totalFunds} CELO
                 </span>
+                
+                {fundsDistributed && (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-900/50 text-green-400 border border-green-500/30 inline-flex items-center">
+                    <Award className="h-3.5 w-3.5 mr-1" />
+                    Funds Distributed
+                  </span>
+                )}
               </div>
             </div>
             
@@ -270,7 +319,7 @@ export default function CampaignDashboard() {
               
               {isAdmin && (
                 <button 
-                  onClick={() => router.push(`/campaign/${campaignId}/settings`)}
+                  onClick={() => router.push(`/campaign/${campaignId}/admin`)}
                   className="px-4 py-2 rounded-lg bg-lime-600/60 text-white hover:bg-lime-600 transition-colors flex items-center"
                 >
                   <Settings className="h-4 w-4 mr-2" />
@@ -387,7 +436,7 @@ export default function CampaignDashboard() {
                   </button>
                 )}
                 
-                {isAdmin && hasEnded && campaign.active && (
+                {canDistributeFunds && (
                   <button
                     onClick={handleDistributeFunds}
                     disabled={isWritePending || isWaitingForTx}
@@ -404,6 +453,16 @@ export default function CampaignDashboard() {
                         Distribute Funds
                       </>
                     )}
+                  </button>
+                )}
+                
+                {fundsDistributed && !distributionTableVisible && (
+                  <button
+                    onClick={() => setDistributionTableVisible(true)}
+                    className="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-colors flex items-center justify-center"
+                  >
+                    <TrendingUp className="h-5 w-5 mr-2" />
+                    View Fund Distribution
                   </button>
                 )}
                 
@@ -429,6 +488,137 @@ export default function CampaignDashboard() {
           
           {/* Right Column - Projects */}
           <div className="lg:w-2/3">
+            {/* Fund Distribution Table (if funds have been distributed) */}
+            {distributionTableVisible && fundsDistributed && (
+              <div className="bg-slate-800/40 backdrop-blur-md rounded-xl border border-lime-600/20 overflow-hidden mb-6">
+                <div className="p-6 pb-4 border-b border-slate-700 flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-yellow-400 flex items-center">
+                    <Award className="h-5 w-5 mr-2" />
+                    Fund Distribution Results
+                  </h2>
+                  <button
+                    onClick={() => setDistributionTableVisible(false)}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    <ChevronUp className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="p-6 bg-slate-800/30">
+                  <h3 className="text-base font-medium mb-3 text-lime-300 flex items-center">
+                    <PieChart className="h-4 w-4 mr-2" />
+                    Distribution Summary
+                  </h3>
+                  
+                  <div className="overflow-x-auto mb-4">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <th className="py-2 px-3 text-left text-slate-300 font-medium">Category</th>
+                          <th className="py-2 px-3 text-right text-slate-300 font-medium">Amount (CELO)</th>
+                          <th className="py-2 px-3 text-right text-slate-300 font-medium">Percentage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {distributionSummary.map((item, index) => (
+                          <tr key={index} className={index !== distributionSummary.length - 1 ? "border-b border-slate-700/50" : ""}>
+                            <td className="py-2 px-3 text-left text-white">{item.name}</td>
+                            <td className="py-2 px-3 text-right text-white">{item.amount}</td>
+                            <td className="py-2 px-3 text-right text-white">
+                              {(Number(item.amount) / Number(totalFunds) * 100).toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-slate-600">
+                          <td className="py-2 px-3 text-left font-semibold text-white">Total</td>
+                          <td className="py-2 px-3 text-right font-semibold text-white">{totalFunds}</td>
+                          <td className="py-2 px-3 text-right font-semibold text-white">100%</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  
+                  <h3 className="text-base font-medium mb-3 mt-6 text-lime-300 flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    Project Distributions
+                  </h3>
+                  
+                  {sortedByFundsProjects.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-700">
+                            <th className="py-2 px-3 text-left text-slate-300 font-medium">Rank</th>
+                            <th className="py-2 px-3 text-left text-slate-300 font-medium">Project</th>
+                            <th className="py-2 px-3 text-right text-slate-300 font-medium">Votes</th>
+                            <th className="py-2 px-3 text-right text-slate-300 font-medium">Funds Received</th>
+                            <th className="py-2 px-3 text-right text-slate-300 font-medium">% of Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedByFundsProjects.map((project, index) => (
+                            <tr key={project.id.toString()} 
+                              className={index !== sortedByFundsProjects.length - 1 ? "border-b border-slate-700/50" : ""}
+                            >
+                              <td className="py-2 px-3 text-center">
+                                {index === 0 ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 bg-yellow-500 text-slate-900 rounded-full font-bold">1</span>
+                                ) : index === 1 ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 bg-slate-400 text-slate-900 rounded-full font-bold">2</span>
+                                ) : index === 2 ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 bg-amber-700 text-white rounded-full font-bold">3</span>
+                                ) : (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 bg-slate-700 text-slate-300 rounded-full">{index + 1}</span>
+                                )}
+                              </td>
+                              <td className="py-2 px-3 text-left text-white">
+                                <a 
+                                  className="hover:text-lime-300"
+                                  href={`/campaign/${campaignId}/project/${project.id}`}
+                                >
+                                  {project.name}
+                                </a>
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-white">
+                                {formatTokenAmount(project.voteCount)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-lime-400">
+                                {formatTokenAmount(project.fundsReceived)} CELO
+                              </td>
+                              <td className="py-2 px-3 text-right text-white">
+                                {(Number(formatTokenAmount(project.fundsReceived)) / Number(totalFunds) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-700/30 rounded-lg p-4 flex items-start">
+                      <Info className="h-5 w-5 text-blue-400 mr-3 flex-shrink-0 mt-0.5" />
+                      <p className="text-slate-300">
+                        No projects received funds. This might happen if no projects received votes or if all projects were rejected.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-4 bg-slate-700/30 border-t border-slate-700">
+                  <div className="flex items-start">
+                    <AlertTriangle className="h-5 w-5 text-yellow-400 mr-3 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-slate-300">
+                      The fund distribution is executed according to the {campaign.useQuadraticDistribution ? 'quadratic' : 'linear'} model. 
+                      {campaign.useQuadraticDistribution ? 
+                        ' With quadratic distribution, funds are allocated based on the square root of votes, creating a more equitable distribution compared to a direct proportional model.' : 
+                        ' With linear distribution, funds are allocated in direct proportion to the number of votes received.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="bg-slate-800/40 backdrop-blur-md rounded-xl border border-lime-600/20 overflow-hidden">
               <div className="p-6 pb-0">
                 <h2 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
@@ -461,11 +651,16 @@ export default function CampaignDashboard() {
                     >
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                         <div className="flex-grow">
-                          <div className="flex items-start">
+                          <div className="flex items-start flex-wrap gap-2">
                             <h3 className="text-lg font-semibold text-white">{project.name}</h3>
                             {!project.approved && (
-                              <span className="ml-2 px-2 py-0.5 bg-orange-900/50 text-orange-400 text-xs rounded-full border border-orange-500/30">
+                              <span className="px-2 py-0.5 bg-orange-900/50 text-orange-400 text-xs rounded-full border border-orange-500/30">
                                 Pending Approval
+                              </span>
+                            )}
+                            {fundsDistributed && Number(project.fundsReceived) > 0 && (
+                              <span className="px-2 py-0.5 bg-green-900/50 text-green-400 text-xs rounded-full border border-green-500/30">
+                                Funded: {formatTokenAmount(project.fundsReceived)} CELO
                               </span>
                             )}
                           </div>
@@ -518,39 +713,41 @@ export default function CampaignDashboard() {
                             </div>
                             <div className="text-xs text-slate-400 mt-1">VOTES</div>
                           </div>
-                           <button
-                                                      onClick={() => router.push(`/campaign/${campaignId}/project/${project.id}`)}
-                                                      className="px-3 py-2 bg-slate-600 text-slate-200 rounded-lg text-sm hover:bg-slate-500 transition-colors flex items-center flex-1 justify-center"
-                                                    >
-                                                      <Eye className="h-4 w-4 mr-1" />
-                                                      View
-                                                    </button>
                           
-                          {isActive && project.approved && (
+                          <div className="flex gap-2 mt-3 w-full md:w-auto">
                             <button
-                              onClick={() => {
-                                setSelectedProject(project);
-                                setVoteModalVisible(true);
-                              }}
-                              className="mt-3 px-4 py-2 bg-lime-600/60 hover:bg-lime-600 text-white rounded-lg text-sm transition-colors w-full"
+                              onClick={() => router.push(`/campaign/${campaignId}/project/${project.id}`)}
+                              className="px-3 py-2 bg-slate-600 text-slate-200 rounded-lg text-sm hover:bg-slate-500 transition-colors flex items-center flex-1 justify-center"
                             >
-                              Vote for Project
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </button>
-                          )}
+                            
+                            {isActive && project.approved && (
+                              <button
+                                onClick={() => {
+                                  setSelectedProject(project);
+                                  setVoteModalVisible(true);
+                                }}
+                                className="px-3 py-2 bg-lime-600/60 hover:bg-lime-600 text-white rounded-lg text-sm transition-colors flex items-center flex-1 justify-center"
+                              >
+                                <Award className="h-4 w-4 mr-1" />
+                                Vote
+                              </button>
+                            )}
+                          </div>
                           
                           {isAdmin && !project.approved && (
                             <button
                               onClick={async () => {
                                 try {
-                                  // Call your approveProject function
-                                  // from useSovereignSeas hook
-                                  await approveProject(campaignId, project.id);
+                                  await approveProject(Number(campaignId), project.id);
                                 } catch (error) {
                                   console.error('Error approving project:', error);
                                 }
                               }}
                               disabled={isWritePending || isWaitingForTx}
-                              className="mt-3 px-4 py-2 bg-yellow-500/60 hover:bg-yellow-500 text-white rounded-lg text-sm transition-colors w-full disabled:bg-slate-500"
+                              className="mt-2 w-full px-4 py-2 bg-yellow-500/60 hover:bg-yellow-500 text-white rounded-lg text-sm transition-colors disabled:bg-slate-500"
                             >
                               Approve Project
                             </button>

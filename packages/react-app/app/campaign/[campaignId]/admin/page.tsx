@@ -119,7 +119,7 @@ export default function CampaignAdminDashboard() {
           }
           
           // Load projects
-          const projectsData = await loadProjects(campaignId);
+          const projectsData = await loadProjects(Number(campaignId));
           setAllProjects(projectsData);
           filterProjects(projectFilter, projectsData);
         } else {
@@ -157,7 +157,7 @@ export default function CampaignAdminDashboard() {
   
   const handleApproveProject = async (projectId: number) => {
     try {
-      await approveProject(campaignId, projectId);
+      await approveProject(Number(campaignId), projectId);
       setStatusMessage({ 
         text: 'Project approved successfully!', 
         type: 'success' 
@@ -174,7 +174,14 @@ export default function CampaignAdminDashboard() {
   
   const handleDistributeFunds = async () => {
     try {
-      await distributeFunds(campaignId);
+      if (campaignId) {
+        await distributeFunds(Number(campaignId));
+      } else {
+        setStatusMessage({ 
+          text: 'Invalid campaign ID. Please try again later.', 
+          type: 'error' 
+        });
+      }
       setStatusMessage({ 
         text: 'Funds distributed successfully!', 
         type: 'success' 
