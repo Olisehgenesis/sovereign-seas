@@ -14,12 +14,21 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  Info
+  Info,
+  Image as ImageIcon,
+  Video,
+  Code,
+  Plus,
+  X,
+  Trash,
+  AlertTriangle,
+  HelpCircle,
+  Eye
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` 
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`; 
+const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`; 
 
 
 export default function SubmitProject() {
@@ -28,12 +37,17 @@ export default function SubmitProject() {
   const { address, isConnected } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
   
-  // Form state
-  const [projectName, setProjectName] = useState('');
-  const [description, setDescription] = useState('');
-  const [githubLink, setGithubLink] = useState('');
-  const [socialLink, setSocialLink] = useState('');
-  const [testingLink, setTestingLink] = useState('');
+  // Enhanced form state with new fields
+  const [project, setProject] = useState({
+    name: '',
+    description: '',
+    githubLink: '',
+    socialLink: '',
+    testingLink: '',
+    logo: '',
+    demoVideo: '',
+    contracts: [''],
+  });
   
   // Campaign data
   const [campaign, setCampaign] = useState<any>(null);
@@ -43,14 +57,28 @@ export default function SubmitProject() {
   
   // Form validation
   const [formErrors, setFormErrors] = useState({
-    projectName: '',
+    name: '',
     description: '',
+    logo: '',
+    demoVideo: '',
+    contracts: [''],
   });
+  
+  // UI state
+  const [activeTab, setActiveTab] = useState('basic'); // 'basic', 'media', 'contracts'
+  const [urlPreview, setUrlPreview] = useState({
+    logo: null,
+    demoVideo: null,
+  });
+  const [showMediaPreview, setShowMediaPreview] = useState(false);
+  const [previewType, setPreviewType] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   // Contract interaction
   const {
     isInitialized,
     loadCampaigns,
+    loadProjects,
     submitProject,
     formatCampaignTime,
     getCampaignTimeRemaining,
@@ -59,6 +87,8 @@ export default function SubmitProject() {
     isWaitingForTx,
     isTxSuccess,
     txReceipt,
+    writeError,
+    resetWrite
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -84,6 +114,14 @@ export default function SubmitProject() {
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+  
+  // Check for write errors
+  useEffect(() => {
+    if (writeError) {
+      setErrorMessage(`Error submitting project: ${writeError.message || 'Please try again later.'}`);
+      resetWrite();
+    }
+  }, [writeError, resetWrite]);
   
   // Redirect or reset form on successful submission
   useEffect(() => {
@@ -127,19 +165,22 @@ export default function SubmitProject() {
   const validateForm = () => {
     let isValid = true;
     const errors = {
-      projectName: '',
+      name: '',
       description: '',
+      logo: '',
+      demoVideo: '',
+      contracts: [''],
     };
     
-    if (!projectName.trim()) {
-      errors.projectName = 'Project name is required';
+    if (!project.name.trim()) {
+      errors.name = 'Project name is required';
       isValid = false;
     }
     
-    if (!description.trim()) {
+    if (!project.description.trim()) {
       errors.description = 'Description is required';
       isValid = false;
-    } else if (description.trim().length < 20) {
+    } else if (project.description.trim().length < 20) {
       errors.description = 'Description must be at least 20 characters long';
       isValid = false;
     }
@@ -147,19 +188,41 @@ export default function SubmitProject() {
     // Validate URLs if provided
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
     
-    if (githubLink && !urlRegex.test(githubLink)) {
-      setErrorMessage('Please enter a valid GitHub URL');
+    if (project.githubLink && !urlRegex.test(project.githubLink)) {
+      errors.name = 'Please enter a valid GitHub URL';
       isValid = false;
     }
     
-    if (socialLink && !urlRegex.test(socialLink)) {
-      setErrorMessage('Please enter a valid social media URL');
+    if (project.socialLink && !urlRegex.test(project.socialLink)) {
+      errors.name = 'Please enter a valid social media URL';
       isValid = false;
     }
     
-    if (testingLink && !urlRegex.test(testingLink)) {
-      setErrorMessage('Please enter a valid testing/demo URL');
+    if (project.testingLink && !urlRegex.test(project.testingLink)) {
+      errors.name = 'Please enter a valid testing/demo URL';
       isValid = false;
+    }
+    
+    if (project.logo && !urlRegex.test(project.logo)) {
+      errors.logo = 'Please enter a valid logo URL';
+      isValid = false;
+    }
+    
+    if (project.demoVideo && !urlRegex.test(project.demoVideo)) {
+      errors.demoVideo = 'Please enter a valid demo video URL';
+      isValid = false;
+    }
+    
+    // Validate contracts if any are provided
+    const validContracts = project.contracts.filter(c => c.trim() !== '');
+    if (validContracts.length > 0) {
+      const contractRegex = /^0x[a-fA-F0-9]{40}$/;
+      for (let i = 0; i < validContracts.length; i++) {
+        if (!contractRegex.test(validContracts[i])) {
+          errors.contracts[i] = 'Please enter a valid Ethereum address (0x...)';
+          isValid = false;
+        }
+      }
     }
     
     setFormErrors(errors);
@@ -180,13 +243,19 @@ export default function SubmitProject() {
     }
     
     try {
+      // Filter out empty contract addresses
+      const contracts = project.contracts.filter(c => c.trim() !== '');
+      
       await submitProject(
         Number(campaignId),
-        projectName,
-        description,
-        githubLink,
-        socialLink,
-        testingLink
+        project.name,
+        project.description,
+        project.githubLink,
+        project.socialLink,
+        project.testingLink,
+        project.logo,
+        project.demoVideo,
+        contracts
       );
     } catch (error) {
       console.error('Error submitting project:', error);
@@ -195,15 +264,96 @@ export default function SubmitProject() {
   };
   
   const resetForm = () => {
-    setProjectName('');
-    setDescription('');
-    setGithubLink('');
-    setSocialLink('');
-    setTestingLink('');
-    setFormErrors({
-      projectName: '',
+    setProject({
+      name: '',
       description: '',
+      githubLink: '',
+      socialLink: '',
+      testingLink: '',
+      logo: '',
+      demoVideo: '',
+      contracts: [''],
     });
+    setFormErrors({
+      name: '',
+      description: '',
+      logo: '',
+      demoVideo: '',
+      contracts: [''],
+    });
+    setActiveTab('basic');
+  };
+  
+  const handleInputChange = (field: string, value: string) => {
+    setProject({
+      ...project,
+      [field]: value,
+    });
+    
+    // Clear validation error when user starts typing
+    if (formErrors[field as keyof typeof formErrors]) {
+      setFormErrors({
+        ...formErrors,
+        [field]: '',
+      });
+    }
+  };
+  
+  const handleContractChange = (index: number, value: string) => {
+    const updatedContracts = [...project.contracts];
+    updatedContracts[index] = value;
+    setProject({
+      ...project,
+      contracts: updatedContracts
+    });
+    
+    // Clear contract validation error
+    if (formErrors.contracts[index]) {
+      const updatedContractErrors = [...formErrors.contracts];
+      updatedContractErrors[index] = '';
+      setFormErrors({
+        ...formErrors,
+        contracts: updatedContractErrors
+      });
+    }
+  };
+  
+  const handleAddContract = () => {
+    setProject({
+      ...project,
+      contracts: [...project.contracts, '']
+    });
+    setFormErrors({
+      ...formErrors,
+      contracts: [...formErrors.contracts, '']
+    });
+  };
+  
+  const handleRemoveContract = (index: number) => {
+    if (project.contracts.length <= 1) return;
+    
+    const updatedContracts = [...project.contracts];
+    updatedContracts.splice(index, 1);
+    setProject({
+      ...project,
+      contracts: updatedContracts
+    });
+    
+    const updatedErrors = [...formErrors.contracts];
+    updatedErrors.splice(index, 1);
+    setFormErrors({
+      ...formErrors,
+      contracts: updatedErrors
+    });
+  };
+  
+  // Function to open media preview modal
+  const openMediaPreview = (type: string, url: string) => {
+    if (!url) return;
+    
+    setPreviewType(type);
+    setPreviewUrl(url);
+    setShowMediaPreview(true);
   };
   
   if (!isMounted) {
@@ -301,7 +451,7 @@ export default function SubmitProject() {
           </div>
           
           <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20 mb-6">
-                          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6">
               {hasStarted ? (
                 <div className="flex items-center text-yellow-400">
                   <Clock className="h-5 w-5 mr-2" />
@@ -344,82 +494,268 @@ export default function SubmitProject() {
               </div>
             )}
             
+            {/* Form Tabs */}
+            <div className="flex border-b border-slate-700 mb-6">
+              <button
+                onClick={() => setActiveTab('basic')}
+                className={`px-4 py-2 font-medium ${
+                  activeTab === 'basic' 
+                    ? 'text-lime-400 border-b-2 border-lime-400' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Basic Info
+              </button>
+              <button
+                onClick={() => setActiveTab('media')}
+                className={`px-4 py-2 font-medium ${
+                  activeTab === 'media' 
+                    ? 'text-lime-400 border-b-2 border-lime-400' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Media
+              </button>
+              <button
+                onClick={() => setActiveTab('contracts')}
+                className={`px-4 py-2 font-medium ${
+                  activeTab === 'contracts' 
+                    ? 'text-lime-400 border-b-2 border-lime-400' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Contracts
+              </button>
+            </div>
+            
             <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-lime-300 mb-2">Project Name *</label>
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="Enter project name"
-                  />
-                  {formErrors.projectName && (
-                    <p className="mt-1 text-red-400 text-sm">{formErrors.projectName}</p>
-                  )}
+              {/* Basic Info Tab */}
+              {activeTab === 'basic' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-lime-300 mb-2">Project Name *</label>
+                    <input
+                      type="text"
+                      value={project.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                      placeholder="Enter project name"
+                    />
+                    {formErrors.name && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.name}</p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-lime-300 mb-2">Description *</label>
+                    <textarea
+                      value={project.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      rows={5}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                      placeholder="Describe your project in detail. What problem does it solve? How does it relate to ocean conservation?"
+                    />
+                    {formErrors.description && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.description}</p>
+                    )}
+                    <p className="mt-1 text-slate-400 text-sm">Minimum 20 characters</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-lime-300 mb-2 flex items-center">
+                      <Github className="h-4 w-4 mr-2" />
+                      GitHub Repository (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={project.githubLink}
+                      onChange={(e) => handleInputChange('githubLink', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                      placeholder="https://github.com/yourusername/yourproject"
+                    />
+                    <p className="mt-1 text-slate-400 text-sm">Link to your project's GitHub repository</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-lime-300 mb-2 flex items-center">
+                      <Globe className="h-4 w-4 mr-2" />
+                      Social Media Link (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={project.socialLink}
+                      onChange={(e) => handleInputChange('socialLink', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                      placeholder="https://twitter.com/yourproject"
+                    />
+                    <p className="mt-1 text-slate-400 text-sm">Link to your project's social media page</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-lime-300 mb-2 flex items-center">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Demo/Testing Link (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={project.testingLink}
+                      onChange={(e) => handleInputChange('testingLink', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                      placeholder="https://demo.yourproject.com"
+                    />
+                    <p className="mt-1 text-slate-400 text-sm">Link to a demo or testing version of your project</p>
+                  </div>
                 </div>
-                
-                <div>
-                  <label className="block text-lime-300 mb-2">Description *</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={5}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="Describe your project in detail. What problem does it solve? How does it relate to ocean conservation?"
-                  />
-                  {formErrors.description && (
-                    <p className="mt-1 text-red-400 text-sm">{formErrors.description}</p>
-                  )}
-                  <p className="mt-1 text-slate-400 text-sm">Minimum 20 characters</p>
+              )}
+              
+              {/* Media Tab */}
+              {activeTab === 'media' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
+                    <h3 className="text-lg font-medium text-lime-300">Media Content</h3>
+                    <div className="flex items-center text-sm text-slate-400">
+                      <Info className="h-3.5 w-3.5 mr-2" />
+                      Project media enhances visibility
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-lime-300 mb-2 flex items-center">
+                      <ImageIcon className="h-4 w-4 mr-2" />
+                      Logo URL (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={project.logo}
+                      onChange={(e) => handleInputChange('logo', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                      placeholder="https://example.com/logo.png or IPFS hash"
+                    />
+                    {formErrors.logo && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.logo}</p>
+                    )}
+                    <p className="mt-1 text-slate-400 text-sm">Add your project logo (URL to an image file)</p>
+                    
+                    {project.logo && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => openMediaPreview('image', project.logo)}
+                          className="px-3 py-1 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition-colors inline-flex items-center"
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          Preview Logo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-lime-300 mb-2 flex items-center">
+                      <Video className="h-4 w-4 mr-2" />
+                      Demo Video URL (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={project.demoVideo}
+                      onChange={(e) => handleInputChange('demoVideo', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                      placeholder="https://example.com/demo.mp4 or IPFS hash"
+                    />
+                    {formErrors.demoVideo && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.demoVideo}</p>
+                    )}
+                    <p className="mt-1 text-slate-400 text-sm">Add a video demonstrating your project</p>
+                  </div>
+                  
+                  <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
+                    <div className="flex items-start">
+                      <HelpCircle className="h-5 w-5 text-blue-400 mr-3 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-slate-300 text-sm">
+                          <span className="font-medium text-white">Media Tips:</span> Adding visual content significantly increases engagement with your project. Upload your media to a hosting service or IPFS and paste the URL here.
+                        </p>
+                        <p className="text-slate-400 text-sm mt-2">
+                          Recommended image formats: PNG, JPG, SVG<br />
+                          Recommended video formats: MP4, WebM
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div>
-                  <label className="block text-lime-300 mb-2 flex items-center">
-                    <Github className="h-4 w-4 mr-2" />
-                    GitHub Repository (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={githubLink}
-                    onChange={(e) => setGithubLink(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://github.com/yourusername/yourproject"
-                  />
-                  <p className="mt-1 text-slate-400 text-sm">Link to your project's GitHub repository</p>
+              )}
+              
+              {/* Contracts Tab */}
+              {activeTab === 'contracts' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
+                    <h3 className="text-lg font-medium text-lime-300">Smart Contracts</h3>
+                    <div className="flex items-center text-sm text-slate-400">
+                      <Info className="h-3.5 w-3.5 mr-2" />
+                      Add project contracts
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label className="flex justify-between items-center text-lime-300 mb-3">
+                      <span className="flex items-center">
+                        <Code className="h-4 w-4 mr-2" />
+                        Contract Addresses (Optional)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleAddContract}
+                        className="px-3 py-1 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition-colors inline-flex items-center"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Add Contract
+                      </button>
+                    </label>
+                    
+                    {project.contracts.map((contract, index) => (
+                      <div key={index} className="flex mb-3">
+                        <input
+                          type="text"
+                          value={contract}
+                          onChange={(e) => handleContractChange(index, e.target.value)}
+                          className="flex-grow px-4 py-2 rounded-l-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white font-mono"
+                          placeholder="0x..."
+                        />
+                        {project.contracts.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveContract(index)}
+                            className="bg-slate-700 text-slate-300 px-3 py-2 rounded-r-lg hover:bg-slate-600 transition-colors"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
+                        </div>
+                    ))}
+                    
+                    {formErrors.contracts[0] && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.contracts[0]}</p>
+                    )}
+                    <p className="mt-1 text-slate-400 text-sm">
+                      Add Ethereum-compatible contract addresses associated with your project
+                    </p>
+                  </div>
+                  
+                  <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
+                    <div className="flex items-start">
+                      <AlertTriangle className="h-5 w-5 text-yellow-400 mr-3 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-slate-300 text-sm">
+                          <span className="font-medium text-white">Important:</span> Only add verified contracts that are part of your project. Contract addresses must be valid Ethereum-format addresses (0x followed by 40 hexadecimal characters).
+                        </p>
+                        <p className="text-slate-400 text-sm mt-2">
+                          These contracts will be publicly linked to your project and visible to all users.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div>
-                  <label className="block text-lime-300 mb-2 flex items-center">
-                    <Globe className="h-4 w-4 mr-2" />
-                    Social Media Link (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={socialLink}
-                    onChange={(e) => setSocialLink(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://twitter.com/yourproject"
-                  />
-                  <p className="mt-1 text-slate-400 text-sm">Link to your project's social media page</p>
-                </div>
-                
-                <div>
-                  <label className="block text-lime-300 mb-2 flex items-center">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Demo/Testing Link (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={testingLink}
-                    onChange={(e) => setTestingLink(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://demo.yourproject.com"
-                  />
-                  <p className="mt-1 text-slate-400 text-sm">Link to a demo or testing version of your project</p>
-                </div>
-              </div>
+              )}
               
               <div className="bg-slate-700/30 rounded-lg p-4 mt-8 mb-6">
                 <p className="text-slate-300 text-sm">
@@ -462,6 +798,64 @@ export default function SubmitProject() {
           </div>
         </div>
       </div>
+      
+      {/* Media Preview Modal */}
+      {showMediaPreview && previewUrl && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-2xl p-6 relative">
+            <button
+              onClick={() => setShowMediaPreview(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            
+            <h3 className="text-xl font-bold mb-4">
+              {previewType === 'image' ? 'Logo Preview' : 'Demo Video Preview'}
+            </h3>
+            
+            <div className="flex items-center justify-center bg-slate-900 rounded-lg p-4 min-h-[300px]">
+              {previewType === 'image' ? (
+                <img 
+                  src={previewUrl} 
+                  alt="Project Logo" 
+                  className="max-w-full max-h-[400px] object-contain rounded"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder-image.png';
+                    setErrorMessage('Could not load image. Please check the URL.');
+                  }}
+                />
+              ) : (
+                <div className="w-full">
+                  <video 
+                    src={previewUrl}
+                    controls
+                    className="max-w-full max-h-[400px] mx-auto rounded"
+                    onError={() => {
+                      setErrorMessage('Could not load video. Please check the URL or try a different format.');
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 text-center">
+              <p className="text-slate-400 text-sm break-all">{previewUrl}</p>
+            </div>
+            
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setShowMediaPreview(false)}
+                className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
