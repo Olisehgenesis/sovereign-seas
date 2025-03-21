@@ -18,22 +18,28 @@ import {
   BarChart,
   Zap,
   ShieldCheck,
-  CheckCircle
+  CheckCircle,
+  Shield,
+  Video,
+  Image as ImageIcon,
+  ListChecks,
+  UserPlus,
+  FileCode
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
 
 // Contract addresses - replace with actual addresses
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` || 
-  '0x35128A5Ee461943fA6403672b3574346Ba7E4530' as `0x${string}`;
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` || 
-  '0x3FC1f6138F4b0F5Da3E1927412Afe5c68ed4527b' as `0x${string}`;
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`
+const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` 
 
 // Featured campaign type
 type FeaturedCampaign = {
   id: string;
   name: string;
   description: string;
+  logo: string;  // Added logo field
+  demoVideo: string; // Added demo video field
   totalFunds: string;
   isActive: boolean;
   endsIn?: string;
@@ -53,6 +59,7 @@ export default function Home() {
   const [totalFunds, setTotalFunds] = useState('0');
   const [featuredCampaigns, setFeaturedCampaigns] = useState<FeaturedCampaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Use the hook to interact with the contract
   const {
@@ -63,6 +70,7 @@ export default function Home() {
     formatCampaignTime,
     getCampaignTimeRemaining,
     isCampaignActive,
+    isSuperAdmin: hookIsSuperAdmin
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -77,6 +85,11 @@ export default function Home() {
       setUserAddress(address);
     }
   }, [address, isConnected]);
+
+  // Update super admin status when the hook value changes
+  useEffect(() => {
+    setIsSuperAdmin(hookIsSuperAdmin);
+  }, [hookIsSuperAdmin]);
 
   // Load data from the blockchain
   useEffect(() => {
@@ -145,6 +158,8 @@ export default function Home() {
               id: campaign.id.toString(),
               name: campaign.name,
               description: campaign.description,
+              logo: campaign.logo || '', // Include logo
+              demoVideo: campaign.demoVideo || '', // Include demo video
               totalFunds: formatTokenAmount(campaign.totalFunds),
               isActive: isActive,
               endsIn: hasStarted ? `${timeRemaining.days}d ${timeRemaining.hours}h` : undefined,
@@ -177,6 +192,10 @@ export default function Home() {
 
   const navigateToCampaignDetails = (campaignId: string) => {
     router.push(`/campaign/${campaignId}/dashboard`);
+  };
+
+  const navigateToAdmin = () => {
+    router.push('/admin');
   };
 
   if (!isMounted) {
@@ -243,12 +262,24 @@ export default function Home() {
                 <Waves className="h-4 w-4 mr-2" />
                 Start a Campaign <ChevronRight className="ml-1 h-4 w-4" />
               </button>
+              {isSuperAdmin && (
+                <button 
+                  onClick={navigateToAdmin}
+                  className="px-5 py-2.5 rounded-lg bg-purple-500 text-white font-semibold hover:bg-purple-400 transition-all flex items-center shadow-md shadow-purple-500/20 hover:-translate-y-0.5 hover:shadow-lg"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Dashboard <ChevronRight className="ml-1 h-4 w-4" />
+                </button>
+              )}
             </div>
             
             {isConnected ? (
               <div className="px-4 py-1.5 bg-slate-800/60 backdrop-blur-sm rounded-lg border border-slate-700/50 text-lime-300 mt-4 text-sm flex items-center">
                 <div className="h-2 w-2 rounded-full bg-lime-400 mr-2 animate-pulse"></div>
                 Connected: {userAddress.slice(0, 6)}...{userAddress.slice(-4)}
+                {isSuperAdmin && (
+                  <span className="ml-2 px-1.5 py-0.5 bg-purple-500/30 text-purple-300 text-xs rounded">Super Admin</span>
+                )}
               </div>
             ) : (
               <div className="px-4 py-1.5 bg-slate-800/60 backdrop-blur-sm rounded-lg border border-slate-700/50 text-yellow-300 mt-4 text-sm flex items-center">
@@ -355,6 +386,15 @@ export default function Home() {
                 onClick={() => navigateToCampaignDetails(campaign.id)}
               >
                 <div className="h-32 bg-gradient-to-r from-lime-600/40 to-yellow-600/40 relative">
+                  {/* Display campaign logo if available */}
+                  {campaign.logo && (
+                    <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${campaign.logo})`, opacity: 0.6 }}></div>
+                  )}
+                  {campaign.demoVideo && (
+                    <div className="absolute top-3 left-3 p-1.5 bg-slate-900/70 rounded-full text-lime-400">
+                      <Video className="h-4 w-4" />
+                    </div>
+                  )}
                   <div className={`absolute top-3 right-3 px-2.5 py-1 ${
                     campaign.isActive 
                       ? 'bg-yellow-400 text-slate-900' 
@@ -456,7 +496,77 @@ export default function Home() {
         </div>
       </div>
       
-      {/* Features Highlights */}
+      {/* NEW: Enhanced Features Highlights */}
+      <div className="container mx-auto px-6 py-10">
+        <h2 className="text-xl md:text-2xl font-bold text-white mb-6 flex items-center">
+          <TrendingUp className="h-5 w-5 text-lime-500 mr-2" />
+          Enhanced Features
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-r from-slate-800/40 to-slate-800/20 backdrop-blur-md rounded-lg p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0">
+              <UserPlus className="h-5 w-5 text-lime-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Multiple Admins</h3>
+              <p className="text-slate-300 text-sm">Campaigns can now have multiple administrators for better team collaboration and management.</p>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-slate-800/40 to-slate-800/20 backdrop-blur-md rounded-lg p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+              <ImageIcon className="h-5 w-5 text-yellow-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Rich Media Content</h3>
+              <p className="text-slate-300 text-sm">Showcase your projects with logos and demo videos for more engaging and informative presentations.</p>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-slate-800/40 to-slate-800/20 backdrop-blur-md rounded-lg p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0">
+              <FileCode className="h-5 w-5 text-lime-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Project Contracts</h3>
+              <p className="text-slate-300 text-sm">Link your project to on-chain contracts for greater transparency and technical validation.</p>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-slate-800/40 to-slate-800/20 backdrop-blur-md rounded-lg p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+              <Shield className="h-5 w-5 text-yellow-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Super Admin System</h3>
+              <p className="text-slate-300 text-sm">Enhanced platform governance with super admin roles for better oversight and support.</p>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-slate-800/40 to-slate-800/20 backdrop-blur-md rounded-lg p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0">
+              <ListChecks className="h-5 w-5 text-lime-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Campaign Editing</h3>
+              <p className="text-slate-300 text-sm">Update campaign details like dates and fees even after creation for greater flexibility.</p>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-slate-800/40 to-slate-800/20 backdrop-blur-md rounded-lg p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+              <Video className="h-5 w-5 text-yellow-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Demo Videos</h3>
+              <p className="text-slate-300 text-sm">Showcase your project in action with embedded demo videos to better communicate your impact.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Original Features Highlights */}
       <div className="container mx-auto px-6 py-10">
         <h2 className="text-xl md:text-2xl font-bold text-white mb-6 flex items-center">
           <TrendingUp className="h-5 w-5 text-lime-500 mr-2" />
