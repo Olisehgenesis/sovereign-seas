@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { CalendarRange, ChevronDown, Clock, Coins, Settings, Users, Waves, Check, X, HelpCircle } from 'lucide-react';
+import { CalendarRange, ChevronDown, Clock, Coins, Settings, Users, Waves, Check, X, HelpCircle, Image as ImageIcon, Video, Link, Hash } from 'lucide-react';
 import { useSovereignSeas } from '../../../hooks/useSovereignSeas';
 
 // Placeholder for the contract addresses - replace with your actual addresses
@@ -19,6 +19,8 @@ export default function CreateCampaign() {
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [logo, setLogo] = useState(''); // Added logo field
+  const [demoVideo, setDemoVideo] = useState(''); // Added demo video field
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [adminFee, setAdminFee] = useState(5);
@@ -33,6 +35,8 @@ export default function CreateCampaign() {
     startDate: '',
     endDate: '',
     adminFee: '',
+    logo: '',
+    demoVideo: ''
   });
   
   // Tooltips
@@ -79,6 +83,8 @@ export default function CreateCampaign() {
       startDate: '',
       endDate: '',
       adminFee: '',
+      logo: '',
+      demoVideo: ''
     };
     
     if (!name.trim()) {
@@ -109,8 +115,30 @@ export default function CreateCampaign() {
       valid = false;
     }
     
+    // Logo validation (optional field, but validate URL format if provided)
+    if (logo && !isValidUrl(logo)) {
+      newErrors.logo = 'Please enter a valid URL for the logo';
+      valid = false;
+    }
+    
+    // Demo video validation (optional field, but validate URL format if provided)
+    if (demoVideo && !isValidUrl(demoVideo)) {
+      newErrors.demoVideo = 'Please enter a valid URL for the demo video';
+      valid = false;
+    }
+    
     setFormErrors(newErrors);
     return valid;
+  };
+  
+  // Simple URL validation
+  const isValidUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
   
   // Submit handler
@@ -134,6 +162,8 @@ export default function CreateCampaign() {
       await createCampaign(
         name,
         description,
+        logo,
+        demoVideo,
         startTimestamp,
         endTimestamp,
         adminFee,
@@ -151,7 +181,7 @@ export default function CreateCampaign() {
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center mb-8">
-            <Waves className="h-8 w-8 text-lime-500 mr-3" />
+            <Hash className="h-8 w-8 text-lime-500 mr-3" />
             <h1 className="text-3xl font-bold">Create New Campaign</h1>
           </div>
           
@@ -186,6 +216,44 @@ export default function CreateCampaign() {
                       placeholder="Describe your campaign"
                     />
                     {formErrors.description && <p className="mt-1 text-red-400 text-sm">{formErrors.description}</p>}
+                  </div>
+                  
+                  {/* Added logo field */}
+                  <div>
+                    <label className="block text-lime-300 mb-2 flex items-center">
+                      <ImageIcon className="h-4 w-4 mr-2" />
+                      Logo URL (optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={logo}
+                      onChange={(e) => setLogo(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500"
+                      placeholder="Enter logo URL or IPFS hash"
+                    />
+                    <p className="mt-1 text-slate-400 text-sm">
+                      Provide a URL to your campaign logo image for better visibility
+                    </p>
+                    {formErrors.logo && <p className="mt-1 text-red-400 text-sm">{formErrors.logo}</p>}
+                  </div>
+                  
+                  {/* Added demo video field */}
+                  <div>
+                    <label className="block text-lime-300 mb-2 flex items-center">
+                      <Video className="h-4 w-4 mr-2" />
+                      Demo Video URL (optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={demoVideo}
+                      onChange={(e) => setDemoVideo(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500"
+                      placeholder="Enter demo video URL or IPFS hash"
+                    />
+                    <p className="mt-1 text-slate-400 text-sm">
+                      Add a demonstration video to showcase your campaign's purpose
+                    </p>
+                    {formErrors.demoVideo && <p className="mt-1 text-red-400 text-sm">{formErrors.demoVideo}</p>}
                   </div>
                 </div>
               </div>

@@ -7,7 +7,6 @@ import {
   PlusCircle, 
   Settings, 
   Clock, 
-  Waves, 
   ArrowRight, 
   CalendarRange, 
   Award, 
@@ -24,16 +23,16 @@ import {
   BarChart,
   Edit,
   Copy,
-  Trash2
+  Trash2,
+  Video,
+  Image
 } from 'lucide-react';
-import Image from 'next/image';
+// import Image from 'next/image';
 import { useSovereignSeas } from '../../../hooks/useSovereignSeas';
 
 // Contract addresses - replace with actual addresses
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` || 
-  '0x35128A5Ee461943fA6403672b3574346Ba7E4530' as `0x${string}`;
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` || 
-  '0x3FC1f6138F4b0F5Da3E1927412Afe5c68ed4527b' as `0x${string}`;
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
+const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
 
 // Campaign type definition
 type Campaign = {
@@ -41,6 +40,8 @@ type Campaign = {
   admin: string;
   name: string;
   description: string;
+  logo: string;           // Added field
+  demoVideo: string;      // Added field
   startTime: bigint;
   endTime: bigint;
   adminFeePercentage: bigint;
@@ -58,6 +59,7 @@ type Campaign = {
   };
   pendingProjects?: number;
   totalVotes?: number;
+  hasMediaContent?: boolean; // Added to track if campaign has media
 };
 
 export default function MyCampaigns() {
@@ -85,6 +87,7 @@ export default function MyCampaigns() {
     isWritePending,
     isWaitingForTx,
     isTxSuccess,
+    isSuperAdmin,  // Added from hook
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -114,8 +117,9 @@ export default function MyCampaigns() {
       
       if (Array.isArray(allCampaigns)) {
         // Filter campaigns where current user is admin
+        // Include campaigns where user is super admin
         const userCampaigns = allCampaigns.filter(
-          campaign => campaign.admin.toLowerCase() === address.toLowerCase()
+          campaign => campaign.admin.toLowerCase() === address.toLowerCase() || isSuperAdmin
         );
         
         // Process campaigns with additional data
@@ -140,13 +144,17 @@ export default function MyCampaigns() {
             // Calculate time remaining
             const timeRemaining = getCampaignTimeRemaining(campaign);
             
+            // Check if campaign has media content
+            const hasMediaContent = campaign.logo?.trim().length > 0 || campaign.demoVideo?.trim().length > 0;
+            
             return {
               ...campaign,
               projectCount: projects.length,
               pendingProjects,
               totalVotes,
               status,
-              timeRemaining
+              timeRemaining,
+              hasMediaContent
             };
           })
         );
@@ -273,7 +281,7 @@ export default function MyCampaigns() {
                 My <span className="text-yellow-400 ml-2">Campaigns</span>
               </h1>
               <p className="text-slate-300 mt-2 max-w-2xl">
-                Manage your ocean conservation campaigns, track projects, and distribute funds.
+                Manage your campaigns, track projects, and distribute funds to innovative solutions.
               </p>
             </div>
             
@@ -285,6 +293,13 @@ export default function MyCampaigns() {
               Create New Campaign
             </button>
           </div>
+          
+          {isSuperAdmin && (
+            <div className="mt-4 bg-yellow-500/20 text-yellow-300 px-4 py-2 rounded-lg inline-flex items-center">
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Super Admin Access Enabled
+            </div>
+          )}
         </div>
       </div>
       
@@ -391,6 +406,21 @@ export default function MyCampaigns() {
                             {campaign.status === 'active' ? 'Active' : 
                              campaign.status === 'upcoming' ? 'Upcoming' : 'Ended'}
                           </span>
+                          
+                          {campaign.hasMediaContent && (
+                            <div className="ml-2 flex">
+                              {campaign.logo && (
+                                <span className="text-xs text-blue-400 flex items-center ml-1">
+                                  <Image className="h-3 w-3 mr-1" />
+                                </span>
+                              )}
+                              {campaign.demoVideo && (
+                                <span className="text-xs text-red-400 flex items-center ml-1">
+                                  <Video className="h-3 w-3 mr-1" />
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         
                         <p className="text-slate-300 mt-1 line-clamp-1">{campaign.description}</p>
@@ -401,7 +431,7 @@ export default function MyCampaigns() {
                           onClick={() => navigateToCampaignDashboard(campaign.id.toString())}
                           className="px-4 py-2 rounded-lg bg-slate-700/60 text-slate-200 hover:bg-slate-700 transition-colors flex items-center"
                         >
-                          <Waves className="h-4 w-4 mr-2" />
+                          <BarChart className="h-4 w-4 mr-2" />
                           Dashboard
                         </button>
                         
@@ -584,55 +614,16 @@ export default function MyCampaigns() {
                 <div>
                   <h3 className="text-slate-300 text-sm">Total Projects</h3>
                   <p className="text-2xl font-bold text-white">
-                    {myCampaigns.reduce((sum, campaign) => sum + (campaign.projectCount || 0), 0)}
+                    {myCampaigns.reduce((sum, campaign) => sum + Number(formatTokenAmount(campaign.totalFunds)), 0).toFixed(2)} CELO
                   </p>
                 </div>
-              </div>
-              <div className="flex text-xs mt-2">
-                <span className="text-lime-400">
-                  {myCampaigns.reduce((sum, campaign) => sum + ((campaign.projectCount || 0) - (campaign.pendingProjects || 0)), 0)} Approved
-                </span>
-                <span className="text-yellow-400 ml-3">
-                  {myCampaigns.reduce((sum, campaign) => sum + (campaign.pendingProjects || 0), 0)} Pending
-                </span>
-              </div>
-            </div>
-            
-            <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 transform hover:-translate-y-1 transition-all">
-              <div className="flex items-center mb-2">
-                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mr-3">
-                  <Award className="h-5 w-5 text-blue-500" />
+                <div className="mt-2 text-xs text-slate-400">
+                  Admin fees earned: {myCampaigns.reduce((sum, campaign) => {
+                    const funds = Number(formatTokenAmount(campaign.totalFunds));
+                    const fee = funds * Number(campaign.adminFeePercentage) / 100;
+                    return sum + fee;
+                  }, 0).toFixed(2)} CELO
                 </div>
-                <div>
-                  <h3 className="text-slate-300 text-sm">Total Votes</h3>
-                  <p className="text-2xl font-bold text-white">
-                    {myCampaigns.reduce((sum, campaign) => sum + (campaign.totalVotes || 0), 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-slate-400">
-                Across {myCampaigns.length} campaigns
-              </div>
-            </div>
-            
-            <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 transform hover:-translate-y-1 transition-all">
-              <div className="flex items-center mb-2">
-                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mr-3">
-                  <Droplets className="h-5 w-5 text-purple-500" />
-                </div>
-                <div>
-                  <h3 className="text-slate-300 text-sm">Total Funds</h3>
-                  <p className="text-2xl font-bold text-lime-400">
-                    {myCampaigns.reduce((sum, campaign) => sum + Number(formatTokenAmount(campaign.totalFunds)), 0).toLocaleString()} CELO
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-slate-400">
-                Admin fees earned: {myCampaigns.reduce((sum, campaign) => {
-                  const funds = Number(formatTokenAmount(campaign.totalFunds));
-                  const fee = funds * Number(campaign.adminFeePercentage) / 100;
-                  return sum + fee;
-                }, 0).toFixed(2)} CELO
               </div>
             </div>
           </div>
@@ -646,7 +637,7 @@ export default function MyCampaigns() {
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="mb-6 md:mb-0">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Ready to launch a new campaign?</h2>
-                <p className="text-lime-100">Create your next ocean conservation campaign and start making waves.</p>
+                <p className="text-lime-100">Create your next funding campaign and support innovative solutions.</p>
               </div>
               <div className="flex flex-wrap gap-4">
                 <button 
@@ -660,7 +651,7 @@ export default function MyCampaigns() {
                   onClick={() => router.push('/campaigns')}
                   className="px-6 py-3 rounded-full bg-transparent border border-lime-400 text-lime-400 font-semibold hover:bg-lime-500/10 transition-all flex items-center"
                 >
-                  <Waves className="h-5 w-5 mr-2" />
+                  <BarChart className="h-5 w-5 mr-2" />
                   Explore Campaigns
                 </button>
               </div>

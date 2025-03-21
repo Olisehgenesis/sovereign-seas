@@ -16,14 +16,16 @@ import {
   PieChart, 
   Search, 
   TrendingUp, 
-  Waves, 
+  BarChart, 
   Users,
   Vote,
   Activity,
   Github,
-  Globe
+  Globe,
+  Video,
+  Image
 } from 'lucide-react';
-import Image from 'next/image';
+// import Image from 'next/image';
 import { useSovereignSeas } from '../../hooks/useSovereignSeas';
 
 // Contract addresses - replace with actual addresses
@@ -56,6 +58,9 @@ type Project = {
   githubLink: string;
   socialLink: string;
   testingLink: string;
+  logo: string;       // Added field
+  demoVideo: string;  // Added field
+  contracts: string[]; // Added field
   approved: boolean;
   voteCount: bigint;
   fundsReceived: bigint;
@@ -63,6 +68,7 @@ type Project = {
   myVotes?: bigint;
   myVotePercentage?: number;
   fundingStatus?: 'pending' | 'funded' | 'not-funded';
+  hasMediaContent?: boolean; // Added to track if project has media
 };
 
 // Campaign type
@@ -71,6 +77,8 @@ type Campaign = {
   admin: string;
   name: string;
   description: string;
+  logo: string;          // Added field
+  demoVideo: string;     // Added field
   startTime: bigint;
   endTime: bigint;
   adminFeePercentage: bigint;
@@ -94,7 +102,7 @@ export default function MyVotes() {
   const [activeVotes, setActiveVotes] = useState('0');
   const [endedVotes, setEndedVotes] = useState('0');
   const [totalCampaignsVoted, setTotalCampaignsVoted] = useState(0);
-  const [topCampaigns, setTopCampaigns] = useState<{id: bigint, name: string, votes: number}[]>([]);
+  const [topCampaigns, setTopCampaigns] = useState<{id: bigint, name: string, votes: number, logo?: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'ended'>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'amount' | 'votes'>('recent');
@@ -183,7 +191,8 @@ export default function MyVotes() {
             campaignVoteTotals.set(campaignId, {
               id: vote.campaignId,
               name: campaign?.name || `Campaign #${campaignId}`,
-              votes: 0
+              votes: 0,
+              logo: campaign?.logo || ''
             });
           }
           const campaignTotal = campaignVoteTotals.get(campaignId);
@@ -226,7 +235,6 @@ export default function MyVotes() {
           // If this is a project we haven't processed yet for our project list
           if (project && !votedProjects.some(p => p.id.toString() === project.id.toString() && p.campaignId.toString() === campaignId)) {
             // Get my total votes for this project
-            // We don't pass address here because the function already uses walletAddress internally
             const myVotes = await getUserVotesForProject(Number(vote.campaignId), Number(vote.projectId));
             
             // Calculate my vote percentage of the total
@@ -239,11 +247,15 @@ export default function MyVotes() {
               ? 'funded' 
               : status === 'ended' ? 'not-funded' : 'pending';
             
+            // Check if project has media content
+            const hasMediaContent = project.logo?.trim().length > 0 || project.demoVideo?.trim().length > 0;
+            
             votedProjects.push({
               ...project,
               myVotes,
               myVotePercentage,
-              fundingStatus
+              fundingStatus,
+              hasMediaContent
             });
           }
           
@@ -414,7 +426,7 @@ export default function MyVotes() {
               onClick={() => router.push('/campaigns')}
               className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all inline-flex items-center"
             >
-              <Waves className="h-5 w-5 mr-2" />
+              <BarChart className="h-5 w-5 mr-2" />
               Explore Campaigns
             </button>
           </div>
@@ -451,7 +463,7 @@ export default function MyVotes() {
                 </div>
                 <div className="flex text-xs mt-2">
                   <span className="text-yellow-400">
-                    in pending campaigns
+                    in active campaigns
                   </span>
                 </div>
               </div>
@@ -514,7 +526,14 @@ export default function MyVotes() {
                         }`}>
                           <span className="font-bold">{index + 1}</span>
                         </div>
-                        <h3 className="font-semibold text-white line-clamp-1">{campaign.name}</h3>
+                        <h3 className="font-semibold text-white line-clamp-1">
+                          {campaign.name}
+                          {campaign.logo && (
+                            <span className="text-xs text-blue-400 flex items-center ml-1">
+                              <Image className="h-3 w-3" />
+                            </span>
+                          )}
+                        </h3>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-300 text-sm">Your contribution:</span>
@@ -549,6 +568,7 @@ export default function MyVotes() {
                         <th className="p-4 text-right text-slate-300 font-medium">Your Votes</th>
                         <th className="p-4 text-right text-slate-300 font-medium">Your %</th>
                         <th className="p-4 text-center text-slate-300 font-medium">Status</th>
+                        <th className="p-4 text-center text-slate-300 font-medium">Media</th>
                         <th className="p-4 text-right text-slate-300 font-medium">Actions</th>
                       </tr>
                     </thead>
@@ -585,6 +605,23 @@ export default function MyVotes() {
                               </span>
                             )}
                           </td>
+                          <td className="p-4 text-center">
+                            <div className="flex justify-center gap-1">
+                              {project.logo && (
+                                <span className="text-blue-400">
+                                  <Image className="h-4 w-4" />
+                                </span>
+                              )}
+                              {project.demoVideo && (
+                                <span className="text-red-400">
+                                  <Video className="h-4 w-4" />
+                                </span>
+                              )}
+                              {!project.logo && !project.demoVideo && (
+                                <span className="text-slate-500 text-xs">None</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-4 text-right">
                             <button
                               onClick={() => handleViewProjectDetails(project)}
@@ -617,8 +654,7 @@ export default function MyVotes() {
                       <input
                         type="text"
                         placeholder="Search campaigns or projects..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-lime-500"
                       />
                       <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-400" />
@@ -796,6 +832,44 @@ export default function MyVotes() {
               </div>
             </div>
             
+            {/* Media Content */}
+            {(selectedProject.logo || selectedProject.demoVideo) && (
+              <div className="mb-6">
+                <h4 className="text-sm text-slate-400 mb-2">Media Content</h4>
+                <div className="flex flex-wrap gap-3">
+                  {selectedProject.logo && (
+                    <div className="bg-slate-700/30 rounded-lg p-3 flex items-center">
+                      <Image className="h-4 w-4 mr-2 text-blue-400" />
+                      <span className="text-sm text-white">Project Logo Available</span>
+                    </div>
+                  )}
+                  
+                  {selectedProject.demoVideo && (
+                    <div className="bg-slate-700/30 rounded-lg p-3 flex items-center">
+                      <Video className="h-4 w-4 mr-2 text-red-400" />
+                      <span className="text-sm text-white">Demo Video Available</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Contract Addresses */}
+            {selectedProject.contracts && selectedProject.contracts.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm text-slate-400 mb-2">Contract Addresses</h4>
+                <div className="bg-slate-700/30 rounded-lg p-3">
+                  <ul className="space-y-1">
+                    {selectedProject.contracts.map((contract, index) => (
+                      <li key={index} className="text-sm text-slate-300 font-mono truncate">
+                        {contract}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+            
             {/* External Links */}
             <div className="flex flex-wrap gap-3 mb-6">
               {selectedProject.githubLink && (
@@ -862,7 +936,7 @@ export default function MyVotes() {
                   onClick={() => router.push('/campaigns')}
                   className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all flex items-center"
                 >
-                  <Waves className="h-5 w-5 mr-2" />
+                  <BarChart className="h-5 w-5 mr-2" />
                   Explore Campaigns
                 </button>
               </div>

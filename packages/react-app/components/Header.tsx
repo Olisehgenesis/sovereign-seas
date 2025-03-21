@@ -124,7 +124,7 @@ export default function Header() {
                           onMouseLeave={() => setShowDropdown(false)}
                         >
                           <Link
-                            href="/campaigns/mycampaigns"
+                            href="/campaign/mycampaigns"
                             className="flex items-center px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white"
                           >
                             <Globe className="mr-1.5 h-3.5 w-3.5 text-lime-500" />
@@ -189,7 +189,7 @@ export default function Header() {
                       </div>
                       <Disclosure.Button
                         as={Link}
-                        href="/campaigns/mycampaigns"
+                        href="/campaign/mycampaigns"
                         className="flex items-center mt-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
                       >
                         <Globe className="mr-2 h-3.5 w-3.5 text-lime-500" />
