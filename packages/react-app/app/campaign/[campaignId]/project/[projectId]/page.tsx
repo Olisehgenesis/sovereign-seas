@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { 
@@ -20,7 +20,21 @@ import {
   ThumbsUp,
   AlertTriangle,
   BadgeCheck,
-  X
+  X,
+  Image as ImageIcon,
+  Video,
+  Code,
+  Edit,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  PieChart,
+  LineChart,
+  BarChart3,
+  Coins,
+  History,
+  BarChart
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../../hooks/useSovereignSeas';
 
@@ -41,29 +55,49 @@ export default function ProjectDetails() {
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userVotes, setUserVotes] = useState<bigint>(BigInt(0));
+  const [userVoteHistory, setUserVoteHistory] = useState<any[]>([]);
+  const [isProjectOwner, setIsProjectOwner] = useState(false);
+  const [projectRanking, setProjectRanking] = useState({ rank: 0, totalProjects: 0 });
   
   // UI states
   const [voteModalVisible, setVoteModalVisible] = useState(false);
   const [voteAmount, setVoteAmount] = useState('');
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' });
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [activeMediaType, setActiveMediaType] = useState<string | null>(null);
+  const [showContractsSection, setShowContractsSection] = useState(false);
+  const [showVoteHistory, setShowVoteHistory] = useState(false);
+  const [showProjectStats, setShowProjectStats] = useState(true);
+  
+  // Media content refs
+  const logoRef = useRef<HTMLImageElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   
   // Contract interaction
   const {
     isInitialized,
     loadCampaigns,
     loadProjects,
-    approveProject,
+    getSortedProjects,
+    getUserVoteHistory,
     getUserVotesForProject,
+    getUserTotalVotesInCampaign,
+    approveProject,
+    updateProject,
     vote,
     formatTokenAmount,
     formatCampaignTime,
     getCampaignTimeRemaining,
     isCampaignActive,
+    isCampaignAdmin,
     isWritePending,
     isWaitingForTx,
     isTxSuccess,
     txReceipt,
+    writeError,
+    resetWrite
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -76,6 +110,9 @@ export default function ProjectDetails() {
   useEffect(() => {
     if (isInitialized && campaignId && projectId) {
       loadProjectData();
+      if (address) {
+        loadUserVoteData();
+      }
     }
   }, [isInitialized, campaignId, projectId, address, isTxSuccess]);
   
@@ -89,6 +126,17 @@ export default function ProjectDetails() {
       return () => clearTimeout(timer);
     }
   }, [statusMessage]);
+  
+  // Handle write errors
+  useEffect(() => {
+    if (writeError) {
+      setStatusMessage({
+        text: `Transaction error: ${writeError.message || 'Please try again.'}`,
+        type: 'error'
+      });
+      resetWrite();
+    }
+  }, [writeError, resetWrite]);
   
   const loadProjectData = async () => {
     setLoading(true);
@@ -104,8 +152,10 @@ export default function ProjectDetails() {
           setCampaign(campaignData);
           
           // Check if current user is the admin
-          if (address && campaignData.admin.toLowerCase() === address.toLowerCase()) {
-            setIsAdmin(true);
+          if (address) {
+            const isAdmin = await isCampaignAdmin(Number(campaignId));
+            setIsAdmin(isAdmin || campaignData.admin.toLowerCase() === address.toLowerCase());
+            setIsSuperAdmin(isSuperAdmin);
           }
           
           // Load projects for this campaign
@@ -118,13 +168,23 @@ export default function ProjectDetails() {
             if (projectData) {
               setProject(projectData);
               
-              // Get user votes for this project
-              if (isConnected && address) {
-                if (campaignId && projectId) {
-                  const votes = await getUserVotesForProject(Number(campaignId), Number(projectId));
-                  setUserVotes(votes);
+              // Check if user is project owner
+              if (address && projectData.owner.toLowerCase() === address.toLowerCase()) {
+                setIsProjectOwner(true);
+              }
+              
+              // Get project ranking
+              try {
+                const sortedProjects = await getSortedProjects(Number(campaignId));
+                const projectIndex = sortedProjects.findIndex(p => p.id.toString() === projectId);
+                if (projectIndex !== -1) {
+                  setProjectRanking({
+                    rank: projectIndex + 1,
+                    totalProjects: sortedProjects.length
+                  });
                 }
-                // setUserVotes(votes);
+              } catch (error) {
+                console.error('Error getting project ranking:', error);
               }
             } else {
               setStatusMessage({ 
@@ -151,17 +211,46 @@ export default function ProjectDetails() {
     }
   };
   
+  const loadUserVoteData = async () => {
+    if (!isConnected || !address || !campaignId || !projectId) return;
+    
+    try {
+      // Get user votes for this project
+      const votes = await getUserVotesForProject(Number(campaignId), Number(projectId));
+      setUserVotes(votes);
+      
+      // Get user vote history
+      const history = await getUserVoteHistory();
+      // Filter for votes on this project
+      const projectVotes = history.filter(vote => 
+        vote.campaignId.toString() === campaignId && 
+        vote.projectId.toString() === projectId
+      );
+      setUserVoteHistory(projectVotes);
+      
+    } catch (error) {
+      console.error('Error loading user vote data:', error);
+    }
+  };
+  
   const handleVote = async () => {
     if (!voteAmount || parseFloat(voteAmount) <= 0) return;
     
     try {
-      await vote(Number(campaignId), Number(projectId), BigInt(voteAmount).toString());
+      await vote(Number(campaignId), Number(projectId), voteAmount);
       setVoteModalVisible(false);
       setVoteAmount('');
       setStatusMessage({ 
         text: 'Vote submitted successfully!', 
         type: 'success' 
       });
+      
+      // Refresh vote data after transaction completes
+      setTimeout(() => {
+        loadUserVoteData();
+        loadProjectData();
+      }, 2000);
+      
     } catch (error) {
       console.error('Error voting:', error);
       setStatusMessage({ 
@@ -193,7 +282,16 @@ export default function ProjectDetails() {
   const shareProject = () => {
     const url = window.location.origin + `/campaign/${campaignId}/project/${projectId}`;
     navigator.clipboard.writeText(url);
-    alert('Project link copied to clipboard!');
+    setStatusMessage({ 
+      text: 'Project link copied to clipboard!', 
+      type: 'success' 
+    });
+  };
+  
+  // Open media modal
+  const openMediaModal = (type: string) => {
+    setActiveMediaType(type);
+    setShowMediaModal(true);
   };
   
   if (!isMounted) {
@@ -217,6 +315,12 @@ export default function ProjectDetails() {
   const hasEnded = now >= Number(campaign.endTime);
   const canVote = isActive && project.approved && isConnected;
   const timeRemaining = getCampaignTimeRemaining(campaign);
+  const votingEnded = hasEnded || !campaign.active;
+  const hasFundsReceived = Number(project.fundsReceived) > 0;
+  
+  // Check if project has media and contracts
+  const hasMedia = project.logo || project.demoVideo;
+  const hasContracts = project.contracts && project.contracts.length > 0;
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -270,6 +374,29 @@ export default function ProjectDetails() {
                       <Clock className="h-3.5 w-3.5 mr-1" />
                       Pending Approval
                     </span>
+                  )}
+                  
+                  {hasFundsReceived && (
+                    <span className="px-2 py-1 bg-blue-900/50 text-blue-400 text-xs rounded-full border border-blue-500/30 inline-flex items-center">
+                      <Coins className="h-3.5 w-3.5 mr-1" />
+                      Funded: {formatTokenAmount(project.fundsReceived)} CELO
+                    </span>
+                  )}
+                  
+                  {/* Media indicators */}
+                  {hasMedia && (
+                    <div className="flex items-center gap-1 ml-1">
+                      {project.logo && (
+                        <span className="text-blue-400" title="Has Logo">
+                          <ImageIcon className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                      {project.demoVideo && (
+                        <span className="text-red-400" title="Has Demo Video">
+                          <Video className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
                 
@@ -340,6 +467,91 @@ export default function ProjectDetails() {
                   )}
                 </div>
                 
+                {/* Media content section - NEW */}
+                {hasMedia && (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-medium text-lime-300 flex items-center">
+                        <Video className="h-4 w-4 mr-2 text-red-400" />
+                        Media Content
+                      </h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {project.logo && (
+                        <div className="bg-slate-700/40 hover:bg-slate-700/60 transition-colors p-3 rounded-lg cursor-pointer"
+                             onClick={() => openMediaModal('logo')}>
+                          <div className="flex items-center mb-2">
+                            <ImageIcon className="h-5 w-5 text-blue-400 mr-2" />
+                            <div className="font-medium">Project Logo</div>
+                          </div>
+                          <div className="h-40 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden">
+                            <img 
+                              src={project.logo} 
+                              alt={`${project.name} Logo`} 
+                              className="max-w-full max-h-40 object-contain"
+                              ref={logoRef}
+                              onError={(e) => {
+                                e.currentTarget.src = "https://placehold.co/400x300/1e293b/475569?text=Logo%20Unavailable";
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {project.demoVideo && (
+                        <div className="bg-slate-700/40 hover:bg-slate-700/60 transition-colors p-3 rounded-lg cursor-pointer"
+                             onClick={() => openMediaModal('video')}>
+                          <div className="flex items-center mb-2">
+                            <Video className="h-5 w-5 text-red-400 mr-2" />
+                            <div className="font-medium">Demo Video</div>
+                          </div>
+                          <div className="h-40 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden">
+                            <div className="text-slate-400 flex flex-col items-center">
+                              <Video className="h-10 w-10 mb-2" />
+                              <span>Click to view video</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Contracts section - NEW */}
+                {hasContracts && (
+                  <div className="mb-6">
+                    <button 
+                      onClick={() => setShowContractsSection(!showContractsSection)}
+                      className="flex items-center justify-between w-full mb-3 bg-slate-700/30 p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
+                    >
+                      <h3 className="text-lg font-medium text-lime-300 flex items-center">
+                        <Code className="h-4 w-4 mr-2 text-purple-400" />
+                        Smart Contracts ({project.contracts?.length || 0})
+                      </h3>
+                      {showContractsSection ? 
+                        <ChevronUp className="h-4 w-4 text-slate-400" /> : 
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      }
+                    </button>
+                    
+                    {showContractsSection && (
+                      <div className="space-y-2">
+                        {project.contracts.map((contract: string, index: number) => (
+                          <div key={index} className="bg-slate-700/40 p-3 rounded-lg">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-slate-400">Contract {index + 1}</span>
+                            </div>
+                            <div className="font-mono text-sm bg-slate-800 p-2 rounded break-all">
+                              {contract}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {/* Project Info */}
                 <div className="flex flex-wrap gap-y-3 gap-x-6 text-sm">
                   <div className="flex items-center text-slate-300">
@@ -351,6 +563,13 @@ export default function ProjectDetails() {
                     <div className="flex items-center text-slate-300">
                       <Calendar className="h-4 w-4 mr-2 text-slate-400" />
                       Campaign ends: <span className="ml-1">{formatCampaignTime(campaign.endTime)}</span>
+                    </div>
+                  )}
+                  
+                  {projectRanking.rank > 0 && (
+                    <div className="flex items-center text-slate-300">
+                      <BarChart3 className="h-4 w-4 mr-2 text-slate-400" />
+                      Rank: <span className="ml-1 text-lime-400">{projectRanking.rank}</span> of {projectRanking.totalProjects}
                     </div>
                   )}
                 </div>
@@ -367,8 +586,39 @@ export default function ProjectDetails() {
                     </div>
                     
                     {userVotes > BigInt(0) && (
-                      <div className="text-sm text-lime-400 mb-4">
+                      <div className="text-sm text-lime-400 mb-4 text-center">
                         You've voted {formatTokenAmount(userVotes)} CELO on this project
+                        
+                        {userVoteHistory.length > 0 && (
+                          <button
+                            onClick={() => setShowVoteHistory(!showVoteHistory)}
+                            className="flex items-center justify-center mt-2 text-xs text-blue-400 hover:text-blue-300"
+                          >
+                            <History className="h-3 w-3 mr-1" />
+                            {showVoteHistory ? 'Hide History' : 'View History'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Vote History (conditionally displayed) */}
+                    {showVoteHistory && userVoteHistory.length > 0 && (
+                      <div className="w-full mb-4 border-t border-slate-600 pt-3">
+                        <h4 className="text-sm font-medium text-center text-blue-400 mb-2">Your Vote History</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {userVoteHistory.map((vote, index) => (
+                            <div key={index} className="bg-slate-700/50 rounded p-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-slate-300">Amount:</span>
+                                <span className="text-lime-400">{formatTokenAmount(vote.amount)} CELO</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-300">Votes:</span>
+                                <span className="text-white">{vote.voteCount.toString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                     
@@ -383,7 +633,7 @@ export default function ProjectDetails() {
                         </button>
                       )}
                       
-                      {isAdmin && !project.approved && (
+                      {(isAdmin || isSuperAdmin) && !project.approved && (
                         <button
                           onClick={handleApproveProject}
                           disabled={isWritePending || isWaitingForTx}
@@ -400,6 +650,16 @@ export default function ProjectDetails() {
                               Approve Project
                             </>
                           )}
+                        </button>
+                      )}
+                      
+                      {isProjectOwner && !votingEnded && (
+                        <button
+                          onClick={() => router.push(`/campaign/${campaignId}/project/${projectId}/edit`)}
+                          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center justify-center"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Project
                         </button>
                       )}
                       
@@ -431,7 +691,7 @@ export default function ProjectDetails() {
                       : 'text-yellow-400'
                 }`}>
                   {hasEnded ? 'Ended' : hasStarted ? 'Active' : 'Not Started'}
-                </span>
+                  </span>
               </div>
               
               {hasStarted && !hasEnded && (
@@ -441,6 +701,85 @@ export default function ProjectDetails() {
               )}
             </div>
           </div>
+        </div>
+        
+        {/* Project Statistics - NEW */}
+        <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-yellow-400 flex items-center">
+              <LineChart className="h-5 w-5 mr-2" />
+              Project Statistics
+            </h2>
+            <button 
+              onClick={() => setShowProjectStats(!showProjectStats)}
+              className="text-slate-400 hover:text-white"
+            >
+              {showProjectStats ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </button>
+          </div>
+          
+          {showProjectStats && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-slate-700/30 p-4 rounded-lg">
+                <div className="flex items-center mb-1">
+                  <BarChart className="h-4 w-4 text-blue-400 mr-2" />
+                  <span className="text-sm text-slate-300">Vote Ranking</span>
+                </div>
+                <div className="flex items-baseline">
+                  <span className="text-2xl font-bold text-white">{projectRanking.rank}</span>
+                  <span className="text-slate-400 ml-1">/ {projectRanking.totalProjects}</span>
+                </div>
+                {projectRanking.rank <= Number(campaign.maxWinners) && Number(campaign.maxWinners) > 0 && (
+                  <div className="mt-1 text-xs text-green-400">
+                    <BadgeCheck className="h-3 w-3 inline mr-1" />
+                    Currently in winning position
+                  </div>
+                )}
+              </div>
+              
+              <div className="bg-slate-700/30 p-4 rounded-lg">
+                <div className="flex items-center mb-1">
+                  <Heart className="h-4 w-4 text-lime-400 mr-2" />
+                  <span className="text-sm text-slate-300">Total Votes</span>
+                </div>
+                <div className="flex items-baseline">
+                  <span className="text-2xl font-bold text-white">{formatTokenAmount(project.voteCount)}</span>
+                </div>
+                <div className="mt-1 text-xs text-slate-400">
+                  Multiplier: {campaign.voteMultiplier.toString()}x
+                </div>
+              </div>
+              
+              {hasFundsReceived && (
+                <div className="bg-slate-700/30 p-4 rounded-lg">
+                  <div className="flex items-center mb-1">
+                    <Coins className="h-4 w-4 text-yellow-400 mr-2" />
+                    <span className="text-sm text-slate-300">Funds Received</span>
+                  </div>
+                  <div className="flex items-baseline">
+                    <span className="text-2xl font-bold text-yellow-400">{formatTokenAmount(project.fundsReceived)}</span>
+                    <span className="text-slate-400 ml-1">CELO</span>
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Campaign Total: {formatTokenAmount(campaign.totalFunds)} CELO
+                  </div>
+                </div>
+              )}
+              
+              <div className="bg-slate-700/30 p-4 rounded-lg">
+                <div className="flex items-center mb-1">
+                  <Users className="h-4 w-4 text-blue-400 mr-2" />
+                  <span className="text-sm text-slate-300">Distribution Method</span>
+                </div>
+                <div className="text-xl font-bold text-white">
+                  {campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">
+                  Max Winners: {campaign.maxWinners.toString() === '0' ? 'All Projects' : campaign.maxWinners.toString()}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Campaign Info Card */}
@@ -523,6 +862,18 @@ export default function ProjectDetails() {
               </p>
             </div>
             
+            {userVoteHistory.length > 0 && (
+              <div className="mb-6 p-3 bg-slate-700/40 rounded-lg">
+                <div className="flex items-start">
+                  <Info className="h-5 w-5 text-blue-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-blue-300">You've already voted {formatTokenAmount(userVotes)} CELO on this project.</p>
+                    <p className="text-xs text-slate-400 mt-1">Your new vote will be added to your existing votes.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="flex gap-3">
               <button
                 onClick={handleVote}
@@ -544,6 +895,73 @@ export default function ProjectDetails() {
                 className="py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Media Modal */}
+      {showMediaModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-3xl p-6 relative">
+            <button
+              onClick={() => setShowMediaModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            
+            <h3 className="text-xl font-bold mb-4">
+              {activeMediaType === 'logo' ? 'Project Logo' : 'Demo Video'}
+            </h3>
+            
+            <div className="flex items-center justify-center bg-slate-900 rounded-lg p-4">
+              {activeMediaType === 'logo' && project.logo && (
+                <img 
+                  src={project.logo} 
+                  alt={`${project.name} Logo`} 
+                  className="max-w-full max-h-[60vh] object-contain rounded"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://placehold.co/600x400/1e293b/475569?text=Logo%20Unavailable";
+                  }}
+                />
+              )}
+              
+              {activeMediaType === 'video' && project.demoVideo && (
+                <div className="w-full">
+                  <video 
+                    ref={videoRef}
+                    src={project.demoVideo}
+                    controls
+                    autoPlay
+                    className="max-w-full max-h-[60vh] mx-auto rounded"
+                    onError={() => {
+                      setStatusMessage({
+                        text: 'Error loading video. Please check the URL or try another format.',
+                        type: 'error'
+                      });
+                      setShowMediaModal(false);
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 text-center">
+              <p className="text-slate-400 text-sm break-all">
+                {activeMediaType === 'logo' ? project.logo : project.demoVideo}
+              </p>
+            </div>
+            
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setShowMediaModal(false)}
+                className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>
