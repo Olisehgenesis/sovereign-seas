@@ -16,12 +16,17 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
     // Platform fee (15%)
     uint256 public constant PLATFORM_FEE = 15;
 
+    // Super admins mapping
+    mapping(address => bool) public superAdmins;
+
     // Campaign struct
     struct Campaign {
         uint256 id;
         address admin;
         string name;
         string description;
+        string logo;          // Added logo field
+        string demoVideo;     // Added demo video field
         uint256 startTime;
         uint256 endTime;
         uint256 adminFeePercentage;
@@ -30,6 +35,7 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         bool useQuadraticDistribution; // Whether to distribute funds quadratically
         bool active;
         uint256 totalFunds;
+        mapping(address => bool) campaignAdmins; // Multiple admins for a campaign
     }
 
     // Project struct
@@ -42,6 +48,9 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         string githubLink; // Optional GitHub repository link
         string socialLink; // Optional social media link
         string testingLink; // Optional testing/demo link
+        string logo;       // Added logo field
+        string demoVideo;  // Added demo video field
+        address[] contracts; // Added contracts list field
         bool approved;
         uint256 voteCount;
         uint256 fundsReceived;
@@ -65,25 +74,119 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
 
     // Events
     event CampaignCreated(uint256 indexed campaignId, address indexed admin, string name);
+    event CampaignUpdated(uint256 indexed campaignId, address indexed updatedBy);
     event ProjectSubmitted(uint256 indexed campaignId, uint256 indexed projectId, address indexed owner);
+    event ProjectUpdated(uint256 indexed campaignId, uint256 indexed projectId, address indexed updatedBy);
     event ProjectApproved(uint256 indexed campaignId, uint256 indexed projectId);
     event VoteCast(
         address indexed voter, uint256 indexed campaignId, uint256 indexed projectId, uint256 amount, uint256 voteCount
     );
     event FundsDistributed(uint256 indexed campaignId);
+    event SuperAdminAdded(address indexed newSuperAdmin, address indexed addedBy);
+    event SuperAdminRemoved(address indexed superAdmin, address indexed removedBy);
+    event CampaignAdminAdded(uint256 indexed campaignId, address indexed newAdmin, address indexed addedBy);
+    event CampaignAdminRemoved(uint256 indexed campaignId, address indexed admin, address indexed removedBy);
 
     /**
-     * @dev Constructor sets the CELO token address
+     * @dev Constructor sets the CELO token address and adds deployer as super admin
      * @param _celoToken Address of the CELO token
      */
     constructor(address _celoToken) {
         celoToken = IERC20(_celoToken);
+        superAdmins[msg.sender] = true;
+    }
+
+    /**
+     * @dev Modifier to check if caller is a super admin
+     */
+    modifier onlySuperAdmin() {
+        require(superAdmins[msg.sender], "Only super admin can call this function");
+        _;
+    }
+
+    /**
+     * @dev Modifier to check if caller is a campaign admin
+     */
+    modifier onlyCampaignAdmin(uint256 _campaignId) {
+        require(_campaignId < campaigns.length, "Campaign does not exist");
+        require(
+            msg.sender == campaigns[_campaignId].admin || 
+            campaigns[_campaignId].campaignAdmins[msg.sender] || 
+            superAdmins[msg.sender],
+            "Only campaign admin or super admin can call this function"
+        );
+        _;
+    }
+
+    /**
+     * @dev Add a new super admin
+     * @param _newSuperAdmin Address of the new super admin
+     */
+    function addSuperAdmin(address _newSuperAdmin) external onlySuperAdmin {
+        require(_newSuperAdmin != address(0), "Invalid address");
+        require(!superAdmins[_newSuperAdmin], "Already a super admin");
+        
+        superAdmins[_newSuperAdmin] = true;
+        emit SuperAdminAdded(_newSuperAdmin, msg.sender);
+    }
+
+    /**
+     * @dev Remove a super admin
+     * @param _superAdmin Address of the super admin to remove
+     */
+    function removeSuperAdmin(address _superAdmin) external onlySuperAdmin {
+        require(_superAdmin != msg.sender, "Cannot remove yourself");
+        require(superAdmins[_superAdmin], "Not a super admin");
+        
+        superAdmins[_superAdmin] = false;
+        emit SuperAdminRemoved(_superAdmin, msg.sender);
+    }
+
+    /**
+     * @dev Add a campaign admin
+     * @param _campaignId Campaign ID
+     * @param _newAdmin Address of the new campaign admin
+     */
+    function addCampaignAdmin(uint256 _campaignId, address _newAdmin) external onlyCampaignAdmin(_campaignId) {
+        require(_newAdmin != address(0), "Invalid address");
+        require(!campaigns[_campaignId].campaignAdmins[_newAdmin], "Already an admin for this campaign");
+        
+        campaigns[_campaignId].campaignAdmins[_newAdmin] = true;
+        emit CampaignAdminAdded(_campaignId, _newAdmin, msg.sender);
+    }
+
+    /**
+     * @dev Remove a campaign admin
+     * @param _campaignId Campaign ID
+     * @param _admin Address of the admin to remove
+     */
+    function removeCampaignAdmin(uint256 _campaignId, address _admin) external onlyCampaignAdmin(_campaignId) {
+        require(_admin != campaigns[_campaignId].admin, "Cannot remove primary admin");
+        require(campaigns[_campaignId].campaignAdmins[_admin], "Not an admin for this campaign");
+        
+        campaigns[_campaignId].campaignAdmins[_admin] = false;
+        emit CampaignAdminRemoved(_campaignId, _admin, msg.sender);
+    }
+
+    /**
+     * @dev Check if an address is a campaign admin
+     * @param _campaignId Campaign ID
+     * @param _admin Address to check
+     * @return Boolean indicating if the address is a campaign admin
+     */
+    function isCampaignAdmin(uint256 _campaignId, address _admin) external view returns (bool) {
+        if (_campaignId >= campaigns.length) return false;
+        return campaigns[_campaignId].admin == _admin || 
+               campaigns[_campaignId].campaignAdmins[_admin] || 
+               superAdmins[_admin];
     }
 
     /**
      * @dev Create a new campaign
      * @param _name Campaign name
      * @param _description Campaign description
+     * @param _logo Campaign logo URL/IPFS hash
+     * @param _demoVideo Campaign demo video URL/IPFS hash
      * @param _startTime Start time (unix timestamp)
      * @param _endTime End time (unix timestamp)
      * @param _adminFeePercentage Percentage fee for the admin (must be reasonable)
@@ -94,6 +197,8 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
     function createCampaign(
         string memory _name,
         string memory _description,
+        string memory _logo,
+        string memory _demoVideo,
         uint256 _startTime,
         uint256 _endTime,
         uint256 _adminFeePercentage,
@@ -107,24 +212,73 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         require(_voteMultiplier >= 1 && _voteMultiplier <= 5, "Vote multiplier must be 1-5");
 
         uint256 campaignId = campaigns.length;
-        campaigns.push(
-            Campaign({
-                id: campaignId,
-                admin: msg.sender,
-                name: _name,
-                description: _description,
-                startTime: _startTime,
-                endTime: _endTime,
-                adminFeePercentage: _adminFeePercentage,
-                voteMultiplier: _voteMultiplier,
-                maxWinners: _maxWinners,
-                useQuadraticDistribution: _useQuadraticDistribution,
-                active: true,
-                totalFunds: 0
-            })
-        );
+        Campaign storage newCampaign = campaigns.push();
+        
+        newCampaign.id = campaignId;
+        newCampaign.admin = msg.sender;
+        newCampaign.name = _name;
+        newCampaign.description = _description;
+        newCampaign.logo = _logo;
+        newCampaign.demoVideo = _demoVideo;
+        newCampaign.startTime = _startTime;
+        newCampaign.endTime = _endTime;
+        newCampaign.adminFeePercentage = _adminFeePercentage;
+        newCampaign.voteMultiplier = _voteMultiplier;
+        newCampaign.maxWinners = _maxWinners;
+        newCampaign.useQuadraticDistribution = _useQuadraticDistribution;
+        newCampaign.active = true;
+        newCampaign.totalFunds = 0;
+        
+        // Add creator as campaign admin
+        newCampaign.campaignAdmins[msg.sender] = true;
 
         emit CampaignCreated(campaignId, msg.sender, _name);
+    }
+
+    /**
+     * @dev Update campaign details (only non-critical parameters)
+     * @param _campaignId Campaign ID
+     * @param _name New campaign name
+     * @param _description New campaign description
+     * @param _logo New campaign logo
+     * @param _demoVideo New campaign demo video
+     * @param _startTime New start time (only if campaign hasn't started)
+     * @param _endTime New end time
+     * @param _adminFeePercentage New admin fee percentage
+     */
+    function updateCampaign(
+        uint256 _campaignId,
+        string memory _name,
+        string memory _description,
+        string memory _logo,
+        string memory _demoVideo,
+        uint256 _startTime,
+        uint256 _endTime,
+        uint256 _adminFeePercentage
+    ) external onlyCampaignAdmin(_campaignId) {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.active, "Campaign is not active");
+        
+        // Can only update start time if campaign hasn't started yet
+        if (block.timestamp < campaign.startTime) {
+            require(_startTime > block.timestamp, "Start time must be in the future");
+            require(_endTime > _startTime, "End time must be after start time");
+            campaign.startTime = _startTime;
+        } else {
+            require(_endTime > block.timestamp, "End time must be in the future");
+        }
+        
+        campaign.name = _name;
+        campaign.description = _description;
+        campaign.logo = _logo;
+        campaign.demoVideo = _demoVideo;
+        campaign.endTime = _endTime;
+        
+        // Admin fee can only be reduced, not increased
+        require(_adminFeePercentage <= campaign.adminFeePercentage, "Cannot increase admin fee");
+        campaign.adminFeePercentage = _adminFeePercentage;
+        
+        emit CampaignUpdated(_campaignId, msg.sender);
     }
 
     /**
@@ -132,9 +286,12 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
      * @param _campaignId Campaign ID
      * @param _name Project name
      * @param _description Project description
-     * @param _githubLink GitHub repository link (optional, can be empty)
-     * @param _socialLink Social media link (optional, can be empty)
-     * @param _testingLink Testing/demo link (optional, can be empty)
+     * @param _githubLink GitHub repository link (optional)
+     * @param _socialLink Social media link (optional)
+     * @param _testingLink Testing/demo link (optional)
+     * @param _logo Project logo URL/IPFS hash (optional)
+     * @param _demoVideo Project demo video URL/IPFS hash (optional)
+     * @param _contracts Array of contract addresses related to the project (optional)
      */
     function submitProject(
         uint256 _campaignId,
@@ -142,7 +299,10 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         string memory _description,
         string memory _githubLink,
         string memory _socialLink,
-        string memory _testingLink
+        string memory _testingLink,
+        string memory _logo,
+        string memory _demoVideo,
+        address[] memory _contracts
     ) external {
         require(_campaignId < campaigns.length, "Campaign does not exist");
         Campaign storage campaign = campaigns[_campaignId];
@@ -150,23 +310,85 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         require(block.timestamp < campaign.endTime, "Campaign has ended");
 
         uint256 projectId = campaignProjects[_campaignId].length;
-        campaignProjects[_campaignId].push(
-            Project({
-                id: projectId,
-                campaignId: _campaignId,
-                owner: payable(msg.sender),
-                name: _name,
-                description: _description,
-                githubLink: _githubLink,
-                socialLink: _socialLink,
-                testingLink: _testingLink,
-                approved: false,
-                voteCount: 0,
-                fundsReceived: 0
-            })
-        );
+        Project memory newProject = Project({
+            id: projectId,
+            campaignId: _campaignId,
+            owner: payable(msg.sender),
+            name: _name,
+            description: _description,
+            githubLink: _githubLink,
+            socialLink: _socialLink,
+            testingLink: _testingLink,
+            logo: _logo,
+            demoVideo: _demoVideo,
+            contracts: _contracts,
+            approved: false,
+            voteCount: 0,
+            fundsReceived: 0
+        });
+        
+        campaignProjects[_campaignId].push(newProject);
 
         emit ProjectSubmitted(_campaignId, projectId, msg.sender);
+    }
+
+    /**
+     * @dev Update project details (only by project owner)
+     * @param _campaignId Campaign ID
+     * @param _projectId Project ID
+     * @param _name New project name
+     * @param _description New project description
+     * @param _githubLink New GitHub repository link
+     * @param _socialLink New social media link
+     * @param _testingLink New testing/demo link
+     * @param _logo New project logo
+     * @param _demoVideo New project demo video
+     * @param _contracts New array of contract addresses
+     */
+    function updateProject(
+        uint256 _campaignId,
+        uint256 _projectId,
+        string memory _name,
+        string memory _description,
+        string memory _githubLink,
+        string memory _socialLink,
+        string memory _testingLink,
+        string memory _logo,
+        string memory _demoVideo,
+        address[] memory _contracts
+    ) external {
+        require(_campaignId < campaigns.length, "Campaign does not exist");
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.active, "Campaign is not active");
+        require(block.timestamp < campaign.endTime, "Campaign has ended");
+        require(_projectId < campaignProjects[_campaignId].length, "Project does not exist");
+        
+        Project storage project = campaignProjects[_campaignId][_projectId];
+        require(msg.sender == project.owner || campaign.campaignAdmins[msg.sender] || superAdmins[msg.sender], 
+                "Only project owner or admins can update");
+        
+        // Don't allow updates to approved projects with votes to maintain fairness
+        if (project.approved && project.voteCount > 0) {
+            // For approved projects with votes, only allow updating links and media
+            project.githubLink = _githubLink;
+            project.socialLink = _socialLink;
+            project.testingLink = _testingLink;
+            project.logo = _logo;
+            project.demoVideo = _demoVideo;
+            project.contracts = _contracts;
+        } else {
+            // For unapproved projects or those without votes, allow full updates
+            project.name = _name;
+            project.description = _description;
+            project.githubLink = _githubLink;
+            project.socialLink = _socialLink;
+            project.testingLink = _testingLink;
+            project.logo = _logo;
+            project.demoVideo = _demoVideo;
+            project.contracts = _contracts;
+        }
+        
+        emit ProjectUpdated(_campaignId, _projectId, msg.sender);
     }
 
     /**
@@ -174,10 +396,7 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
      * @param _campaignId Campaign ID
      * @param _projectId Project ID
      */
-    function approveProject(uint256 _campaignId, uint256 _projectId) external {
-        require(_campaignId < campaigns.length, "Campaign does not exist");
-        Campaign storage campaign = campaigns[_campaignId];
-        require(msg.sender == campaign.admin, "Only campaign admin can approve");
+    function approveProject(uint256 _campaignId, uint256 _projectId) external onlyCampaignAdmin(_campaignId) {
         require(_projectId < campaignProjects[_campaignId].length, "Project does not exist");
 
         Project storage project = campaignProjects[_campaignId][_projectId];
@@ -240,13 +459,8 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
      * @dev Distribute funds after campaign ends
      * @param _campaignId Campaign ID
      */
-    function distributeFunds(uint256 _campaignId) external nonReentrant {
-        require(_campaignId < campaigns.length, "Campaign does not exist");
+    function distributeFunds(uint256 _campaignId) external nonReentrant onlyCampaignAdmin(_campaignId) {
         Campaign storage campaign = campaigns[_campaignId];
-        require(
-            msg.sender == campaign.admin || msg.sender == owner(),
-            "Only campaign admin or platform owner can distribute"
-        );
         require(campaign.active, "Campaign already finalized");
         require(block.timestamp > campaign.endTime, "Campaign has not ended");
 
@@ -397,11 +611,43 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
     /**
      * @dev Get campaign details
      * @param _campaignId Campaign ID
-     * @return Campaign details
+     * @return Campaign details struct (excludes campaignAdmins mapping)
      */
-    function getCampaign(uint256 _campaignId) external view returns (Campaign memory) {
+    function getCampaign(uint256 _campaignId) external view returns (
+        uint256 id,
+        address admin,
+        string memory name,
+        string memory description,
+        string memory logo,
+        string memory demoVideo,
+        uint256 startTime,
+        uint256 endTime,
+        uint256 adminFeePercentage,
+        uint256 voteMultiplier,
+        uint256 maxWinners,
+        bool useQuadraticDistribution,
+        bool active,
+        uint256 totalFunds
+    ) {
         require(_campaignId < campaigns.length, "Campaign does not exist");
-        return campaigns[_campaignId];
+        Campaign storage campaign = campaigns[_campaignId];
+        
+        return (
+            campaign.id,
+            campaign.admin,
+            campaign.name,
+            campaign.description,
+            campaign.logo,
+            campaign.demoVideo,
+            campaign.startTime,
+            campaign.endTime,
+            campaign.adminFeePercentage,
+            campaign.voteMultiplier,
+            campaign.maxWinners,
+            campaign.useQuadraticDistribution,
+            campaign.active,
+            campaign.totalFunds
+        );
     }
 
     /**
