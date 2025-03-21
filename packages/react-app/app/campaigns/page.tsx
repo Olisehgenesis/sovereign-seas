@@ -25,7 +25,13 @@ import {
   HeartOff,
   Tag,
   PlusCircle,
-  Zap
+  Zap,
+  Video,
+  Image as ImageIcon,
+  FileCode,
+  Code,
+  Laptop,
+  Hash
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSovereignSeas } from '../../hooks/useSovereignSeas';
@@ -42,6 +48,8 @@ type Campaign = {
   admin: string;
   name: string;
   description: string;
+  logo: string;          // Added for new contract
+  demoVideo: string;     // Added for new contract
   startTime: bigint;
   endTime: bigint;
   adminFeePercentage: bigint;
@@ -86,6 +94,7 @@ export default function Campaigns() {
     formatTokenAmount,
     getCampaignTimeRemaining,
     isCampaignActive,
+    isSuperAdmin
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -229,6 +238,11 @@ export default function Campaigns() {
     router.push('/campaign/create');
   };
 
+  // Navigate to admin
+  const navigateToAdmin = () => {
+    router.push('/admin');
+  };
+
   // Get status badge color
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
@@ -277,11 +291,11 @@ export default function Campaigns() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center">
-                <Globe className="h-7 w-7 text-lime-500 mr-2" />
-                Ocean Conservation <span className="text-yellow-400 ml-2">Campaigns</span> 🌊
+                <Hash className="h-7 w-7 text-lime-500 mr-2" />
+                Innovation <span className="text-yellow-400 ml-2">Campaigns</span>
               </h1>
               <p className="text-slate-300 mt-2 max-w-2xl">
-                Discover and support impactful projects dedicated to protecting our oceans. Vote with CELO tokens to make waves of change.
+                Discover and support impactful tech projects and initiatives. Vote with CELO tokens to fund innovation.
               </p>
             </div>
             
@@ -302,6 +316,15 @@ export default function Campaigns() {
                 <PlusCircle className="h-4 w-4 mr-1.5" />
                 Create New
               </button>
+              {isSuperAdmin && (
+                <button 
+                  onClick={navigateToAdmin}
+                  className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-purple-500/20 text-purple-400 flex items-center text-sm hover:bg-purple-500/10 transition-colors"
+                >
+                  <Award className="h-4 w-4 mr-1.5" />
+                  Admin
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -487,6 +510,11 @@ export default function Campaigns() {
               >
                 {/* Campaign Header */}
                 <div className="h-28 bg-gradient-to-r from-slate-700/80 to-slate-700/40 relative overflow-hidden">
+                  {/* Display campaign logo if available */}
+                  {campaign.logo && (
+                    <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${campaign.logo})`, opacity: 0.6 }}></div>
+                  )}
+                  
                   {/* Status Badge */}
                   <div className={`absolute top-3 right-3 px-2 py-0.5 ${getStatusColor(campaign.status)} text-xs font-medium rounded-md flex items-center`}>
                     {getStatusIcon(campaign.status)}
@@ -497,9 +525,14 @@ export default function Campaigns() {
                         : 'Ended'}
                   </div>
                   
-                  {/* Campaign ID */}
-                  <div className="absolute top-3 left-3 px-2 py-0.5 bg-slate-800/80 backdrop-blur-sm text-xs text-slate-400 rounded-md">
-                    ID: {campaign.id.toString()}
+                  {/* Media Indicators */}
+                  <div className="absolute top-3 left-3 flex gap-1.5">
+                    {campaign.demoVideo && (
+                      <div className="px-2 py-0.5 bg-slate-800/80 backdrop-blur-sm text-yellow-400 text-xs rounded-md flex items-center">
+                        <Video className="h-3 w-3 mr-1" />
+                        Demo
+                      </div>
+                    )}
                   </div>
                   
                   {/* Time Remaining */}
@@ -513,7 +546,7 @@ export default function Campaigns() {
                   {/* Decoration */}
                   <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-gradient-to-r from-lime-500/20 to-yellow-500/20 blur-xl"></div>
                   <div className="absolute top-4 left-1/2 text-lime-500/10">
-                    <Waves className="h-32 w-32" />
+                    <Laptop className="h-32 w-32" />
                   </div>
                 </div>
                 
@@ -532,7 +565,7 @@ export default function Campaigns() {
                       </div>
                     </div>
                     <div className="bg-slate-700/30 rounded-md p-2 flex items-center">
-                      <Globe className="h-3.5 w-3.5 text-lime-500 mr-1.5" />
+                      <Code className="h-3.5 w-3.5 text-lime-500 mr-1.5" />
                       <div>
                         <div className="text-xs text-slate-400">Projects</div>
                         <div className="text-white text-sm font-medium">{campaign.projectCount || 0}</div>
@@ -645,10 +678,10 @@ export default function Campaigns() {
             <div className="text-center md:text-left">
               <h2 className="text-xl font-bold text-white mb-2 flex items-center">
                 <Sparkles className="h-5 w-5 text-yellow-400 mr-2" />
-                Make waves in ocean conservation 🌊
+                Make an impact through innovation
               </h2>
               <p className="text-lime-100 text-sm">
-                Every vote helps fund vital projects. Join our community of changemakers today!
+                Every vote helps fund vital projects. Join our community of innovators today!
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -669,9 +702,6 @@ export default function Campaigns() {
           </div>
         </div>
       </div>
-      
-      {/* Category Highlights (Optional) */}
-      
     </div>
   );
 }

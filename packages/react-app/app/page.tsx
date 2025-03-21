@@ -59,7 +59,6 @@ export default function Home() {
   const [totalFunds, setTotalFunds] = useState('0');
   const [featuredCampaigns, setFeaturedCampaigns] = useState<FeaturedCampaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Use the hook to interact with the contract
   const {
@@ -70,7 +69,7 @@ export default function Home() {
     formatCampaignTime,
     getCampaignTimeRemaining,
     isCampaignActive,
-    isSuperAdmin: hookIsSuperAdmin
+    isSuperAdmin
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -85,11 +84,6 @@ export default function Home() {
       setUserAddress(address);
     }
   }, [address, isConnected]);
-
-  // Update super admin status when the hook value changes
-  useEffect(() => {
-    setIsSuperAdmin(hookIsSuperAdmin);
-  }, [hookIsSuperAdmin]);
 
   // Load data from the blockchain
   useEffect(() => {

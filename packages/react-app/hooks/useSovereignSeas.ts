@@ -15,12 +15,14 @@ import { getContract } from 'viem';
 import sovereignSeasAbi from '../abis/SovereignSeas.json';
 import celoTokenAbi from '../abis/MockCELO.json';
 
-// Types
+// Updated Types
 export type Campaign = {
   id: bigint;
   admin: string;
   name: string;
   description: string;
+  logo: string;          // New field
+  demoVideo: string;     // New field
   startTime: bigint;
   endTime: bigint;
   adminFeePercentage: bigint;
@@ -40,6 +42,9 @@ export type Project = {
   githubLink: string;
   socialLink: string;
   testingLink: string;
+  logo: string;          // New field
+  demoVideo: string;     // New field
+  contracts: string[];   // New field
   approved: boolean;
   voteCount: bigint;
   fundsReceived: bigint;
@@ -76,6 +81,7 @@ export const useSovereignSeas = ({
   // State
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   
   // Write state
   const { 
@@ -117,43 +123,87 @@ export const useSovereignSeas = ({
     setIsInitialized(true);
   }, [publicClient, contractAddress, celoTokenAddress]);
 
+  // Check if current user is super admin
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      if (!isInitialized || !publicClient || !walletAddress) {
+        setIsSuperAdmin(false);
+        return;
+      }
+      
+      try {
+        const result = await publicClient.readContract({
+          address: contractAddress,
+          abi: sovereignSeasAbi,
+          functionName: 'superAdmins',
+          args: [walletAddress],
+        }) as boolean;
+        
+        setIsSuperAdmin(result);
+      } catch (error) {
+        console.error('Error checking super admin status:', error);
+        setIsSuperAdmin(false);
+      }
+    };
+    
+    checkSuperAdmin();
+  }, [isInitialized, walletAddress, contractAddress, publicClient]);
+
   // Load all campaigns
-  // In hooks/useSovereignSeas.ts
-const loadCampaigns = async () => {
-  if (!contract || !publicClient) return [];
-  
-  try {
-    setLoadingCampaigns(true);
+  const loadCampaigns = async () => {
+    if (!contract || !publicClient) return [];
     
-    // For development/testing without a real contract, use mock data
-  
-    
-    const campaignCount = await publicClient.readContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'getCampaignCount',
-    }) as bigint;
-    
-    const campaignPromises = [];
-    for (let i = 0; i < Number(campaignCount); i++) {
-      campaignPromises.push(publicClient.readContract({
+    try {
+      setLoadingCampaigns(true);
+      
+      const campaignCount = await publicClient.readContract({
         address: contractAddress,
         abi: sovereignSeasAbi,
-        functionName: 'getCampaign',
-        args: [BigInt(i)],
-      }));
+        functionName: 'getCampaignCount',
+      }) as bigint;
+      
+      const campaignPromises = [];
+      for (let i = 0; i < Number(campaignCount); i++) {
+        campaignPromises.push(publicClient.readContract({
+          address: contractAddress,
+          abi: sovereignSeasAbi,
+          functionName: 'getCampaign',
+          args: [BigInt(i)],
+        }));
+      }
+      
+      const campaignResults = await Promise.all(campaignPromises);
+      
+      // Transform the results to match the Campaign type
+      // Since getCampaign now returns multiple values instead of a struct
+      const formattedCampaigns = campaignResults.map((result: any) => {
+        return {
+          id: result[0],
+          admin: result[1],
+          name: result[2],
+          description: result[3],
+          logo: result[4],
+          demoVideo: result[5],
+          startTime: result[6],
+          endTime: result[7],
+          adminFeePercentage: result[8],
+          voteMultiplier: result[9],
+          maxWinners: result[10],
+          useQuadraticDistribution: result[11],
+          active: result[12],
+          totalFunds: result[13]
+        } as Campaign;
+      });
+      
+      setCampaigns(formattedCampaigns);
+      return formattedCampaigns;
+    } catch (error) {
+      console.error('Error loading campaigns:', error);
+      return [];
+    } finally {
+      setLoadingCampaigns(false);
     }
-    
-    const campaignResults = await Promise.all(campaignPromises);
-    setCampaigns(campaignResults as Campaign[]);
-    return campaignResults as Campaign[];  // Make sure to return the results!
-  } catch (error) {
-    console.error('Error loading campaigns:', error);
-    return [];  // Return empty array on error
-  } finally {
-    setLoadingCampaigns(false);
-  }
-};
+  };
 
   // Load projects for a specific campaign
   const loadProjects = async (campaignId: bigint | number) => {
@@ -182,6 +232,23 @@ const loadCampaigns = async () => {
     } catch (error) {
       console.error(`Error loading projects for campaign ${campaignId}:`, error);
       return [];
+    }
+  };
+
+  // Check if user is a campaign admin
+  const isCampaignAdmin = async (campaignId: bigint | number) => {
+    if (!contract || !publicClient || !walletAddress) return false;
+    
+    try {
+      return await publicClient.readContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'isCampaignAdmin',
+        args: [BigInt(campaignId), walletAddress],
+      }) as boolean;
+    } catch (error) {
+      console.error(`Error checking if user is campaign admin for campaign ${campaignId}:`, error);
+      return false;
     }
   };
 
@@ -253,10 +320,80 @@ const loadCampaigns = async () => {
     }
   };
 
+  // Super Admin Functions
+
+  // Add a new super admin
+  const addSuperAdmin = async (newAdminAddress: string) => {
+    if (!walletClient || !isSuperAdmin) return;
+    
+    try {
+      writeContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'addSuperAdmin',
+        args: [newAdminAddress],
+      });
+    } catch (error) {
+      console.error('Error adding super admin:', error);
+    }
+  };
+
+  // Remove a super admin
+  const removeSuperAdmin = async (adminAddress: string) => {
+    if (!walletClient || !isSuperAdmin) return;
+    
+    try {
+      writeContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'removeSuperAdmin',
+        args: [adminAddress],
+      });
+    } catch (error) {
+      console.error('Error removing super admin:', error);
+    }
+  };
+
+  // Campaign Admin Functions
+
+  // Add a campaign admin
+  const addCampaignAdmin = async (campaignId: bigint | number, newAdminAddress: string) => {
+    if (!walletClient) return;
+    
+    try {
+      writeContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'addCampaignAdmin',
+        args: [BigInt(campaignId), newAdminAddress],
+      });
+    } catch (error) {
+      console.error('Error adding campaign admin:', error);
+    }
+  };
+
+  // Remove a campaign admin
+  const removeCampaignAdmin = async (campaignId: bigint | number, adminAddress: string) => {
+    if (!walletClient) return;
+    
+    try {
+      writeContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'removeCampaignAdmin',
+        args: [BigInt(campaignId), adminAddress],
+      });
+    } catch (error) {
+      console.error('Error removing campaign admin:', error);
+    }
+  };
+
   // Create a new campaign
   const createCampaign = async (
     name: string,
     description: string,
+    logo: string,
+    demoVideo: string,
     startTime: number,
     endTime: number,
     adminFeePercentage: number,
@@ -273,7 +410,9 @@ const loadCampaigns = async () => {
         functionName: 'createCampaign',
         args: [
           name, 
-          description, 
+          description,
+          logo,
+          demoVideo,
           BigInt(startTime), 
           BigInt(endTime), 
           BigInt(adminFeePercentage), 
@@ -287,6 +426,40 @@ const loadCampaigns = async () => {
     }
   };
 
+  // Update a campaign
+  const updateCampaign = async (
+    campaignId: bigint | number,
+    name: string,
+    description: string,
+    logo: string,
+    demoVideo: string,
+    startTime: number,
+    endTime: number,
+    adminFeePercentage: number
+  ) => {
+    if (!walletClient) return;
+    
+    try {
+      writeContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'updateCampaign',
+        args: [
+          BigInt(campaignId),
+          name, 
+          description,
+          logo,
+          demoVideo,
+          BigInt(startTime), 
+          BigInt(endTime), 
+          BigInt(adminFeePercentage)
+        ],
+      });
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+    }
+  };
+
   // Submit a project to a campaign
   const submitProject = async (
     campaignId: bigint | number,
@@ -294,7 +467,10 @@ const loadCampaigns = async () => {
     description: string,
     githubLink: string = '',
     socialLink: string = '',
-    testingLink: string = ''
+    testingLink: string = '',
+    logo: string = '',
+    demoVideo: string = '',
+    contracts: string[] = []
   ) => {
     if (!walletClient) return;
     
@@ -309,11 +485,52 @@ const loadCampaigns = async () => {
           description, 
           githubLink, 
           socialLink, 
-          testingLink
+          testingLink,
+          logo,
+          demoVideo,
+          contracts
         ],
       });
     } catch (error) {
       console.error('Error submitting project:', error);
+    }
+  };
+
+  // Update a project
+  const updateProject = async (
+    campaignId: bigint | number,
+    projectId: bigint | number,
+    name: string,
+    description: string,
+    githubLink: string = '',
+    socialLink: string = '',
+    testingLink: string = '',
+    logo: string = '',
+    demoVideo: string = '',
+    contracts: string[] = []
+  ) => {
+    if (!walletClient) return;
+    
+    try {
+      writeContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'updateProject',
+        args: [
+          BigInt(campaignId),
+          BigInt(projectId),
+          name, 
+          description, 
+          githubLink, 
+          socialLink, 
+          testingLink,
+          logo,
+          demoVideo,
+          contracts
+        ],
+      });
+    } catch (error) {
+      console.error('Error updating project:', error);
     }
   };
 
@@ -414,6 +631,7 @@ const loadCampaigns = async () => {
     isInitialized,
     campaigns,
     loadingCampaigns,
+    isSuperAdmin,
     
     // Transaction state
     isWritePending,
@@ -431,10 +649,21 @@ const loadCampaigns = async () => {
     getUserVotesForProject,
     getUserTotalVotesInCampaign,
     getUserVoteHistory,
+    isCampaignAdmin,
+    
+    // Super Admin functions
+    addSuperAdmin,
+    removeSuperAdmin,
+    
+    // Campaign Admin functions
+    addCampaignAdmin,
+    removeCampaignAdmin,
     
     // Write functions
     createCampaign,
+    updateCampaign,
     submitProject,
+    updateProject,
     approveProject,
     vote,
     distributeFunds,
