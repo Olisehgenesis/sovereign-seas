@@ -16,7 +16,7 @@ import {
   Settings, 
   Share2, 
   Users, 
-  Waves,
+  BarChart,
   Award,
   Droplets,
   X,
@@ -25,13 +25,24 @@ import {
   ChevronUp,
   ChevronDown,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Image as ImageIcon,
+  Video,
+  Code,
+  History,
+  MousePointerClick,
+  Wallet,
+  Filter,
+  RefreshCw,
+  TrendingDown,
+  LineChart
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
 
 // Placeholder for the contract addresses - replace with your actual addresses
-const CONTRACT_ADDRESS = '0x35128A5Ee461943fA6403672b3574346Ba7E4530' as `0x${string}`;
-const CELO_TOKEN_ADDRESS = '0x3FC1f6138F4b0F5Da3E1927412Afe5c68ed4527b' as `0x${string}`;
+// Contract addresses - replace with actual addresses
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
+const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` 
 
 export default function CampaignDashboard() {
   const router = useRouter();
@@ -59,8 +70,26 @@ export default function CampaignDashboard() {
     githubLink: '',
     socialLink: '',
     testingLink: '',
+    logo: '',          // Added field
+    demoVideo: '',     // Added field
+    contracts: [''],   // Added field
   });
   const [distributionTableVisible, setDistributionTableVisible] = useState(false);
+  
+  // New states for enhanced functionality
+  const [userVoteHistory, setUserVoteHistory] = useState<any[]>([]);
+  const [voteHistoryVisible, setVoteHistoryVisible] = useState(false);
+  const [projectInfoModalVisible, setProjectInfoModalVisible] = useState(false);
+  const [projectInfoData, setProjectInfoData] = useState<any>(null);
+  const [userVoteStats, setUserVoteStats] = useState<any>({
+    totalVotes: 0,
+    projectCount: 0
+  });
+  const [projectSortMethod, setProjectSortMethod] = useState('votes'); // votes, newest, alphabetical
+  const [projectStatusFilter, setProjectStatusFilter] = useState('approved'); // all, approved, pending
+  const [sortedProjects, setSortedProjects] = useState<any[]>([]);
+  const [projectRankingsVisible, setProjectRankingsVisible] = useState(false);
+  const [statusMessage, setStatusMessage] = useState({ text: '', type: '' });
   
   // Contract interaction
   const {
@@ -68,6 +97,9 @@ export default function CampaignDashboard() {
     loadCampaigns,
     loadProjects,
     getSortedProjects,
+    getUserVoteHistory,
+    getUserTotalVotesInCampaign,
+    getUserVotesForProject,
     approveProject,
     vote,
     submitProject,
@@ -79,6 +111,8 @@ export default function CampaignDashboard() {
     isWritePending,
     isWaitingForTx,
     isTxSuccess,
+    isSuperAdmin, // Added to check for super admin access
+    resetWrite,
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -91,8 +125,37 @@ export default function CampaignDashboard() {
   useEffect(() => {
     if (isInitialized && campaignId) {
       loadCampaignData();
+      if (address) {
+        loadUserVoteHistory();
+        loadUserVoteStats();
+      }
     }
   }, [isInitialized, campaignId, address, isTxSuccess]);
+  
+  // Reset status message after 5 seconds
+  useEffect(() => {
+    if (statusMessage.text) {
+      const timer = setTimeout(() => {
+        setStatusMessage({ text: '', type: '' });
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [statusMessage]);
+  
+  // Apply sorting and filtering whenever projects, sort method, or filter changes
+  useEffect(() => {
+    if (projects.length > 0) {
+      applySortingAndFiltering();
+    }
+  }, [projects, projectSortMethod, projectStatusFilter]);
+  
+  // Load rankings when toggle is activated
+  useEffect(() => {
+    if (projectRankingsVisible && campaign) {
+      loadProjectRankings();
+    }
+  }, [projectRankingsVisible, campaign]);
   
   const loadCampaignData = async () => {
     setLoading(true);
@@ -108,8 +171,9 @@ export default function CampaignDashboard() {
         if (campaignData) {
           setCampaign(campaignData);
           
-          // Check if current user is the admin
-          if (address && campaignData.admin.toLowerCase() === address.toLowerCase()) {
+          // Check if current user is the admin or super admin
+          if (address && 
+             (campaignData.admin.toLowerCase() === address.toLowerCase() || isSuperAdmin)) {
             setIsAdmin(true);
           }
           
@@ -152,6 +216,92 @@ export default function CampaignDashboard() {
     }
   };
   
+  const loadUserVoteHistory = async () => {
+    try {
+      if (address) {
+        const history = await getUserVoteHistory();
+        
+        // Filter to only include votes for this campaign
+        const campaignVotes = history.filter(vote => 
+          vote.campaignId.toString() === campaignId
+        );
+        
+        setUserVoteHistory(campaignVotes);
+      }
+    } catch (error) {
+      console.error('Error loading vote history:', error);
+    }
+  };
+  
+  const loadUserVoteStats = async () => {
+    try {
+      if (address && campaignId) {
+        const totalVotes = await getUserTotalVotesInCampaign(Number(campaignId));
+        
+        // Calculate how many projects the user has voted for
+        const votedProjects = new Set();
+        userVoteHistory.forEach(vote => {
+          if (vote.campaignId.toString() === campaignId) {
+            votedProjects.add(vote.projectId.toString());
+          }
+        });
+        
+        setUserVoteStats({
+          totalVotes: formatTokenAmount(totalVotes),
+          projectCount: votedProjects.size
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user vote stats:', error);
+    }
+  };
+  
+  const loadProjectRankings = async () => {
+    try {
+      if (campaign) {
+        const ranked = await getSortedProjects(Number(campaignId));
+        setSortedProjects(ranked);
+      }
+    } catch (error) {
+      console.error('Error loading project rankings:', error);
+      setStatusMessage({
+        text: 'Error loading project rankings. Please try again.',
+        type: 'error'
+      });
+    }
+  };
+  
+  const applySortingAndFiltering = () => {
+    // First filter
+    let filtered = [...projects];
+    
+    if (projectStatusFilter === 'approved') {
+      filtered = filtered.filter(p => p.approved);
+    } else if (projectStatusFilter === 'pending') {
+      filtered = filtered.filter(p => !p.approved);
+    }
+    
+    // Then sort
+    let sorted;
+    
+    switch (projectSortMethod) {
+      case 'votes':
+        sorted = filtered.sort((a, b) => Number(b.voteCount) - Number(a.voteCount));
+        break;
+      case 'newest':
+        // This would ideally use a timestamp; for now we'll use ID as a proxy
+        sorted = filtered.sort((a, b) => Number(b.id) - Number(a.id));
+        break;
+      case 'alphabetical':
+        sorted = filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      default:
+        sorted = filtered;
+    }
+    
+    setSortedProjects(sorted);
+  };
+  
   const handleVote = async () => {
     if (!selectedProject || !voteAmount || parseFloat(voteAmount) <= 0 || !campaignId) return;
     
@@ -159,8 +309,24 @@ export default function CampaignDashboard() {
       await vote(Number(campaignId), selectedProject.id, Number(voteAmount).toString());
       setVoteModalVisible(false);
       setVoteAmount('');
+      setStatusMessage({
+        text: `Vote successful! You voted ${voteAmount} CELO for ${selectedProject.name}.`,
+        type: 'success'
+      });
+      
+      // After a successful vote, refresh the user's vote history and stats
+      setTimeout(() => {
+        loadUserVoteHistory();
+        loadUserVoteStats();
+        loadCampaignData(); // Refresh project vote counts
+      }, 2000); // Give blockchain time to update
+      
     } catch (error) {
       console.error('Error voting:', error);
+      setStatusMessage({
+        text: 'Error submitting vote. Please try again.',
+        type: 'error'
+      });
     }
   };
   
@@ -170,13 +336,19 @@ export default function CampaignDashboard() {
     if (!newProject.name || !newProject.description) return;
     
     try {
+      // Filter out empty contract addresses
+      const contracts = newProject.contracts.filter(c => c.trim() !== '');
+      
       await submitProject(
         Number(campaignId),
         newProject.name,
         newProject.description,
         newProject.githubLink,
         newProject.socialLink,
-        newProject.testingLink
+        newProject.testingLink,
+        newProject.logo,         // Added field
+        newProject.demoVideo,    // Added field
+        contracts                // Added field
       );
       setSubmitModalVisible(false);
       setNewProject({
@@ -185,9 +357,27 @@ export default function CampaignDashboard() {
         githubLink: '',
         socialLink: '',
         testingLink: '',
+        logo: '',
+        demoVideo: '',
+        contracts: [''],
       });
+      
+      setStatusMessage({
+        text: 'Project submitted successfully! It will be available after admin approval.',
+        type: 'success'
+      });
+      
+      // Refresh the project list after submission
+      setTimeout(() => {
+        loadCampaignData();
+      }, 2000); // Give blockchain time to update
+      
     } catch (error) {
       console.error('Error submitting project:', error);
+      setStatusMessage({
+        text: 'Error submitting project. Please try again.',
+        type: 'error'
+      });
     }
   };
   
@@ -197,6 +387,11 @@ export default function CampaignDashboard() {
     try {
       await distributeFunds(Number(campaignId));
       
+      setStatusMessage({
+        text: 'Funds distributed successfully!',
+        type: 'success'
+      });
+      
       // After funds are distributed, refresh the data and show distribution table
       setTimeout(() => {
         loadCampaignData();
@@ -205,14 +400,53 @@ export default function CampaignDashboard() {
       
     } catch (error) {
       console.error('Error distributing funds:', error);
+      setStatusMessage({
+        text: 'Error distributing funds. Please try again.',
+        type: 'error'
+      });
     }
+  };
+  
+  // Add/remove contract field in new project form
+  const handleAddContract = () => {
+    setNewProject({
+      ...newProject,
+      contracts: [...newProject.contracts, '']
+    });
+  };
+  
+  const handleRemoveContract = (index: number) => {
+    const updatedContracts = [...newProject.contracts];
+    updatedContracts.splice(index, 1);
+    setNewProject({
+      ...newProject,
+      contracts: updatedContracts.length ? updatedContracts : ['']
+    });
+  };
+  
+  const handleContractChange = (index: number, value: string) => {
+    const updatedContracts = [...newProject.contracts];
+    updatedContracts[index] = value;
+    setNewProject({
+      ...newProject,
+      contracts: updatedContracts
+    });
   };
   
   // Helper function to copy campaign link to clipboard
   const shareCampaign = () => {
     const url = window.location.origin + `/campaign/${campaignId}`;
     navigator.clipboard.writeText(url);
-    alert('Campaign link copied to clipboard!');
+    setStatusMessage({
+      text: 'Campaign link copied to clipboard!',
+      type: 'success'
+    });
+  };
+  
+  // Open the project info modal with the selected project
+  const openProjectInfo = (project: any) => {
+    setProjectInfoData(project);
+    setProjectInfoModalVisible(true);
   };
   
   if (!isMounted) {
@@ -259,17 +493,59 @@ export default function CampaignDashboard() {
     { name: "Distributed to Projects", amount: distributedToProjects.toFixed(2) },
   ];
   
+  // Check if campaign has media content
+  const hasCampaignMedia = campaign.logo?.trim().length > 0 || campaign.demoVideo?.trim().length > 0;
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
+        {/* Status Message */}
+        {statusMessage.text && (
+          <div className={`mb-6 p-4 rounded-lg ${
+            statusMessage.type === 'success' 
+              ? 'bg-green-900/30 border border-green-500/40' 
+              : 'bg-red-900/30 border border-red-500/40'
+          }`}>
+            <div className="flex items-start">
+              {statusMessage.type === 'success' ? (
+                <Info className="h-5 w-5 text-green-400 mr-3 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 mt-0.5" />
+              )}
+              <p className={statusMessage.type === 'success' ? 'text-green-300' : 'text-red-300'}>
+                {statusMessage.text}
+              </p>
+            </div>
+          </div>
+        )}
+        
         {/* Campaign Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold flex items-center">
-                <Waves className="h-8 w-8 text-lime-500 mr-3" />
-                {campaign.name}
-              </h1>
+              <div className="flex items-center">
+                <h1 className="text-3xl font-bold flex items-center">
+                  <BarChart className="h-8 w-8 text-lime-500 mr-3" />
+                  {campaign.name}
+                </h1>
+                
+                {/* Media indicators */}
+                {hasCampaignMedia && (
+                  <div className="flex items-center ml-3 gap-1">
+                    {campaign.logo && (
+                      <span className="text-blue-400" title="Has Logo">
+                        <ImageIcon className="h-5 w-5" />
+                      </span>
+                    )}
+                    {campaign.demoVideo && (
+                      <span className="text-red-400" title="Has Demo Video">
+                        <Video className="h-5 w-5" />
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               <p className="text-slate-300 mt-2 mb-4">{campaign.description}</p>
               
               <div className="flex flex-wrap gap-3">
@@ -373,6 +649,72 @@ export default function CampaignDashboard() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column - Stats and Actions */}
           <div className="lg:w-1/3">
+            {/* User Vote Stats - New Component */}
+            {address && isConnected && (
+              <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-purple-600/20 mb-6">
+                <h2 className="text-xl font-semibold mb-4 text-purple-400 flex items-center">
+                  <Wallet className="h-5 w-5 mr-2" />
+                  Your Activity
+                </h2>
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Your Total Votes:</span>
+                    <span className="font-semibold text-purple-400">{userVoteStats.totalVotes}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Projects Voted:</span>
+                    <span className="font-semibold text-purple-400">{userVoteStats.projectCount}</span>
+                  </div>
+                  
+                  <button
+                    onClick={() => setVoteHistoryVisible(!voteHistoryVisible)}
+                    className="w-full py-2 rounded-lg bg-purple-600/30 text-purple-300 font-medium hover:bg-purple-600/50 transition-colors flex items-center justify-center mt-2"
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    {voteHistoryVisible ? 'Hide Vote History' : 'View Vote History'}
+                  </button>
+                  
+                  {/* Vote History (conditionally rendered) */}
+                  {voteHistoryVisible && (
+                    <div className="mt-3 space-y-2">
+                      <h3 className="text-sm font-medium text-purple-300 mb-2">Vote History</h3>
+                      
+                      {userVoteHistory.length === 0 ? (
+                        <p className="text-slate-400 text-sm">You haven't voted in this campaign yet.</p>
+                      ) : (
+                        userVoteHistory.map((vote, index) => {
+                          const project = projects.find(p => p.id.toString() === vote.projectId.toString());
+                          return (
+                            <div key={index} className="bg-slate-700/40 rounded-lg p-3">
+                              <div className="flex items-center mb-1">
+                                <MousePointerClick className="h-3.5 w-3.5 text-purple-400 mr-2" />
+                                <span className="font-medium">
+                                  {project ? project.name : `Project #${vote.projectId.toString()}`}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-slate-400">Amount:</span>
+                                <span className="text-lime-400 font-medium">
+                                  {formatTokenAmount(vote.amount)} CELO
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-slate-400">Vote Count:</span>
+                                <span className="text-purple-400 font-medium">
+                                  {vote.voteCount.toString()}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
             {/* Campaign Stats */}
             <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 mb-6">
               <h2 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
@@ -402,7 +744,7 @@ export default function CampaignDashboard() {
                   <span className="font-semibold text-white">{campaign.voteMultiplier.toString()}x</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-300">Admin Fee:</span>
+                <span className="text-slate-300">Admin Fee:</span>
                   <span className="font-semibold text-white">{campaign.adminFeePercentage.toString()}%</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -415,6 +757,91 @@ export default function CampaignDashboard() {
                     {campaign.maxWinners.toString() === '0' ? 'All Projects' : campaign.maxWinners.toString()}
                   </span>
                 </div>
+                
+                {/* Media Info */}
+                {hasCampaignMedia && (
+                  <>
+                    <div className="border-t border-slate-700 pt-3 mt-3">
+                      <span className="text-slate-300 font-medium">Media Content:</span>
+                    </div>
+                    {campaign.logo && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-300 flex items-center">
+                          <ImageIcon className="h-4 w-4 mr-2 text-blue-400" />
+                          Logo:
+                        </span>
+                        <span className="font-medium text-blue-400">Available</span>
+                      </div>
+                    )}
+                    {campaign.demoVideo && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-300 flex items-center">
+                          <Video className="h-4 w-4 mr-2 text-red-400" />
+                          Demo Video:
+                        </span>
+                        <span className="font-medium text-red-400">Available</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* View project rankings button */}
+                <button
+                  onClick={() => setProjectRankingsVisible(!projectRankingsVisible)}
+                  className="w-full py-2 rounded-lg bg-blue-600/30 text-blue-300 font-medium hover:bg-blue-600/50 transition-colors flex items-center justify-center mt-4"
+                >
+                  <LineChart className="h-4 w-4 mr-2" />
+                  {projectRankingsVisible ? 'Hide Rankings' : 'View Current Rankings'}
+                </button>
+                
+                {/* Project Rankings Display */}
+                {projectRankingsVisible && sortedProjects.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-700">
+                    <h3 className="text-sm font-medium text-blue-300 mb-2">Current Rankings</h3>
+                    
+                    <div className="space-y-2 mt-3">
+                      {sortedProjects.slice(0, 5).map((project, index) => (
+                        <div 
+                          key={project.id.toString()} 
+                          className={`flex items-center justify-between bg-slate-700/40 rounded-lg p-2 ${
+                            index < Number(campaign.maxWinners) && campaign.maxWinners.toString() !== '0' 
+                              ? 'border border-green-500/30' 
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <span className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                              index === 0 
+                                ? 'bg-yellow-500 text-slate-900' 
+                                : index === 1 
+                                  ? 'bg-slate-400 text-slate-900' 
+                                  : index === 2 
+                                    ? 'bg-amber-700 text-white' 
+                                    : 'bg-slate-700 text-slate-300'
+                            } mr-2 font-bold text-xs`}>
+                              {index + 1}
+                            </span>
+                            <span className="text-sm font-medium truncate max-w-[140px]">
+                              {project.name}
+                            </span>
+                          </div>
+                          <span className="text-xs text-lime-400 font-medium">
+                            {formatTokenAmount(project.voteCount)}
+                          </span>
+                        </div>
+                      ))}
+                      
+                      {sortedProjects.length > 5 && (
+                        <button
+                          onClick={() => router.push(`/campaign/${campaignId}/leaderboard`)}
+                          className="w-full text-center text-sm text-blue-400 hover:text-blue-300 pt-1"
+                        >
+                          View full leaderboard →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -620,11 +1047,66 @@ export default function CampaignDashboard() {
             )}
             
             <div className="bg-slate-800/40 backdrop-blur-md rounded-xl border border-lime-600/20 overflow-hidden">
-              <div className="p-6 pb-0">
-                <h2 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
-                  <Globe className="h-5 w-5 mr-2" />
-                  Projects
-                </h2>
+              <div className="p-6 pb-4 border-b border-slate-700">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <h2 className="text-xl font-semibold mb-2 md:mb-0 text-yellow-400 flex items-center">
+                    <Globe className="h-5 w-5 mr-2" />
+                    Projects
+                  </h2>
+                  
+                  {/* New filtering and sorting controls */}
+                  <div className="flex flex-wrap gap-2">
+                    <div className="relative inline-block">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 text-sm hidden md:inline">Status:</span>
+                        <select
+                          value={projectStatusFilter}
+                          onChange={(e) => setProjectStatusFilter(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-2 focus:ring-lime-500 focus:outline-none"
+                        >
+                          <option value="all">All</option>
+                          <option value="approved">Approved</option>
+                          <option value="pending">Pending</option>
+                        </select>
+                        <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                          <ChevronDown className="h-4 w-4 text-slate-400" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="relative inline-block">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 text-sm hidden md:inline">Sort by:</span>
+                        <select
+                          value={projectSortMethod}
+                          onChange={(e) => setProjectSortMethod(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-2 focus:ring-lime-500 focus:outline-none"
+                        >
+                          <option value="votes">Most Votes</option>
+                          <option value="newest">Newest</option>
+                          <option value="alphabetical">A-Z</option>
+                        </select>
+                        <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                          <ChevronDown className="h-4 w-4 text-slate-400" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        loadCampaignData();
+                        setStatusMessage({
+                          text: 'Projects refreshed',
+                          type: 'success'
+                        });
+                      }}
+                      className="bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg px-3 py-1.5 text-sm inline-flex items-center"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                      Refresh
+                    </button>
+                  </div>
+                </div>
               </div>
               
               {projects.length === 0 ? (
@@ -640,13 +1122,24 @@ export default function CampaignDashboard() {
                     </button>
                   )}
                 </div>
+              ) : sortedProjects.length === 0 ? (
+                <div className="p-10 text-center">
+                  <p className="text-slate-400 mb-4">No projects match the current filter criteria.</p>
+                  <button
+                    onClick={() => setProjectStatusFilter('all')}
+                    className="px-6 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors inline-flex items-center"
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Show All Projects
+                  </button>
+                </div>
               ) : (
                 <div className="p-6">
-                  {projects.map((project, index) => (
+                  {sortedProjects.map((project, index) => (
                     <div 
                       key={project.id.toString()} 
                       className={`bg-slate-700/40 rounded-lg p-5 hover:bg-slate-700/60 transition-colors ${
-                        index !== projects.length - 1 ? 'mb-4' : ''
+                        index !== sortedProjects.length - 1 ? 'mb-4' : ''
                       }`}
                     >
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -662,6 +1155,22 @@ export default function CampaignDashboard() {
                               <span className="px-2 py-0.5 bg-green-900/50 text-green-400 text-xs rounded-full border border-green-500/30">
                                 Funded: {formatTokenAmount(project.fundsReceived)} CELO
                               </span>
+                            )}
+                            
+                            {/* Media indicators */}
+                            {(project.logo || project.demoVideo) && (
+                              <div className="flex items-center gap-1">
+                                {project.logo && (
+                                  <span className="text-blue-400">
+                                    <ImageIcon className="h-3.5 w-3.5" />
+                                  </span>
+                                )}
+                                {project.demoVideo && (
+                                  <span className="text-red-400">
+                                    <Video className="h-3.5 w-3.5"  />
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
                           
@@ -703,6 +1212,14 @@ export default function CampaignDashboard() {
                                 Demo
                               </a>
                             )}
+                            
+                            {/* Show contract count if there are any contracts */}
+                            {project.contracts && project.contracts.length > 0 && (
+                              <span className="text-purple-400 flex items-center">
+                                <Code className="h-4 w-4 mr-1" />
+                                {project.contracts.length} Contract{project.contracts.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
                           </div>
                         </div>
                         
@@ -716,7 +1233,7 @@ export default function CampaignDashboard() {
                           
                           <div className="flex gap-2 mt-3 w-full md:w-auto">
                             <button
-                              onClick={() => router.push(`/campaign/${campaignId}/project/${project.id}`)}
+                              onClick={() => openProjectInfo(project)}
                               className="px-3 py-2 bg-slate-600 text-slate-200 rounded-lg text-sm hover:bg-slate-500 transition-colors flex items-center flex-1 justify-center"
                             >
                               <Eye className="h-4 w-4 mr-1" />
@@ -742,8 +1259,19 @@ export default function CampaignDashboard() {
                               onClick={async () => {
                                 try {
                                   await approveProject(Number(campaignId), project.id);
+                                  setStatusMessage({
+                                    text: `Project "${project.name}" approved successfully!`,
+                                    type: 'success'
+                                  });
+                                  setTimeout(() => {
+                                    loadCampaignData();
+                                  }, 2000);
                                 } catch (error) {
                                   console.error('Error approving project:', error);
+                                  setStatusMessage({
+                                    text: 'Error approving project. Please try again.',
+                                    type: 'error'
+                                  });
                                 }
                               }}
                               disabled={isWritePending || isWaitingForTx}
@@ -762,6 +1290,207 @@ export default function CampaignDashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Project Info Modal */}
+      {projectInfoModalVisible && projectInfoData && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setProjectInfoModalVisible(false)} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            
+            <div className="flex items-center gap-3 mb-2">
+              <h3 className="text-xl font-bold">{projectInfoData.name}</h3>
+              
+              {!projectInfoData.approved && (
+                <span className="px-2 py-0.5 bg-orange-900/50 text-orange-400 text-xs rounded-full border border-orange-500/30">
+                  Pending Approval
+                </span>
+              )}
+              
+              {fundsDistributed && Number(projectInfoData.fundsReceived) > 0 && (
+                <span className="px-2 py-0.5 bg-green-900/50 text-green-400 text-xs rounded-full border border-green-500/30">
+                  Funded: {formatTokenAmount(projectInfoData.fundsReceived)} CELO
+                </span>
+              )}
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-6 mb-6">
+              <div className="md:w-2/3">
+                <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
+                  <h4 className="text-sm font-medium text-slate-300 mb-2">Description</h4>
+                  <p className="text-white">{projectInfoData.description}</p>
+                </div>
+                
+                {projectInfoData.contracts && projectInfoData.contracts.length > 0 && (
+                  <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
+                    <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center">
+                      <Code className="h-4 w-4 mr-1 text-purple-400" />
+                      Contract Addresses
+                    </h4>
+                    <div className="space-y-2">
+                      {projectInfoData.contracts.map((contract: string, idx: number) => (
+                        <div key={idx} className="font-mono text-sm text-white bg-slate-800 p-2 rounded break-all">
+                          {contract}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Links Section */}
+                <div className="rounded-lg bg-slate-700/40 p-4">
+                    <h4 className="text-sm font-medium text-slate-300 mb-2">Links</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {projectInfoData.githubLink && (
+                        <a 
+                          href={projectInfoData.githubLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                        >
+                          <Github className="h-5 w-5 mr-2" />
+                          GitHub Repository
+                        </a>
+                      )}
+                      
+                      {projectInfoData.socialLink && (
+                        <a 
+                          href={projectInfoData.socialLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                        >
+                          <Globe className="h-5 w-5 mr-2" />
+                          Social Media
+                        </a>
+                      )}
+                      
+                      {projectInfoData.testingLink && (
+                        <a 
+                          href={projectInfoData.testingLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                        >
+                          <FileText className="h-5 w-5 mr-2" />
+                          Demo / Testing
+                        </a>
+                      )}
+                      
+                      {projectInfoData.logo && (
+                        <a 
+                          href={projectInfoData.logo} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                        >
+                          <ImageIcon className="h-5 w-5 mr-2" />
+                          Project Logo
+                        </a>
+                      )}
+                      
+                      {projectInfoData.demoVideo && (
+                        <a 
+                          href={projectInfoData.demoVideo} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                        >
+                          <Video className="h-5 w-5 mr-2" />
+                          Demo Video
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="md:w-1/3">
+                <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Vote Statistics</h4>
+                  <div className="bg-slate-800/60 rounded-lg px-4 py-5 text-center mb-3">
+                    <div className="text-2xl font-bold text-lime-400">
+                      {formatTokenAmount(projectInfoData.voteCount)}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1">TOTAL VOTES</div>
+                  </div>
+                  
+                  {address && isConnected && (
+                    <div className="bg-slate-800/60 rounded-lg px-4 py-3 text-center">
+                      <div className="text-lg font-bold text-purple-400 flex items-center justify-center">
+                        <History className="h-4 w-4 mr-1" />
+                        <span id="user-vote-count">
+                          {/* This would be filled in after loading user's votes for this project */}
+                          {userVoteHistory
+                            .filter(v => v.projectId.toString() === projectInfoData.id.toString())
+                            .reduce((sum, v) => sum + Number(formatTokenAmount(v.voteCount)), 0)
+                          }
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">YOUR VOTES</div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="rounded-lg bg-slate-700/40 p-4">
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Project Info</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-slate-400">Owner:</span>
+                      <span className="text-sm font-mono text-white">
+                        {`${projectInfoData.owner.slice(0, 6)}...${projectInfoData.owner.slice(-4)}`}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-sm text-slate-400">Status:</span>
+                      <span className={`text-sm ${projectInfoData.approved ? 'text-green-400' : 'text-orange-400'}`}>
+                        {projectInfoData.approved ? 'Approved' : 'Pending Approval'}
+                      </span>
+                    </div>
+                    
+                    {fundsDistributed && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-slate-400">Funds Received:</span>
+                        <span className="text-sm text-lime-400">
+                          {formatTokenAmount(projectInfoData.fundsReceived)} CELO
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {isActive && projectInfoData.approved && (
+                  <button
+                    onClick={() => {
+                      setSelectedProject(projectInfoData);
+                      setVoteModalVisible(true);
+                      setProjectInfoModalVisible(false);
+                    }}
+                    className="w-full py-3 rounded-lg bg-lime-600 text-white font-semibold hover:bg-lime-500 transition-colors mt-4 flex items-center justify-center"
+                  >
+                    <Award className="h-5 w-5 mr-2" />
+                    Vote for this Project
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex">
+              <button
+                onClick={() => setProjectInfoModalVisible(false)}
+                className="flex-1 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+       
+      )}
       
       {/* Vote Modal */}
       {voteModalVisible && selectedProject && (
@@ -895,6 +1624,67 @@ export default function CampaignDashboard() {
                     className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
                     placeholder="https://demo.yourproject.com"
                   />
+                </div>
+                
+                {/* New fields for logo and demo video */}
+                <div>
+                  <label className="block text-slate-300 mb-2">Logo URL (Optional)</label>
+                  <input 
+                    type="url"
+                    value={newProject.logo}
+                    onChange={(e) => setNewProject({...newProject, logo: e.target.value})}
+                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                    placeholder="https://example.com/logo.png or IPFS hash"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-slate-300 mb-2">Demo Video URL (Optional)</label>
+                  <input 
+                    type="url"
+                    value={newProject.demoVideo}
+                    onChange={(e) => setNewProject({...newProject, demoVideo: e.target.value})}
+                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                    placeholder="https://example.com/demo.mp4 or IPFS hash"
+                  />
+                </div>
+                
+                {/* Contract addresses */}
+                <div>
+                  <label className="flex justify-between items-center text-slate-300 mb-2">
+                    <span>Contract Addresses (Optional)</span>
+                    <button
+                      type="button"
+                      onClick={handleAddContract}
+                      className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded"
+                    >
+                      + Add Contract
+                    </button>
+                  </label>
+                  
+                  {newProject.contracts.map((contract, index) => (
+                    <div key={index} className="flex mb-2">
+                      <input 
+                        type="text"
+                        value={contract}
+                        onChange={(e) => handleContractChange(index, e.target.value)}
+                        className="flex-grow px-4 py-2 rounded-l-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                        placeholder="0x..."
+                      />
+                      {newProject.contracts.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveContract(index)}
+                          className="bg-slate-600 hover:bg-slate-500 text-slate-300 px-3 py-2 rounded-r-lg"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <p className="text-xs text-slate-400 mt-1">
+                    Add the addresses of any contracts associated with this project.
+                  </p>
                 </div>
               </div>
               

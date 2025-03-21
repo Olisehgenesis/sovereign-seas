@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { 
@@ -24,13 +24,22 @@ import {
   Droplets,
   User,
   Users,
-  Info
+  Info,
+  Image,
+  Video,
+  Code,
+  UserPlus,
+  UserMinus,
+  Settings,
+  PlusCircle,
+  Trash2,
+  MousePointerClick,
+  History
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
 
-const CONTRACT_ADDRESS = '0x35128A5Ee461943fA6403672b3574346Ba7E4530' as `0x${string}`;
-const CELO_TOKEN_ADDRESS = '0x3FC1f6138F4b0F5Da3E1927412Afe5c68ed4527b' as `0x${string}`;
-
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
+const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` 
 
 export default function CampaignAdminDashboard() {
   const router = useRouter();
@@ -45,10 +54,24 @@ export default function CampaignAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' });
   
+  // New states for additional functionality
+  const [campaignAdmins, setCampaignAdmins] = useState<string[]>([]);
+  const [newAdminAddress, setNewAdminAddress] = useState('');
+  const [adminToRemove, setAdminToRemove] = useState('');
+  const [userVoteHistory, setUserVoteHistory] = useState<any[]>([]);
+  const [voteHistoryVisible, setVoteHistoryVisible] = useState(false);
+  const [sortedProjects, setSortedProjects] = useState<any[]>([]);
+  const [showWinningProjectsPreview, setShowWinningProjectsPreview] = useState(false);
+  
   // UI state
   const [projectFilter, setProjectFilter] = useState('pending'); // 'all', 'pending', 'approved'
   const [confirmModal, setConfirmModal] = useState({ visible: false, action: '', projectId: -1 });
   const [distributeFundsModal, setDistributeFundsModal] = useState(false);
+  const [adminManagementModal, setAdminManagementModal] = useState(false);
+  const [invalidAddressError, setInvalidAddressError] = useState('');
+  
+  // Refs for form validation
+  const adminAddressInputRef = useRef<HTMLInputElement>(null);
   
   // Contract interaction
   const {
@@ -56,8 +79,14 @@ export default function CampaignAdminDashboard() {
     loadCampaigns,
     loadProjects,
     getSortedProjects,
+    getUserVoteHistory,
+    getUserTotalVotesInCampaign,
+    getUserVotesForProject,
     approveProject,
     distributeFunds,
+    addCampaignAdmin,
+    removeCampaignAdmin,
+    isCampaignAdmin,
     formatTokenAmount,
     formatCampaignTime,
     getCampaignTimeRemaining,
@@ -65,6 +94,8 @@ export default function CampaignAdminDashboard() {
     isWritePending,
     isWaitingForTx,
     isTxSuccess,
+    isSuperAdmin,
+    resetWrite
   } = useSovereignSeas({
     contractAddress: CONTRACT_ADDRESS,
     celoTokenAddress: CELO_TOKEN_ADDRESS,
@@ -77,6 +108,7 @@ export default function CampaignAdminDashboard() {
   useEffect(() => {
     if (isInitialized && campaignId) {
       loadCampaignData();
+      loadVoteHistory();
     }
   }, [isInitialized, campaignId, address, isTxSuccess]);
   
@@ -98,6 +130,13 @@ export default function CampaignAdminDashboard() {
     }
   }, [projectFilter, allProjects]);
   
+  // Load winning projects preview when toggle is activated
+  useEffect(() => {
+    if (showWinningProjectsPreview && campaign) {
+      loadSortedProjects();
+    }
+  }, [showWinningProjectsPreview, campaign]);
+  
   const loadCampaignData = async () => {
     setLoading(true);
     try {
@@ -111,11 +150,18 @@ export default function CampaignAdminDashboard() {
         if (campaignData) {
           setCampaign(campaignData);
           
-          // Check if current user is the admin
-          if (address && campaignData.admin.toLowerCase() !== address.toLowerCase()) {
-            // Not the admin, redirect to regular dashboard
-            router.push(`/campaign/${campaignId}/dashboard`);
-            return;
+          // Check if current user is the admin or super admin
+          if (address && 
+              campaignData.admin.toLowerCase() !== address.toLowerCase() && 
+              !isSuperAdmin) {
+            
+            // Additional check for campaign admin
+            const isAdmin = await isCampaignAdmin(Number(campaignId));
+            if (!isAdmin) {
+              // Not the admin, redirect to regular dashboard
+              router.push(`/campaign/${campaignId}/dashboard`);
+              return;
+            }
           }
           
           // Load projects
@@ -137,6 +183,38 @@ export default function CampaignAdminDashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const loadVoteHistory = async () => {
+    try {
+      if (address) {
+        const history = await getUserVoteHistory();
+        
+        // Filter to only include votes for this campaign
+        const campaignVotes = history.filter(vote => 
+          vote.campaignId.toString() === campaignId
+        );
+        
+        setUserVoteHistory(campaignVotes);
+      }
+    } catch (error) {
+      console.error('Error loading vote history:', error);
+    }
+  };
+  
+  const loadSortedProjects = async () => {
+    try {
+      if (campaign) {
+        const sorted = await getSortedProjects(Number(campaignId));
+        setSortedProjects(sorted);
+      }
+    } catch (error) {
+      console.error('Error loading sorted projects:', error);
+      setStatusMessage({
+        text: 'Error loading project rankings. Please try again later.',
+        type: 'error'
+      });
     }
   };
   
@@ -196,6 +274,59 @@ export default function CampaignAdminDashboard() {
     }
   };
   
+  // New functions for admin management
+  const validateEthereumAddress = (address: string) => {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  };
+  
+  const handleAddAdmin = async () => {
+    if (!validateEthereumAddress(newAdminAddress)) {
+      setInvalidAddressError('Please enter a valid Ethereum address');
+      if (adminAddressInputRef.current) {
+        adminAddressInputRef.current.focus();
+      }
+      return;
+    }
+    
+    setInvalidAddressError('');
+    
+    try {
+      await addCampaignAdmin(Number(campaignId), newAdminAddress);
+      setStatusMessage({
+        text: 'New admin added successfully!',
+        type: 'success'
+      });
+      setNewAdminAddress('');
+      setAdminManagementModal(false);
+    } catch (error) {
+      console.error('Error adding campaign admin:', error);
+      setStatusMessage({
+        text: 'Error adding admin. Please try again later.',
+        type: 'error'
+      });
+    }
+  };
+  
+  const handleRemoveAdmin = async () => {
+    if (!adminToRemove) return;
+    
+    try {
+      await removeCampaignAdmin(Number(campaignId), adminToRemove);
+      setStatusMessage({
+        text: 'Admin removed successfully!',
+        type: 'success'
+      });
+      setAdminToRemove('');
+      setAdminManagementModal(false);
+    } catch (error) {
+      console.error('Error removing campaign admin:', error);
+      setStatusMessage({
+        text: 'Error removing admin. Please try again later.',
+        type: 'error'
+      });
+    }
+  };
+  
   if (!isMounted) {
     return null;
   }
@@ -243,6 +374,9 @@ export default function CampaignAdminDashboard() {
   const totalVotes = allProjects.reduce((sum, project) => sum + Number(formatTokenAmount(project.voteCount)), 0);
   const totalFunds = formatTokenAmount(campaign.totalFunds);
   
+  // Check for campaign media
+  const hasCampaignMedia = campaign.logo?.trim().length > 0 || campaign.demoVideo?.trim().length > 0;
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
@@ -262,9 +396,35 @@ export default function CampaignAdminDashboard() {
                   <Shield className="h-3 w-3 mr-1" />
                   Admin View
                 </span>
+                
+                {isSuperAdmin && (
+                  <span className="px-2 py-0.5 bg-purple-900/50 text-purple-400 text-xs rounded-full border border-purple-500/30 inline-flex items-center">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Super Admin
+                  </span>
+                )}
               </div>
               
-              <h1 className="text-3xl font-bold mb-2">{campaign.name}</h1>
+              <div className="flex items-center">
+                <h1 className="text-3xl font-bold mb-2">{campaign.name}</h1>
+                
+                {/* Media indicators */}
+                {hasCampaignMedia && (
+                  <div className="flex items-center ml-2 gap-1">
+                    {campaign.logo && (
+                      <span className="text-blue-400">
+                        <Image className="h-4 w-4" />
+                      </span>
+                    )}
+                    {campaign.demoVideo && (
+                      <span className="text-red-400">
+                        <Video className="h-4 w-4" />
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               <p className="text-slate-300 mb-4">{campaign.description}</p>
               
               {/* Campaign Status */}
@@ -384,9 +544,40 @@ export default function CampaignAdminDashboard() {
                   onClick={() => router.push(`/campaign/${campaignId}/edit`)}
                   className="w-full py-3 rounded-lg bg-slate-700 text-white font-semibold hover:bg-slate-600 transition-colors flex items-center justify-center"
                 >
-                  <Globe className="h-5 w-5 mr-2" />
+                  <Settings className="h-5 w-5 mr-2" />
                   Edit Campaign
                 </button>
+                
+                {/* New Admin Management Button */}
+                <button
+                  onClick={() => setAdminManagementModal(true)}
+                  className="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-colors flex items-center justify-center"
+                >
+                  <Users className="h-5 w-5 mr-2" />
+                  Manage Admins
+                </button>
+                
+                {/* New Vote History Button */}
+                <button
+                  onClick={() => setVoteHistoryVisible(!voteHistoryVisible)}
+                  className="w-full py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-500 transition-colors flex items-center justify-center"
+                >
+                  <History className="h-5 w-5 mr-2" />
+                  {voteHistoryVisible ? 'Hide Vote History' : 'View Vote History'}
+                </button>
+                
+                {/* New Winners Preview Button */}
+                {hasStarted && (
+                  <button
+                    onClick={() => {
+                      setShowWinningProjectsPreview(!showWinningProjectsPreview);
+                    }}
+                    className="w-full py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-500 transition-colors flex items-center justify-center"
+                  >
+                    <Award className="h-5 w-5 mr-2" />
+                    {showWinningProjectsPreview ? 'Hide Rankings' : 'Preview Rankings'}
+                  </button>
+                )}
                 
                 <button
                   onClick={() => router.push(`/campaign/${campaignId}/export`)}
@@ -415,6 +606,101 @@ export default function CampaignAdminDashboard() {
                 </div>
               )}
             </div>
+            
+            {/* Vote History Section (Conditionally Rendered) */}
+            {voteHistoryVisible && (
+              <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-purple-600/20 mb-6">
+                <h2 className="text-xl font-semibold mb-4 text-purple-400 flex items-center">
+                  <History className="h-5 w-5 mr-2" />
+                  Your Vote History
+                </h2>
+                
+                {userVoteHistory.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-slate-400">You haven't voted in this campaign yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {userVoteHistory.map((vote, index) => {
+                      const project = allProjects.find(p => p.id.toString() === vote.projectId.toString());
+                      return (
+                        <div key={index} className="bg-slate-700/40 rounded-lg p-3">
+                          <div className="flex items-center mb-1">
+                            <MousePointerClick className="h-3.5 w-3.5 text-purple-400 mr-2" />
+                            <span className="font-medium">
+                              {project ? project.name : `Project #${vote.projectId.toString()}`}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-400">Amount:</span>
+                            <span className="text-lime-400 font-medium">
+                              {formatTokenAmount(vote.amount)} CELO
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-400">Vote Count:</span>
+                            <span className="text-purple-400 font-medium">
+                              {vote.voteCount.toString()}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Project Rankings Preview (Conditionally Rendered) */}
+            {showWinningProjectsPreview && (
+              <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-green-600/20 mb-6">
+                <h2 className="text-xl font-semibold mb-4 text-green-400 flex items-center">
+                  <Award className="h-5 w-5 mr-2" />
+                  Project Rankings
+                </h2>
+                
+                {sortedProjects.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Loader2 className="h-8 w-8 text-green-500 animate-spin mb-2 mx-auto" />
+                    <p className="text-slate-400">Loading project rankings...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {sortedProjects.map((project, index) => (
+                      <div 
+                        key={project.id.toString()} 
+                        className={`bg-slate-700/40 rounded-lg p-3 ${index < Number(campaign.maxWinners) && campaign.maxWinners.toString() !== '0' ? 'border border-green-500/30' : ''}`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium flex items-center">
+                            {index + 1}.{' '}
+                            {index < Number(campaign.maxWinners) && campaign.maxWinners.toString() !== '0' && (
+                              <Award className="h-3.5 w-3.5 text-yellow-400 ml-1" />
+                            )}
+                          </span>
+                          <span className="text-sm px-2 py-0.5 bg-green-900/50 text-green-400 rounded-full">
+                            {formatTokenAmount(project.voteCount)} votes
+                          </span>
+                        </div>
+                        <div className="font-medium text-white">{project.name}</div>
+                        <div className="text-xs text-slate-400 truncate mt-1">
+                          Owner: {project.owner.slice(0, 6)}...{project.owner.slice(-4)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {campaign.maxWinners.toString() !== '0' && sortedProjects.length > 0 && (
+                  <div className="mt-4 p-3 bg-slate-700/40 rounded-lg">
+                    <p className="text-sm text-green-300 flex items-start">
+                      <Info className="h-4 w-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
+                      Top {campaign.maxWinners.toString()} projects will receive funds based on {campaign.useQuadraticDistribution ? 'quadratic' : 'linear'} distribution.
+                    </p>
+                    </div>
+                )}
+              </div>
+            )}
             
             {/* Campaign Stats */}
             <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20">
@@ -458,6 +744,33 @@ export default function CampaignAdminDashboard() {
                     {campaign.maxWinners.toString() === '0' ? 'All Projects' : campaign.maxWinners.toString()}
                   </span>
                 </div>
+                
+                {/* Media Info */}
+                {hasCampaignMedia && (
+                  <>
+                    <div className="border-t border-slate-700 pt-3 mt-3">
+                      <span className="text-slate-300 font-medium">Media Content:</span>
+                    </div>
+                    {campaign.logo && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-300 flex items-center">
+                          <Image className="h-4 w-4 mr-2 text-blue-400" />
+                          Logo:
+                        </span>
+                        <span className="font-medium text-blue-400">Available</span>
+                      </div>
+                    )}
+                    {campaign.demoVideo && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-300 flex items-center">
+                          <Video className="h-4 w-4 mr-2 text-red-400" />
+                          Demo Video:
+                        </span>
+                        <span className="font-medium text-red-400">Available</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -540,6 +853,22 @@ export default function CampaignAdminDashboard() {
                               Pending Approval
                             </span>
                           )}
+                          
+                          {/* Media indicators */}
+                          {(project.logo || project.demoVideo) && (
+                            <div className="flex items-center gap-1">
+                              {project.logo && (
+                                <span className="text-blue-400">
+                                  <Image className="h-3.5 w-3.5" />
+                                </span>
+                              )}
+                              {project.demoVideo && (
+                                <span className="text-red-400">
+                                  <Video className="h-3.5 w-3.5" />
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         
                         <p className="text-slate-300 mt-1 mb-3">{project.description}</p>
@@ -580,6 +909,14 @@ export default function CampaignAdminDashboard() {
                               Demo
                             </a>
                           )}
+                          
+                          {/* Show contract count if there are any contracts */}
+                          {project.contracts && project.contracts.length > 0 && (
+                            <span className="text-purple-400 flex items-center">
+                              <Code className="h-4 w-4 mr-1" />
+                              {project.contracts.length} Contract{project.contracts.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
                         
                         <div className="flex items-center text-xs text-slate-400">
@@ -592,7 +929,7 @@ export default function CampaignAdminDashboard() {
                         {project.approved && (
                           <div className="bg-slate-800/60 rounded-lg px-4 py-3 text-center min-w-[120px] mb-3">
                             <div className="text-xl font-bold text-lime-400">
-                              {formatTokenAmount(project.voteCount)}
+                            {formatTokenAmount(project.voteCount)}
                             </div>
                             <div className="text-xs text-slate-400 mt-1">VOTES</div>
                           </div>
@@ -675,6 +1012,100 @@ export default function CampaignAdminDashboard() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Admin Management Modal */}
+      {adminManagementModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-lg p-6 relative">
+            <button 
+              onClick={() => {
+                setAdminManagementModal(false);
+                setNewAdminAddress('');
+                setInvalidAddressError('');
+              }} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+            
+            <h3 className="text-xl font-bold mb-1">Manage Campaign Admins</h3>
+            <p className="text-blue-400 font-medium mb-4">{campaign.name}</p>
+            
+            <div className="mb-6">
+              <h4 className="font-medium text-white mb-3">Add New Admin</h4>
+              
+              <div className="flex flex-col">
+                <label className="text-sm text-slate-300 mb-1">Admin Wallet Address</label>
+                <div className="flex">
+                  <input
+                    ref={adminAddressInputRef}
+                    type="text"
+                    value={newAdminAddress}
+                    onChange={(e) => {
+                      setNewAdminAddress(e.target.value);
+                      if (invalidAddressError) setInvalidAddressError('');
+                    }}
+                    placeholder="0x..."
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-l-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleAddAdmin}
+                    disabled={isWritePending || !newAdminAddress}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-500 disabled:bg-slate-600 disabled:text-slate-400 flex items-center"
+                  >
+                    {isWritePending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {invalidAddressError && (
+                  <p className="text-red-400 text-sm mt-1">{invalidAddressError}</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <h4 className="font-medium text-white mb-3">Current Admins</h4>
+              
+              <div className="bg-slate-700/50 rounded-lg p-3">
+                <div className="mb-2 flex items-center">
+                  <Shield className="h-4 w-4 text-yellow-400 mr-2" />
+                  <span className="text-yellow-400">Campaign Owner</span>
+                </div>
+                <div className="flex items-center justify-between bg-slate-700 rounded-lg p-3 mb-2">
+                  <span className="font-mono text-white">{campaign.admin}</span>
+                </div>
+                
+                {/* Campaign admins would be listed here */}
+                <div className="mt-4 mb-2 flex items-center">
+                  <Users className="h-4 w-4 text-blue-400 mr-2" />
+                  <span className="text-blue-400">Additional Admins</span>
+                </div>
+                
+                {/* This would be populated from the blockchain */}
+                <p className="text-slate-400 text-sm italic">
+                  To view all current admins, check the blockchain explorer or use the contract's getCampaignAdmins function.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  setAdminManagementModal(false);
+                  setNewAdminAddress('');
+                  setInvalidAddressError('');
+                }}
+                className="w-full py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -770,3 +1201,5 @@ export default function CampaignAdminDashboard() {
     </div>
   );
 }
+
+

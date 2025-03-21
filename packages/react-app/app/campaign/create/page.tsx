@@ -48,6 +48,7 @@ export default function CreateCampaign() {
   const {
     isInitialized,
     createCampaign,
+    loadCampaigns,
     isWritePending,
     isWaitingForTx,
     isTxSuccess,
@@ -64,12 +65,34 @@ export default function CreateCampaign() {
   // Redirect to dashboard on successful transaction
   useEffect(() => {
     if (isTxSuccess && txReceipt) {
-      // Extract campaign ID from transaction receipt events
-      // This is a simplified version - you'd need to decode the event logs properly
-      router.push(`/campaign/${txReceipt.logs[0]?.topics[1] || '0'}/dashboard`);
+      try {
+        // Option 1: Check all logs and use a more generic approach
+        // Find the latest log that might contain relevant information
+        if (txReceipt.logs.length > 0) {
+          // For most contracts, the campaign ID would be in the first topic after the event signature
+          const lastLog = txReceipt.logs[txReceipt.logs.length - 1];
+          if (lastLog.topics.length > 1) {
+            const campaignIdHex = lastLog.topics[1];
+            const campaignIdDecimal = campaignIdHex ? parseInt(campaignIdHex.slice(2), 16) : NaN;
+            
+            // Make sure it's a reasonable number before redirecting
+            if (!isNaN(campaignIdDecimal) && campaignIdDecimal < 1000000) {
+              router.push(`/campaign/${campaignIdDecimal}/dashboard`);
+              return;
+            }
+          }
+        }
+        
+        // Option 2: Fallback - redirect to campaigns list and show a message
+        console.warn("Could not extract campaign ID from transaction, going to campaigns list");
+        router.push('/campaigns');
+        
+      } catch (error) {
+        console.error("Error extracting campaign ID:", error);
+        router.push('/campaigns');
+      }
     }
   }, [isTxSuccess, txReceipt, router]);
-  
   if (!isMounted) {
     return null;
   }
