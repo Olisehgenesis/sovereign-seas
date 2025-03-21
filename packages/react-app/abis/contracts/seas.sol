@@ -611,7 +611,20 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
     /**
      * @dev Get campaign details
      * @param _campaignId Campaign ID
-     * @return Campaign details struct (excludes campaignAdmins mapping)
+     * @return id Campaign ID
+     * @return admin Campaign admin address
+     * @return name Campaign name
+     * @return description Campaign description
+     * @return logo Campaign logo URL/IPFS hash
+     * @return demoVideo Campaign demo video URL/IPFS hash
+     * @return startTime Campaign start time
+     * @return endTime Campaign end time
+     * @return adminFeePercentage Admin fee percentage
+     * @return voteMultiplier Vote multiplier
+     * @return maxWinners Maximum number of winners
+     * @return useQuadraticDistribution Whether quadratic distribution is used
+     * @return active Whether campaign is active
+     * @return totalFunds Total funds collected
      */
     function getCampaign(uint256 _campaignId) external view returns (
         uint256 id,
