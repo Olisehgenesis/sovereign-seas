@@ -236,7 +236,7 @@ export default function Home() {
             <div className="max-w-2xl">
               <div className="bg-gradient-to-r from-lime-300/10 to-yellow-300/10 backdrop-blur-sm rounded-xl p-4 border border-lime-500/20 shadow-lg">
                 <h2 className="text-xl md:text-2xl text-lime-100">
-                  The ocean decides, and the vote rules the tides. A decentralized voting system for impactful ocean conservation projects.
+                  The ocean decides, and the vote rules the tides. A decentralized voting system for  projects.
                 </h2>
               </div>
             </div>
