@@ -36,9 +36,13 @@ import {
   Filter,
   RefreshCw,
   TrendingDown,
-  LineChart
+  LineChart,
+  ExternalLink,
+  Edit,
+  User
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
+import { Button } from '@headlessui/react';
 
 // Placeholder for the contract addresses - replace with your actual addresses
 // Contract addresses - replace with actual addresses
@@ -1213,207 +1217,234 @@ export default function CampaignDashboard() {
       
       {/* Project Info Modal */}
       {projectInfoModalVisible && projectInfoData && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
-            <button 
-              onClick={() => setProjectInfoModalVisible(false)} 
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-xl font-bold">{projectInfoData.name}</h3>
-              
-              {!projectInfoData.approved && (
-                <span className="px-2 py-0.5 bg-orange-900/50 text-orange-400 text-xs rounded-full border border-orange-500/30">
-                  Pending Approval
-                </span>
-              )}
-              
-              {fundsDistributed && Number(projectInfoData.fundsReceived) > 0 && (
-                <span className="px-2 py-0.5 bg-green-900/50 text-green-400 text-xs rounded-full border border-green-500/30">
-                  Funded: {formatTokenAmount(projectInfoData.fundsReceived)} CELO
-                </span>
-              )}
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-6 mb-6">
-              <div className="md:w-2/3">
-                <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
-                  <h4 className="text-sm font-medium text-slate-300 mb-2">Description</h4>
-                  <p className="text-white">{projectInfoData.description}</p>
-                </div>
-                
-                {projectInfoData.contracts && projectInfoData.contracts.length > 0 && (
-                  <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
-                    <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center">
-                      <Code className="h-4 w-4 mr-1 text-purple-400" />
-                      Contract Addresses
-                    </h4>
-                    <div className="space-y-2">
-                      {projectInfoData.contracts.map((contract: string, idx: number) => (
-                        <div key={idx} className="font-mono text-sm text-white bg-slate-800 p-2 rounded break-all">
-                          {contract}
-                        </div>
-                      ))}
-                    </div>
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="bg-slate-800 rounded-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+      <button 
+        onClick={() => setProjectInfoModalVisible(false)} 
+        className="absolute top-4 right-4 text-slate-400 hover:text-white"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      
+      {/* Header section with title and badges */}
+      <div className="flex items-center flex-wrap gap-3 mb-4">
+        <h3 className="text-2xl font-bold">{projectInfoData.name}</h3>
+        
+        {!projectInfoData.approved && (
+          <span className="px-2 py-0.5 bg-orange-900/50 text-orange-400 text-xs rounded-full border border-orange-500/30">
+            Pending Approval
+          </span>
+        )}
+        
+        {fundsDistributed && Number(projectInfoData.fundsReceived) > 0 && (
+          <span className="px-2 py-0.5 bg-green-900/50 text-green-400 text-xs rounded-full border border-green-500/30">
+            Funded: {formatTokenAmount(projectInfoData.fundsReceived)} CELO
+          </span>
+        )}
+      </div>
+      
+      {/* Project Owner and Edit Button */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="bg-slate-700/60 rounded-full px-3 py-1 text-sm flex items-center gap-2">
+          <User className="h-3.5 w-3.5 text-slate-400" />
+          <span className="font-mono text-slate-300">
+            {`${projectInfoData.owner.slice(0, 6)}...${projectInfoData.owner.slice(-4)}`}
+          </span>
+        </div>
+        
+        {/* Only show edit button if user is owner or admin */}
+        {address && (address.toLowerCase() === projectInfoData.owner.toLowerCase() || isAdmin) && (
+          <a 
+            href={`/campaign/${campaignId}/project/${projectInfoData.id}/edit`}
+            className="bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-500 text-sm rounded-full px-3 py-1 flex items-center gap-1 transition-colors"
+          >
+            <Edit className="h-3.5 w-3.5" />
+            Edit Project
+          </a>
+        )}
+      </div>
+      
+      <div className="flex flex-col md:flex-row gap-6 mb-6">
+        <div className="md:w-2/3">
+          {/* Description section */}
+          <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
+            <h4 className="text-sm font-medium text-slate-300 mb-2">Description</h4>
+            <p className="text-white">{projectInfoData.description}</p>
+          </div>
+          
+          {/* Contracts section */}
+          {projectInfoData.contracts && projectInfoData.contracts.length > 0 && (
+            <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
+              <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center">
+                <Code className="h-4 w-4 mr-1 text-purple-400" />
+                Contract Addresses
+              </h4>
+              <div className="space-y-2">
+                {projectInfoData.contracts.map((contract: string, idx: number) => (
+                  <div key={idx} className="font-mono text-sm text-white bg-slate-800 p-2 rounded break-all">
+                    {contract}
                   </div>
-                )}
-                
-                {/* Links Section */}
-                <div className="rounded-lg bg-slate-700/40 p-4">
-                    <h4 className="text-sm font-medium text-slate-300 mb-2">Links</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {projectInfoData.githubLink && (
-                        <a 
-                          href={projectInfoData.githubLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
-                        >
-                          <Github className="h-5 w-5 mr-2" />
-                          GitHub Repository
-                        </a>
-                      )}
-                      
-                      {projectInfoData.socialLink && (
-                        <a 
-                          href={projectInfoData.socialLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
-                        >
-                          <Globe className="h-5 w-5 mr-2" />
-                          Social Media
-                        </a>
-                      )}
-                      
-                      {projectInfoData.testingLink && (
-                        <a 
-                          href={projectInfoData.testingLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
-                        >
-                          <FileText className="h-5 w-5 mr-2" />
-                          Demo / Testing
-                        </a>
-                      )}
-                      
-                      {projectInfoData.logo && (
-                        <a 
-                          href={projectInfoData.logo} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
-                        >
-                          <ImageIcon className="h-5 w-5 mr-2" />
-                          Project Logo
-                        </a>
-                      )}
-                      
-                      {projectInfoData.demoVideo && (
-                        <a 
-                          href={projectInfoData.demoVideo} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
-                        >
-                          <Video className="h-5 w-5 mr-2" />
-                          Demo Video
-                        </a>
-                      )}
-                      
-
-
-                      </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="md:w-1/3">
-                <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">Vote Statistics</h4>
-                  <div className="bg-slate-800/60 rounded-lg px-4 py-5 text-center mb-3">
-                    <div className="text-2xl font-bold text-lime-400">
-                      {formatTokenAmount(projectInfoData.voteCount)}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1">TOTAL VOTES</div>
-                  </div>
-                  
-                  {address && isConnected && (
-                    <div className="bg-slate-800/60 rounded-lg px-4 py-3 text-center">
-                      <div className="text-lg font-bold text-purple-400 flex items-center justify-center">
-                        <History className="h-4 w-4 mr-1" />
-                        <span id="user-vote-count">
-                          {/* This would be filled in after loading user's votes for this project */}
-                          {userVoteHistory
-                            .filter(v => v.projectId.toString() === projectInfoData.id.toString())
-                            .reduce((sum, v) => sum + Number(formatTokenAmount(v.voteCount)), 0)
-                          }
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-400 mt-1">YOUR VOTES</div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="rounded-lg bg-slate-700/40 p-4">
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">Project Info</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-slate-400">Owner:</span>
-                      <span className="text-sm font-mono text-white">
-                        {`${projectInfoData.owner.slice(0, 6)}...${projectInfoData.owner.slice(-4)}`}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-sm text-slate-400">Status:</span>
-                      <span className={`text-sm ${projectInfoData.approved ? 'text-green-400' : 'text-orange-400'}`}>
-                        {projectInfoData.approved ? 'Approved' : 'Pending Approval'}
-                      </span>
-                    </div>
-                    
-                    {fundsDistributed && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-slate-400">Funds Received:</span>
-                        <span className="text-sm text-lime-400">
-                          {formatTokenAmount(projectInfoData.fundsReceived)} CELO
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {isActive && projectInfoData.approved && (
-                  <button
-                    onClick={() => {
-                      setSelectedProject(projectInfoData);
-                      setVoteModalVisible(true);
-                      setProjectInfoModalVisible(false);
-                    }}
-                    className="w-full py-3 rounded-lg bg-lime-600 text-white font-semibold hover:bg-lime-500 transition-colors mt-4 flex items-center justify-center"
-                  >
-                    <Award className="h-5 w-5 mr-2" />
-                    Vote for this Project
-                  </button>
-                )}
+                ))}
               </div>
             </div>
-            
-            <div className="flex">
-              <button
-                onClick={() => setProjectInfoModalVisible(false)}
-                className="flex-1 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors"
-              >
-                Close
-              </button>
+          )}
+          
+          {/* Links Section */}
+          <div className="rounded-lg bg-slate-700/40 p-4">
+            <h4 className="text-sm font-medium text-slate-300 mb-2">Links</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {projectInfoData.githubLink && (
+                <a 
+                  href={projectInfoData.githubLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                >
+                  <Github className="h-5 w-5 mr-2" />
+                  GitHub Repository
+                </a>
+              )}
+              
+              {projectInfoData.socialLink && (
+                <a 
+                  href={projectInfoData.socialLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                >
+                  <Globe className="h-5 w-5 mr-2" />
+                  Social Media
+                </a>
+              )}
+              
+              {projectInfoData.testingLink && (
+                <a 
+                  href={projectInfoData.testingLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  Demo / Testing
+                </a>
+              )}
+              
+              {projectInfoData.logo && (
+                <a 
+                  href={projectInfoData.logo} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                >
+                  <ImageIcon className="h-5 w-5 mr-2" />
+                  Project Logo
+                </a>
+              )}
+              
+              {projectInfoData.demoVideo && (
+                <a 
+                  href={projectInfoData.demoVideo} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center text-blue-400 hover:text-blue-300 py-2 px-3 bg-slate-800/50 rounded-lg"
+                >
+                  <Video className="h-5 w-5 mr-2" />
+                  Demo Video
+                </a>
+              )}
             </div>
           </div>
-       
-      )}
+        </div>
+        
+        {/* Right sidebar */}
+        <div className="md:w-1/3">
+          {/* Vote statistics card */}
+          <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
+            <h4 className="text-sm font-medium text-slate-300 mb-3">Vote Statistics</h4>
+            <div className="bg-slate-800/60 rounded-lg px-4 py-5 text-center mb-3">
+              <div className="text-2xl font-bold text-lime-400">
+                {formatTokenAmount(projectInfoData.voteCount)}
+              </div>
+              <div className="text-xs text-slate-400 mt-1">TOTAL VOTES</div>
+            </div>
+            
+            {address && isConnected && (
+              <div className="bg-slate-800/60 rounded-lg px-4 py-3 text-center">
+                <div className="text-lg font-bold text-purple-400 flex items-center justify-center">
+                  <History className="h-4 w-4 mr-1" />
+                  <span id="user-vote-count">
+                    {userVoteHistory
+                      .filter(v => v.projectId.toString() === projectInfoData.id.toString())
+                      .reduce((sum, v) => sum + Number(formatTokenAmount(v.voteCount)), 0)
+                    }
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">YOUR VOTES</div>
+              </div>
+            )}
+          </div>
+          
+          {/* Project info card */}
+          <div className="rounded-lg bg-slate-700/40 p-4 mb-4">
+            <h4 className="text-sm font-medium text-slate-300 mb-3">Project Info</h4>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-400">Status:</span>
+                <span className={`text-sm ${projectInfoData.approved ? 'text-green-400' : 'text-orange-400'}`}>
+                  {projectInfoData.approved ? 'Approved' : 'Pending Approval'}
+                </span>
+              </div>
+              
+              {fundsDistributed && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-400">Funds Received:</span>
+                  <span className="text-sm text-lime-400">
+                    {formatTokenAmount(projectInfoData.fundsReceived)} CELO
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Action buttons */}
+          <div className="space-y-2">
+            {isActive && projectInfoData.approved && (
+              <button
+                onClick={() => {
+                  setSelectedProject(projectInfoData);
+                  setVoteModalVisible(true);
+                  setProjectInfoModalVisible(false);
+                }}
+                className="w-full py-3 rounded-lg bg-lime-600 text-white font-semibold hover:bg-lime-500 transition-colors flex items-center justify-center"
+              >
+                <Award className="h-5 w-5 mr-2" />
+                Vote for this Project
+              </button>
+            )}
+            
+            <a 
+              href={`/campaign/${campaignId}/project/${projectInfoData.id}`}
+              className="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-colors flex items-center justify-center"
+            >
+              <ExternalLink className="h-5 w-5 mr-2" />
+              View Full Project Page
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex">
+        <button
+          onClick={() => setProjectInfoModalVisible(false)}
+          className="flex-1 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      
       
       {/* Vote Modal */}
       {voteModalVisible && selectedProject && (
