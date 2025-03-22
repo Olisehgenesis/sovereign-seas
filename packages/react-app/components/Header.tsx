@@ -10,8 +10,8 @@ import { usePathname } from 'next/navigation';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
 import { celo } from 'viem/chains';
 
-// Define Celo chain ID - Celo Mainnet is 42220, Celo Alfajores testnet is 44787
-const CELO_CHAIN_ID = celo.id; // Uses viem's celo chain definition
+//get chain id from .env
+const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CELO_CHAIN_ID as string);
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
