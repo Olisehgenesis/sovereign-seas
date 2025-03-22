@@ -48,8 +48,8 @@ type Campaign = {
   admin: string;
   name: string;
   description: string;
-  logo: string;          // Added for new contract
-  demoVideo: string;     // Added for new contract
+  logo: string;
+  demoVideo: string;
   startTime: bigint;
   endTime: bigint;
   adminFeePercentage: bigint;
@@ -247,13 +247,13 @@ export default function Campaigns() {
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'active':
-        return 'bg-emerald-500 text-slate-900';
+        return 'bg-emerald-500 text-white';
       case 'upcoming':
-        return 'bg-amber-400 text-slate-900';
+        return 'bg-amber-400 text-amber-900';
       case 'ended':
-        return 'bg-slate-600 text-white';
+        return 'bg-gray-300 text-gray-700';
       default:
-        return 'bg-slate-700 text-white';
+        return 'bg-gray-300 text-gray-700';
     }
   };
 
@@ -276,42 +276,35 @@ export default function Campaigns() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        {/* Animated Background Effects */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-lime-500/10 rounded-full filter blur-3xl animate-blob"></div>
-          <div className="absolute top-40 right-10 w-72 h-72 bg-yellow-500/10 rounded-full filter blur-3xl animate-blob animation-delay-2000"></div>
-          <div className="absolute bottom-10 left-1/3 w-80 h-80 bg-teal-500/10 rounded-full filter blur-3xl animate-blob animation-delay-4000"></div>
-        </div>
-        
         {/* Content */}
-        <div className="container mx-auto px-4 py-8 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="container mx-auto px-6 py-10 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center">
-                <Hash className="h-7 w-7 text-lime-500 mr-2" />
-                Innovation <span className="text-yellow-400 ml-2">Campaigns</span>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center tilt-neon">
+                <Hash className="h-7 w-7 text-emerald-600 mr-2" />
+                Innovation <span className="text-emerald-600 ml-2">Campaigns</span>
               </h1>
-              <p className="text-slate-300 mt-2 max-w-2xl">
+              <p className="text-gray-600 mt-2 max-w-2xl">
                 Discover and support impactful tech projects and initiatives. Vote with CELO tokens to fund innovation.
               </p>
             </div>
             
             {/* Quick stats */}
             <div className="flex flex-wrap gap-3">
-              <div className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-lime-500/20 flex items-center">
+              <div className="bg-white py-2 px-4 rounded-full border border-gray-200 shadow-sm flex items-center">
                 <Zap className="h-4 w-4 text-emerald-500 mr-1.5" />
-                <span className="text-sm"><span className="text-emerald-400 font-semibold">{totalActive}</span> Active</span>
+                <span className="text-sm"><span className="text-emerald-600 font-semibold">{totalActive}</span> Active</span>
               </div>
-              <div className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-lime-500/20 flex items-center">
-                <Clock className="h-4 w-4 text-amber-400 mr-1.5" />
-                <span className="text-sm"><span className="text-amber-400 font-semibold">{totalUpcoming}</span> Upcoming</span>
+              <div className="bg-white py-2 px-4 rounded-full border border-gray-200 shadow-sm flex items-center">
+                <Clock className="h-4 w-4 text-amber-500 mr-1.5" />
+                <span className="text-sm"><span className="text-amber-600 font-semibold">{totalUpcoming}</span> Upcoming</span>
               </div>
               <button 
                 onClick={navigateToCreateCampaign}
-                className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-lime-500/20 text-lime-400 flex items-center text-sm hover:bg-lime-500/10 transition-colors"
+                className="bg-white py-2 px-4 rounded-full border border-emerald-100 text-emerald-600 flex items-center text-sm hover:bg-emerald-50 transition-colors shadow-sm"
               >
                 <PlusCircle className="h-4 w-4 mr-1.5" />
                 Create New
@@ -319,7 +312,7 @@ export default function Campaigns() {
               {isSuperAdmin && (
                 <button 
                   onClick={navigateToAdmin}
-                  className="bg-slate-800/40 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-purple-500/20 text-purple-400 flex items-center text-sm hover:bg-purple-500/10 transition-colors"
+                  className="bg-white py-2 px-4 rounded-full border border-purple-100 text-purple-600 flex items-center text-sm hover:bg-purple-50 transition-colors shadow-sm"
                 >
                   <Award className="h-4 w-4 mr-1.5" />
                   Admin
@@ -330,10 +323,10 @@ export default function Campaigns() {
         </div>
       </div>
       
-      {/* Filter Bar - Compact Version */}
-      <div className="container mx-auto px-4">
-        <div className="bg-slate-800/40 backdrop-blur-md rounded-lg p-3 border border-lime-600/20 shadow-lg">
-          <div className="flex flex-wrap items-center gap-2">
+      {/* Filter Bar */}
+      <div className="container mx-auto px-6">
+        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-md">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Search */}
             <div className="flex-grow min-w-[200px]">
               <div className="relative">
@@ -342,78 +335,78 @@ export default function Campaigns() {
                   placeholder="Search campaigns..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-lime-500 text-sm"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm"
                 />
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               </div>
             </div>
             
             {/* Quick Filters */}
-            <div className="flex space-x-1">
+            <div className="flex space-x-2">
               <button
                 onClick={() => setStatusFilter('all')}
-                className={`px-3 py-2 rounded-md text-xs font-medium ${
+                className={`px-4 py-2.5 rounded-full text-xs font-medium transition-colors ${
                   statusFilter === 'all'
-                    ? 'bg-lime-600 text-white'
-                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 All
               </button>
               <button
                 onClick={() => setStatusFilter('active')}
-                className={`px-3 py-2 rounded-md text-xs font-medium flex items-center ${
+                className={`px-4 py-2.5 rounded-full text-xs font-medium flex items-center transition-colors ${
                   statusFilter === 'active'
-                    ? 'bg-emerald-600/70 text-white'
-                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                <Zap className="h-3 w-3 mr-1" />
+                <Zap className="h-3.5 w-3.5 mr-1.5" />
                 Active
               </button>
               <button
                 onClick={() => setStatusFilter('upcoming')}
-                className={`px-3 py-2 rounded-md text-xs font-medium flex items-center ${
+                className={`px-4 py-2.5 rounded-full text-xs font-medium flex items-center transition-colors ${
                   statusFilter === 'upcoming'
-                    ? 'bg-amber-600/70 text-white'
-                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-amber-400 text-amber-900 shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                <Clock className="h-3 w-3 mr-1" />
+                <Clock className="h-3.5 w-3.5 mr-1.5" />
                 Upcoming
               </button>
               <button
                 onClick={() => setStatusFilter('ended')}
-                className={`px-3 py-2 rounded-md text-xs font-medium flex items-center ${
+                className={`px-4 py-2.5 rounded-full text-xs font-medium flex items-center transition-colors ${
                   statusFilter === 'ended'
-                    ? 'bg-slate-600 text-white'
-                    : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-gray-300 text-gray-700 shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                 }`}
               >
-                <CheckCircle className="h-3 w-3 mr-1" />
+                <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                 Ended
               </button>
             </div>
             
             {/* Sort Dropdown */}
-            <div className="relative min-w-[140px]">
+            <div className="relative min-w-[160px]">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full appearance-none pl-8 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+                className="w-full appearance-none pl-9 pr-10 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-xs"
               >
                 <option value="newest">Newest First</option>
                 <option value="endingSoon">Ending Soon</option>
                 <option value="mostFunded">Most Funded</option>
               </select>
-              <Filter className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <Filter className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <button 
                 onClick={toggleSortDirection}
-                className="absolute right-2.5 top-2.5"
+                className="absolute right-3 top-2.5"
               >
                 {sortDirection === 'desc' 
-                  ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                  : <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+                  ? <ChevronDown className="h-4 w-4 text-gray-400" />
+                  : <ChevronUp className="h-4 w-4 text-gray-400" />
                 }
               </button>
             </div>
@@ -421,7 +414,7 @@ export default function Campaigns() {
             {/* Advanced Filters Toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-3 py-2 rounded-md bg-slate-700/60 text-slate-300 hover:bg-slate-700 transition-colors text-xs flex items-center"
+              className="px-4 py-2.5 rounded-full bg-white border border-gray-200 text-emerald-600 hover:bg-emerald-50 transition-colors text-xs flex items-center shadow-sm"
             >
               <BarChart className="h-3.5 w-3.5 mr-1.5" />
               {showFilters ? 'Hide Filters' : 'More Filters'}
@@ -431,11 +424,11 @@ export default function Campaigns() {
           
           {/* Advanced Filters - Expanded */}
           {showFilters && (
-            <div className="mt-3 pt-3 border-t border-slate-700/50 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-slate-400 mb-1 text-xs">Distribution Method</label>
+                <label className="block text-gray-500 mb-1.5 text-xs">Distribution Method</label>
                 <select
-                  className="w-full appearance-none pl-3 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+                  className="w-full appearance-none pl-3 pr-8 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-xs"
                 >
                   <option value="all">All Methods</option>
                   <option value="quadratic">Quadratic Distribution</option>
@@ -444,9 +437,9 @@ export default function Campaigns() {
               </div>
               
               <div>
-                <label className="block text-slate-400 mb-1 text-xs">Vote Multiplier</label>
+                <label className="block text-gray-500 mb-1.5 text-xs">Vote Multiplier</label>
                 <select
-                  className="w-full appearance-none pl-3 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+                  className="w-full appearance-none pl-3 pr-8 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-xs"
                 >
                   <option value="all">Any Multiplier</option>
                   <option value="1">1x</option>
@@ -456,9 +449,9 @@ export default function Campaigns() {
               </div>
               
               <div>
-                <label className="block text-slate-400 mb-1 text-xs">Funding Amount</label>
+                <label className="block text-gray-500 mb-1.5 text-xs">Funding Amount</label>
                 <select
-                  className="w-full appearance-none pl-3 pr-8 py-2 rounded-md bg-slate-700/60 border border-slate-600 text-white focus:outline-none focus:border-lime-500 text-xs"
+                  className="w-full appearance-none pl-3 pr-8 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-xs"
                 >
                   <option value="all">Any Amount</option>
                   <option value="low">Less than 100 CELO</option>
@@ -472,11 +465,11 @@ export default function Campaigns() {
       </div>
       
       {/* Results Count + Create Button */}
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <div className="text-slate-300 text-sm">
+      <div className="container mx-auto px-6 py-6 flex justify-between items-center">
+        <div className="text-gray-600 text-sm">
           {loading ? (
             <span className="flex items-center">
-              <div className="w-4 h-4 border-t-2 border-lime-500 rounded-full animate-spin mr-2"></div>
+              <div className="w-4 h-4 border-t-2 border-emerald-500 rounded-full animate-spin mr-2"></div>
               Loading campaigns...
             </span>
           ) : (
@@ -486,7 +479,7 @@ export default function Campaigns() {
         
         <button 
           onClick={navigateToCreateCampaign}
-          className="text-lime-400 hover:text-lime-300 text-sm transition-colors flex items-center"
+          className="text-emerald-600 hover:text-emerald-700 text-sm transition-colors flex items-center"
         >
           <PlusCircle className="h-4 w-4 mr-1.5" />
           Create Campaign
@@ -494,29 +487,29 @@ export default function Campaigns() {
       </div>
       
       {/* Campaigns Grid */}
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-6 py-4">
         {loading ? (
           // Loading state
           <div className="flex justify-center items-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-lime-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
           </div>
         ) : filteredCampaigns.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCampaigns.map((campaign) => (
               <div 
                 key={campaign.id.toString()}
-                className="bg-slate-800/40 backdrop-blur-md rounded-lg overflow-hidden border border-slate-700 hover:border-lime-500/50 transition-all cursor-pointer shadow-lg hover:shadow-lime-500/5"
+                className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-emerald-300 transition-all cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-1 duration-200"
                 onClick={() => navigateToCampaign(campaign.id.toString())}
               >
                 {/* Campaign Header */}
-                <div className="h-28 bg-gradient-to-r from-slate-700/80 to-slate-700/40 relative overflow-hidden">
+                <div className="h-28 bg-gradient-to-r from-teal-50 to-emerald-50 relative overflow-hidden">
                   {/* Display campaign logo if available */}
                   {campaign.logo && (
-                    <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${campaign.logo})`, opacity: 0.6 }}></div>
+                    <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${campaign.logo})`, opacity: 0.8 }}></div>
                   )}
                   
                   {/* Status Badge */}
-                  <div className={`absolute top-3 right-3 px-2 py-0.5 ${getStatusColor(campaign.status)} text-xs font-medium rounded-md flex items-center`}>
+                  <div className={`absolute top-3 right-3 px-3 py-1 ${getStatusColor(campaign.status)} text-xs font-medium rounded-full flex items-center shadow-sm`}>
                     {getStatusIcon(campaign.status)}
                     {campaign.status === 'active' 
                       ? 'Active' 
@@ -528,7 +521,7 @@ export default function Campaigns() {
                   {/* Media Indicators */}
                   <div className="absolute top-3 left-3 flex gap-1.5">
                     {campaign.demoVideo && (
-                      <div className="px-2 py-0.5 bg-slate-800/80 backdrop-blur-sm text-yellow-400 text-xs rounded-md flex items-center">
+                      <div className="px-2 py-1 bg-white text-amber-600 text-xs rounded-full flex items-center shadow-sm">
                         <Video className="h-3 w-3 mr-1" />
                         Demo
                       </div>
@@ -537,63 +530,66 @@ export default function Campaigns() {
                   
                   {/* Time Remaining */}
                   {campaign.status === 'active' && campaign.timeRemaining && (
-                    <div className="absolute bottom-3 right-3 px-2 py-0.5 bg-slate-900/80 backdrop-blur-sm text-white text-xs rounded-md flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
+                    <div className="absolute bottom-3 right-3 px-3 py-1 bg-white text-gray-700 text-xs rounded-full flex items-center shadow-sm">
+                      <Clock className="h-3 w-3 mr-1 text-emerald-500" />
                       {campaign.timeRemaining.days}d {campaign.timeRemaining.hours}h remaining
                     </div>
                   )}
                   
                   {/* Decoration */}
-                  <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-gradient-to-r from-lime-500/20 to-yellow-500/20 blur-xl"></div>
-                  <div className="absolute top-4 left-1/2 text-lime-500/10">
+                  <div className="absolute top-4 left-1/2 text-emerald-200">
                     <Laptop className="h-32 w-32" />
                   </div>
                 </div>
                 
                 {/* Campaign Content */}
-                <div className="p-4">
-                  <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">{campaign.name}</h3>
-                  <p className="text-slate-300 text-xs mb-3 line-clamp-2">{campaign.description}</p>
+                <div className="p-5">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-1">{campaign.name}</h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{campaign.description}</p>
                   
                   {/* Stats Row */}
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div className="bg-slate-700/30 rounded-md p-2 flex items-center">
-                      <Droplets className="h-3.5 w-3.5 text-lime-500 mr-1.5" />
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-gray-50 rounded-xl p-3 flex items-center">
+                      <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center mr-3">
+                        <Droplets className="h-4 w-4 text-emerald-600" />
+                      </div>
                       <div>
-                        <div className="text-xs text-slate-400">Total Funds</div>
-                        <div className="text-lime-400 text-sm font-medium">{formatTokenAmount(campaign.totalFunds)} CELO</div>
+                        <div className="text-xs text-gray-500">Total Funds</div>
+                        <div className="text-emerald-600 text-sm font-medium">{formatTokenAmount(campaign.totalFunds)} CELO</div>
                       </div>
                     </div>
-                    <div className="bg-slate-700/30 rounded-md p-2 flex items-center">
-                      <Code className="h-3.5 w-3.5 text-lime-500 mr-1.5" />
+                    <div className="bg-gray-50 rounded-xl p-3 flex items-center">
+                      <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center mr-3">
+                        <Code className="h-4 w-4 text-emerald-600" />
+                      </div>
                       <div>
-                        <div className="text-xs text-slate-400">Projects</div>
-                        <div className="text-white text-sm font-medium">{campaign.projectCount || 0}</div>
+                        <div className="text-xs text-gray-500">Projects</div>
+                        <div className="text-gray-800 text-sm font-medium">{campaign.projectCount || 0}</div>
                       </div>
                     </div>
                   </div>
                   
                   {/* Tags */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <div className="px-2 py-0.5 bg-slate-700/50 rounded-md text-xs text-slate-300 flex items-center">
-                      <Tag className="h-3 w-3 mr-1 text-yellow-500" />
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700 flex items-center">
+                      <Tag className="h-3 w-3 mr-1 text-teal-600" />
                       {campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'} 
                     </div>
-                    <div className="px-2 py-0.5 bg-slate-700/50 rounded-md text-xs text-slate-300 flex items-center">
-                      <Award className="h-3 w-3 mr-1 text-yellow-500" />
+                    <div className="px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700 flex items-center">
+                      <Award className="h-3 w-3 mr-1 text-teal-600" />
                       {campaign.voteMultiplier.toString()}x Votes
                     </div>
                   </div>
                   
                   {/* Action Button */}
                   <button 
-                    className="w-full py-1.5 rounded-md bg-gradient-to-r from-lime-600/60 to-lime-500/60 hover:from-lime-600 hover:to-lime-500 text-white text-xs font-medium transition-all flex items-center justify-center"
+                    className="w-full py-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors flex items-center justify-center shadow-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigateToCampaign(campaign.id.toString());
                     }}
                   >
-                    Explore Campaign <ArrowRight className="ml-1.5 h-3 w-3" />
+                    Explore Campaign <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -601,12 +597,14 @@ export default function Campaigns() {
           </div>
         ) : (
           // No campaigns found
-          <div className="bg-slate-800/30 backdrop-blur-md rounded-lg p-8 text-center my-8 border border-slate-700">
-            <div className="flex justify-center mb-4">
-              <XCircle className="h-14 w-14 text-slate-500" />
+          <div className="bg-white rounded-xl p-8 text-center my-8 border border-gray-200 shadow-md">
+            <div className="flex justify-center mb-6">
+              <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center">
+                <XCircle className="h-8 w-8 text-gray-400" />
+              </div>
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No Campaigns Found</h3>
-            <p className="text-slate-300 mb-6 max-w-lg mx-auto">
+            <h3 className="text-xl font-semibold text-gray-800 mb-3 tilt-neon">No Campaigns Found</h3>
+            <p className="text-gray-600 mb-6 max-w-lg mx-auto">
               {searchQuery 
                 ? `No campaigns match "${searchQuery}". Try a different search term or filter.` 
                 : 'No campaigns found with the current filters. Try adjusting your filters or create a new campaign.'}
@@ -618,13 +616,13 @@ export default function Campaigns() {
                   setStatusFilter('all');
                   setSortBy('newest');
                 }}
-                className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-all mr-3"
+                className="px-5 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors mr-3 shadow-sm"
               >
                 Reset Filters
               </button>
               <button 
                 onClick={navigateToCreateCampaign}
-                className="px-4 py-2 rounded-lg bg-lime-600 text-white hover:bg-lime-500 transition-all flex items-center"
+                className="px-5 py-2.5 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 transition-colors flex items-center shadow-sm"
               >
                 <PlusCircle className="h-4 w-4 mr-1.5" />
                 Create Campaign
@@ -634,67 +632,67 @@ export default function Campaigns() {
         )}
       </div>
       
-      {/* Pagination (if needed) - Simplified */}
+      {/* Pagination (if needed) */}
       {filteredCampaigns.length > 12 && (
-        <div className="container mx-auto px-4 py-6 flex justify-center">
-          <div className="flex space-x-1.5">
-            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
+        <div className="container mx-auto px-6 py-8 flex justify-center">
+          <div className="flex space-x-2">
+            <button className="px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-xs shadow-sm">
               Previous
             </button>
-            <button className="px-3 py-1.5 rounded-md bg-lime-600 text-white text-xs">
+            <button className="px-4 py-2 rounded-full bg-emerald-500 text-white text-xs shadow-sm">
               1
             </button>
-            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
+            <button className="px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-xs shadow-sm">
               2
             </button>
-            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
+            <button className="px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-xs shadow-sm">
               3
             </button>
-            <button className="px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-600 transition-all text-xs">
+            <button className="px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-xs shadow-sm">
               Next
             </button>
           </div>
         </div>
       )}
       
-      {/* No Wallet Connected Warning - Subtle */}
+      {/* No Wallet Connected Warning */}
       {!isConnected && (
-        <div className="container mx-auto px-4 py-4">
-          <div className="bg-yellow-500/10 backdrop-blur-md rounded-lg p-3 border border-yellow-500/20 flex flex-wrap items-center justify-between">
-            <p className="text-yellow-300 text-sm">
+        <div className="container mx-auto px-6 py-4">
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 flex flex-wrap items-center justify-between shadow-sm">
+            <p className="text-amber-700 text-sm">
               💡 Connect your wallet to vote for projects and contribute to campaigns
             </p>
-            <button className="px-3 py-1.5 rounded-md bg-yellow-500 text-slate-900 font-medium hover:bg-yellow-400 transition-all text-xs">
+            <button className="px-4 py-2 rounded-full bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors text-xs shadow-sm">
               Connect Wallet
             </button>
           </div>
         </div>
       )}
       
-      {/* CTA Section - Compact */}
-      <div className="container mx-auto px-4 py-10">
-        <div className="bg-gradient-to-r from-lime-900/30 to-yellow-900/30 backdrop-blur-md rounded-lg p-5 border border-lime-500/20 shadow-lg">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* CTA Section */}
+      <div className="container mx-auto px-6 py-10">
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-100 rounded-xl p-6 border border-emerald-100 shadow-md">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
-              <h2 className="text-xl font-bold text-white mb-2 flex items-center">
-                <Sparkles className="h-5 w-5 text-yellow-400 mr-2" />
+              <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center tilt-neon">
+                <Sparkles className="h-5 w-5 text-emerald-500 mr-2" />
                 Make an impact through innovation
               </h2>
-              <p className="text-lime-100 text-sm">
+              <p className="text-gray-600 text-sm">
                 Every vote helps fund vital projects. Join our community of innovators today!
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <button 
                 onClick={navigateToCreateCampaign}
-                className="px-4 py-2 rounded-lg bg-yellow-500 text-slate-900 font-medium hover:bg-yellow-400 transition-all text-sm flex items-center shadow-md shadow-yellow-500/20"
+                className="px-5 py-2.5 rounded-full bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors text-sm flex items-center shadow-md"
               >
                 <PlusCircle className="h-4 w-4 mr-1.5" />
                 Start Campaign
               </button>
               <button 
                 onClick={() => router.push('/')}
-                className="px-4 py-2 rounded-lg bg-transparent border border-lime-400 text-lime-400 font-medium hover:bg-lime-500/10 transition-all text-sm"
+                className="px-5 py-2.5 rounded-full bg-white border border-emerald-200 text-emerald-600 font-medium hover:bg-emerald-50 transition-colors text-sm shadow-sm"
               >
                 Learn More
               </button>

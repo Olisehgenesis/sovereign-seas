@@ -29,31 +29,31 @@ const navigation = [
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-800/60 backdrop-blur-md mt-auto border-t border-lime-600/30">
-      <div className="mx-auto max-w-7xl py-8 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8">
-        <div className="flex justify-center space-x-6 md:order-2">
+    <footer className="bg-white/90 backdrop-blur-sm mt-auto border-t border-emerald-100 shadow-sm">
+      <div className="mx-auto max-w-7xl py-4 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8">
+        <div className="flex justify-center space-x-4 md:order-2">
           {navigation.map((item) => (
             <a
               key={item.name}
               href={item.href}
-              className="text-slate-400 hover:text-lime-400 transition-colors"
+              className="text-gray-500 hover:text-emerald-500 transition-colors"
               target="_blank"
               rel="noopener noreferrer"
             >
               <span className="sr-only">{item.name}</span>
-              <item.icon className="h-6 w-6" aria-hidden="true" />
+              <item.icon className="h-5 w-5" aria-hidden="true" />
             </a>
           ))}
         </div>
-        <div className="mt-8 md:order-1 md:mt-0">
-          <p className="text-center text-base text-slate-400">
-            &copy; {new Date().getFullYear()} Developed with <span className="text-yellow-400">♦</span> by Oliseh GENESIS
+        <div className="mt-2 md:order-1 md:mt-0">
+          <p className="text-center text-sm text-gray-500">
+            &copy; {new Date().getFullYear()} Developed with <span className="text-emerald-500">♦</span> by <span className="tilt-neon">Oliseh GENESIS</span>
           </p>
         </div>
       </div>
       
       {/* Decorative gradient line */}
-      <div className="h-1 w-full bg-gradient-to-r from-lime-500 via-yellow-400 to-lime-500 opacity-60"></div>
+      <div className="h-0.5 w-full bg-gradient-to-r from-teal-400 via-emerald-500 to-teal-400"></div>
     </footer>
   );
 }
