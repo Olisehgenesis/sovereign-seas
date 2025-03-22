@@ -16,7 +16,11 @@ import {
   Github,
   Twitter,
   Mail,
-  Navigation
+  Navigation,
+  Coins,
+  BarChart3,
+  TrendingUp,
+  Zap
 } from 'lucide-react';
 
 export default function About() {
@@ -77,7 +81,7 @@ export default function About() {
             </div>
             
             <h2 className="text-xl md:text-2xl text-lime-100 max-w-3xl">
-              A decentralized voting platform where "the ocean decides, and the vote rules the tides."
+              A decentralized voting platform where communities decide, and collective decisions drive impact.
             </h2>
           </div>
         </div>
@@ -94,7 +98,7 @@ export default function About() {
             
             <p className="text-slate-300 mb-6 leading-relaxed">
               Sovereign Seas is a groundbreaking decentralized application built on the Celo blockchain, 
-              designed to empower communities to fund and support impactful ocean conservation projects. 
+              designed to empower communities to fund and support innovative projects. 
               Our platform creates a transparent ecosystem where the best ideas rise to the top through 
               collective decision-making, with every vote contributing to real-world positive change.
             </p>
@@ -102,8 +106,8 @@ export default function About() {
             <p className="text-slate-300 leading-relaxed">
               Through our unique voting and funding mechanism, we're democratizing project funding and 
               ensuring that resources flow to the most valued initiatives as determined by the community. 
-              From coral reef restoration to ocean plastic removal, Sovereign Seas enables direct community 
-              support for the projects that matter most.
+              From open-source development to community-led research, Sovereign Seas enables direct support 
+              for the projects that matter most.
             </p>
           </div>
         </div>
@@ -113,7 +117,7 @@ export default function About() {
       <div className="container mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-4 flex items-center justify-center">
-            <Anchor className="h-8 w-8 text-yellow-400 mr-3" />
+            <Coins className="h-8 w-8 text-yellow-400 mr-3" />
             Core Components
           </h2>
           <p className="text-lime-100 max-w-2xl mx-auto">
@@ -170,17 +174,17 @@ export default function About() {
           {/* Campaign Management */}
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 border-t-4 border-lime-500 transform hover:-translate-y-1 transition-all">
             <div className="flex items-center mb-4">
-              <LifeBuoy className="h-6 w-6 text-lime-500 mr-2" />
+              <BarChart3 className="h-6 w-6 text-lime-500 mr-2" />
               <h3 className="text-xl font-bold text-white">Campaign Management</h3>
             </div>
             <ul className="text-slate-300 space-y-2">
               <li className="flex items-start">
                 <span className="text-yellow-400 mr-2">•</span>
-                <span>Create themed conservation campaigns</span>
+                <span>Create themed funding campaigns</span>
               </li>
               <li className="flex items-start">
                 <span className="text-yellow-400 mr-2">•</span>
-                <span>Submit and approve conservation projects</span>
+                <span>Submit and approve community projects</span>
               </li>
               <li className="flex items-start">
                 <span className="text-yellow-400 mr-2">•</span>
@@ -209,7 +213,7 @@ export default function About() {
             <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-yellow-500 rounded-full flex items-center justify-center mb-4">
               <Navigation className="h-6 w-6 text-slate-900" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Platform Administrators</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Super Admins</h3>
             <p className="text-slate-300 mb-4">
               Manage the overall platform, handle disputes, and maintain system integrity to ensure a
               fair and functional ecosystem for all participants.
@@ -219,7 +223,7 @@ export default function About() {
           {/* Campaign Administrators */}
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 hover:bg-slate-800/50 transition-all">
             <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-yellow-500 rounded-full flex items-center justify-center mb-4">
-              <LifeBuoy className="h-6 w-6 text-slate-900" />
+              <TrendingUp className="h-6 w-6 text-slate-900" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Campaign Administrators</h3>
             <p className="text-slate-300 mb-4">
@@ -231,12 +235,12 @@ export default function About() {
           {/* Project Owners */}
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 hover:bg-slate-800/50 transition-all">
             <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-yellow-500 rounded-full flex items-center justify-center mb-4">
-              <Anchor className="h-6 w-6 text-slate-900" />
+              <Zap className="h-6 w-6 text-slate-900" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Project Owners</h3>
             <p className="text-slate-300 mb-4">
-              Submit conservation projects to campaigns, provide detailed information about their initiatives,
-              and engage with the voting community.
+              Submit innovative projects to campaigns, provide detailed information about their initiatives,
+              and engage with the voting community to gain support.
             </p>
           </div>
           
@@ -277,21 +281,21 @@ export default function About() {
                 <div className="p-6">
                   <h3 className="text-lg font-bold text-white mb-3">Main Platform Contract</h3>
                   <p className="text-slate-300 text-sm">
-                    Handles the 15% platform fee, manages campaign creation, and governs global parameters.
+                    Handles the platform fee, anti-spam mechanisms, manages campaign creation, and governs global parameters.
                   </p>
                 </div>
                 
                 <div className="p-6">
                   <h3 className="text-lg font-bold text-white mb-3">Campaign Contract</h3>
                   <p className="text-slate-300 text-sm">
-                    Manages project submissions, approvals, voting logic, and handles fund distribution.
+                    Manages project submissions, approvals, voting logic, and handles fund distribution with quadratic or linear options.
                   </p>
                 </div>
                 
                 <div className="p-6">
                   <h3 className="text-lg font-bold text-white mb-3">Treasury Contract</h3>
                   <p className="text-slate-300 text-sm">
-                    Securely holds funds during the campaign period and handles automated distribution.
+                    Securely holds funds during the campaign period and handles automated distribution to winning projects.
                   </p>
                 </div>
               </div>
@@ -314,7 +318,7 @@ export default function About() {
             Roadmap
           </h2>
           <p className="text-lime-100 max-w-2xl mx-auto">
-            Our journey to revolutionize ocean conservation funding is just beginning.
+            Our journey to revolutionize community-driven funding is just beginning.
           </p>
         </div>
         
@@ -380,7 +384,7 @@ export default function About() {
                     </li>
                     <li className="flex items-start">
                       <span className="text-yellow-400 mr-2">•</span>
-                      <span>Expand educational resources and documentation</span>
+                      <span>Anti-spam measures with creation fees</span>
                     </li>
                   </ul>
                 </div>
@@ -452,10 +456,10 @@ export default function About() {
             </p>
             
             <p className="text-lime-100 leading-relaxed">
-              Our vision is to create a global community of ocean advocates, channeling resources directly to 
-              impactful conservation efforts through the power of decentralized technology. By removing traditional 
-              barriers to funding and enabling direct community participation, we're building a more sustainable 
-              future for our oceans.
+              Our vision is to create a global community of innovators and supporters, channeling resources directly to 
+              impactful projects through the power of decentralized technology. By removing traditional 
+              barriers to funding and enabling direct community participation, we're building a more equitable 
+              future for project funding.
             </p>
           </div>
         </div>
@@ -466,7 +470,7 @@ export default function About() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-4">Our Team</h2>
           <p className="text-lime-100 max-w-2xl mx-auto">
-            Passionate individuals dedicated to ocean conservation and decentralized technologies.
+            Passionate individuals dedicated to blockchain innovation and decentralized technologies.
           </p>
         </div>
         
@@ -478,29 +482,29 @@ export default function About() {
             <h3 className="text-xl font-bold text-white mb-1">Oliseh Genesis</h3>
             <p className="text-yellow-400 mb-3">Designer & Founder</p>
             <p className="text-slate-300 mb-4 text-sm">
-              Creative visionary behind Sovereign Seas with a passion for combining blockchain and conservation.
+              Creative visionary behind Sovereign Seas with a passion for combining blockchain and community governance.
             </p>
           </div>
           
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 text-center border border-lime-600/20 transform hover:-translate-y-1 transition-all">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-yellow-600 mx-auto mb-4 flex items-center justify-center">
-              <span className="text-slate-900 font-bold text-2xl">JW</span>
+              <span className="text-slate-900 font-bold text-2xl">ST</span>
             </div>
             <h3 className="text-xl font-bold text-white mb-1">Sam The Tutor</h3>
-            <p className="text-yellow-400 mb-3">Developer</p>
+            <p className="text-yellow-400 mb-3">Lead Developer</p>
             <p className="text-slate-300 mb-4 text-sm">
-              Expert in marine ecosystems providing scientific guidance for conservation projects.
+              Blockchain expert developing the secure, transparent infrastructure of Sovereign Seas.
             </p>
           </div>
           
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 text-center border border-lime-600/20 transform hover:-translate-y-1 transition-all">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-yellow-600 mx-auto mb-4 flex items-center justify-center">
-              <span className="text-slate-900 font-bold text-2xl">MC</span>
+              <span className="text-slate-900 font-bold text-2xl">YU</span>
             </div>
             <h3 className="text-xl font-bold text-white mb-1">You</h3>
-            <p className="text-yellow-400 mb-3">Blockchain User</p>
+            <p className="text-yellow-400 mb-3">Community Member</p>
             <p className="text-slate-300 mb-4 text-sm">
-              Web3 expert building the secure, transparent infrastructure of Sovereign Seas.
+              Become part of our vibrant ecosystem as a voter, project creator, or campaign admin.
             </p>
           </div>
         </div>
@@ -508,12 +512,12 @@ export default function About() {
       
       {/* Contact Section */}
       <div className="container mx-auto px-6 py-16">
-        <div className="max-w-4xl mx-auto bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20">
+      <div className="max-w-4xl mx-auto bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="mb-8 md:mb-0">
               <h2 className="text-2xl font-bold text-white mb-4">Connect With Us</h2>
               <p className="text-slate-300 mb-6">
-                Join our mission to protect and revitalize the world's oceans through decentralized community action.
+                Join our mission to revolutionize project funding through decentralized community action.
               </p>
               
               <div className="space-y-4">
@@ -561,8 +565,8 @@ export default function About() {
           <div className="bg-gradient-to-r from-lime-900/40 to-yellow-900/40 backdrop-blur-md rounded-2xl p-8 border border-lime-500/30">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="mb-6 md:mb-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Ready to make waves?</h2>
-                <p className="text-lime-100">Join Sovereign Seas today and help protect our oceans through decentralized voting.</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Ready to make an impact?</h2>
+                <p className="text-lime-100">Join Sovereign Seas today and help fund innovative projects through decentralized voting.</p>
               </div>
               <div className="flex flex-wrap gap-4">
                 <button 
