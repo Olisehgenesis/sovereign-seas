@@ -1,56 +1,138 @@
+/* styles/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Tilt+Neon&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --celo-green: #35D07F;
+  --celo-green-light: #B8EBCB;
+  --celo-gold: #FBCC5C;
+  --celo-brown: #F9F6F0;
+  --celo-dark-brown: #EBE7E0;
+  --celo-text: #2E3338;
+  --celo-text-light: #666666;
+}
 
+body {
+  background-color: var(--celo-brown);
+  color: var(--celo-text);
+  font-family: 'Inter', sans-serif;
+}
 
-/* Add this to your globals.css file to style the Connect Button */
+.tilt-neon {
+  font-family: 'Tilt Neon', sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings:
+    "XROT" 0,
+    "YROT" 0;
+}
+
+/* Custom utility classes for Celo colors */
+.bg-celo-green {
+  background-color: var(--celo-green);
+}
+
+.bg-celo-green-light {
+  background-color: var(--celo-green-light);
+}
+
+.bg-celo-gold {
+  background-color: var(--celo-gold);
+}
+
+.bg-celo-brown {
+  background-color: var(--celo-brown);
+}
+
+.bg-celo-dark-brown {
+  background-color: var(--celo-dark-brown);
+}
+
+.text-celo-green {
+  color: var(--celo-green);
+}
+
+.text-celo-gold {
+  color: var(--celo-gold);
+}
+
+.text-celo-text {
+  color: var(--celo-text);
+}
+
+.text-celo-text-light {
+  color: var(--celo-text-light);
+}
+
+.border-celo-green {
+  border-color: var(--celo-green);
+}
+
+.border-celo-gold {
+  border-color: var(--celo-gold);
+}
+
+/* Gradient backgrounds */
+.bg-celo-gradient {
+  background: linear-gradient(135deg, var(--celo-green-light), var(--celo-brown));
+}
+
+.bg-celo-card {
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+}
 
 /* Custom Connect Button Styling */
 .custom-connect-button [data-rk] {
-  --rk-colors-accentColor: rgb(132, 204, 22) !important;
-  --rk-colors-accentColorForeground: rgb(15, 23, 42) !important;
-  --rk-colors-actionButtonBorder: rgba(132, 204, 22, 0.3) !important;
-  --rk-colors-actionButtonBorderMobile: rgba(132, 204, 22, 0.2) !important;
-  --rk-colors-actionButtonSecondaryBackground: rgb(51, 65, 85) !important;
-  --rk-colors-connectButtonBackground: rgba(132, 204, 22, 0.9) !important;
-  --rk-colors-connectButtonBackgroundError: rgba(239, 68, 68, 0.9) !important;
-  --rk-colors-connectButtonInnerBackground: rgb(15, 23, 42) !important;
-  --rk-colors-connectButtonText: white !important;
+  --rk-colors-accentColor: var(--celo-green) !important;
+  --rk-colors-accentColorForeground: white !important;
+  --rk-colors-actionButtonBorder: rgba(53, 208, 127, 0.3) !important;
+  --rk-colors-actionButtonBorderMobile: rgba(53, 208, 127, 0.2) !important;
+  --rk-colors-actionButtonSecondaryBackground: white !important;
+  --rk-colors-connectButtonBackground: var(--celo-green) !important;
+  --rk-colors-connectButtonBackgroundError: #E57037 !important;
+  --rk-colors-connectButtonInnerBackground: white !important;
+  --rk-colors-connectButtonText: var(--celo-text) !important;
   --rk-colors-connectButtonTextError: white !important;
-  --rk-colors-error: rgb(239, 68, 68) !important;
-  --rk-colors-generalBorderDim: rgb(51, 65, 85) !important;
-  --rk-shadows-connectButton: 0px 4px 12px rgba(132, 204, 22, 0.1) !important;
-  --rk-radii-connectButton: 0.5rem !important;
-  --rk-fonts-body: inherit !important;
+  --rk-colors-error: #E57037 !important;
+  --rk-colors-generalBorderDim: var(--celo-dark-brown) !important;
+  --rk-shadows-connectButton: 0px 4px 12px rgba(53, 208, 127, 0.15) !important;
+  --rk-radii-connectButton: 24px !important;
+  --rk-fonts-body: 'Inter', sans-serif !important;
 }
 
 /* Smaller font size for Connect Button */
 .custom-connect-button [data-rk] button {
-  font-size: 13px !important;
-  border-radius: 9999px !important; /* round buttons */
+  font-size: 14px !important;
+  border-radius: 24px !important;
+  font-weight: 500 !important;
 }
 
 /* Make the balance display smaller */
 .custom-connect-button [data-rk] div span {
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 
 /* Fix icon size on the connect button */
 .custom-connect-button [data-rk] button svg {
-  width: 14px !important;
-  height: 14px !important;
+  width: 16px !important;
+  height: 16px !important;
 }
 
 /* Add slight glow effect to match the design language */
 .custom-connect-button [data-rk] button:not([disabled]):hover {
-  box-shadow: 0 0 10px rgba(132, 204, 22, 0.4) !important;
+  box-shadow: 0 0 10px rgba(53, 208, 127, 0.3) !important;
+  transition: all 0.2s ease !important;
 }
 
 /* Styling for the connected button to match theme */
 .custom-connect-button [data-rk] div:has(button:not([disabled])) {
-  background: rgba(30, 41, 59, 0.8) !important;
-  border: 1px solid rgba(132, 204, 22, 0.3) !important;
-  backdrop-filter: blur(4px) !important;
-  border-radius: 9999px !important;
+  background: white !important;
+  border: 1px solid rgba(53, 208, 127, 0.3) !important;
+  border-radius: 24px !important;
 }
