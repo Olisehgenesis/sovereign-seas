@@ -14,6 +14,7 @@ import {
   PieChart, 
   Plus, 
   Settings, 
+  SunSnowIcon,
   Share2, 
   Users, 
   BarChart,
@@ -26,7 +27,7 @@ import {
   ChevronDown,
   Info,
   AlertTriangle,
-  Image as ImageIcon,
+  ImageIcon,
   Video,
   Code,
   History,
@@ -63,17 +64,6 @@ export default function CampaignDashboard() {
   const [voteModalVisible, setVoteModalVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [voteAmount, setVoteAmount] = useState('');
-  const [submitModalVisible, setSubmitModalVisible] = useState(false);
-  const [newProject, setNewProject] = useState({
-    name: '',
-    description: '',
-    githubLink: '',
-    socialLink: '',
-    testingLink: '',
-    logo: '',          // Added field
-    demoVideo: '',     // Added field
-    contracts: [''],   // Added field
-  });
   const [distributionTableVisible, setDistributionTableVisible] = useState(false);
   
   // New states for enhanced functionality
@@ -86,7 +76,7 @@ export default function CampaignDashboard() {
     projectCount: 0
   });
   const [projectSortMethod, setProjectSortMethod] = useState('votes'); // votes, newest, alphabetical
-  const [projectStatusFilter, setProjectStatusFilter] = useState('approved'); // all, approved, pending
+  const [projectStatusFilter, setProjectStatusFilter] = useState('all'); // all, approved, pending
   const [sortedProjects, setSortedProjects] = useState<any[]>([]);
   const [projectRankingsVisible, setProjectRankingsVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' });
@@ -102,7 +92,6 @@ export default function CampaignDashboard() {
     getUserVotesForProject,
     approveProject,
     vote,
-    submitProject,
     distributeFunds,
     formatTokenAmount,
     formatCampaignTime,
@@ -330,57 +319,6 @@ export default function CampaignDashboard() {
     }
   };
   
-  const handleSubmitProject = async (e: { preventDefault: () => void; }) => {
-    e.preventDefault();
-    
-    if (!newProject.name || !newProject.description) return;
-    
-    try {
-      // Filter out empty contract addresses
-      const contracts = newProject.contracts.filter(c => c.trim() !== '');
-      
-      await submitProject(
-        Number(campaignId),
-        newProject.name,
-        newProject.description,
-        newProject.githubLink,
-        newProject.socialLink,
-        newProject.testingLink,
-        newProject.logo,         // Added field
-        newProject.demoVideo,    // Added field
-        contracts                // Added field
-      );
-      setSubmitModalVisible(false);
-      setNewProject({
-        name: '',
-        description: '',
-        githubLink: '',
-        socialLink: '',
-        testingLink: '',
-        logo: '',
-        demoVideo: '',
-        contracts: [''],
-      });
-      
-      setStatusMessage({
-        text: 'Project submitted successfully! It will be available after admin approval.',
-        type: 'success'
-      });
-      
-      // Refresh the project list after submission
-      setTimeout(() => {
-        loadCampaignData();
-      }, 2000); // Give blockchain time to update
-      
-    } catch (error) {
-      console.error('Error submitting project:', error);
-      setStatusMessage({
-        text: 'Error submitting project. Please try again.',
-        type: 'error'
-      });
-    }
-  };
-  
   const handleDistributeFunds = async () => {
     if (!canDistributeFunds) return;
     
@@ -405,32 +343,6 @@ export default function CampaignDashboard() {
         type: 'error'
       });
     }
-  };
-  
-  // Add/remove contract field in new project form
-  const handleAddContract = () => {
-    setNewProject({
-      ...newProject,
-      contracts: [...newProject.contracts, '']
-    });
-  };
-  
-  const handleRemoveContract = (index: number) => {
-    const updatedContracts = [...newProject.contracts];
-    updatedContracts.splice(index, 1);
-    setNewProject({
-      ...newProject,
-      contracts: updatedContracts.length ? updatedContracts : ['']
-    });
-  };
-  
-  const handleContractChange = (index: number, value: string) => {
-    const updatedContracts = [...newProject.contracts];
-    updatedContracts[index] = value;
-    setNewProject({
-      ...newProject,
-      contracts: updatedContracts
-    });
   };
   
   // Helper function to copy campaign link to clipboard
@@ -602,6 +514,14 @@ export default function CampaignDashboard() {
                   Admin Panel
                 </button>
               )}
+            
+              <button 
+                  onClick={() => router.push(`/campaign/${campaignId}/submit`)}
+                  className="px-4 py-2 rounded-lg bg-lime-600/60 text-white hover:bg-lime-600 transition-colors flex items-center"
+                >
+                  <SunSnowIcon className="h-4 w-4 mr-2" />
+                  Submit Project
+                </button>
             </div>
           </div>
           
@@ -796,7 +716,7 @@ export default function CampaignDashboard() {
                 
                 {/* Project Rankings Display */}
                 {projectRankingsVisible && sortedProjects.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-slate-700">
+                  <div className="mt-4 pt-4 border-t border -slate-700">
                     <h3 className="text-sm font-medium text-blue-300 mb-2">Current Rankings</h3>
                     
                     <div className="space-y-2 mt-3">
@@ -855,7 +775,7 @@ export default function CampaignDashboard() {
               <div className="space-y-4">
                 {isActive && (
                   <button
-                    onClick={() => setSubmitModalVisible(true)}
+                    onClick={() => router.push(`/campaign/${campaignId}/submit`)}
                     className="w-full py-3 rounded-lg bg-lime-600 text-white font-semibold hover:bg-lime-500 transition-colors flex items-center justify-center"
                   >
                     <Plus className="h-5 w-5 mr-2" />
@@ -1114,7 +1034,7 @@ export default function CampaignDashboard() {
                   <p className="text-slate-400 mb-4">No projects have been submitted yet.</p>
                   {isActive && (
                     <button
-                      onClick={() => setSubmitModalVisible(true)}
+                      onClick={() => router.push(`/campaign/${campaignId}/submit`)}
                       className="px-6 py-2 rounded-lg bg-lime-600/60 text-white hover:bg-lime-600 transition-colors inline-flex items-center"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -1404,7 +1324,10 @@ export default function CampaignDashboard() {
                           Demo Video
                         </a>
                       )}
-                    </div>
+                      
+
+
+                      </div>
                   </div>
                 </div>
               </div>
@@ -1550,169 +1473,6 @@ export default function CampaignDashboard() {
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Submit Project Modal */}
-      {submitModalVisible && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
-            <button 
-              onClick={() => setSubmitModalVisible(false)} 
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            
-            <h3 className="text-xl font-bold mb-1">Submit New Project</h3>
-            <p className="text-lime-400 font-medium mb-4">{campaign.name}</p>
-            
-            <form onSubmit={handleSubmitProject}>
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-slate-300 mb-2">Project Name</label>
-                  <input 
-                    type="text"
-                    value={newProject.name}
-                    onChange={(e) => setNewProject({...newProject, name: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="Enter project name"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-slate-300 mb-2">Description</label>
-                  <textarea
-                    value={newProject.description}
-                    onChange={(e) => setNewProject({...newProject, description: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white h-24"
-                    placeholder="Describe your project"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-slate-300 mb-2">GitHub Link (Optional)</label>
-                  <input 
-                    type="url"
-                    value={newProject.githubLink}
-                    onChange={(e) => setNewProject({...newProject, githubLink: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://github.com/yourusername/yourproject"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-slate-300 mb-2">Social Media Link (Optional)</label>
-                  <input 
-                    type="url"
-                    value={newProject.socialLink}
-                    onChange={(e) => setNewProject({...newProject, socialLink: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://twitter.com/yourproject"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-slate-300 mb-2">Demo/Testing Link (Optional)</label>
-                  <input 
-                    type="url"
-                    value={newProject.testingLink}
-                    onChange={(e) => setNewProject({...newProject, testingLink: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://demo.yourproject.com"
-                  />
-                </div>
-                
-                {/* New fields for logo and demo video */}
-                <div>
-                  <label className="block text-slate-300 mb-2">Logo URL (Optional)</label>
-                  <input 
-                    type="url"
-                    value={newProject.logo}
-                    onChange={(e) => setNewProject({...newProject, logo: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://example.com/logo.png or IPFS hash"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-slate-300 mb-2">Demo Video URL (Optional)</label>
-                  <input 
-                    type="url"
-                    value={newProject.demoVideo}
-                    onChange={(e) => setNewProject({...newProject, demoVideo: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                    placeholder="https://example.com/demo.mp4 or IPFS hash"
-                  />
-                </div>
-                
-                {/* Contract addresses */}
-                <div>
-                  <label className="flex justify-between items-center text-slate-300 mb-2">
-                    <span>Contract Addresses (Optional)</span>
-                    <button
-                      type="button"
-                      onClick={handleAddContract}
-                      className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded"
-                    >
-                      + Add Contract
-                    </button>
-                  </label>
-                  
-                  {newProject.contracts.map((contract, index) => (
-                    <div key={index} className="flex mb-2">
-                      <input 
-                        type="text"
-                        value={contract}
-                        onChange={(e) => handleContractChange(index, e.target.value)}
-                        className="flex-grow px-4 py-2 rounded-l-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                        placeholder="0x..."
-                      />
-                      {newProject.contracts.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveContract(index)}
-                          className="bg-slate-600 hover:bg-slate-500 text-slate-300 px-3 py-2 rounded-r-lg"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <p className="text-xs text-slate-400 mt-1">
-                    Add the addresses of any contracts associated with this project.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={isWritePending || isWaitingForTx || !newProject.name || !newProject.description}
-                  className="flex-1 py-3 px-6 bg-lime-500 text-slate-900 font-semibold rounded-lg hover:bg-lime-400 transition-colors disabled:bg-slate-500 disabled:text-slate-300 disabled:cursor-not-allowed"
-                >
-                  {isWritePending || isWaitingForTx ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-900 mr-2"></div>
-                      Processing...
-                    </div>
-                  ) : (
-                    'Submit Project'
-                  )}
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => setSubmitModalVisible(false)}
-                  className="py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

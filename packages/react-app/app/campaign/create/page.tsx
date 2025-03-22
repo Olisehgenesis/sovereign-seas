@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { CalendarRange, ChevronDown, Clock, Coins, Settings, Users, Waves, Check, X, HelpCircle, Image as ImageIcon, Video, Link, Hash } from 'lucide-react';
-import { useSovereignSeas } from '../../../hooks/useSovereignSeas';
+import { CalendarRange, ChevronDown, Clock, Coins, Settings, Users, Waves, Check, X, HelpCircle, Image as ImageIcon, Video, Link, Hash, AlertCircle, Shield } from 'lucide-react';
+import { useSovereignSeas, CAMPAIGN_CREATION_FEE, PROJECT_CREATION_FEE } from '../../../hooks/useSovereignSeas';
 
 // Placeholder for the contract addresses - replace with your actual addresses
 //get const CONTRACT_ADDRESS AND CELO_TOKEN_ADDRESS  FRON  ,env next.js
@@ -43,6 +43,7 @@ export default function CreateCampaign() {
   const [showVoteTooltip, setShowVoteTooltip] = useState(false);
   const [showDistributionTooltip, setShowDistributionTooltip] = useState(false);
   const [showWinnersTooltip, setShowWinnersTooltip] = useState(false);
+  const [showFeeTooltip, setShowFeeTooltip] = useState(false);
   
   // Contract interaction
   const {
@@ -206,6 +207,46 @@ export default function CreateCampaign() {
           <div className="flex items-center mb-8">
             <Hash className="h-8 w-8 text-lime-500 mr-3" />
             <h1 className="text-3xl font-bold">Create New Campaign</h1>
+          </div>
+          
+          {/* Fee Notice */}
+          <div className="mb-6 bg-amber-900/40 backdrop-blur-sm rounded-lg p-4 border border-amber-500/30 relative">
+            <div className="flex items-start">
+              <Shield className="h-6 w-6 text-amber-400 mr-3 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-amber-400 flex items-center">
+                  Creation Fee Required
+                  <button 
+                    type="button" 
+                    onClick={() => setShowFeeTooltip(!showFeeTooltip)}
+                    className="text-amber-400/70 hover:text-amber-300 ml-2"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </h3>
+                <p className="text-amber-100/90 mt-1">
+                  A fee of <span className="font-semibold">{CAMPAIGN_CREATION_FEE} CELO</span> will be charged to create this campaign.
+                </p>
+                <p className="text-amber-100/70 text-sm mt-2">
+                  This fee helps prevent spam and abuse. Projects will also require a {PROJECT_CREATION_FEE} CELO submission fee.
+                </p>
+                
+                {showFeeTooltip && (
+                  <div className="absolute right-4 top-4 w-64 p-3 bg-slate-800 rounded-md shadow-lg z-10 text-sm border border-amber-500/30">
+                    <p className="text-amber-100">
+                      These fees are collected to prevent spam and maintain platform quality. Fees are managed by platform superadmins and support ongoing development.
+                    </p>
+                    <button 
+                      type="button" 
+                      className="absolute top-1 right-1 text-slate-400 hover:text-white"
+                      onClick={() => setShowFeeTooltip(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           
           <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20">
@@ -515,6 +556,10 @@ export default function CreateCampaign() {
                     Please connect your wallet to create a campaign
                   </p>
                 )}
+                
+                <p className="mt-4 text-center text-slate-400 text-sm">
+                  By creating a campaign, you agree to pay the {CAMPAIGN_CREATION_FEE} CELO creation fee
+                </p>
               </div>
             </form>
           </div>

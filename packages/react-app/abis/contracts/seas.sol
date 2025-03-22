@@ -16,6 +16,13 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
     // Platform fee (15%)
     uint256 public constant PLATFORM_FEE = 15;
 
+    // Creation fees
+    uint256 public constant CAMPAIGN_CREATION_FEE = 2 ether; // 2 CELO
+    uint256 public constant PROJECT_CREATION_FEE = 1 ether;  // 1 CELO
+
+    // Total accumulated fees
+    uint256 public totalCreationFees;
+
     // Super admins mapping
     mapping(address => bool) public superAdmins;
 
@@ -86,6 +93,7 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
     event SuperAdminRemoved(address indexed superAdmin, address indexed removedBy);
     event CampaignAdminAdded(uint256 indexed campaignId, address indexed newAdmin, address indexed addedBy);
     event CampaignAdminRemoved(uint256 indexed campaignId, address indexed admin, address indexed removedBy);
+    event CreationFeesWithdrawn(address indexed superAdmin, uint256 amount);
 
     /**
      * @dev Constructor sets the CELO token address and adds deployer as super admin
@@ -211,6 +219,10 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         require(_adminFeePercentage <= 30, "Admin fee too high");
         require(_voteMultiplier >= 1 && _voteMultiplier <= 5, "Vote multiplier must be 1-5");
 
+        // Collect campaign creation fee
+        require(celoToken.transferFrom(msg.sender, address(this), CAMPAIGN_CREATION_FEE), "Campaign fee transfer failed");
+        totalCreationFees += CAMPAIGN_CREATION_FEE;
+
         uint256 campaignId = campaigns.length;
         Campaign storage newCampaign = campaigns.push();
         
@@ -308,6 +320,10 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         Campaign storage campaign = campaigns[_campaignId];
         require(campaign.active, "Campaign is not active");
         require(block.timestamp < campaign.endTime, "Campaign has ended");
+
+        // Collect project submission fee
+        require(celoToken.transferFrom(msg.sender, address(this), PROJECT_CREATION_FEE), "Project fee transfer failed");
+        totalCreationFees += PROJECT_CREATION_FEE;
 
         uint256 projectId = campaignProjects[_campaignId].length;
         Project memory newProject = Project({
@@ -564,6 +580,28 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
         emit FundsDistributed(_campaignId);
     }
 
+    /**
+     * @dev Allows super admins to withdraw creation fees
+     * @param _amount Amount to withdraw (0 to withdraw all)
+     */
+    function withdrawCreationFees(uint256 _amount) external nonReentrant onlySuperAdmin {
+        uint256 withdrawAmount = _amount == 0 ? totalCreationFees : _amount;
+        require(withdrawAmount <= totalCreationFees, "Insufficient creation fees");
+        
+        totalCreationFees -= withdrawAmount;
+        require(celoToken.transfer(msg.sender, withdrawAmount), "Transfer failed");
+        
+        emit CreationFeesWithdrawn(msg.sender, withdrawAmount);
+    }
+    
+    /**
+     * @dev Get available creation fees for withdrawal
+     * @return Total accumulated creation fees
+     */
+    function getAvailableCreationFees() external view returns (uint256) {
+        return totalCreationFees;
+    }
+
     // View functions
 
     /**
@@ -746,4 +784,3 @@ contract SovereignSeas is Ownable(msg.sender), ReentrancyGuard {
             z = (x / z + z) / 2;
         }
     }
-}

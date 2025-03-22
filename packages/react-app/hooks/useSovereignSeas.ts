@@ -14,6 +14,8 @@ import { getContract } from 'viem';
 // Import ABI
 import sovereignSeasAbi from '../abis/SovereignSeas.json';
 import celoTokenAbi from '../abis/MockCELO.json';
+// get chain id from .env
+const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ? Number(process.env.NEXT_PUBLIC_CHAIN_ID) : undefined;
 
 // Updated Types
 export type Campaign = {
@@ -58,6 +60,10 @@ export type Vote = {
   voteCount: bigint;
 };
 
+// Fee constants
+export const CAMPAIGN_CREATION_FEE = "2";
+export const PROJECT_CREATION_FEE = "1";
+
 interface SovereignSeasConfig {
   contractAddress: `0x${string}`;
   celoTokenAddress: `0x${string}`;
@@ -69,8 +75,12 @@ export const useSovereignSeas = ({
   celoTokenAddress,
 }: SovereignSeasConfig) => {
   const { address: walletAddress } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient({
+    chainId: chainId,
+  });
+  const { data: walletClient } = useWalletClient(
+    { chainId: chainId }
+  );
   
   const [isInitialized, setIsInitialized] = useState(false);
   
@@ -82,6 +92,8 @@ export const useSovereignSeas = ({
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [creationFees, setCreationFees] = useState<bigint>(BigInt(0));
+  const [loadingFees, setLoadingFees] = useState(false);
   
   // Write state
   const { 
@@ -148,6 +160,47 @@ export const useSovereignSeas = ({
     
     checkSuperAdmin();
   }, [isInitialized, walletAddress, contractAddress, publicClient]);
+
+  // Load available creation fees
+  const loadCreationFees = async () => {
+    if (!contract || !publicClient) return BigInt(0);
+    
+    try {
+      setLoadingFees(true);
+      
+      const fees = await publicClient.readContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'getAvailableCreationFees',
+      }) as bigint;
+      
+      setCreationFees(fees);
+      return fees;
+    } catch (error) {
+      console.error('Error loading creation fees:', error);
+      return BigInt(0);
+    } finally {
+      setLoadingFees(false);
+    }
+  };
+
+  // Withdraw creation fees (only for super admins)
+  const withdrawCreationFees = async (amount: string = "0") => {
+    if (!walletClient || !isSuperAdmin) return;
+    
+    try {
+      const amountBigInt = amount === "0" ? BigInt(0) : parseEther(amount);
+      
+      writeContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'withdrawCreationFees',
+        args: [amountBigInt],
+      });
+    } catch (error) {
+      console.error('Error withdrawing creation fees:', error);
+    }
+  };
 
   // Load all campaigns
   const loadCampaigns = async () => {
@@ -404,6 +457,17 @@ export const useSovereignSeas = ({
     if (!walletClient) return;
     
     try {
+      // First approve token spending for the campaign creation fee
+      const campaignFee = parseEther(CAMPAIGN_CREATION_FEE);
+      
+      await writeContract({
+        address: celoTokenAddress,
+        abi: celoTokenAbi,
+        functionName: 'approve',
+        args: [contractAddress, campaignFee],
+      });
+      
+      // Then create the campaign
       writeContract({
         address: contractAddress,
         abi: sovereignSeasAbi,
@@ -475,6 +539,17 @@ export const useSovereignSeas = ({
     if (!walletClient) return;
     
     try {
+      // First approve token spending for the project creation fee
+      const projectFee = parseEther(PROJECT_CREATION_FEE);
+      
+      await writeContract({
+        address: celoTokenAddress,
+        abi: celoTokenAbi,
+        functionName: 'approve',
+        args: [contractAddress, projectFee],
+      });
+      
+      // Then submit the project
       writeContract({
         address: contractAddress,
         abi: sovereignSeasAbi,
@@ -627,11 +702,21 @@ export const useSovereignSeas = ({
   };
 
   return {
+    //clients
+    publicClient,
+    walletClient,
+    
     // Contract state
     isInitialized,
     campaigns,
     loadingCampaigns,
     isSuperAdmin,
+    creationFees,
+    loadingFees,
+    
+    // Fee constants
+    CAMPAIGN_CREATION_FEE,
+    PROJECT_CREATION_FEE,
     
     // Transaction state
     isWritePending,
@@ -645,6 +730,7 @@ export const useSovereignSeas = ({
     // Read functions
     loadCampaigns,
     loadProjects,
+    loadCreationFees,
     getSortedProjects,
     getUserVotesForProject,
     getUserTotalVotesInCampaign,
@@ -654,6 +740,7 @@ export const useSovereignSeas = ({
     // Super Admin functions
     addSuperAdmin,
     removeSuperAdmin,
+    withdrawCreationFees,
     
     // Campaign Admin functions
     addCampaignAdmin,

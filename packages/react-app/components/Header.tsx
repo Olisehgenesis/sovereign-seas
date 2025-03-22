@@ -5,8 +5,13 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { useSovereignSeas } from '../hooks/useSovereignSeas';
+import { celo } from 'viem/chains';
+
+// Define Celo chain ID - Celo Mainnet is 42220, Celo Alfajores testnet is 44787
+const CELO_CHAIN_ID = celo.id; // Uses viem's celo chain definition
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -20,8 +25,44 @@ export default function Header() {
   const { connect } = useConnect();
   const { isConnected } = useAccount();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showChainAlert, setShowChainAlert] = useState(false);
+  const [currentChainId, setCurrentChainId] = useState<number | null>(null);
   const pathname = usePathname();
+  
+  // Use the sovereign seas hook to get the clients
+  const { publicClient, walletClient } = useSovereignSeas({
+    contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+    celoTokenAddress: process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`,
+  });
 
+  // Check if user is on the correct chain
+  useEffect(() => {
+    const checkChain = async () => {
+      if (isConnected && publicClient) {
+        try {
+          // Get the current chain from the public client
+          const chainId = await publicClient.getChainId();
+          setCurrentChainId(chainId);
+          
+          if (chainId !== CELO_CHAIN_ID) {
+            setShowChainAlert(true);
+          } else {
+            setShowChainAlert(false);
+          }
+        } catch (error) {
+          console.error("Error getting chain ID:", error);
+        }
+      }
+    };
+    
+    checkChain();
+    
+    // Set up interval to periodically check chain
+    const interval = setInterval(checkChain, 5000);
+    return () => clearInterval(interval);
+  }, [isConnected, publicClient]);
+
+  // Handle MiniPay connection
   useEffect(() => {
     if (window.ethereum && window.ethereum.isMiniPay) {
       setHideConnectBtn(true);
@@ -29,8 +70,49 @@ export default function Header() {
     }
   }, [connect]);
 
+  // Function to switch to Celo using the viem wallet client
+  const handleSwitchToCelo = async () => {
+    if (!walletClient) {
+      console.error("Wallet client not available");
+      return;
+    }
+    
+    try {
+      await walletClient.switchChain({ id: CELO_CHAIN_ID });
+      setShowChainAlert(false);
+    } catch (error) {
+      console.error("Error switching to Celo:", error);
+      
+      // If chain doesn't exist in the wallet, try to add it
+      if ((error as any).code === 4902) { // Chain doesn't exist
+        try {
+          await walletClient.addChain({
+            chain: celo
+          });
+          // Try switching again after adding
+          await walletClient.switchChain({ id: CELO_CHAIN_ID });
+        } catch (addError) {
+          console.error("Error adding Celo chain:", addError);
+        }
+      }
+    }
+  };
   return (
     <div className="relative z-50">
+      {/* Chain Warning Alert */}
+      {showChainAlert && (
+        <div className="bg-amber-500 text-slate-900 py-2 px-4 flex items-center justify-center">
+          <AlertTriangle className="h-5 w-5 mr-2" />
+          <span className="font-medium">This app only supports the Celo network.</span>
+          <button 
+            onClick={handleSwitchToCelo}
+            className="ml-3 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
+          >
+            Switch to Celo
+          </button>
+        </div>
+      )}
+
       {/* Shadow element for raised effect */}
       <div className="absolute inset-x-0 h-1.5 bottom-0 translate-y-full bg-gradient-to-b from-black/20 to-transparent pointer-events-none"></div>
       
@@ -98,6 +180,12 @@ export default function Header() {
                 
                 {/* Right side - Connect Wallet & User Menu */}
                 <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+                  {/* Celo Network Badge */}
+                  <div className="mr-2 hidden sm:flex items-center rounded-full bg-lime-600/20 text-lime-400 px-2.5 py-0.5 text-xs border border-lime-500/30">
+                    <span className="h-2 w-2 rounded-full bg-lime-400 mr-1.5"></span>
+                    Celo Only
+                  </div>
+                  
                   {isConnected && (
                     <div className="relative mr-2">
                       <button
@@ -144,11 +232,70 @@ export default function Header() {
                   
                   {!hideConnectBtn && (
                     <div className="custom-connect-button scale-90 origin-right">
-                      <ConnectButton 
-                        showBalance={false}
-                        chainStatus="icon"
-                        accountStatus="address"
-                      />
+                      <ConnectButton.Custom>
+                        {({
+                          account,
+                          chain,
+                          openAccountModal,
+                          openChainModal,
+                          openConnectModal,
+                          mounted,
+                        }) => {
+                          const ready = mounted;
+                          const connected = ready && account && chain;
+                          
+                          return (
+                            <div
+                              {...(!ready && {
+                                'aria-hidden': true,
+                                style: {
+                                  opacity: 0,
+                                  pointerEvents: 'none',
+                                  userSelect: 'none',
+                                },
+                              })}
+                            >
+                              {(() => {
+                                if (!connected) {
+                                  return (
+                                    <button 
+                                      onClick={openConnectModal} 
+                                      className="bg-lime-600 hover:bg-lime-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                                    >
+                                      Connect Wallet
+                                    </button>
+                                  );
+                                }
+                                
+                                if (chain.id !== CELO_CHAIN_ID) {
+                                  return (
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={handleSwitchToCelo}
+                                        className="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-900 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                                      >
+                                        <AlertTriangle size={16} />
+                                        Switch to Celo
+                                      </button>
+                                    </div>
+                                  );
+                                }
+                                
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={openAccountModal}
+                                      className="flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                                    >
+                                      {account.displayName}
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          );
+                        }}
+                      </ConnectButton.Custom>
                     </div>
                   )}
                 </div>
@@ -158,6 +305,12 @@ export default function Header() {
             {/* Mobile menu */}
             <Disclosure.Panel className="sm:hidden">
               <div className="space-y-1 px-3 pt-2 pb-3">
+                {/* Mobile Celo Badge */}
+                <div className="mb-2 flex items-center justify-center rounded-md bg-lime-600/20 text-lime-400 px-3 py-1.5 text-sm border border-lime-500/30">
+                  <span className="h-2 w-2 rounded-full bg-lime-400 mr-1.5"></span>
+                  Celo Network Only
+                </div>
+                
                 {navigation.map((item) => {
                   const NavIcon = item.icon;
                   const isActive = pathname === item.href || 

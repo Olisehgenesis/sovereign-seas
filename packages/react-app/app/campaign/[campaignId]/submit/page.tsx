@@ -23,9 +23,10 @@ import {
   Trash,
   AlertTriangle,
   HelpCircle,
-  Eye
+  Eye,
+  Shield
 } from 'lucide-react';
-import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
+import { useSovereignSeas, PROJECT_CREATION_FEE } from '../../../../hooks/useSovereignSeas';
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`; 
 const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`; 
@@ -73,6 +74,7 @@ export default function SubmitProject() {
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [previewType, setPreviewType] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showFeeTooltip, setShowFeeTooltip] = useState(false);
   
   // Contract interaction
   const {
@@ -449,6 +451,46 @@ export default function SubmitProject() {
             </h1>
             <p className="text-slate-300 mt-2">{campaign.name}</p>
           </div>
+
+          {/* Fee Notice */}
+          <div className="mb-6 bg-amber-900/40 backdrop-blur-sm rounded-lg p-4 border border-amber-500/30 relative">
+            <div className="flex items-start">
+              <Shield className="h-6 w-6 text-amber-400 mr-3 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-amber-400 flex items-center">
+                  Project Submission Fee Required
+                  <button 
+                    type="button" 
+                    onClick={() => setShowFeeTooltip(!showFeeTooltip)}
+                    className="text-amber-400/70 hover:text-amber-300 ml-2"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </h3>
+                <p className="text-amber-100/90 mt-1">
+                  A fee of <span className="font-semibold">{PROJECT_CREATION_FEE} CELO</span> will be charged to submit this project.
+                </p>
+                <p className="text-amber-100/70 text-sm mt-2">
+                  This fee helps prevent spam submissions and ensures project quality.
+                </p>
+                
+                {showFeeTooltip && (
+                  <div className="absolute right-4 top-4 w-64 p-3 bg-slate-800 rounded-md shadow-lg z-10 text-sm border border-amber-500/30">
+                    <p className="text-amber-100">
+                      Submission fees are collected to prevent spam and ensure only quality projects are submitted. These fees support platform maintenance and development.
+                    </p>
+                    <button 
+                      type="button" 
+                      className="absolute top-1 right-1 text-slate-400 hover:text-white"
+                      onClick={() => setShowFeeTooltip(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           
           <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20 mb-6">
             <div className="flex items-center justify-between mb-6">
@@ -794,6 +836,10 @@ export default function SubmitProject() {
                   Please connect your wallet to submit a project
                 </p>
               )}
+              
+              <p className="mt-4 text-center text-slate-400 text-sm">
+                By submitting this project, you agree to pay the {PROJECT_CREATION_FEE} CELO submission fee
+              </p>
             </form>
           </div>
         </div>
