@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { 
   ArrowLeft, 
+  ArrowRight,
   Waves, 
   Github,
   Globe,
@@ -24,7 +25,9 @@ import {
   AlertTriangle,
   HelpCircle,
   Eye,
-  Shield
+  Shield,
+  Hash,
+  CheckIcon
 } from 'lucide-react';
 import { useSovereignSeas, PROJECT_CREATION_FEE } from '../../../../hooks/useSovereignSeas';
 
@@ -37,6 +40,10 @@ export default function SubmitProject() {
   const { campaignId } = useParams();
   const { address, isConnected } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Form stages (1: Basic Info, 2: Media, 3: Contracts, 4: Review & Submit)
+  const [currentStage, setCurrentStage] = useState(1);
+  const totalStages = 4;
   
   // Enhanced form state with new fields
   const [project, setProject] = useState({
@@ -66,7 +73,6 @@ export default function SubmitProject() {
   });
   
   // UI state
-  const [activeTab, setActiveTab] = useState('basic'); // 'basic', 'media', 'contracts'
   const [urlPreview, setUrlPreview] = useState({
     logo: null,
     demoVideo: null,
@@ -164,14 +170,12 @@ export default function SubmitProject() {
     }
   };
   
-  const validateForm = () => {
+  const validateBasicInfo = () => {
     let isValid = true;
     const errors = {
+      ...formErrors,
       name: '',
       description: '',
-      logo: '',
-      demoVideo: '',
-      contracts: [''],
     };
     
     if (!project.name.trim()) {
@@ -205,6 +209,21 @@ export default function SubmitProject() {
       isValid = false;
     }
     
+    setFormErrors(errors);
+    return isValid;
+  };
+  
+  const validateMedia = () => {
+    let isValid = true;
+    const errors = {
+      ...formErrors,
+      logo: '',
+      demoVideo: '',
+    };
+    
+    // Validate URLs if provided
+    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+    
     if (project.logo && !urlRegex.test(project.logo)) {
       errors.logo = 'Please enter a valid logo URL';
       isValid = false;
@@ -214,6 +233,17 @@ export default function SubmitProject() {
       errors.demoVideo = 'Please enter a valid demo video URL';
       isValid = false;
     }
+    
+    setFormErrors(errors);
+    return isValid;
+  };
+  
+  const validateContracts = () => {
+    let isValid = true;
+    const errors = {
+      ...formErrors,
+      contracts: [...formErrors.contracts],
+    };
     
     // Validate contracts if any are provided
     const validContracts = project.contracts.filter(c => c.trim() !== '');
@@ -231,6 +261,32 @@ export default function SubmitProject() {
     return isValid;
   };
   
+  const validateAllSteps = () => {
+    const isBasicValid = validateBasicInfo();
+    const isMediaValid = validateMedia();
+    const isContractsValid = validateContracts();
+    
+    return isBasicValid && isMediaValid && isContractsValid;
+  };
+  
+  const handleNext = () => {
+    if (currentStage === 1 && !validateBasicInfo()) return;
+    if (currentStage === 2 && !validateMedia()) return;
+    if (currentStage === 3 && !validateContracts()) return;
+    
+    if (currentStage < totalStages) {
+      setCurrentStage(currentStage + 1);
+      window.scrollTo(0, 0);
+    }
+  };
+  
+  const handlePrevious = () => {
+    if (currentStage > 1) {
+      setCurrentStage(currentStage - 1);
+      window.scrollTo(0, 0);
+    }
+  };
+  
   const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     setErrorMessage('');
@@ -240,7 +296,7 @@ export default function SubmitProject() {
       return;
     }
     
-    if (!validateForm()) {
+    if (!validateAllSteps()) {
       return;
     }
     
@@ -283,7 +339,7 @@ export default function SubmitProject() {
       demoVideo: '',
       contracts: [''],
     });
-    setActiveTab('basic');
+    setCurrentStage(1);
   };
   
   const handleInputChange = (field: string, value: string) => {
@@ -358,16 +414,27 @@ export default function SubmitProject() {
     setShowMediaPreview(true);
   };
   
+  // Get stage title
+  const getStageTitle = (stage: number) => {
+    switch (stage) {
+      case 1: return "Basic Information";
+      case 2: return "Media Content";
+      case 3: return "Smart Contracts";
+      case 4: return "Review & Submit";
+      default: return "";
+    }
+  };
+  
   if (!isMounted) {
     return null;
   }
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800 flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <Loader2 className="h-12 w-12 text-lime-500 animate-spin mb-4" />
-          <p className="text-lg text-lime-300">Loading campaign data...</p>
+          <Loader2 className="h-12 w-12 text-emerald-500 animate-spin mb-4" />
+          <p className="text-lg text-emerald-600">Loading campaign data...</p>
         </div>
       </div>
     );
@@ -375,14 +442,14 @@ export default function SubmitProject() {
   
   if (!campaign) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
-        <div className="flex flex-col items-center text-center max-w-md mx-auto p-6">
-          <XCircle className="h-16 w-16 text-red-400 mb-4" />
-          <h1 className="text-2xl font-bold mb-3">Campaign Not Found</h1>
-          <p className="text-slate-300 mb-6">The campaign you're looking for doesn't exist or has been removed.</p>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800 flex items-center justify-center">
+        <div className="flex flex-col items-center text-center max-w-md mx-auto p-6 bg-white rounded-xl shadow-md border border-gray-200">
+          <XCircle className="h-16 w-16 text-red-500 mb-4" />
+          <h1 className="text-2xl font-bold mb-3 text-gray-800">Campaign Not Found</h1>
+          <p className="text-gray-600 mb-6">The campaign you're looking for doesn't exist or has been removed.</p>
           <button
             onClick={() => router.push('/campaigns')}
-            className="px-6 py-2 bg-lime-600 text-white rounded-lg hover:bg-lime-500 transition-colors"
+            className="px-6 py-2.5 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors shadow-sm"
           >
             View All Campaigns
           </button>
@@ -402,26 +469,26 @@ export default function SubmitProject() {
   
   if (hasEnded) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-        <div className="container mx-auto px-4 py-12">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800">
+        <div className="container mx-auto px-6 py-12">
           <div className="max-w-3xl mx-auto">
             <button
               onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-              className="inline-flex items-center text-slate-300 hover:text-white mb-8"
+              className="inline-flex items-center text-gray-600 hover:text-emerald-600 mb-8"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Campaign
             </button>
             
-            <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20 text-center">
-              <Info className="h-16 w-16 text-yellow-400 mx-auto mb-4" />
-              <h1 className="text-2xl font-bold mb-3">Campaign Has Ended</h1>
-              <p className="text-slate-300 mb-6">
+            <div className="bg-white rounded-xl p-8 border border-gray-200 text-center shadow-md">
+              <Info className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+              <h1 className="text-2xl font-bold mb-3 text-gray-800">Campaign Has Ended</h1>
+              <p className="text-gray-600 mb-6">
                 This campaign has ended and is no longer accepting project submissions.
               </p>
               <button
                 onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-                className="px-6 py-2 bg-lime-600 text-white rounded-lg hover:bg-lime-500 transition-colors"
+                className="px-6 py-2.5 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors shadow-sm"
               >
                 View Campaign Dashboard
               </button>
@@ -433,55 +500,55 @@ export default function SubmitProject() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800">
+      <div className="container mx-auto px-6 py-12">
         <div className="max-w-3xl mx-auto">
           <button
             onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-            className="inline-flex items-center text-slate-300 hover:text-white mb-8"
+            className="inline-flex items-center text-gray-600 hover:text-emerald-600 mb-8"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Campaign
           </button>
           
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold flex items-center">
-              <Waves className="h-8 w-8 text-lime-500 mr-3" />
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold flex items-center tilt-neon text-gray-800">
+              <Hash className="h-7 w-7 text-emerald-500 mr-2" />
               Submit Project to Campaign
             </h1>
-            <p className="text-slate-300 mt-2">{campaign.name}</p>
+            <p className="text-gray-600 mt-1">{campaign.name}</p>
           </div>
 
           {/* Fee Notice */}
-          <div className="mb-6 bg-amber-900/40 backdrop-blur-sm rounded-lg p-4 border border-amber-500/30 relative">
+          <div className="mb-6 bg-amber-50 rounded-xl p-4 border border-amber-200 relative shadow-sm">
             <div className="flex items-start">
-              <Shield className="h-6 w-6 text-amber-400 mr-3 flex-shrink-0 mt-0.5" />
+              <Shield className="h-6 w-6 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-amber-400 flex items-center">
+                <h3 className="font-semibold text-amber-700 flex items-center">
                   Project Submission Fee Required
                   <button 
                     type="button" 
                     onClick={() => setShowFeeTooltip(!showFeeTooltip)}
-                    className="text-amber-400/70 hover:text-amber-300 ml-2"
+                    className="text-amber-500 hover:text-amber-600 ml-2"
                   >
                     <HelpCircle className="h-4 w-4" />
                   </button>
                 </h3>
-                <p className="text-amber-100/90 mt-1">
+                <p className="text-amber-700 mt-1">
                   A fee of <span className="font-semibold">{PROJECT_CREATION_FEE} CELO</span> will be charged to submit this project.
                 </p>
-                <p className="text-amber-100/70 text-sm mt-2">
+                <p className="text-amber-600 text-sm mt-2">
                   This fee helps prevent spam submissions and ensures project quality.
                 </p>
                 
                 {showFeeTooltip && (
-                  <div className="absolute right-4 top-4 w-64 p-3 bg-slate-800 rounded-md shadow-lg z-10 text-sm border border-amber-500/30">
-                    <p className="text-amber-100">
+                  <div className="absolute right-4 top-4 w-64 p-3 bg-white rounded-xl shadow-lg z-10 text-sm border border-amber-200">
+                    <p className="text-amber-700">
                       Submission fees are collected to prevent spam and ensure only quality projects are submitted. These fees support platform maintenance and development.
                     </p>
                     <button 
                       type="button" 
-                      className="absolute top-1 right-1 text-slate-400 hover:text-white"
+                      className="absolute top-1 right-1 text-gray-400 hover:text-gray-600"
                       onClick={() => setShowFeeTooltip(false)}
                     >
                       <X className="h-4 w-4" />
@@ -492,380 +559,518 @@ export default function SubmitProject() {
             </div>
           </div>
           
-          <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20 mb-6">
-            <div className="flex items-center justify-between mb-6">
-              {hasStarted ? (
-                <div className="flex items-center text-yellow-400">
-                  <Clock className="h-5 w-5 mr-2" />
-                  <span className="font-medium">Time Remaining: {timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m</span>
-                </div>
-              ) : (
-                <div className="flex items-center text-lime-400">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  <span className="font-medium">Starts: {formatCampaignTime(campaign.startTime)}</span>
-                </div>
-              )}
-              <div className="flex items-center text-slate-300">
-                <Calendar className="h-4 w-4 mr-2" />
-                Ends: {formatCampaignTime(campaign.endTime)}
+          <div className="bg-white rounded-xl border border-gray-200 mb-6 shadow-md overflow-hidden">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                {hasStarted ? (
+                  <div className="flex items-center text-amber-600 text-sm bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100 shadow-sm">
+                    <Clock className="h-4 w-4 mr-1.5" />
+                    <span className="font-medium">⏳ Time Remaining: {timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m {Math.floor((Number(campaign.endTime) - now) % 60)}s</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center text-blue-600 text-sm bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100 shadow-sm">
+                    <Calendar className="h-4 w-4 mr-1.5" />
+                    <span className="font-medium">🚀 Campaign launches in: {Math.floor((Number(campaign.startTime) - now) / 86400)}d {Math.floor(((Number(campaign.startTime) - now) % 86400) / 3600)}h {Math.floor(((Number(campaign.startTime) - now) % 3600) / 60)}m {Math.floor((Number(campaign.startTime) - now) % 60)}s</span>
+                  </div>
+                )}
               </div>
-            </div>
-            
-            {!hasStarted && (
-              <div className="bg-blue-900/30 border border-blue-500/40 rounded-lg p-4 mb-6 flex items-start">
-                <Info className="h-5 w-5 text-blue-400 mr-3 flex-shrink-0 mt-0.5" />
-                <p className="text-blue-300">
-                  This campaign hasn't started yet, but you can submit your project early! Your project will need approval from the campaign admin before it appears in the list of projects.
-                </p>
-              </div>
-            )}
-            
-            {/* Success message */}
-            {successMessage && (
-              <div className="bg-green-900/30 border border-green-500/40 rounded-lg p-4 mb-6 flex items-start">
-                <CheckCircle className="h-5 w-5 text-green-400 mr-3 flex-shrink-0 mt-0.5" />
-                <p className="text-green-300">{successMessage}</p>
-              </div>
-            )}
-            
-            {/* Error message */}
-            {errorMessage && (
-              <div className="bg-red-900/30 border border-red-500/40 rounded-lg p-4 mb-6 flex items-start">
-                <XCircle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 mt-0.5" />
-                <p className="text-red-300">{errorMessage}</p>
-              </div>
-            )}
-            
-            {/* Form Tabs */}
-            <div className="flex border-b border-slate-700 mb-6">
-              <button
-                onClick={() => setActiveTab('basic')}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 'basic' 
-                    ? 'text-lime-400 border-b-2 border-lime-400' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Basic Info
-              </button>
-              <button
-                onClick={() => setActiveTab('media')}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 'media' 
-                    ? 'text-lime-400 border-b-2 border-lime-400' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Media
-              </button>
-              <button
-                onClick={() => setActiveTab('contracts')}
-                className={`px-4 py-2 font-medium ${
-                  activeTab === 'contracts' 
-                    ? 'text-lime-400 border-b-2 border-lime-400' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Contracts
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit}>
-              {/* Basic Info Tab */}
-              {activeTab === 'basic' && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-lime-300 mb-2">Project Name *</label>
-                    <input
-                      type="text"
-                      value={project.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="Enter project name"
-                    />
-                    {formErrors.name && (
-                      <p className="mt-1 text-red-400 text-sm">{formErrors.name}</p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-lime-300 mb-2">Description *</label>
-                    <textarea
-                      value={project.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                      rows={5}
-                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="Describe your project in detail. What problem does it solve?"
-                    />
-                    {formErrors.description && (
-                      <p className="mt-1 text-red-400 text-sm">{formErrors.description}</p>
-                    )}
-                    <p className="mt-1 text-slate-400 text-sm">Minimum 20 characters</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-lime-300 mb-2 flex items-center">
-                      <Github className="h-4 w-4 mr-2" />
-                      GitHub Repository (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={project.githubLink}
-                      onChange={(e) => handleInputChange('githubLink', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="https://github.com/yourusername/yourproject"
-                    />
-                    <p className="mt-1 text-slate-400 text-sm">Link to your project's GitHub repository</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-lime-300 mb-2 flex items-center">
-                      <Globe className="h-4 w-4 mr-2" />
-                      Social Media Link (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={project.socialLink}
-                      onChange={(e) => handleInputChange('socialLink', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="https://twitter.com/yourproject"
-                    />
-                    <p className="mt-1 text-slate-400 text-sm">Link to your project's social media page</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-lime-300 mb-2 flex items-center">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Demo/Testing Link (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={project.testingLink}
-                      onChange={(e) => handleInputChange('testingLink', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="https://demo.yourproject.com"
-                    />
-                    <p className="mt-1 text-slate-400 text-sm">Link to a demo or testing version of your project</p>
-                  </div>
+              
+              {!hasStarted && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-2 flex items-start shadow-sm">
+                  <Info className="h-5 w-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <p className="text-blue-700">
+                    This campaign hasn't started yet, but you can submit your project early! Your project will need approval from the campaign admin before it appears in the list of projects.
+                  </p>
                 </div>
               )}
               
-              {/* Media Tab */}
-              {activeTab === 'media' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
-                    <h3 className="text-lg font-medium text-lime-300">Media Content</h3>
-                    <div className="flex items-center text-sm text-slate-400">
-                      <Info className="h-3.5 w-3.5 mr-2" />
-                      Project media enhances visibility
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-lime-300 mb-2 flex items-center">
-                      <ImageIcon className="h-4 w-4 mr-2" />
-                      Logo URL (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={project.logo}
-                      onChange={(e) => handleInputChange('logo', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="https://example.com/logo.png or IPFS hash"
-                    />
-                    {formErrors.logo && (
-                      <p className="mt-1 text-red-400 text-sm">{formErrors.logo}</p>
-                    )}
-                    <p className="mt-1 text-slate-400 text-sm">Add your project logo (URL to an image file)</p>
-                    
-                    {project.logo && (
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          onClick={() => openMediaPreview('image', project.logo)}
-                          className="px-3 py-1 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition-colors inline-flex items-center"
-                        >
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          Preview Logo
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-lime-300 mb-2 flex items-center">
-                      <Video className="h-4 w-4 mr-2" />
-                      Demo Video URL (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={project.demoVideo}
-                      onChange={(e) => handleInputChange('demoVideo', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="https://example.com/demo.mp4 or IPFS hash"
-                    />
-                    {formErrors.demoVideo && (
-                      <p className="mt-1 text-red-400 text-sm">{formErrors.demoVideo}</p>
-                    )}
-                    <p className="mt-1 text-slate-400 text-sm">Add a video demonstrating your project</p>
-                  </div>
-                  
-                  <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
-                    <div className="flex items-start">
-                      <HelpCircle className="h-5 w-5 text-blue-400 mr-3 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-slate-300 text-sm">
-                          <span className="font-medium text-white">Media Tips:</span> Adding visual content significantly increases engagement with your project. Upload your media to a hosting service or IPFS and paste the URL here.
-                        </p>
-                        <p className="text-slate-400 text-sm mt-2">
-                          Recommended image formats: PNG, JPG, SVG<br />
-                          Recommended video formats: MP4, WebM
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              {/* Success message */}
+              {successMessage && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-2 flex items-start shadow-sm">
+                  <CheckCircle className="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <p className="text-emerald-700">{successMessage}</p>
                 </div>
               )}
               
-              {/* Contracts Tab */}
-              {activeTab === 'contracts' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-4">
-                    <h3 className="text-lg font-medium text-lime-300">Smart Contracts</h3>
-                    <div className="flex items-center text-sm text-slate-400">
-                      <Info className="h-3.5 w-3.5 mr-2" />
-                      Add project contracts
+              {/* Error message */}
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-2 flex items-start shadow-sm">
+                  <XCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-700">{errorMessage}</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Progress Steps */}
+            <div className="px-6 pt-6 pb-4">
+              <div className="flex justify-between mb-6">
+                {[1, 2, 3, 4].map((step) => (
+                  <div key={step} className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      currentStage === step 
+                        ? 'bg-emerald-500 text-white' 
+                        : currentStage > step 
+                          ? 'bg-emerald-100 text-emerald-700' 
+                          : 'bg-gray-100 text-gray-400'
+                    } transition-colors duration-300`}>
+                      {currentStage > step ? <CheckIcon className="h-5 w-5" /> : step}
+                    </div>
+                    <div className={`text-xs mt-2 font-medium ${
+                      currentStage === step 
+                        ? 'text-emerald-600' 
+                        : currentStage > step 
+                          ? 'text-emerald-700' 
+                          : 'text-gray-500'
+                    }`}>
+                      Step {step}
+                    </div>
+                    <div className={`text-xs ${
+                      currentStage === step 
+                        ? 'text-emerald-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {getStageTitle(step)}
                     </div>
                   </div>
-                  
-                  <div className="mb-3">
-                    <label className="flex justify-between items-center text-lime-300 mb-3">
-                      <span className="flex items-center">
-                        <Code className="h-4 w-4 mr-2" />
-                        Contract Addresses (Optional)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleAddContract}
-                        className="px-3 py-1 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition-colors inline-flex items-center"
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Add Contract
-                      </button>
-                    </label>
+                ))}
+              </div>
+              
+              <div className="relative mb-6">
+                <div className="h-1 bg-gray-200 rounded-full absolute top-0 left-0 right-0"></div>
+                <div 
+                  className="h-1 bg-emerald-500 rounded-full absolute top-0 left-0 transition-all duration-500" 
+                  style={{ width: `${(currentStage / totalStages) * 100}%` }}
+                ></div>
+              </div>
+              
+              <h2 className="text-xl font-semibold text-emerald-700 mb-6">
+                Step {currentStage}: {getStageTitle(currentStage)}
+              </h2>
+              
+              <form onSubmit={handleSubmit}>
+                {/* Stage 1: Basic Info */}
+                {currentStage === 1 && (
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-emerald-700 font-medium mb-2">Project Name *</label>
+                      <input
+                        type="text"
+                        value={project.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                        placeholder="Enter project name"
+                      />
+                      {formErrors.name && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.name}</p>
+                      )}
+                    </div>
                     
-                    {project.contracts.map((contract, index) => (
-                      <div key={index} className="flex mb-3">
-                        <input
-                          type="text"
-                          value={contract}
-                          onChange={(e) => handleContractChange(index, e.target.value)}
-                          className="flex-grow px-4 py-2 rounded-l-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white font-mono"
-                          placeholder="0x..."
-                        />
-                        {project.contracts.length > 1 && (
+                    <div>
+                      <label className="block text-emerald-700 font-medium mb-2">Description *</label>
+                      <textarea
+                        value={project.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                        rows={5}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                        placeholder="Describe your project in detail. What problem does it solve?"
+                      />
+                      {formErrors.description && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.description}</p>
+                      )}
+                      <p className="mt-1 text-gray-500 text-sm">Minimum 20 characters</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+                        <Github className="h-4 w-4 mr-2" />
+                        GitHub Repository (Optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={project.githubLink}
+                        onChange={(e) => handleInputChange('githubLink', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                        placeholder="https://github.com/yourusername/yourproject"
+                      />
+                      <p className="mt-1 text-gray-500 text-sm">Link to your project's GitHub repository</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+                        <Globe className="h-4 w-4 mr-2" />
+                        Social Media Link (Optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={project.socialLink}
+                        onChange={(e) => handleInputChange('socialLink', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                        placeholder="https://twitter.com/yourproject"
+                      />
+                      <p className="mt-1 text-gray-500 text-sm">Link to your project's social media page</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Demo/Testing Link (Optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={project.testingLink}
+                        onChange={(e) => handleInputChange('testingLink', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                        placeholder="https://demo.yourproject.com"
+                      />
+                      <p className="mt-1 text-gray-500 text-sm">Link to a demo or testing version of your project</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Stage 2: Media Content */}
+                {currentStage === 2 && (
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-4">
+                      <h3 className="text-lg font-medium text-emerald-700">Media Content</h3>
+                      <div className="flex items-center text-sm text-gray-500">
+                      <Info className="h-3.5 w-3.5 mr-2" />
+                        Project media enhances visibility
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Logo URL (Optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={project.logo}
+                        onChange={(e) => handleInputChange('logo', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                        placeholder="https://example.com/logo.png or IPFS hash"
+                      />
+                      {formErrors.logo && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.logo}</p>
+                      )}
+                      <p className="mt-1 text-gray-500 text-sm">Add your project logo (URL to an image file)</p>
+                      
+                      {project.logo && (
+                        <div className="mt-3">
                           <button
                             type="button"
-                            onClick={() => handleRemoveContract(index)}
-                            className="bg-slate-700 text-slate-300 px-3 py-2 rounded-r-lg hover:bg-slate-600 transition-colors"
+                            onClick={() => openMediaPreview('image', project.logo)}
+                            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition-colors inline-flex items-center border border-gray-200 shadow-sm"
                           >
-                            <Trash className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5 mr-1.5" />
+                            Preview Logo
                           </button>
-                        )}
                         </div>
-                    ))}
+                      )}
+                    </div>
                     
-                    {formErrors.contracts[0] && (
-                      <p className="mt-1 text-red-400 text-sm">{formErrors.contracts[0]}</p>
-                    )}
-                    <p className="mt-1 text-slate-400 text-sm">
-                      Add Ethereum-compatible contract addresses associated with your project
-                    </p>
+                    <div>
+                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+                        <Video className="h-4 w-4 mr-2" />
+                        Demo Video URL (Optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={project.demoVideo}
+                        onChange={(e) => handleInputChange('demoVideo', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                        placeholder="https://example.com/demo.mp4 or IPFS hash"
+                      />
+                      {formErrors.demoVideo && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.demoVideo}</p>
+                      )}
+                      <p className="mt-1 text-gray-500 text-sm">Add a video demonstrating your project</p>
+                    </div>
+                    
+                    <div className="bg-blue-50 rounded-xl p-4 mt-4 border border-blue-100 shadow-sm">
+                      <div className="flex items-start">
+                        <HelpCircle className="h-5 w-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-blue-700 text-sm">
+                            <span className="font-medium text-blue-800">Media Tips:</span> Adding visual content significantly increases engagement with your project. Upload your media to a hosting service or IPFS and paste the URL here.
+                          </p>
+                          <p className="text-blue-600 text-sm mt-2">
+                            Recommended image formats: PNG, JPG, SVG<br />
+                            Recommended video formats: MP4, WebM
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
-                    <div className="flex items-start">
-                      <AlertTriangle className="h-5 w-5 text-yellow-400 mr-3 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-slate-300 text-sm">
-                          <span className="font-medium text-white">Important:</span> Only add verified contracts that are part of your project. Contract addresses must be valid Ethereum-format addresses (0x followed by 40 hexadecimal characters).
-                        </p>
-                        <p className="text-slate-400 text-sm mt-2">
-                          These contracts will be publicly linked to your project and visible to all users.
+                )}
+                
+                {/* Stage 3: Contracts */}
+                {currentStage === 3 && (
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-4">
+                      <h3 className="text-lg font-medium text-emerald-700">Smart Contracts</h3>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Info className="h-3.5 w-3.5 mr-2" />
+                        Add project contracts
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <label className="flex justify-between items-center text-emerald-700 font-medium mb-3">
+                        <span className="flex items-center">
+                          <Code className="h-4 w-4 mr-2" />
+                          Contract Addresses (Optional)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleAddContract}
+                          className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-xs hover:bg-emerald-200 transition-colors inline-flex items-center border border-emerald-200 shadow-sm"
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1.5" />
+                          Add Contract
+                        </button>
+                      </label>
+                      
+                      {project.contracts.map((contract, index) => (
+                        <div key={index} className="flex mb-3">
+                          <input
+                            type="text"
+                            value={contract}
+                            onChange={(e) => handleContractChange(index, e.target.value)}
+                            className="flex-grow px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800 font-mono"
+                            placeholder="0x..."
+                          />
+                          {project.contracts.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveContract(index)}
+                              className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-r-xl hover:bg-gray-200 transition-colors border-y border-r border-gray-200"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {formErrors.contracts[0] && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.contracts[0]}</p>
+                      )}
+                      <p className="mt-1 text-gray-500 text-sm">
+                        Add Ethereum-compatible contract addresses associated with your project
+                      </p>
+                    </div>
+                    
+                    <div className="bg-amber-50 rounded-xl p-4 mt-4 border border-amber-100 shadow-sm">
+                      <div className="flex items-start">
+                        <AlertTriangle className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-amber-700 text-sm">
+                            <span className="font-medium text-amber-800">Important:</span> Only add verified contracts that are part of your project. Contract addresses must be valid Ethereum-format addresses (0x followed by 40 hexadecimal characters).
+                          </p>
+                          <p className="text-amber-600 text-sm mt-2">
+                            These contracts will be publicly linked to your project and visible to all users.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Stage 4: Review & Submit */}
+                {currentStage === 4 && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-4">
+                      <h3 className="text-lg font-medium text-emerald-700">Project Summary</h3>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Info className="h-3.5 w-3.5 mr-2" />
+                        Review your submission
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h4 className="font-medium text-gray-800 mb-3">Basic Information</h4>
+                      <div className="space-y-2">
+                        <div className="flex">
+                          <span className="font-medium text-gray-600 w-32">Project Name:</span>
+                          <span className="text-gray-800">{project.name}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-600 mb-1">Description:</span>
+                          <p className="text-gray-800 text-sm bg-white p-3 rounded-lg border border-gray-100">{project.description}</p>
+                        </div>
+                        {project.githubLink && (
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-600 w-32">GitHub:</span>
+                            <a href={project.githubLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 truncate">{project.githubLink}</a>
+                          </div>
+                        )}
+                        {project.socialLink && (
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-600 w-32">Social Media:</span>
+                            <a href={project.socialLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 truncate">{project.socialLink}</a>
+                          </div>
+                        )}
+                        {project.testingLink && (
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-600 w-32">Demo/Testing:</span>
+                            <a href={project.testingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 truncate">{project.testingLink}</a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h4 className="font-medium text-gray-800 mb-3">Media Content</h4>
+                      <div className="space-y-2">
+                        {project.logo ? (
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-600 w-32">Logo:</span>
+                            <button
+                              type="button"
+                              onClick={() => openMediaPreview('image', project.logo)}
+                              className="text-blue-600 hover:text-blue-700 flex items-center"
+                            >
+                              <Eye className="h-4 w-4 mr-1" /> View Logo
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex">
+                            <span className="font-medium text-gray-600 w-32">Logo:</span>
+                            <span className="text-gray-500">None provided</span>
+                          </div>
+                        )}
+                        
+                        {project.demoVideo ? (
+                          <div className="flex items-center">
+                            <span className="font-medium text-gray-600 w-32">Demo Video:</span>
+                            <button
+                              type="button"
+                              onClick={() => openMediaPreview('video', project.demoVideo)}
+                              className="text-blue-600 hover:text-blue-700 flex items-center"
+                            >
+                              <Eye className="h-4 w-4 mr-1" /> View Demo Video
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex">
+                            <span className="font-medium text-gray-600 w-32">Demo Video:</span>
+                            <span className="text-gray-500">None provided</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <h4 className="font-medium text-gray-800 mb-3">Smart Contracts</h4>
+                      <div className="space-y-2">
+                        {project.contracts.some(c => c.trim() !== '') ? (
+                          project.contracts.filter(c => c.trim() !== '').map((contract, idx) => (
+                            <div key={idx} className="font-mono text-sm bg-white p-2 rounded-lg border border-gray-100">
+                              {contract}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-gray-500">No contracts provided</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 shadow-sm">
+                      <div className="flex items-start">
+                        <Shield className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-amber-700 text-sm">
+                            <span className="font-medium">Submission Fee:</span> A fee of {PROJECT_CREATION_FEE} CELO will be charged when you submit this project. Please ensure you have sufficient funds in your wallet.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 shadow-sm">
+                      <div className="flex items-start">
+                        <Info className="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <p className="text-emerald-700 text-sm">
+                          Your project will be submitted to campaign: <span className="font-medium">{campaign.name}</span>. 
+                          Once submitted, it will need to be approved by the campaign admin before it appears in the list of projects.
                         </p>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-              
-              <div className="bg-slate-700/30 rounded-lg p-4 mt-8 mb-6">
-                <p className="text-slate-300 text-sm">
-                  Your project will be submitted to campaign: <span className="text-lime-400 font-medium">{campaign.name}</span>. 
-                  Once submitted, it will need to be approved by the campaign admin before it appears in the list of projects.
-                </p>
-              </div>
-              
-              <div className="flex flex-col md:flex-row gap-4">
-                <button
-                  type="submit"
-                  disabled={isWritePending || isWaitingForTx || !isConnected}
-                  className="flex-1 py-3 px-6 bg-lime-500 text-slate-900 font-semibold rounded-lg hover:bg-lime-400 transition-colors disabled:bg-slate-500 disabled:text-slate-300 disabled:cursor-not-allowed"
-                >
-                  {isWritePending || isWaitingForTx ? (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      {isWritePending ? 'Preparing Submission...' : 'Submitting...'}
-                    </div>
-                  ) : (
-                    'Submit Project'
-                  )}
-                </button>
+                )}
                 
-                <button
-                  type="button"
-                  onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-                  className="py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-              
-              {!isConnected && (
-                <p className="mt-3 text-yellow-400 text-center">
-                  Please connect your wallet to submit a project
-                </p>
-              )}
-              
-              <p className="mt-4 text-center text-slate-400 text-sm">
-                By submitting this project, you agree to pay the {PROJECT_CREATION_FEE} CELO submission fee
-              </p>
-            </form>
+                {/* Navigation Buttons */}
+                <div className="flex justify-between mt-8 mb-2">
+                  <button
+                    type="button"
+                    onClick={handlePrevious}
+                    className={`px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors shadow-sm flex items-center ${currentStage === 1 ? 'invisible' : ''}`}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </button>
+                  
+                  {currentStage < totalStages ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="px-5 py-2.5 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors shadow-sm flex items-center"
+                    >
+                      Continue
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isWritePending || isWaitingForTx || !isConnected}
+                      className="px-5 py-2.5 bg-pink-500 text-white rounded-full hover:bg-pink-600 transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed shadow-md flex items-center"
+                    >
+                      {isWritePending || isWaitingForTx ? (
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          {isWritePending ? 'Preparing...' : 'Submitting...'}
+                        </div>
+                      ) : (
+                        <>
+                          Submit Project
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                
+                {!isConnected && currentStage === totalStages && (
+                  <p className="mt-3 text-amber-600 text-center">
+                    Please connect your wallet to submit a project
+                  </p>
+                )}
+              </form>
+            </div>
           </div>
         </div>
       </div>
       
       {/* Media Preview Modal */}
       {showMediaPreview && previewUrl && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-2xl p-6 relative">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl p-6 relative shadow-lg">
             <button
               onClick={() => setShowMediaPreview(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
             </button>
             
-            <h3 className="text-xl font-bold mb-4">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
               {previewType === 'image' ? 'Logo Preview' : 'Demo Video Preview'}
             </h3>
             
-            <div className="flex items-center justify-center bg-slate-900 rounded-lg p-4 min-h-[300px]">
+            <div className="flex items-center justify-center bg-gray-50 rounded-xl p-4 min-h-[300px] border border-gray-200">
               {previewType === 'image' ? (
                 <img 
                   src={previewUrl} 
                   alt="Project Logo" 
-                  className="max-w-full max-h-[400px] object-contain rounded"
+                  className="max-w-full max-h-[400px] object-contain rounded-lg"
                   onError={(e) => {
                     e.currentTarget.src = '/placeholder-image.png';
                     setErrorMessage('Could not load image. Please check the URL.');
@@ -876,7 +1081,7 @@ export default function SubmitProject() {
                   <video 
                     src={previewUrl}
                     controls
-                    className="max-w-full max-h-[400px] mx-auto rounded"
+                    className="max-w-full max-h-[400px] mx-auto rounded-lg"
                     onError={() => {
                       setErrorMessage('Could not load video. Please check the URL or try a different format.');
                     }}
@@ -888,13 +1093,13 @@ export default function SubmitProject() {
             </div>
             
             <div className="mt-4 text-center">
-              <p className="text-slate-400 text-sm break-all">{previewUrl}</p>
+              <p className="text-gray-500 text-sm break-all">{previewUrl}</p>
             </div>
             
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setShowMediaPreview(false)}
-                className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                className="px-6 py-2.5 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors shadow-sm"
               >
                 Close Preview
               </button>
