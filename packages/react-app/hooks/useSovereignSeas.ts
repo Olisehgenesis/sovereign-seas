@@ -246,11 +246,18 @@ export const useSovereignSeas = ({
           args: [BigInt(i)],
         }));
       }
+
+
       
       const campaignResults = await Promise.all(campaignPromises);
       
       // Transform the results to match the Campaign type
       // Since getCampaign now returns multiple values instead of a struct
+      //dont returncampaigns whose ids are in spam
+      //cast next public spam camapins from .env to list of bigints
+
+      const spam: bigint[] = process.env.NEXT_PUBLIC_SPAM_CAMPAIGNS ? process.env.NEXT_PUBLIC_SPAM_CAMPAIGNS.split(',').map((id: string) => BigInt(id)) : [];
+
       const formattedCampaigns = campaignResults.map((result: any) => {
         return {
           id: result[0],
@@ -269,6 +276,12 @@ export const useSovereignSeas = ({
           totalFunds: result[13]
         } as Campaign;
       });
+      //remove spam campaigns
+      for (let i = 0; i < formattedCampaigns.length; i++) {
+        if(spam.includes(formattedCampaigns[i].id)){
+          formattedCampaigns.splice(i, 1);
+        }
+      }
       
       setCampaigns(formattedCampaigns);
       return formattedCampaigns;
