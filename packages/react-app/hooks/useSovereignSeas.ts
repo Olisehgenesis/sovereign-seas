@@ -429,7 +429,6 @@ export const useSovereignSeas = ({
         functionName: 'approve',
         args: [contractAddress, amountInWei],
       });
-      await publicClient.waitForTransactionReceipt({ hash: writeData  as "0x${string}"});
       
       // Then vote
       writeContract({
@@ -540,7 +539,7 @@ const createCampaign = async (
       functionName: 'approve',
       args: [contractAddress, campaignFee],
     });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+
     
     // Then create the campaign
     writeContract({
@@ -625,7 +624,6 @@ const submitProject = async (
       functionName: 'approve',
       args: [contractAddress, projectFee],
     });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
     
     // Then submit the project
     writeContract({
