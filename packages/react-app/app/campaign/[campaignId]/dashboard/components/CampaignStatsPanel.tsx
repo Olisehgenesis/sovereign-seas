@@ -138,7 +138,7 @@ const CampaignStatsPanel: React.FC<CampaignStatsPanelProps> = ({
                     </span>
                   </div>
                   <span className="text-xs text-emerald-600 font-medium">
-                    {formatTokenAmount(project.voteCount)}
+                    {formatTokenAmount(BigInt(project.voteCount))}
                   </span>
                 </div>
               ))}

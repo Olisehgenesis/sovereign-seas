@@ -12,7 +12,7 @@ interface ActionPanelProps {
   isWaitingForTx: boolean;
   handleDistributeFunds: () => void;
   setDistributionTableVisible: (visible: boolean) => void;
-  router: any; // You might want to replace 'any' with a more specific type if possible
+  router: any; 
 }
 
 const ActionPanel: React.FC<ActionPanelProps> = ({
