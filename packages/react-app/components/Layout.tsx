@@ -1,14 +1,49 @@
 import { FC, ReactNode } from 'react';
+import Head from 'next/head';
 import Footer from './Footer';
 import Header from './Header';
 
 interface Props {
   children: ReactNode;
+  title?: string;
+  description?: string;
+  keywords?: string;
+  ogImage?: string;
 }
 
-const Layout: FC<Props> = ({ children }) => {
+const Layout: FC<Props> = ({ 
+  children, 
+  title = 'Sovereign Seas | Decentralized Funding Platform',
+  description = 'A transparent blockchain-based platform for funding innovative projects through community voting and quadratic distribution.',
+  keywords = 'blockchain, funding, campaigns, decentralized, voting, projects, Celo',
+  ogImage = '/og-image.png'
+}) => {
   return (
     <>
+      <Head>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta name="keywords" content={keywords} />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+        
+        {/* Open Graph / Social Media Meta Tags */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="Sovereign Seas" />
+        
+        {/* Twitter Card data */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href="https://sovereignseas.io" />
+      </Head>
+      
       <div className="bg-gradient-to-b from-emerald-50 to-teal-50 overflow-hidden flex flex-col min-h-screen">
         <Header />
         <div className="py-6 max-w-7xl mx-auto space-y-4 px-4 sm:px-6 lg:px-8">
