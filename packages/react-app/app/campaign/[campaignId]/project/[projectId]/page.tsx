@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { 
   ArrowLeft, 
-  Waves, 
   Calendar, 
   Clock, 
   FileText, 
@@ -34,13 +33,15 @@ import {
   BarChart3,
   Coins,
   History,
-  BarChart
+  BarChart,
+  Hash
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../../hooks/useSovereignSeas';
 
 // Contract addresses - replace with your actual addresses or environment variables
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
 const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`
+
 export default function ProjectDetails() {
   const router = useRouter();
   const { campaignId, projectId } = useParams();
@@ -297,10 +298,10 @@ export default function ProjectDetails() {
   
   if (loading || !campaign || !project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800 flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <Loader2 className="h-12 w-12 text-lime-500 animate-spin mb-4" />
-          <p className="text-lg text-lime-300">Loading project details...</p>
+          <Loader2 className="h-12 w-12 text-emerald-500 animate-spin mb-4" />
+          <p className="text-lg text-emerald-600">Loading project details...</p>
         </div>
       </div>
     );
@@ -320,13 +321,13 @@ export default function ProjectDetails() {
   const hasContracts = project.contracts && project.contracts.length > 0;
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800">
+      <div className="container mx-auto px-6 py-8">
         {/* Navigation */}
         <div className="mb-6">
           <button
             onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-            className="inline-flex items-center text-slate-300 hover:text-white"
+            className="inline-flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Campaign
@@ -335,18 +336,18 @@ export default function ProjectDetails() {
         
         {/* Status Message */}
         {statusMessage.text && (
-          <div className={`mb-6 p-4 rounded-lg ${
+          <div className={`mb-6 p-4 rounded-xl shadow-sm ${
             statusMessage.type === 'success' 
-              ? 'bg-green-900/30 border border-green-500/40' 
-              : 'bg-red-900/30 border border-red-500/40'
+              ? 'bg-emerald-50 border border-emerald-200' 
+              : 'bg-red-50 border border-red-200'
           }`}>
             <div className="flex items-start">
               {statusMessage.type === 'success' ? (
-                <ThumbsUp className="h-5 w-5 text-green-400 mr-3 flex-shrink-0 mt-0.5" />
+                <ThumbsUp className="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0 mt-0.5" />
               ) : (
-                <AlertTriangle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
               )}
-              <p className={statusMessage.type === 'success' ? 'text-green-300' : 'text-red-300'}>
+              <p className={statusMessage.type === 'success' ? 'text-emerald-700' : 'text-red-700'}>
                 {statusMessage.text}
               </p>
             </div>
@@ -354,28 +355,31 @@ export default function ProjectDetails() {
         )}
         
         {/* Project Header */}
-        <div className="bg-slate-800/40 backdrop-blur-md rounded-xl border border-lime-600/20 overflow-hidden mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6 shadow-md">
           <div className="p-6">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
               <div className="flex-grow">
                 {/* Project Title and Approval Status */}
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <h1 className="text-3xl font-bold text-white">{project.name}</h1>
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                  <h1 className="text-2xl font-bold flex items-center tilt-neon text-gray-800">
+                    <Hash className="h-7 w-7 text-emerald-500 mr-2" />
+                    {project.name}
+                  </h1>
                   {project.approved ? (
-                    <span className="px-2 py-1 bg-green-900/50 text-green-400 text-xs rounded-full border border-green-500/30 inline-flex items-center">
-                      <BadgeCheck className="h-3.5 w-3.5 mr-1" />
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full border border-emerald-200 inline-flex items-center shadow-sm">
+                      <BadgeCheck className="h-3.5 w-3.5 mr-1.5" />
                       Approved
                     </span>
                   ) : (
-                    <span className="px-2 py-1 bg-yellow-900/50 text-yellow-400 text-xs rounded-full border border-yellow-500/30 inline-flex items-center">
-                      <Clock className="h-3.5 w-3.5 mr-1" />
+                    <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full border border-amber-200 inline-flex items-center shadow-sm">
+                      <Clock className="h-3.5 w-3.5 mr-1.5" />
                       Pending Approval
                     </span>
                   )}
                   
                   {hasFundsReceived && (
-                    <span className="px-2 py-1 bg-blue-900/50 text-blue-400 text-xs rounded-full border border-blue-500/30 inline-flex items-center">
-                      <Coins className="h-3.5 w-3.5 mr-1" />
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full border border-blue-200 inline-flex items-center shadow-sm">
+                      <Coins className="h-3.5 w-3.5 mr-1.5" />
                       Funded: {formatTokenAmount(project.fundsReceived)} CELO
                     </span>
                   )}
@@ -384,12 +388,12 @@ export default function ProjectDetails() {
                   {hasMedia && (
                     <div className="flex items-center gap-1 ml-1">
                       {project.logo && (
-                        <span className="text-blue-400" title="Has Logo">
+                        <span className="text-blue-600" title="Has Logo">
                           <ImageIcon className="h-3.5 w-3.5" />
                         </span>
                       )}
                       {project.demoVideo && (
-                        <span className="text-red-400" title="Has Demo Video">
+                        <span className="text-red-600" title="Has Demo Video">
                           <Video className="h-3.5 w-3.5" />
                         </span>
                       )}
@@ -398,13 +402,13 @@ export default function ProjectDetails() {
                 </div>
                 
                 {/* Campaign Name */}
-                <p className="text-lime-400 mb-4">
+                <p className="text-emerald-600 mb-4">
                   Part of <span className="font-medium">{campaign.name}</span>
                 </p>
                 
                 {/* Project Description */}
-                <div className="bg-slate-700/30 rounded-lg p-4 mb-6">
-                  <p className="text-slate-300 whitespace-pre-line">{project.description}</p>
+                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200 shadow-sm">
+                  <p className="text-gray-700 whitespace-pre-line">{project.description}</p>
                 </div>
                 
                 {/* Project Links */}
@@ -414,12 +418,12 @@ export default function ProjectDetails() {
                       href={project.githubLink} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center bg-slate-700/40 hover:bg-slate-700/60 transition-colors p-3 rounded-lg text-blue-400 hover:text-blue-300"
+                      className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
                     >
                       <Github className="h-5 w-5 mr-3" />
                       <div>
                         <div className="font-medium">GitHub Repository</div>
-                        <div className="text-xs text-slate-400 truncate max-w-[200px]">
+                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
                           {project.githubLink}
                         </div>
                       </div>
@@ -432,12 +436,12 @@ export default function ProjectDetails() {
                       href={project.socialLink} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center bg-slate-700/40 hover:bg-slate-700/60 transition-colors p-3 rounded-lg text-blue-400 hover:text-blue-300"
+                      className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
                     >
                       <Globe className="h-5 w-5 mr-3" />
                       <div>
                         <div className="font-medium">Social Media</div>
-                        <div className="text-xs text-slate-400 truncate max-w-[200px]">
+                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
                           {project.socialLink}
                         </div>
                       </div>
@@ -450,12 +454,12 @@ export default function ProjectDetails() {
                       href={project.testingLink} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center bg-slate-700/40 hover:bg-slate-700/60 transition-colors p-3 rounded-lg text-blue-400 hover:text-blue-300"
+                      className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
                     >
                       <FileText className="h-5 w-5 mr-3" />
                       <div>
                         <div className="font-medium">Demo/Testing</div>
-                        <div className="text-xs text-slate-400 truncate max-w-[200px]">
+                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
                           {project.testingLink}
                         </div>
                       </div>
@@ -464,32 +468,32 @@ export default function ProjectDetails() {
                   )}
                 </div>
                 
-                {/* Media content section - NEW */}
+                {/* Media content section */}
                 {hasMedia && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-medium text-lime-300 flex items-center">
-                        <Video className="h-4 w-4 mr-2 text-red-400" />
+                      <h3 className="text-lg font-medium text-emerald-700 flex items-center">
+                        <Video className="h-4 w-4 mr-2 text-red-600" />
                         Media Content
                       </h3>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {project.logo && (
-                        <div className="bg-slate-700/40 hover:bg-slate-700/60 transition-colors p-3 rounded-lg cursor-pointer"
+                        <div className="bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl cursor-pointer border border-gray-200 shadow-sm"
                              onClick={() => openMediaModal('logo')}>
                           <div className="flex items-center mb-2">
-                            <ImageIcon className="h-5 w-5 text-blue-400 mr-2" />
-                            <div className="font-medium">Project Logo</div>
+                            <ImageIcon className="h-5 w-5 text-blue-600 mr-2" />
+                            <div className="font-medium text-gray-800">Project Logo</div>
                           </div>
-                          <div className="h-40 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden">
+                          <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                             <img 
                               src={project.logo} 
                               alt={`${project.name} Logo`} 
                               className="max-w-full max-h-40 object-contain"
                               ref={logoRef}
                               onError={(e) => {
-                                e.currentTarget.src = "https://placehold.co/400x300/1e293b/475569?text=Logo%20Unavailable";
+                                e.currentTarget.src = "https://placehold.co/400x300/f1f5f9/64748b?text=Logo%20Unavailable";
                               }}
                             />
                           </div>
@@ -497,14 +501,14 @@ export default function ProjectDetails() {
                       )}
                       
                       {project.demoVideo && (
-                        <div className="bg-slate-700/40 hover:bg-slate-700/60 transition-colors p-3 rounded-lg cursor-pointer"
+                        <div className="bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl cursor-pointer border border-gray-200 shadow-sm"
                              onClick={() => openMediaModal('video')}>
                           <div className="flex items-center mb-2">
-                            <Video className="h-5 w-5 text-red-400 mr-2" />
-                            <div className="font-medium">Demo Video</div>
+                            <Video className="h-5 w-5 text-red-600 mr-2" />
+                            <div className="font-medium text-gray-800">Demo Video</div>
                           </div>
-                          <div className="h-40 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden">
-                            <div className="text-slate-400 flex flex-col items-center">
+                          <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                            <div className="text-gray-500 flex flex-col items-center">
                               <Video className="h-10 w-10 mb-2" />
                               <span>Click to view video</span>
                             </div>
@@ -515,31 +519,31 @@ export default function ProjectDetails() {
                   </div>
                 )}
                 
-                {/* Contracts section - NEW */}
+                {/* Contracts section */}
                 {hasContracts && (
                   <div className="mb-6">
                     <button 
                       onClick={() => setShowContractsSection(!showContractsSection)}
-                      className="flex items-center justify-between w-full mb-3 bg-slate-700/30 p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
+                      className="flex items-center justify-between w-full mb-3 bg-gray-50 p-3 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm"
                     >
-                      <h3 className="text-lg font-medium text-lime-300 flex items-center">
-                        <Code className="h-4 w-4 mr-2 text-purple-400" />
+                      <h3 className="text-lg font-medium text-emerald-700 flex items-center">
+                        <Code className="h-4 w-4 mr-2 text-purple-600" />
                         Smart Contracts ({project.contracts?.length || 0})
                       </h3>
                       {showContractsSection ? 
-                        <ChevronUp className="h-4 w-4 text-slate-400" /> : 
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                        <ChevronUp className="h-4 w-4 text-gray-500" /> : 
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
                       }
                     </button>
                     
                     {showContractsSection && (
                       <div className="space-y-2">
                         {project.contracts.map((contract: string, index: number) => (
-                          <div key={index} className="bg-slate-700/40 p-3 rounded-lg">
+                          <div key={index} className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm text-slate-400">Contract {index + 1}</span>
+                              <span className="text-sm text-gray-500">Contract {index + 1}</span>
                             </div>
-                            <div className="font-mono text-sm bg-slate-800 p-2 rounded break-all">
+                            <div className="font-mono text-sm bg-gray-50 p-2 rounded-lg break-all border border-gray-100">
                               {contract}
                             </div>
                           </div>
@@ -551,22 +555,22 @@ export default function ProjectDetails() {
                 
                 {/* Project Info */}
                 <div className="flex flex-wrap gap-y-3 gap-x-6 text-sm">
-                  <div className="flex items-center text-slate-300">
-                    <User className="h-4 w-4 mr-2 text-slate-400" />
+                  <div className="flex items-center text-gray-600">
+                    <User className="h-4 w-4 mr-2 text-gray-500" />
                     Submitted by: <span className="ml-1 font-mono">{project.owner.slice(0, 6)}...{project.owner.slice(-4)}</span>
                   </div>
                   
                   {project.approved && (
-                    <div className="flex items-center text-slate-300">
-                      <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                    <div className="flex items-center text-gray-600">
+                      <Calendar className="h-4 w-4 mr-2 text-gray-500" />
                       Campaign ends: <span className="ml-1">{formatCampaignTime(campaign.endTime)}</span>
                     </div>
                   )}
                   
                   {projectRanking.rank > 0 && (
-                    <div className="flex items-center text-slate-300">
-                      <BarChart3 className="h-4 w-4 mr-2 text-slate-400" />
-                      Rank: <span className="ml-1 text-lime-400">{projectRanking.rank}</span> of {projectRanking.totalProjects}
+                    <div className="flex items-center text-gray-600">
+                      <BarChart3 className="h-4 w-4 mr-2 text-gray-500" />
+                      Rank: <span className="ml-1 text-emerald-600 font-medium">{projectRanking.rank}</span> of {projectRanking.totalProjects}
                     </div>
                   )}
                 </div>
@@ -574,22 +578,24 @@ export default function ProjectDetails() {
               
               {/* Vote Stats and Actions */}
               <div className="shrink-0 flex flex-col items-center">
-                <div className="bg-slate-700/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 w-full md:w-auto">
+                <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-md w-full md:w-auto">
                   <div className="flex flex-col items-center">
-                    <Heart className="h-8 w-8 text-lime-500 mb-2" />
-                    <div className="text-3xl font-bold text-white mb-1">{formatTokenAmount(project.voteCount)}</div>
-                    <div className="text-sm text-slate-400 mb-4">
+                    <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mb-2">
+                      <Heart className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div className="text-3xl font-bold text-gray-800 mb-1">{formatTokenAmount(project.voteCount)}</div>
+                    <div className="text-sm text-gray-500 mb-4">
                       Total {Number(campaign.voteMultiplier) > 1 ? `(${campaign.voteMultiplier.toString()}x)` : ''} Votes
                     </div>
                     
                     {userVotes > BigInt(0) && (
-                      <div className="text-sm text-lime-400 mb-4 text-center">
+                      <div className="text-sm text-emerald-600 mb-4 text-center">
                         You've voted {formatTokenAmount(userVotes)} CELO on this project
                         
                         {userVoteHistory.length > 0 && (
                           <button
                             onClick={() => setShowVoteHistory(!showVoteHistory)}
-                            className="flex items-center justify-center mt-2 text-xs text-blue-400 hover:text-blue-300"
+                            className="flex items-center justify-center mt-2 text-xs text-blue-600 hover:text-blue-700"
                           >
                             <History className="h-3 w-3 mr-1" />
                             {showVoteHistory ? 'Hide History' : 'View History'}
@@ -600,18 +606,18 @@ export default function ProjectDetails() {
                     
                     {/* Vote History (conditionally displayed) */}
                     {showVoteHistory && userVoteHistory.length > 0 && (
-                      <div className="w-full mb-4 border-t border-slate-600 pt-3">
-                        <h4 className="text-sm font-medium text-center text-blue-400 mb-2">Your Vote History</h4>
+                      <div className="w-full mb-4 border-t border-gray-200 pt-3">
+                        <h4 className="text-sm font-medium text-center text-blue-600 mb-2">Your Vote History</h4>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {userVoteHistory.map((vote, index) => (
-                            <div key={index} className="bg-slate-700/50 rounded p-2 text-xs">
+                            <div key={index} className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100">
                               <div className="flex justify-between">
-                                <span className="text-slate-300">Amount:</span>
-                                <span className="text-lime-400">{formatTokenAmount(vote.amount)} CELO</span>
+                                <span className="text-gray-600">Amount:</span>
+                                <span className="text-emerald-600 font-medium">{formatTokenAmount(vote.amount)} CELO</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-slate-300">Votes:</span>
-                                <span className="text-white">{vote.voteCount.toString()}</span>
+                                <span className="text-gray-600">Votes:</span>
+                                <span className="text-gray-800 font-medium">{vote.voteCount.toString()}</span>
                               </div>
                             </div>
                           ))}
@@ -623,7 +629,7 @@ export default function ProjectDetails() {
                       {canVote && (
                         <button
                           onClick={() => setVoteModalVisible(true)}
-                          className="w-full py-2 px-4 bg-lime-600 hover:bg-lime-500 text-white rounded-lg transition-colors flex items-center justify-center"
+                          className="w-full py-2.5 px-4 bg-pink-500 hover:bg-pink-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm"
                         >
                           <Award className="h-4 w-4 mr-2" />
                           Vote for Project
@@ -634,7 +640,7 @@ export default function ProjectDetails() {
                         <button
                           onClick={handleApproveProject}
                           disabled={isWritePending || isWaitingForTx}
-                          className="w-full py-2 px-4 bg-yellow-500 hover:bg-yellow-400 text-slate-900 rounded-lg transition-colors flex items-center justify-center disabled:bg-slate-600 disabled:text-slate-300"
+                          className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm disabled:bg-gray-300 disabled:text-gray-500"
                         >
                           {isWritePending || isWaitingForTx ? (
                             <div className="flex items-center justify-center">
@@ -653,7 +659,7 @@ export default function ProjectDetails() {
                       {isProjectOwner && !votingEnded && (
                         <button
                           onClick={() => router.push(`/campaign/${campaignId}/project/${projectId}/edit`)}
-                          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center justify-center"
+                          className="w-full py-2.5 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm"
                         >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Project
@@ -662,7 +668,7 @@ export default function ProjectDetails() {
                       
                       <button
                         onClick={shareProject}
-                        className="w-full py-2 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center justify-center"
+                        className="w-full py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-full transition-colors flex items-center justify-center border border-gray-200 shadow-sm"
                       >
                         <Share2 className="h-4 w-4 mr-2" />
                         Share Project
@@ -675,41 +681,43 @@ export default function ProjectDetails() {
           </div>
           
           {/* Campaign Status Bar */}
-          <div className="bg-slate-700/50 px-6 py-3 border-t border-slate-600">
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Waves className="h-5 w-5 text-lime-500 mr-2" />
-                <span className="font-medium">Campaign Status:</span>
+                <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center mr-2">
+                <Hash className="h-4 w-4 text-emerald-600" />
+                </div>
+                <span className="font-medium text-gray-700">Campaign Status:</span>
                 <span className={`ml-2 ${
                   hasEnded 
-                    ? 'text-slate-400' 
+                    ? 'text-gray-500' 
                     : hasStarted 
-                      ? 'text-green-400' 
-                      : 'text-yellow-400'
+                      ? 'text-emerald-600' 
+                      : 'text-amber-600'
                 }`}>
                   {hasEnded ? 'Ended' : hasStarted ? 'Active' : 'Not Started'}
-                  </span>
+                </span>
               </div>
               
               {hasStarted && !hasEnded && (
-                <div className="text-yellow-400 text-sm">
-                  {timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m remaining
+                <div className="text-amber-600 text-sm font-medium px-3 py-1 bg-amber-50 rounded-full border border-amber-100 shadow-sm">
+                  ⏳ {timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m remaining
                 </div>
               )}
             </div>
           </div>
         </div>
         
-        {/* Project Statistics - NEW */}
-        <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 mb-6">
+        {/* Project Statistics */}
+        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6 shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-yellow-400 flex items-center">
-              <LineChart className="h-5 w-5 mr-2" />
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center tilt-neon">
+              <LineChart className="h-5 w-5 mr-2 text-emerald-500" />
               Project Statistics
             </h2>
             <button 
               onClick={() => setShowProjectStats(!showProjectStats)}
-              className="text-slate-400 hover:text-white"
+              className="text-gray-400 hover:text-gray-600"
             >
               {showProjectStats ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </button>
@@ -717,61 +725,69 @@ export default function ProjectDetails() {
           
           {showProjectStats && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-slate-700/30 p-4 rounded-lg">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-1">
-                  <BarChart className="h-4 w-4 text-blue-400 mr-2" />
-                  <span className="text-sm text-slate-300">Vote Ranking</span>
+                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                    <BarChart className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  <span className="text-sm text-gray-600">Vote Ranking</span>
                 </div>
                 <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-white">{projectRanking.rank}</span>
-                  <span className="text-slate-400 ml-1">/ {projectRanking.totalProjects}</span>
+                  <span className="text-2xl font-bold text-gray-800">{projectRanking.rank}</span>
+                  <span className="text-gray-500 ml-1">/ {projectRanking.totalProjects}</span>
                 </div>
                 {projectRanking.rank <= Number(campaign.maxWinners) && Number(campaign.maxWinners) > 0 && (
-                  <div className="mt-1 text-xs text-green-400">
+                  <div className="mt-1 text-xs text-emerald-600">
                     <BadgeCheck className="h-3 w-3 inline mr-1" />
                     Currently in winning position
                   </div>
                 )}
               </div>
               
-              <div className="bg-slate-700/30 p-4 rounded-lg">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-1">
-                  <Heart className="h-4 w-4 text-lime-400 mr-2" />
-                  <span className="text-sm text-slate-300">Total Votes</span>
+                  <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center mr-2">
+                    <Heart className="h-3.5 w-3.5 text-emerald-600" />
+                  </div>
+                  <span className="text-sm text-gray-600">Total Votes</span>
                 </div>
                 <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-white">{formatTokenAmount(project.voteCount)}</span>
+                  <span className="text-2xl font-bold text-gray-800">{formatTokenAmount(project.voteCount)}</span>
                 </div>
-                <div className="mt-1 text-xs text-slate-400">
+                <div className="mt-1 text-xs text-gray-500">
                   Multiplier: {campaign.voteMultiplier.toString()}x
                 </div>
               </div>
               
               {hasFundsReceived && (
-                <div className="bg-slate-700/30 p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
                   <div className="flex items-center mb-1">
-                    <Coins className="h-4 w-4 text-yellow-400 mr-2" />
-                    <span className="text-sm text-slate-300">Funds Received</span>
+                    <div className="h-6 w-6 rounded-full bg-amber-100 flex items-center justify-center mr-2">
+                      <Coins className="h-3.5 w-3.5 text-amber-600" />
+                    </div>
+                    <span className="text-sm text-gray-600">Funds Received</span>
                   </div>
                   <div className="flex items-baseline">
-                    <span className="text-2xl font-bold text-yellow-400">{formatTokenAmount(project.fundsReceived)}</span>
-                    <span className="text-slate-400 ml-1">CELO</span>
+                    <span className="text-2xl font-bold text-amber-600">{formatTokenAmount(project.fundsReceived)}</span>
+                    <span className="text-gray-500 ml-1">CELO</span>
                   </div>
-                  <div className="mt-1 text-xs text-slate-400">
+                  <div className="mt-1 text-xs text-gray-500">
                     Campaign Total: {formatTokenAmount(campaign.totalFunds)} CELO
                   </div>
                 </div>
               )}
               
-              <div className="bg-slate-700/30 p-4 rounded-lg">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
                 <div className="flex items-center mb-1">
-                  <Users className="h-4 w-4 text-blue-400 mr-2" />
-                  <span className="text-sm text-slate-300">Distribution Method</span>
+                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                    <Users className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  <span className="text-sm text-gray-600">Distribution Method</span>
                 </div>
-                <div className="text-xl font-bold text-white">
+                <div className="text-xl font-bold text-gray-800">
                   {campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}
                 </div>
-                <div className="mt-1 text-xs text-slate-400">
+                <div className="mt-1 text-xs text-gray-500">
                   Max Winners: {campaign.maxWinners.toString() === '0' ? 'All Projects' : campaign.maxWinners.toString()}
                 </div>
               </div>
@@ -780,42 +796,42 @@ export default function ProjectDetails() {
         </div>
         
         {/* Campaign Info Card */}
-        <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
-            <Waves className="h-5 w-5 mr-2" />
+        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6 shadow-md">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center tilt-neon">
+            <Hash className="h-5 w-5 mr-2 text-emerald-500" />
             About The Campaign
           </h2>
           
-          <p className="text-slate-300 mb-4">{campaign.description}</p>
+          <p className="text-gray-600 mb-4">{campaign.description}</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            <div className="bg-slate-700/30 p-3 rounded-lg">
-              <div className="text-sm text-slate-400">Distribution Method</div>
-              <div className="font-medium">{campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}</div>
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-sm text-gray-500">Distribution Method</div>
+              <div className="font-medium text-gray-800">{campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}</div>
             </div>
             
-            <div className="bg-slate-700/30 p-3 rounded-lg">
-              <div className="text-sm text-slate-400">Vote Multiplier</div>
-              <div className="font-medium">{campaign.voteMultiplier.toString()}x</div>
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-sm text-gray-500">Vote Multiplier</div>
+              <div className="font-medium text-gray-800">{campaign.voteMultiplier.toString()}x</div>
             </div>
             
-            <div className="bg-slate-700/30 p-3 rounded-lg">
-              <div className="text-sm text-slate-400">Max Winners</div>
-              <div className="font-medium">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-sm text-gray-500">Max Winners</div>
+              <div className="font-medium text-gray-800">
                 {campaign.maxWinners.toString() === '0' ? 'All Projects' : `Top ${campaign.maxWinners.toString()}`}
               </div>
             </div>
             
-            <div className="bg-slate-700/30 p-3 rounded-lg">
-              <div className="text-sm text-slate-400">Total Funds</div>
-              <div className="font-medium text-lime-400">{formatTokenAmount(campaign.totalFunds)} CELO</div>
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-sm text-gray-500">Total Funds</div>
+              <div className="font-medium text-emerald-600">{formatTokenAmount(campaign.totalFunds)} CELO</div>
             </div>
           </div>
           
           <div className="mt-6">
             <button
               onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-              className="px-4 py-2 bg-lime-600 hover:bg-lime-500 text-white rounded-lg transition-colors inline-flex items-center"
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full transition-colors inline-flex items-center shadow-sm"
             >
               <Globe className="h-4 w-4 mr-2" />
               View All Projects
@@ -827,32 +843,32 @@ export default function ProjectDetails() {
       {/* Vote Modal */}
       {voteModalVisible && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-md p-6 relative">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 relative shadow-lg">
             <button 
               onClick={() => setVoteModalVisible(false)} 
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
             </button>
             
-            <h3 className="text-xl font-bold mb-1">Vote for Project</h3>
-            <p className="text-lime-400 font-medium mb-4">{project.name}</p>
+            <h3 className="text-xl font-bold mb-1 text-gray-800">Vote for Project</h3>
+            <p className="text-emerald-600 font-medium mb-4">{project.name}</p>
             
             <div className="mb-6">
-              <label className="block text-slate-300 mb-2">CELO Amount</label>
+              <label className="block text-gray-700 font-medium mb-2">CELO Amount</label>
               <input 
                 type="number"
                 min="0.1"
                 step="0.1"
                 value={voteAmount}
                 onChange={(e) => setVoteAmount(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
+                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
                 placeholder="Enter amount"
               />
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-gray-500">
                 Each CELO token is worth {campaign.voteMultiplier.toString()} votes.
                 {voteAmount && !isNaN(parseFloat(voteAmount)) && parseFloat(voteAmount) > 0 && (
-                  <span className="block mt-1 text-lime-400">
+                  <span className="block mt-1 text-emerald-600">
                     Your vote will be worth {parseFloat(voteAmount) * Number(campaign.voteMultiplier)} votes.
                   </span>
                 )}
@@ -860,12 +876,12 @@ export default function ProjectDetails() {
             </div>
             
             {userVoteHistory.length > 0 && (
-              <div className="mb-6 p-3 bg-slate-700/40 rounded-lg">
+              <div className="mb-6 p-3 bg-blue-50 rounded-xl border border-blue-100 shadow-sm">
                 <div className="flex items-start">
-                  <Info className="h-5 w-5 text-blue-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <Info className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-blue-300">You've already voted {formatTokenAmount(userVotes)} CELO on this project.</p>
-                    <p className="text-xs text-slate-400 mt-1">Your new vote will be added to your existing votes.</p>
+                    <p className="text-sm text-blue-700">You've already voted {formatTokenAmount(userVotes)} CELO on this project.</p>
+                    <p className="text-xs text-blue-600 mt-1">Your new vote will be added to your existing votes.</p>
                   </div>
                 </div>
               </div>
@@ -875,7 +891,7 @@ export default function ProjectDetails() {
               <button
                 onClick={handleVote}
                 disabled={isWritePending || isWaitingForTx || !voteAmount || parseFloat(voteAmount) <= 0}
-                className="flex-1 py-3 px-6 bg-lime-500 text-slate-900 font-semibold rounded-lg hover:bg-lime-400 transition-colors disabled:bg-slate-500 disabled:text-slate-300 disabled:cursor-not-allowed"
+                className="flex-1 py-3 px-6 bg-pink-500 text-white font-semibold rounded-full hover:bg-pink-600 transition-colors shadow-md disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
               >
                 {isWritePending || isWaitingForTx ? (
                   <div className="flex items-center justify-center">
@@ -889,7 +905,7 @@ export default function ProjectDetails() {
               
               <button
                 onClick={() => setVoteModalVisible(false)}
-                className="py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
+                className="py-3 px-6 bg-white border border-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-50 transition-colors shadow-sm"
               >
                 Cancel
               </button>
@@ -900,27 +916,27 @@ export default function ProjectDetails() {
       
       {/* Media Modal */}
       {showMediaModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-3xl p-6 relative">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-3xl p-6 relative shadow-lg">
             <button
               onClick={() => setShowMediaModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
             </button>
             
-            <h3 className="text-xl font-bold mb-4">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
               {activeMediaType === 'logo' ? 'Project Logo' : 'Demo Video'}
             </h3>
             
-            <div className="flex items-center justify-center bg-slate-900 rounded-lg p-4">
+            <div className="flex items-center justify-center bg-gray-50 rounded-xl p-4 min-h-[300px] border border-gray-200">
               {activeMediaType === 'logo' && project.logo && (
                 <img 
                   src={project.logo} 
                   alt={`${project.name} Logo`} 
-                  className="max-w-full max-h-[60vh] object-contain rounded"
+                  className="max-w-full max-h-[60vh] object-contain rounded-lg"
                   onError={(e) => {
-                    e.currentTarget.src = "https://placehold.co/600x400/1e293b/475569?text=Logo%20Unavailable";
+                    e.currentTarget.src = "https://placehold.co/600x400/f1f5f9/64748b?text=Logo%20Unavailable";
                   }}
                 />
               )}
@@ -932,7 +948,7 @@ export default function ProjectDetails() {
                     src={project.demoVideo}
                     controls
                     autoPlay
-                    className="max-w-full max-h-[60vh] mx-auto rounded"
+                    className="max-w-full max-h-[60vh] mx-auto rounded-lg"
                     onError={() => {
                       setStatusMessage({
                         text: 'Error loading video. Please check the URL or try another format.',
@@ -948,7 +964,7 @@ export default function ProjectDetails() {
             </div>
             
             <div className="mt-4 text-center">
-              <p className="text-slate-400 text-sm break-all">
+              <p className="text-gray-500 text-sm break-all">
                 {activeMediaType === 'logo' ? project.logo : project.demoVideo}
               </p>
             </div>
@@ -956,7 +972,7 @@ export default function ProjectDetails() {
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setShowMediaModal(false)}
-                className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                className="px-6 py-2.5 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors shadow-sm"
               >
                 Close
               </button>
