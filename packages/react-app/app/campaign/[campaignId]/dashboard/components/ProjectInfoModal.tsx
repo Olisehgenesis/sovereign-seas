@@ -31,18 +31,18 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
   setProjectInfoModalVisible
 }) => {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto shadow-xl">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 md:p-4">
+      <div className="bg-white rounded-xl w-full max-w-2xl p-4 md:p-6 relative max-h-[90vh] overflow-y-auto shadow-xl">
         <button 
           onClick={() => setProjectInfoModalVisible(false)} 
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4 md:h-5 md:w-5" />
         </button>
         
         {/* Header section with title and badges */}
-        <div className="flex items-center flex-wrap gap-3 mb-4">
-          <h3 className="text-2xl font-bold text-gray-800 tilt-neon">{project.name}</h3>
+        <div className="flex items-center flex-wrap gap-2 mb-3 md:mb-4">
+          <h3 className="text-xl md:text-2xl font-bold text-gray-800 tilt-neon break-words">{project.name}</h3>
           
           {!project.approved && (
             <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full border border-amber-200">
@@ -58,10 +58,10 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
         </div>
         
         {/* Project Owner and Edit Button */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="bg-gray-100 rounded-full px-3 py-1 text-sm flex items-center gap-2">
-            <User className="h-3.5 w-3.5 text-gray-500" />
-            <span className="font-mono text-gray-600">
+        <div className="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
+          <div className="bg-gray-100 rounded-full px-2.5 py-1 text-xs md:text-sm flex items-center gap-1.5">
+            <User className="h-3 w-3 md:h-3.5 md:w-3.5 text-gray-500" />
+            <span className="font-mono text-gray-600 truncate max-w-[150px] md:max-w-full">
               {`${project.owner.slice(0, 6)}...${project.owner.slice(-4)}`}
             </span>
           </div>
@@ -70,32 +70,32 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
           {address && (address.toLowerCase() === project.owner.toLowerCase() || isAdmin) && (
             <a 
               href={`/campaign/${campaignId}/project/${project.id}/edit`}
-              className="bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm rounded-full px-3 py-1 flex items-center gap-1 transition-colors"
+              className="bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs md:text-sm rounded-full px-2.5 py-1 flex items-center gap-1 transition-colors"
             >
-              <Edit className="h-3.5 w-3.5" />
+              <Edit className="h-3 w-3 md:h-3.5 md:w-3.5" />
               Edit Project
             </a>
           )}
         </div>
         
-        <div className="flex flex-col md:flex-row gap-6 mb-6">
-          <div className="md:w-2/3">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-6">
+          <div className="w-full md:w-2/3">
             {/* Description section */}
-            <div className="rounded-xl bg-gray-50 p-4 mb-4 border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-600 mb-2">Description</h4>
-              <p className="text-gray-800">{project.description}</p>
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+              <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-1.5 md:mb-2">Description</h4>
+              <p className="text-gray-800 text-xs md:text-sm">{project.description}</p>
             </div>
             
             {/* Contracts section */}
             {project.contracts && project.contracts.length > 0 && (
-              <div className="rounded-xl bg-gray-50 p-4 mb-4 border border-gray-100">
-                <h4 className="text-sm font-medium text-gray-600 mb-2 flex items-center">
-                  <Code className="h-4 w-4 mr-1 text-purple-600" />
+              <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+                <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-1.5 md:mb-2 flex items-center">
+                  <Code className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 text-purple-600" />
                   Contract Addresses
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-1.5 md:space-y-2">
                   {project.contracts.map((contract: string, idx: number) => (
-                    <div key={idx} className="font-mono text-sm text-gray-800 bg-white p-2 rounded-lg break-all border border-gray-200">
+                    <div key={idx} className="font-mono text-xs md:text-sm text-gray-800 bg-white p-1.5 md:p-2 rounded-lg break-all border border-gray-200">
                       {contract}
                     </div>
                   ))}
@@ -104,17 +104,17 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
             )}
             
             {/* Links Section */}
-            <div className="rounded-xl bg-gray-50 p-4 border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-600 mb-2">Links</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 border border-gray-100">
+              <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-1.5 md:mb-2">Links</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                 {project.githubLink && (
                   <a 
                     href={project.githubLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-2 px-3 bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
                   >
-                    <Github className="h-5 w-5 mr-2" />
+                    <Github className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     GitHub Repository
                   </a>
                 )}
@@ -124,9 +124,9 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.socialLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-2 px-3 bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
                   >
-                    <Globe className="h-5 w-5 mr-2" />
+                    <Globe className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     Social Media
                   </a>
                 )}
@@ -136,9 +136,9 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.testingLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-2 px-3 bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
                   >
-                    <FileText className="h-5 w-5 mr-2" />
+                    <FileText className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     Demo / Testing
                   </a>
                 )}
@@ -148,9 +148,9 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.logo} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-2 px-3 bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
                   >
-                    <ImageIcon className="h-5 w-5 mr-2" />
+                    <ImageIcon className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     Project Logo
                   </a>
                 )}
@@ -160,9 +160,9 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.demoVideo} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-2 px-3 bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
                   >
-                    <Video className="h-5 w-5 mr-2" />
+                    <Video className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     Demo Video
                   </a>
                 )}
@@ -171,21 +171,21 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
           </div>
           
           {/* Right sidebar */}
-          <div className="md:w-1/3">
+          <div className="w-full md:w-1/3">
             {/* Vote statistics card */}
-            <div className="rounded-xl bg-gray-50 p-4 mb-4 border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-600 mb-3">Vote Statistics</h4>
-              <div className="bg-white rounded-lg px-4 py-5 text-center mb-3 border border-gray-200 shadow-sm">
-                <div className="text-2xl font-bold text-emerald-600">
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+              <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-2 md:mb-3">Vote Statistics</h4>
+              <div className="bg-white rounded-lg px-3 md:px-4 py-3 md:py-5 text-center mb-2 md:mb-3 border border-gray-200 shadow-sm">
+                <div className="text-xl md:text-2xl font-bold text-emerald-600">
                   {formatTokenAmount(project.voteCount)}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">TOTAL VOTES</div>
+                <div className="text-xs text-gray-500 mt-0.5 md:mt-1">TOTAL VOTES</div>
               </div>
               
               {address && isConnected && (
-                <div className="bg-white rounded-lg px-4 py-3 text-center border border-gray-200 shadow-sm">
-                  <div className="text-lg font-bold text-purple-600 flex items-center justify-center">
-                    <History className="h-4 w-4 mr-1" />
+                <div className="bg-white rounded-lg px-3 md:px-4 py-2 md:py-3 text-center border border-gray-200 shadow-sm">
+                  <div className="text-base md:text-lg font-bold text-purple-600 flex items-center justify-center">
+                    <History className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
                     <span id="user-vote-count">
                       {userVoteHistory
                         .filter((v: { projectId: { toString: () => any; }; }) => v.projectId.toString() === project.id.toString())
@@ -193,26 +193,26 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                       }
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">YOUR VOTES</div>
+                  <div className="text-xs text-gray-500 mt-0.5 md:mt-1">YOUR VOTES</div>
                 </div>
               )}
             </div>
             
             {/* Project info card */}
-            <div className="rounded-xl bg-gray-50 p-4 mb-4 border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-600 mb-3">Project Info</h4>
-              <div className="space-y-3">
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+              <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-2 md:mb-3">Project Info</h4>
+              <div className="space-y-2 md:space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Status:</span>
-                  <span className={`text-sm ${project.approved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <span className="text-xs md:text-sm text-gray-500">Status:</span>
+                  <span className={`text-xs md:text-sm ${project.approved ? 'text-emerald-600' : 'text-amber-600'}`}>
                     {project.approved ? 'Approved' : 'Pending Approval'}
                   </span>
                 </div>
                 
                 {fundsDistributed && (
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Funds Received:</span>
-                    <span className="text-sm text-emerald-600">
+                    <span className="text-xs md:text-sm text-gray-500">Funds Received:</span>
+                    <span className="text-xs md:text-sm text-emerald-600">
                       {formatTokenAmount(project.fundsReceived)} CELO
                     </span>
                   </div>
@@ -229,18 +229,18 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     setVoteModalVisible(true);
                     setProjectInfoModalVisible(false);
                   }}
-                  className="w-full py-3 rounded-full bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition-colors flex items-center justify-center shadow-md"
+                  className="w-full py-2 md:py-3 rounded-full text-xs md:text-sm bg-emerald-500 text-white font-medium md:font-semibold hover:bg-emerald-600 transition-colors flex items-center justify-center shadow-md"
                 >
-                  <Award className="h-5 w-5 mr-2" />
+                  <Award className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                   Vote for this Project
                 </button>
               )}
               
               <a 
                 href={`/campaign/${campaignId}/project/${project.id}`}
-                className="w-full py-3 rounded-full bg-teal-500 text-white font-semibold hover:bg-teal-600 transition-colors flex items-center justify-center shadow-md"
+                className="w-full py-2 md:py-3 rounded-full text-xs md:text-sm bg-teal-500 text-white font-medium md:font-semibold hover:bg-teal-600 transition-colors flex items-center justify-center shadow-md"
               >
-                <ExternalLink className="h-5 w-5 mr-2" />
+                <ExternalLink className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                 View Full Project Page
               </a>
             </div>
@@ -250,7 +250,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
         <div className="flex">
           <button
             onClick={() => setProjectInfoModalVisible(false)}
-            className="flex-1 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 transition-colors border border-gray-200 shadow-sm"
+            className="flex-1 py-1.5 md:py-2 rounded-full text-xs md:text-sm bg-white text-gray-700 hover:bg-gray-50 transition-colors border border-gray-200 shadow-sm"
           >
             Close
           </button>

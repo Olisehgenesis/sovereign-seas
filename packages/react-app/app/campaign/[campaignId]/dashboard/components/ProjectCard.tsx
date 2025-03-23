@@ -81,7 +81,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
           </div>
           
-          <p className="text-gray-600 mt-1 mb-3">{project.description}</p>
+          <p className="text-gray-600 mt-1 mb-3">{project.description.length > 200 ? project.description.substring(0, 200) + '...' : project.description}</p>
+          
+       
           
           <div className="flex flex-wrap gap-y-2 gap-x-4 text-sm">
             {project.githubLink && (

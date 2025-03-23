@@ -27,7 +27,6 @@ import {
   Video,
   Image
 } from 'lucide-react';
-// import Image from 'next/image';
 import { useSovereignSeas } from '../../../hooks/useSovereignSeas';
 
 // Contract addresses - replace with actual addresses
@@ -234,13 +233,13 @@ export default function MyCampaigns() {
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'active':
-        return 'bg-lime-500 text-slate-900';
+        return 'bg-emerald-500 text-white';
       case 'upcoming':
-        return 'bg-yellow-400 text-slate-900';
+        return 'bg-amber-400 text-amber-900';
       case 'ended':
-        return 'bg-slate-600 text-white';
+        return 'bg-gray-300 text-gray-700';
       default:
-        return 'bg-slate-700 text-white';
+        return 'bg-gray-300 text-gray-700';
     }
   };
 
@@ -262,40 +261,42 @@ export default function MyCampaigns() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800">
       {/* Header */}
       <div className="relative overflow-hidden">
-        {/* Background Wave Effect */}
-        <div className="absolute inset-0 z-0 opacity-20">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 z-0 opacity-10">
           <svg className="w-full h-full" viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#84cc16" fillOpacity="1" d="M0,96L48,112C96,128,192,160,288,165.3C384,171,480,149,576,149.3C672,149,768,171,864,176C960,181,1056,171,1152,154.7C1248,139,1344,117,1392,106.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
+            <path fill="#10b981" fillOpacity="1" d="M0,96L48,112C96,128,192,160,288,165.3C384,171,480,149,576,149.3C672,149,768,171,864,176C960,181,1056,171,1152,154.7C1248,139,1344,117,1392,106.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" />
           </svg>
         </div>
         
         {/* Content */}
-        <div className="container mx-auto px-6 py-16 relative z-10">
+        <div className="container mx-auto px-6 py-12 relative z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex flex-col items-start">
-              <h1 className="text-3xl md:text-4xl font-bold text-white flex items-center tracking-tight">
-                <Settings className="h-8 w-8 text-lime-500 mr-3" />
-                My <span className="text-yellow-400 ml-2">Campaigns</span>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-800 flex items-center tracking-tight tilt-neon">
+                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3 shadow-sm">
+                  <Settings className="h-5 w-5 text-emerald-600" />
+                </div>
+                My <span className="text-emerald-600 ml-2">Campaigns</span>
               </h1>
-              <p className="text-slate-300 mt-2 max-w-2xl">
+              <p className="text-gray-600 mt-2 max-w-2xl">
                 Manage your campaigns, track projects, and distribute funds to innovative solutions.
               </p>
             </div>
             
             <button 
               onClick={navigateToCreateCampaign}
-              className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all flex items-center self-start"
+              className="px-5 py-2.5 rounded-full bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-all flex items-center shadow-sm text-sm"
             >
-              <PlusCircle className="h-5 w-5 mr-2" />
+              <PlusCircle className="h-4 w-4 mr-2" />
               Create New Campaign
             </button>
           </div>
           
           {isSuperAdmin && (
-            <div className="mt-4 bg-yellow-500/20 text-yellow-300 px-4 py-2 rounded-lg inline-flex items-center">
+            <div className="mt-4 bg-amber-50 text-amber-700 px-4 py-2 rounded-full inline-flex items-center text-sm border border-amber-100 shadow-sm">
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Super Admin Access Enabled
             </div>
@@ -306,64 +307,64 @@ export default function MyCampaigns() {
       {/* Content Area */}
       <div className="container mx-auto px-6 py-8">
         {!isConnected ? (
-          <div className="bg-yellow-500/10 backdrop-blur-md rounded-xl p-8 border border-yellow-500/30 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
-              <Users className="h-8 w-8 text-yellow-500" />
+          <div className="bg-white rounded-xl p-8 border border-amber-200 text-center shadow-sm">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center shadow-sm">
+              <Users className="h-6 w-6 text-amber-500" />
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Wallet Not Connected</h2>
-            <p className="text-slate-300 mb-6 max-w-lg mx-auto">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3">Wallet Not Connected</h2>
+            <p className="text-gray-600 mb-6 max-w-lg mx-auto">
               Please connect your wallet to view and manage your campaigns. You need to be connected to the same wallet that created the campaigns.
             </p>
-            <button className="px-6 py-3 rounded-full bg-yellow-500 text-slate-900 font-semibold hover:bg-yellow-400 transition-all">
+            <button className="px-5 py-2.5 rounded-full bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all shadow-sm text-sm">
               Connect Wallet
             </button>
           </div>
         ) : loading ? (
           <div className="flex justify-center items-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-lime-500"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-emerald-500"></div>
           </div>
         ) : (
           <>
             {/* Tab Navigation */}
-            <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-4 border border-lime-600/20 mb-8">
+            <div className="bg-white rounded-xl p-4 border border-gray-200 mb-8 shadow-sm">
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-5 py-2 rounded-lg font-medium ${
+                  className={`px-5 py-2 rounded-lg font-medium text-sm ${
                     activeTab === 'all'
-                      ? 'bg-lime-600 text-white'
-                      : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
-                  }`}
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  } transition-colors`}
                 >
                   All Campaigns
                 </button>
                 <button
                   onClick={() => setActiveTab('active')}
-                  className={`px-5 py-2 rounded-lg font-medium ${
+                  className={`px-5 py-2 rounded-lg font-medium text-sm ${
                     activeTab === 'active'
-                      ? 'bg-lime-600 text-white'
-                      : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
-                  }`}
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  } transition-colors`}
                 >
                   Active
                 </button>
                 <button
                   onClick={() => setActiveTab('upcoming')}
-                  className={`px-5 py-2 rounded-lg font-medium ${
+                  className={`px-5 py-2 rounded-lg font-medium text-sm ${
                     activeTab === 'upcoming'
-                      ? 'bg-lime-600 text-white'
-                      : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
-                  }`}
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  } transition-colors`}
                 >
                   Upcoming
                 </button>
                 <button
                   onClick={() => setActiveTab('ended')}
-                  className={`px-5 py-2 rounded-lg font-medium ${
+                  className={`px-5 py-2 rounded-lg font-medium text-sm ${
                     activeTab === 'ended'
-                      ? 'bg-lime-600 text-white'
-                      : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
-                  }`}
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  } transition-colors`}
                 >
                   Ended
                 </button>
@@ -371,21 +372,23 @@ export default function MyCampaigns() {
             </div>
             
             {filteredCampaigns.length === 0 ? (
-              <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-8 text-center my-12">
+              <div className="bg-white rounded-xl p-8 text-center my-12 shadow-sm border border-gray-100">
                 <div className="flex justify-center mb-4">
-                  <ListFilter className="h-16 w-16 text-slate-500" />
+                  <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center">
+                    <ListFilter className="h-8 w-8 text-gray-400" />
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">No Campaigns Found</h3>
-                <p className="text-slate-300 mb-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">No Campaigns Found</h3>
+                <p className="text-gray-600 mb-6">
                   {activeTab === 'all' 
                     ? "You haven't created any campaigns yet."
                     : `You don't have any ${activeTab} campaigns.`}
                 </p>
                 <button 
                   onClick={navigateToCreateCampaign}
-                  className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all inline-flex items-center"
+                  className="px-5 py-2.5 rounded-full bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-all inline-flex items-center shadow-sm text-sm"
                 >
-                  <PlusCircle className="h-5 w-5 mr-2" />
+                  <PlusCircle className="h-4 w-4 mr-2" />
                   Create Your First Campaign
                 </button>
               </div>
@@ -394,13 +397,13 @@ export default function MyCampaigns() {
                 {filteredCampaigns.map((campaign) => (
                   <div 
                     key={campaign.id.toString()}
-                    className="bg-slate-800/40 backdrop-blur-md rounded-xl border border-lime-600/20 overflow-hidden"
+                    className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                   >
                     {/* Campaign Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between p-6 border-b border-slate-700/50">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between p-6 border-b border-gray-100">
                       <div className="flex flex-col">
                         <div className="flex items-center">
-                          <h3 className="text-xl font-bold text-white">{campaign.name}</h3>
+                          <h3 className="text-xl font-bold text-gray-800">{campaign.name}</h3>
                           <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${getStatusColor(campaign.status)}`}>
                             {getStatusIcon(campaign.status)}
                             {campaign.status === 'active' ? 'Active' : 
@@ -410,12 +413,12 @@ export default function MyCampaigns() {
                           {campaign.hasMediaContent && (
                             <div className="ml-2 flex">
                               {campaign.logo && (
-                                <span className="text-xs text-blue-400 flex items-center ml-1">
+                                <span className="text-xs text-blue-500 flex items-center ml-1">
                                   <Image className="h-3 w-3 mr-1" />
                                 </span>
                               )}
                               {campaign.demoVideo && (
-                                <span className="text-xs text-red-400 flex items-center ml-1">
+                                <span className="text-xs text-red-500 flex items-center ml-1">
                                   <Video className="h-3 w-3 mr-1" />
                                 </span>
                               )}
@@ -423,13 +426,13 @@ export default function MyCampaigns() {
                           )}
                         </div>
                         
-                        <p className="text-slate-300 mt-1 line-clamp-1">{campaign.description}</p>
+                        <p className="text-gray-600 mt-1 line-clamp-1">{campaign.description}</p>
                       </div>
                       
                       <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
                         <button
                           onClick={() => navigateToCampaignDashboard(campaign.id.toString())}
-                          className="px-4 py-2 rounded-lg bg-slate-700/60 text-slate-200 hover:bg-slate-700 transition-colors flex items-center"
+                          className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center text-sm shadow-sm"
                         >
                           <BarChart className="h-4 w-4 mr-2" />
                           Dashboard
@@ -437,7 +440,7 @@ export default function MyCampaigns() {
                         
                         <button
                           onClick={() => navigateToCampaignAdmin(campaign.id.toString())}
-                          className="px-4 py-2 rounded-lg bg-lime-600/60 text-white hover:bg-lime-600 transition-colors flex items-center"
+                          className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors flex items-center text-sm shadow-sm"
                         >
                           <Settings className="h-4 w-4 mr-2" />
                           Admin Panel
@@ -448,13 +451,13 @@ export default function MyCampaigns() {
                     {/* Campaign Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 p-6">
                       <div>
-                        <h4 className="text-xs text-slate-400 uppercase mb-1 flex items-center">
+                        <h4 className="text-xs text-gray-500 uppercase mb-1 flex items-center">
                           <CalendarRange className="h-3 w-3 mr-1" />
                           Timeline
                         </h4>
-                        <div className="text-white">
+                        <div className="text-gray-800">
                           {campaign.status === 'active' && campaign.timeRemaining ? (
-                            <span className="text-yellow-400">
+                            <span className="text-amber-600">
                               {campaign.timeRemaining.days}d {campaign.timeRemaining.hours}h remaining
                             </span>
                           ) : campaign.status === 'upcoming' ? (
@@ -466,14 +469,14 @@ export default function MyCampaigns() {
                       </div>
                       
                       <div>
-                        <h4 className="text-xs text-slate-400 uppercase mb-1 flex items-center">
+                        <h4 className="text-xs text-gray-500 uppercase mb-1 flex items-center">
                           <Users className="h-3 w-3 mr-1" />
                           Projects
                         </h4>
-                        <div className="text-white">
+                        <div className="text-gray-800">
                           {campaign.projectCount || 0} total 
                           {campaign.pendingProjects ? (
-                            <span className="text-yellow-400 ml-1">
+                            <span className="text-amber-600 ml-1">
                               ({campaign.pendingProjects} pending)
                             </span>
                           ) : null}
@@ -481,21 +484,21 @@ export default function MyCampaigns() {
                       </div>
                       
                       <div>
-                        <h4 className="text-xs text-slate-400 uppercase mb-1 flex items-center">
+                        <h4 className="text-xs text-gray-500 uppercase mb-1 flex items-center">
                           <Droplets className="h-3 w-3 mr-1" />
                           Funds
                         </h4>
-                        <div className="text-lime-400">
+                        <div className="text-emerald-600">
                           {formatTokenAmount(campaign.totalFunds)} CELO
                         </div>
                       </div>
                       
                       <div>
-                        <h4 className="text-xs text-slate-400 uppercase mb-1 flex items-center">
+                        <h4 className="text-xs text-gray-500 uppercase mb-1 flex items-center">
                           <Award className="h-3 w-3 mr-1" />
                           Distribution
                         </h4>
-                        <div className="text-white">
+                        <div className="text-gray-800">
                           {campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'} 
                           {campaign.maxWinners.toString() !== '0' ? 
                             ` (Top ${campaign.maxWinners.toString()})` : 
@@ -505,11 +508,11 @@ export default function MyCampaigns() {
                     </div>
                     
                     {/* Campaign Actions */}
-                    <div className="bg-slate-700/30 p-4 border-t border-slate-700/50 flex flex-wrap justify-between items-center gap-4">
+                    <div className="bg-gray-50 p-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-4">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => navigateToEditCampaign(campaign.id.toString())}
-                          className="px-3 py-1.5 rounded-lg bg-slate-600 text-slate-200 hover:bg-slate-500 transition-colors text-sm flex items-center"
+                          className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors text-sm flex items-center shadow-sm"
                         >
                           <Edit className="h-3.5 w-3.5 mr-1.5" />
                           Edit
@@ -519,7 +522,7 @@ export default function MyCampaigns() {
                           onClick={() => {
                             // Implement clone campaign functionality
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-slate-600 text-slate-200 hover:bg-slate-500 transition-colors text-sm flex items-center"
+                          className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors text-sm flex items-center shadow-sm"
                         >
                           <Copy className="h-3.5 w-3.5 mr-1.5" />
                           Clone
@@ -529,7 +532,7 @@ export default function MyCampaigns() {
                         {campaign.status === 'upcoming' && (
                           <button
                             onClick={() => handleDeleteCampaign(campaign)}
-                            className="px-3 py-1.5 rounded-lg bg-red-900/50 text-red-300 hover:bg-red-900 transition-colors text-sm flex items-center"
+                            className="px-3 py-1.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors text-sm flex items-center shadow-sm"
                           >
                             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                             Delete
@@ -542,11 +545,11 @@ export default function MyCampaigns() {
                           <button
                             onClick={() => handleDistributeFunds(campaign.id)}
                             disabled={isWritePending || isWaitingForTx}
-                            className="px-4 py-2 rounded-lg bg-yellow-500 text-slate-900 font-semibold hover:bg-yellow-400 transition-colors flex items-center disabled:bg-slate-500 disabled:text-slate-300"
+                            className="px-4 py-2 rounded-full bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors flex items-center shadow-sm text-sm disabled:bg-gray-300 disabled:text-gray-500"
                           >
                             {isWritePending || isWaitingForTx ? (
                               <div className="flex items-center justify-center">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-900 mr-2"></div>
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
                                 Processing...
                               </div>
                             ) : (
@@ -559,7 +562,7 @@ export default function MyCampaigns() {
                         )}
                         
                         {campaign.status === 'ended' && !campaign.active && (
-                          <span className="px-4 py-2 rounded-lg bg-green-900/20 text-green-400 border border-green-500/30 flex items-center">
+                          <span className="px-4 py-2 rounded-full bg-green-50 text-green-700 border border-green-200 flex items-center text-sm shadow-sm">
                             <CheckCircle2 className="h-4 w-4 mr-2" />
                             Funds Distributed
                           </span>
@@ -577,53 +580,55 @@ export default function MyCampaigns() {
       {/* Campaign Stats Summary (when user has campaigns) */}
       {!loading && myCampaigns.length > 0 && (
         <div className="container mx-auto px-6 py-12">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-            <BarChart className="h-7 w-7 text-lime-500 mr-3" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center mr-3 shadow-sm">
+              <BarChart className="h-4 w-4 text-emerald-600" />
+            </div>
             Campaign Analytics
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 transform hover:-translate-y-1 transition-all">
+            <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex items-center mb-2">
-                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center mr-3">
-                  <Activity className="h-5 w-5 text-yellow-500" />
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mr-3">
+                  <Activity className="h-4 w-4 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-slate-300 text-sm">Total Campaigns</h3>
-                  <p className="text-2xl font-bold text-white">{myCampaigns.length}</p>
+                  <h3 className="text-gray-500 text-xs">Total Campaigns</h3>
+                  <p className="text-xl font-bold text-gray-800">{myCampaigns.length}</p>
                 </div>
               </div>
               <div className="flex text-xs mt-2">
-                <span className="text-lime-400 mr-3">
+                <span className="text-emerald-600 mr-3">
                   {myCampaigns.filter(c => c.status === 'active').length} Active
                 </span>
-                <span className="text-yellow-400 mr-3">
+                <span className="text-amber-600 mr-3">
                   {myCampaigns.filter(c => c.status === 'upcoming').length} Upcoming
                 </span>
-                <span className="text-slate-400">
+                <span className="text-gray-500">
                   {myCampaigns.filter(c => c.status === 'ended').length} Ended
                 </span>
               </div>
             </div>
             
-            <div className="bg-slate-800/40 backdrop-blur-md rounded-xl p-6 border border-lime-600/20 transform hover:-translate-y-1 transition-all">
+            <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex items-center mb-2">
-                <div className="w-10 h-10 rounded-full bg-lime-500/20 flex items-center justify-center mr-3">
-                  <Users className="h-5 w-5 text-lime-500" />
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3">
+                  <Users className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="text-slate-300 text-sm">Total Projects</h3>
-                  <p className="text-2xl font-bold text-white">
+                  <h3 className="text-gray-500 text-xs">Total Funds</h3>
+                  <p className="text-xl font-bold text-emerald-600">
                     {myCampaigns.reduce((sum, campaign) => sum + Number(formatTokenAmount(campaign.totalFunds)), 0).toFixed(2)} CELO
                   </p>
                 </div>
-                <div className="mt-2 text-xs text-slate-400">
-                  Admin fees earned: {myCampaigns.reduce((sum, campaign) => {
-                    const funds = Number(formatTokenAmount(campaign.totalFunds));
-                    const fee = funds * Number(campaign.adminFeePercentage) / 100;
-                    return sum + fee;
-                  }, 0).toFixed(2)} CELO
-                </div>
+              </div>
+              <div className="text-xs mt-2 text-gray-500">
+                Admin fees earned: {myCampaigns.reduce((sum, campaign) => {
+                  const funds = Number(formatTokenAmount(campaign.totalFunds));
+                  const fee = funds * Number(campaign.adminFeePercentage) / 100;
+                  return sum + fee;
+                }, 0).toFixed(2)} CELO
               </div>
             </div>
           </div>
@@ -631,27 +636,27 @@ export default function MyCampaigns() {
       )}
       
       {/* CTA Section */}
-      <div className="py-16">
+      <div className="py-12">
         <div className="container mx-auto px-6">
-          <div className="bg-gradient-to-r from-lime-900/40 to-yellow-900/40 backdrop-blur-md rounded-2xl p-8 border border-lime-500/30">
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100 shadow-sm">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="mb-6 md:mb-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Ready to launch a new campaign?</h2>
-                <p className="text-lime-100">Create your next funding campaign and support innovative solutions.</p>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2 tilt-neon">Ready to launch a new campaign?</h2>
+                <p className="text-emerald-700 text-sm">Create your next funding campaign and support innovative solutions.</p>
               </div>
               <div className="flex flex-wrap gap-4">
                 <button 
                   onClick={navigateToCreateCampaign}
-                  className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all flex items-center"
+                  className="px-5 py-2.5 rounded-full bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-all flex items-center shadow-sm text-sm"
                 >
-                  <PlusCircle className="h-5 w-5 mr-2" />
+                  <PlusCircle className="h-4 w-4 mr-1.5" />
                   Create Campaign
                 </button>
                 <button 
                   onClick={() => router.push('/campaigns')}
-                  className="px-6 py-3 rounded-full bg-transparent border border-lime-400 text-lime-400 font-semibold hover:bg-lime-500/10 transition-all flex items-center"
+                  className="px-5 py-2.5 rounded-full bg-white text-emerald-600 border border-gray-200 font-medium hover:bg-gray-50 transition-all flex items-center shadow-sm text-sm"
                 >
-                  <BarChart className="h-5 w-5 mr-2" />
+                  <BarChart className="h-4 w-4 mr-1.5" />
                   Explore Campaigns
                 </button>
               </div>
@@ -662,25 +667,25 @@ export default function MyCampaigns() {
       
       {/* Delete Campaign Modal */}
       {deleteModalVisible && campaignToDelete && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-md p-6 relative">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 relative shadow-lg">
             <button 
               onClick={() => {
                 setDeleteModalVisible(false);
                 setCampaignToDelete(null);
               }} 
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
             </button>
             
             <div className="text-center mb-6">
-              <div className="mx-auto w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+              <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
                 <Trash2 className="h-6 w-6 text-red-500" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Delete Campaign</h3>
-              <p className="text-slate-300">
-                Are you sure you want to delete <span className="font-semibold text-white">{campaignToDelete.name}</span>? 
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Delete Campaign</h3>
+              <p className="text-gray-600">
+                Are you sure you want to delete <span className="font-semibold text-gray-800">{campaignToDelete.name}</span>? 
                 This action cannot be undone.
               </p>
             </div>
@@ -688,7 +693,7 @@ export default function MyCampaigns() {
             <div className="flex gap-3">
               <button
                 onClick={confirmDeleteCampaign}
-                className="flex-1 py-3 px-6 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors"
+                className="flex-1 py-2.5 px-5 bg-red-500 text-white font-medium rounded-full hover:bg-red-600 transition-colors shadow-sm"
               >
                 Delete Campaign
               </button>
@@ -698,7 +703,7 @@ export default function MyCampaigns() {
                   setDeleteModalVisible(false);
                   setCampaignToDelete(null);
                 }}
-                className="flex-1 py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
+                className="flex-1 py-2.5 px-5 bg-white border border-gray-200 text-gray-700 font-medium rounded-full hover:bg-gray-50 transition-colors shadow-sm"
               >
                 Cancel
               </button>

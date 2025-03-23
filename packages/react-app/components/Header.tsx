@@ -227,6 +227,13 @@ export default function Header() {
                             <Award className="mr-1.5 h-4 w-4 text-amber-500" />
                             My Votes
                           </Link>
+                          <Link
+                            href="/myprojects"
+                            className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <Award className="mr-1.5 h-4 w-4 text-amber-500" />
+                            My Projects
+                          </Link>
                         </div>
                       </Transition>
                     </div>
@@ -357,6 +364,14 @@ export default function Header() {
                       >
                         <Award className="mr-2 h-4 w-4" />
                         My Votes
+                      </Disclosure.Button>
+                      <Disclosure.Button
+                        as={Link}
+                        href="/myprojects"
+                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-emerald-600/20"
+                      >
+                        <Award className="mr-2 h-4 w-4" />
+                        My Projects
                       </Disclosure.Button>
                     </div>
                   </>

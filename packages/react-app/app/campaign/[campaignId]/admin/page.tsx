@@ -64,7 +64,7 @@ export default function CampaignAdminDashboard() {
   const [showWinningProjectsPreview, setShowWinningProjectsPreview] = useState(false);
   
   // UI state
-  const [projectFilter, setProjectFilter] = useState('pending'); // 'all', 'pending', 'approved'
+  const [projectFilter, setProjectFilter] = useState('all'); // 'all', 'pending', 'approved'
   const [confirmModal, setConfirmModal] = useState({ visible: false, action: '', projectId: -1 });
   const [distributeFundsModal, setDistributeFundsModal] = useState(false);
   const [adminManagementModal, setAdminManagementModal] = useState(false);
