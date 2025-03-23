@@ -37,6 +37,7 @@ import {
   Hash
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../../hooks/useSovereignSeas';
+import { waitForTransactionReceipt } from 'viem/actions';
 
 // Contract addresses - replace with your actual addresses or environment variables
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
@@ -76,6 +77,7 @@ export default function ProjectDetails() {
   // Contract interaction
   const {
     isInitialized,
+    publicClient,
     loadCampaigns,
     loadProjects,
     getSortedProjects,
@@ -235,7 +237,14 @@ export default function ProjectDetails() {
     if (!voteAmount || parseFloat(voteAmount) <= 0) return;
     
     try {
-      await vote(Number(campaignId), Number(projectId), voteAmount);
+      // Get the transaction hash from your vote function
+    const txHash = await vote(Number(campaignId), Number(projectId), voteAmount);
+    //wait until vite is done
+
+    // await new Promise(r => setTimeout(r, 15000));
+   
+   
+
       setVoteModalVisible(false);
       setVoteAmount('');
       setStatusMessage({ 

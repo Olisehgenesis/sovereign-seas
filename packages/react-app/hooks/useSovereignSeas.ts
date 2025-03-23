@@ -410,259 +410,14 @@ export const useSovereignSeas = ({
 
   // Super Admin Functions
 
-  // Add a new super admin
-  const addSuperAdmin = async (newAdminAddress: string) => {
-    if (!walletClient || !isSuperAdmin) return;
-    
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'addSuperAdmin',
-        args: [newAdminAddress],
-      });
-    } catch (error) {
-      console.error('Error adding super admin:', error);
-    }
-  };
-
-  // Remove a super admin
-  const removeSuperAdmin = async (adminAddress: string) => {
-    if (!walletClient || !isSuperAdmin) return;
-    
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'removeSuperAdmin',
-        args: [adminAddress],
-      });
-    } catch (error) {
-      console.error('Error removing super admin:', error);
-    }
-  };
-
-  // Campaign Admin Functions
-
-  // Add a campaign admin
-  const addCampaignAdmin = async (campaignId: bigint | number, newAdminAddress: string) => {
-    if (!walletClient) return;
-    
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'addCampaignAdmin',
-        args: [BigInt(campaignId), newAdminAddress],
-      });
-    } catch (error) {
-      console.error('Error adding campaign admin:', error);
-    }
-  };
-
-  // Remove a campaign admin
-  const removeCampaignAdmin = async (campaignId: bigint | number, adminAddress: string) => {
-    if (!walletClient) return;
-    
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'removeCampaignAdmin',
-        args: [BigInt(campaignId), adminAddress],
-      });
-    } catch (error) {
-      console.error('Error removing campaign admin:', error);
-    }
-  };
-
-  // Create a new campaign
-  const createCampaign = async (
-    name: string,
-    description: string,
-    logo: string,
-    demoVideo: string,
-    startTime: number,
-    endTime: number,
-    adminFeePercentage: number,
-    voteMultiplier: number,
-    maxWinners: number,
-    useQuadraticDistribution: boolean
-  ) => {
-    if (!walletClient) return;
-    
-    try {
-      // First approve token spending for the campaign creation fee
-      const campaignFee = parseEther(CAMPAIGN_CREATION_FEE);
-      
-      await writeContract({
-        address: celoTokenAddress,
-        abi: celoTokenAbi,
-        functionName: 'approve',
-        args: [contractAddress, campaignFee],
-      });
-      
-      // Then create the campaign
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'createCampaign',
-        args: [
-          name, 
-          description,
-          logo,
-          demoVideo,
-          BigInt(startTime), 
-          BigInt(endTime), 
-          BigInt(adminFeePercentage), 
-          BigInt(voteMultiplier),
-          BigInt(maxWinners),
-          useQuadraticDistribution
-        ],
-      });
-    } catch (error) {
-      console.error('Error creating campaign:', error);
-    }
-  };
-
-  // Update a campaign
-  const updateCampaign = async (
-    campaignId: bigint | number,
-    name: string,
-    description: string,
-    logo: string,
-    demoVideo: string,
-    startTime: number,
-    endTime: number,
-    adminFeePercentage: number
-  ) => {
-    if (!walletClient) return;
-    
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'updateCampaign',
-        args: [
-          BigInt(campaignId),
-          name, 
-          description,
-          logo,
-          demoVideo,
-          BigInt(startTime), 
-          BigInt(endTime), 
-          BigInt(adminFeePercentage)
-        ],
-      });
-    } catch (error) {
-      console.error('Error updating campaign:', error);
-    }
-  };
-
-  // Submit a project to a campaign
-  const submitProject = async (
-    campaignId: bigint | number,
-    name: string,
-    description: string,
-    githubLink: string = '',
-    socialLink: string = '',
-    testingLink: string = '',
-    logo: string = '',
-    demoVideo: string = '',
-    contracts: string[] = []
-  ) => {
-    if (!walletClient) return;
-    
-    try {
-      // First approve token spending for the project creation fee
-      const projectFee = parseEther(PROJECT_CREATION_FEE);
-      
-      await writeContract({
-        address: celoTokenAddress,
-        abi: celoTokenAbi,
-        functionName: 'approve',
-        args: [contractAddress, projectFee],
-      });
-      
-      // Then submit the project
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'submitProject',
-        args: [
-          BigInt(campaignId), 
-          name, 
-          description, 
-          githubLink, 
-          socialLink, 
-          testingLink,
-          logo,
-          demoVideo,
-          contracts
-        ],
-      });
-    } catch (error) {
-      console.error('Error submitting project:', error);
-    }
-  };
-
-  // Update a project
-  const updateProject = async (
-    campaignId: bigint | number,
-    projectId: bigint | number,
-    name: string,
-    description: string,
-    githubLink: string = '',
-    socialLink: string = '',
-    testingLink: string = '',
-    logo: string = '',
-    demoVideo: string = '',
-    contracts: string[] = []
-  ) => {
-    if (!walletClient) return;
-    
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'updateProject',
-        args: [
-          BigInt(campaignId),
-          BigInt(projectId),
-          name, 
-          description, 
-          githubLink, 
-          socialLink, 
-          testingLink,
-          logo,
-          demoVideo,
-          contracts
-        ],
-      });
-    } catch (error) {
-      console.error('Error updating project:', error);
-    }
-  };
-
-  // Approve a project
-  const approveProject = async (campaignId: bigint | number, projectId: bigint | number) => {
-    if (!walletClient) return;
-    
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'approveProject',
-        args: [BigInt(campaignId), BigInt(projectId)],
-      });
-    } catch (error) {
-      console.error('Error approving project:', error);
-    }
-  };
-
   // Vote for a project
   const vote = async (campaignId: bigint | number, projectId: bigint | number, amount: string) => {
     if (!walletClient) return;
+    if (!publicClient) {
+      console.error('Public client not initialized');
+      return;
+    }
+ 
     
     try {
       // First approve token spending
@@ -674,6 +429,7 @@ export const useSovereignSeas = ({
         functionName: 'approve',
         args: [contractAddress, amountInWei],
       });
+      await publicClient.waitForTransactionReceipt({ hash: writeData  as "0x${string}"});
       
       // Then vote
       writeContract({
@@ -682,26 +438,290 @@ export const useSovereignSeas = ({
         functionName: 'vote',
         args: [BigInt(campaignId), BigInt(projectId), amountInWei],
       });
+      await publicClient.waitForTransactionReceipt({ hash: writeData  as "0x${string}"});
     } catch (error) {
       console.error('Error voting for project:', error);
     }
   };
 
-  // Distribute funds
-  const distributeFunds = async (campaignId: bigint | number) => {
-    if (!walletClient) return;
+ 
+
+
+// Add a new super admin
+const addSuperAdmin = async (newAdminAddress: string) => {
+  if (!walletClient || !isSuperAdmin || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'addSuperAdmin',
+      args: [newAdminAddress],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error adding super admin:', error);
+  }
+};
+
+// Remove a super admin
+const removeSuperAdmin = async (adminAddress: string) => {
+  if (!walletClient || !isSuperAdmin || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'removeSuperAdmin',
+      args: [adminAddress],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error removing super admin:', error);
+  }
+};
+
+// Add a campaign admin
+const addCampaignAdmin = async (campaignId: bigint | number, newAdminAddress: string) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'addCampaignAdmin',
+      args: [BigInt(campaignId), newAdminAddress],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error adding campaign admin:', error);
+  }
+};
+
+// Remove a campaign admin
+const removeCampaignAdmin = async (campaignId: bigint | number, adminAddress: string) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'removeCampaignAdmin',
+      args: [BigInt(campaignId), adminAddress],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error removing campaign admin:', error);
+  }
+};
+
+// Create a new campaign
+const createCampaign = async (
+  name: string,
+  description: string,
+  logo: string,
+  demoVideo: string,
+  startTime: number,
+  endTime: number,
+  adminFeePercentage: number,
+  voteMultiplier: number,
+  maxWinners: number,
+  useQuadraticDistribution: boolean
+) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    // First approve token spending for the campaign creation fee
+    const campaignFee = parseEther(CAMPAIGN_CREATION_FEE);
     
-    try {
-      writeContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'distributeFunds',
-        args: [BigInt(campaignId)],
-      });
-    } catch (error) {
-      console.error('Error distributing funds:', error);
-    }
-  };
+    await writeContract({
+      address: celoTokenAddress,
+      abi: celoTokenAbi,
+      functionName: 'approve',
+      args: [contractAddress, campaignFee],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    
+    // Then create the campaign
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'createCampaign',
+      args: [
+        name, 
+        description,
+        logo,
+        demoVideo,
+        BigInt(startTime), 
+        BigInt(endTime), 
+        BigInt(adminFeePercentage), 
+        BigInt(voteMultiplier),
+        BigInt(maxWinners),
+        useQuadraticDistribution
+      ],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error creating campaign:', error);
+  }
+};
+
+// Update a campaign
+const updateCampaign = async (
+  campaignId: bigint | number,
+  name: string,
+  description: string,
+  logo: string,
+  demoVideo: string,
+  startTime: number,
+  endTime: number,
+  adminFeePercentage: number
+) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'updateCampaign',
+      args: [
+        BigInt(campaignId),
+        name, 
+        description,
+        logo,
+        demoVideo,
+        BigInt(startTime), 
+        BigInt(endTime), 
+        BigInt(adminFeePercentage)
+      ],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error updating campaign:', error);
+  }
+};
+
+// Submit a project to a campaign
+const submitProject = async (
+  campaignId: bigint | number,
+  name: string,
+  description: string,
+  githubLink: string = '',
+  socialLink: string = '',
+  testingLink: string = '',
+  logo: string = '',
+  demoVideo: string = '',
+  contracts: string[] = []
+) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    // First approve token spending for the project creation fee
+    const projectFee = parseEther(PROJECT_CREATION_FEE);
+    
+    await writeContract({
+      address: celoTokenAddress,
+      abi: celoTokenAbi,
+      functionName: 'approve',
+      args: [contractAddress, projectFee],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    
+    // Then submit the project
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'submitProject',
+      args: [
+        BigInt(campaignId), 
+        name, 
+        description, 
+        githubLink, 
+        socialLink, 
+        testingLink,
+        logo,
+        demoVideo,
+        contracts
+      ],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error submitting project:', error);
+  }
+};
+
+// Update a project
+const updateProject = async (
+  campaignId: bigint | number,
+  projectId: bigint | number,
+  name: string,
+  description: string,
+  githubLink: string = '',
+  socialLink: string = '',
+  testingLink: string = '',
+  logo: string = '',
+  demoVideo: string = '',
+  contracts: string[] = []
+) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'updateProject',
+      args: [
+        BigInt(campaignId),
+        BigInt(projectId),
+        name, 
+        description, 
+        githubLink, 
+        socialLink, 
+        testingLink,
+        logo,
+        demoVideo,
+        contracts
+      ],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error updating project:', error);
+  }
+};
+
+// Approve a project
+const approveProject = async (campaignId: bigint | number, projectId: bigint | number) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'approveProject',
+      args: [BigInt(campaignId), BigInt(projectId)],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error approving project:', error);
+  }
+};
+
+// Distribute funds
+const distributeFunds = async (campaignId: bigint | number) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    writeContract({
+      address: contractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'distributeFunds',
+      args: [BigInt(campaignId)],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+  } catch (error) {
+    console.error('Error distributing funds:', error);
+  }
+};
 
   // Check if a campaign is active
   const isCampaignActive = (campaign: Campaign) => {
