@@ -5,13 +5,23 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle, FileCode } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
-import { celo } from 'viem/chains';
+import { celo, celoAlfajores } from 'viem/chains';
 
-//get chain id from .env
+// Get chain values from environment variables
 const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CELO_CHAIN_ID as string);
+const CHAIN_NAME = process.env.NEXT_PUBLIC_CHAIN_NAME || 'Celo';
+const IS_TESTNET = process.env.NEXT_PUBLIC_IS_TESTNET === 'true';
+
+// Determine which chain to use based on environment variables
+const getChainConfig = () => {
+  if (IS_TESTNET) {
+    return celoAlfajores;
+  }
+  return celo;
+};
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -70,8 +80,8 @@ export default function Header() {
     }
   }, [connect]);
 
-  // Function to switch to Celo using the viem wallet client
-  const handleSwitchToCelo = async () => {
+  // Function to switch to the correct chain using the viem wallet client
+  const handleSwitchToNetwork = async () => {
     if (!walletClient) {
       console.error("Wallet client not available");
       return;
@@ -81,34 +91,37 @@ export default function Header() {
       await walletClient.switchChain({ id: CELO_CHAIN_ID });
       setShowChainAlert(false);
     } catch (error) {
-      console.error("Error switching to Celo:", error);
+      console.error(`Error switching to ${CHAIN_NAME}:`, error);
       
       // If chain doesn't exist in the wallet, try to add it
       if ((error as any).code === 4902) { // Chain doesn't exist
         try {
+          const chainConfig = getChainConfig();
+          
           await walletClient.addChain({
-            chain: celo
+            chain: chainConfig
           });
           // Try switching again after adding
           await walletClient.switchChain({ id: CELO_CHAIN_ID });
         } catch (addError) {
-          console.error("Error adding Celo chain:", addError);
+          console.error(`Error adding ${CHAIN_NAME} chain:`, addError);
         }
       }
     }
   };
+
   return (
     <div className="relative z-50">
       {/* Chain Warning Alert */}
       {showChainAlert && (
         <div className="bg-amber-500 text-slate-900 py-2 px-4 flex items-center justify-center">
           <AlertTriangle className="h-5 w-5 mr-2" />
-          <span className="font-medium">This app only supports the Celo network.</span>
+          <span className="font-medium">This app only supports the {CHAIN_NAME} network{IS_TESTNET ? ' (Testnet)' : ''}.</span>
           <button 
-            onClick={handleSwitchToCelo}
+            onClick={handleSwitchToNetwork}
             className="ml-3 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors"
           >
-            Switch to Celo
+            Switch to {CHAIN_NAME}
           </button>
         </div>
       )}
@@ -182,10 +195,10 @@ export default function Header() {
                 
                 {/* Right side - Connect Wallet & User Menu */}
                 <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-                  {/* Celo Network Badge */}
+                  {/* Network Badge */}
                   <div className="mr-2 hidden sm:flex items-center rounded-full bg-white/20 text-white px-3 py-1 text-xs">
                     <span className="h-2 w-2 rounded-full bg-white mr-1.5"></span>
-                    Celo Only
+                    {CHAIN_NAME} {IS_TESTNET ? 'Testnet' : ''}
                   </div>
                   
                   {isConnected && (
@@ -231,7 +244,7 @@ export default function Header() {
                             href="/myprojects"
                             className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                           >
-                            <Award className="mr-1.5 h-4 w-4 text-amber-500" />
+                            <FileCode className="mr-1.5 h-4 w-4 text-blue-500" />
                             My Projects
                           </Link>
                         </div>
@@ -280,11 +293,11 @@ export default function Header() {
                                   return (
                                     <div className="flex items-center gap-2">
                                       <button
-                                        onClick={handleSwitchToCelo}
+                                        onClick={handleSwitchToNetwork}
                                         className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-full text-sm font-medium transition-colors shadow-sm"
                                       >
                                         <AlertTriangle size={16} />
-                                        Switch to Celo
+                                        Switch to {CHAIN_NAME}
                                       </button>
                                     </div>
                                   );
@@ -314,10 +327,10 @@ export default function Header() {
             {/* Mobile menu */}
             <Disclosure.Panel className="sm:hidden">
               <div className="space-y-1 px-3 pt-2 pb-3">
-                {/* Mobile Celo Badge */}
+                {/* Mobile Network Badge */}
                 <div className="mb-3 flex items-center justify-center rounded-full bg-white/20 text-white px-3 py-1.5 text-sm">
                   <span className="h-2 w-2 rounded-full bg-white mr-1.5"></span>
-                  Celo Network Only
+                  {CHAIN_NAME} {IS_TESTNET ? 'Testnet' : ''} Only
                 </div>
                 
                 {navigation.map((item) => {
@@ -370,7 +383,7 @@ export default function Header() {
                         href="/myprojects"
                         className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-emerald-600/20"
                       >
-                        <Award className="mr-2 h-4 w-4" />
+                        <FileCode className="mr-2 h-4 w-4" />
                         My Projects
                       </Disclosure.Button>
                     </div>

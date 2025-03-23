@@ -137,27 +137,49 @@ export const useSovereignSeas = ({
 
   // Check if current user is super admin
   useEffect(() => {
-    const checkSuperAdmin = async () => {
-      if (!isInitialized || !publicClient || !walletAddress) {
-        setIsSuperAdmin(false);
-        return;
-      }
+   // Replace the existing checkSuperAdmin function with this updated version
+   const checkSuperAdmin = async () => {
+    if (!isInitialized || !publicClient || !walletAddress) {
+      setIsSuperAdmin(false);
+      return;
+    }
+  
+    try {
+      // Check if the walletAddress is a super admin
+      const isSuperAdmin = await publicClient.readContract({
+        address: contractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'superAdmins',
+        args: [walletAddress],
+      }) as boolean;
+  
+      // Get contract deployer address from environment variable
+      const contractDeployer = process.env.NEXT_PUBLIC_CONTRACT_DEPLOYER as string;
       
-      try {
-        const result = await publicClient.readContract({
-          address: contractAddress,
-          abi: sovereignSeasAbi,
-          functionName: 'superAdmins',
-          args: [walletAddress],
-        }) as boolean;
-        
-        setIsSuperAdmin(result);
-      } catch (error) {
-        console.error('Error checking super admin status:', error);
-        setIsSuperAdmin(false);
-      }
-    };
-    
+      // Ensure both addresses are normalized to lowercase for comparison
+      const normalizedDeployer = contractDeployer ? contractDeployer.toLowerCase() : '';
+      const normalizedWallet = walletAddress ? walletAddress.toLowerCase() : '';
+      
+      console.log("Normalized deployer:", normalizedDeployer);
+      console.log("Normalized wallet:", normalizedWallet);
+      console.log("Are they equal?", normalizedDeployer === normalizedWallet);
+  
+      // Check if walletAddress is either a super admin or the deployer
+      const isDeployer = !!normalizedDeployer && !!normalizedWallet && normalizedDeployer === normalizedWallet;
+      
+      console.log("isSuperAdmin:", isSuperAdmin);
+      console.log("isDeployer:", isDeployer);
+      
+      setIsSuperAdmin(isSuperAdmin || isDeployer);
+      
+      console.log("Final isSuperAdmin value:", isSuperAdmin || isDeployer);
+  
+    } catch (error) {
+      console.error('Error checking super admin status:', error);
+      setIsSuperAdmin(false);
+    }
+  };
+
     checkSuperAdmin();
   }, [isInitialized, walletAddress, contractAddress, publicClient]);
 
