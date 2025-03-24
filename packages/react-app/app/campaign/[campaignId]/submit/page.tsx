@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { 
@@ -30,6 +30,7 @@ import {
   CheckIcon
 } from 'lucide-react';
 import { useSovereignSeas, PROJECT_CREATION_FEE } from '../../../../hooks/useSovereignSeas';
+import { uploadToIPFS } from '@/app/utils/imageUtils';
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`; 
 const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`; 
@@ -67,7 +68,7 @@ export default function SubmitProject() {
   const [formErrors, setFormErrors] = useState({
     name: '',
     description: '',
-    logo: '',
+    // logo: '',
     demoVideo: '',
     contracts: [''],
   });
@@ -77,10 +78,12 @@ export default function SubmitProject() {
     logo: null,
     demoVideo: null,
   });
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [previewType, setPreviewType] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showFeeTooltip, setShowFeeTooltip] = useState(false);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   
   // Contract interaction
   const {
@@ -217,18 +220,16 @@ export default function SubmitProject() {
     let isValid = true;
     const errors = {
       ...formErrors,
-      logo: '',
+      // logo: '',
       demoVideo: '',
     };
     
     // Validate URLs if provided
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+    // Skip validation if it's a file selection placeholder
+  
     
-    if (project.logo && !urlRegex.test(project.logo)) {
-      errors.logo = 'Please enter a valid logo URL';
-      isValid = false;
-    }
-    
+  
     if (project.demoVideo && !urlRegex.test(project.demoVideo)) {
       errors.demoVideo = 'Please enter a valid demo video URL';
       isValid = false;
@@ -301,23 +302,47 @@ export default function SubmitProject() {
     }
     
     try {
-      // Filter out empty contract addresses
-      const contracts = project.contracts.filter(c => c.trim() !== '');
+      setLoading(true);
       
+      // Create a copy of the project data to work with
+      const projectData = {...project};
+      
+      // Upload logo if it's a file selection
+      if (projectData.logo && projectData.logo.includes('File selected:') && logoFileInputRef.current?.files?.[0]) {
+        setIsUploadingLogo(true);
+        try {
+          const logoFile = logoFileInputRef.current.files[0];
+          const logoIpfsUrl = await uploadToIPFS(logoFile);
+          projectData.logo = logoIpfsUrl;
+        } catch (uploadError) {
+          console.error('Error uploading logo:', uploadError);
+          setErrorMessage('Failed to upload logo. Please try again.');
+          setLoading(false);
+          setIsUploadingLogo(false);
+          return;
+        }
+        setIsUploadingLogo(false);
+      }
+      
+      // Filter out empty contract addresses
+      const contracts = projectData.contracts.filter(c => c.trim() !== '');
+      
+      // Submit the project with the updated data
       await submitProject(
         Number(campaignId),
-        project.name,
-        project.description,
-        project.githubLink,
-        project.socialLink,
-        project.testingLink,
-        project.logo,
-        project.demoVideo,
+        projectData.name,
+        projectData.description,
+        projectData.githubLink,
+        projectData.socialLink,
+        projectData.testingLink,
+        projectData.logo,  // This will be the IPFS URL if a file was uploaded
+        projectData.demoVideo,
         contracts
       );
     } catch (error) {
       console.error('Error submitting project:', error);
       setErrorMessage('Error submitting project. Please try again later.');
+      setLoading(false);
     }
   };
   
@@ -335,7 +360,7 @@ export default function SubmitProject() {
     setFormErrors({
       name: '',
       description: '',
-      logo: '',
+      // logo: '',
       demoVideo: '',
       contracts: [''],
     });
@@ -739,35 +764,37 @@ export default function SubmitProject() {
                     </div>
                     
                     <div>
-                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
-                        <ImageIcon className="h-4 w-4 mr-2" />
-                        Logo URL (Optional)
-                      </label>
-                      <input
-                        type="url"
-                        value={project.logo}
-                        onChange={(e) => handleInputChange('logo', e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
-                        placeholder="https://example.com/logo.png or IPFS hash"
-                      />
-                      {formErrors.logo && (
-                        <p className="mt-1 text-red-500 text-sm">{formErrors.logo}</p>
-                      )}
-                      <p className="mt-1 text-gray-500 text-sm">Add your project logo (URL to an image file)</p>
-                      
-                      {project.logo && (
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => openMediaPreview('image', project.logo)}
-                            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition-colors inline-flex items-center border border-gray-200 shadow-sm"
-                          >
-                            <Eye className="h-3.5 w-3.5 mr-1.5" />
-                            Preview Logo
-                          </button>
-                        </div>
-                      )}
-                    </div>
+  <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+    <ImageIcon className="h-4 w-4 mr-2" />
+    Logo (Upload or provide URL)
+  </label>
+  
+  <input
+    type="file"
+    ref={logoFileInputRef}
+    accept="image/*"
+    onChange={(e) => {
+      if (e.target.files && e.target.files[0]) {
+        // Just set a placeholder to indicate a file is selected
+        setProject({
+          ...project,
+          logo: `File selected: ${e.target.files[0].name}`
+        });
+      }
+    }}
+    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+  />
+  
+  <p className="my-2 text-center text-gray-500">OR</p>
+  
+  <input
+    type="url"
+    value={project.logo}
+    onChange={(e) => handleInputChange('logo', e.target.value)}
+    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+    placeholder="Enter an IPFS or image URL directly"
+  />
+</div>
                     
                     <div>
                       <label className="block text-emerald-700 font-medium mb-2 flex items-center">
