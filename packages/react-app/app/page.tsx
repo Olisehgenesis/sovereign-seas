@@ -23,9 +23,7 @@ import {
 import Image from 'next/image';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
 
-// Contract addresses
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` 
+
 
 // Featured campaign type
 type FeaturedCampaign = {
@@ -58,16 +56,14 @@ export default function Home() {
   const {
     isInitialized,
     loadCampaigns,
+
     formatTokenAmount,
     loadProjects,
     formatCampaignTime,
     getCampaignTimeRemaining,
     isCampaignActive,
     isSuperAdmin
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
 
   useEffect(() => {
     setIsMounted(true);

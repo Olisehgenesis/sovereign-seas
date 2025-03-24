@@ -29,9 +29,6 @@ import {
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../hooks/useSovereignSeas';
 
-// Contract addresses - replace with actual addresses
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` || '0x0000000000000000000000000000000000000000';
 
 // Campaign type definition
 type Campaign = {
@@ -87,10 +84,7 @@ export default function MyCampaigns() {
     isWaitingForTx,
     isTxSuccess,
     isSuperAdmin,  // Added from hook
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
 
   useEffect(() => {
     setIsMounted(true);

@@ -43,9 +43,6 @@ import {
 } from 'lucide-react';
 import { Campaign, Project, useSovereignSeas, Vote } from '../../../../hooks/useSovereignSeas';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` 
-
 export default function CampaignAdminDashboard() {
   const router = useRouter();
   const { campaignId } = useParams();
@@ -104,10 +101,7 @@ export default function CampaignAdminDashboard() {
     isTxSuccess,
     isSuperAdmin,
     resetWrite
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
   
   useEffect(() => {
     setIsMounted(true);

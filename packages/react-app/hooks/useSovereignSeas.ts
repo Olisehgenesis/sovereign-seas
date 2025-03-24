@@ -12,10 +12,11 @@ import { parseEther, formatEther } from 'viem';
 import { getContract } from 'viem';
 
 // Import ABI
-import sovereignSeasAbi from '../abis/SovereignSeas.json';
-import celoTokenAbi from '../abis/MockCELO.json';
-// get chain id from .env
+import sovereignSeasAbi from '../abis/SovereignSeasV2.json';
+
+// get chain id and contract address from .env
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ? Number(process.env.NEXT_PUBLIC_CHAIN_ID) : undefined;
+const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
 
 // Updated Types
 export type Campaign = {
@@ -23,8 +24,8 @@ export type Campaign = {
   admin: string;
   name: string;
   description: string;
-  logo: string;          // New field
-  demoVideo: string;     // New field
+  logo: string;
+  demoVideo: string;
   startTime: bigint;
   endTime: bigint;
   adminFeePercentage: bigint;
@@ -44,10 +45,11 @@ export type Project = {
   githubLink: string;
   socialLink: string;
   testingLink: string;
-  logo: string;          // New field
-  demoVideo: string;     // New field
-  contracts: string[];   // New field
+  logo: string;
+  demoVideo: string;
+  contracts: string[];
   approved: boolean;
+  active: boolean; // New field for active status
   voteCount: bigint;
   fundsReceived: bigint;
 };
@@ -64,29 +66,29 @@ export type Vote = {
 export const CAMPAIGN_CREATION_FEE = "2";
 export const PROJECT_CREATION_FEE = "1";
 
+// Export contract address for use in other components
+export const SOVEREIGN_SEAS_ADDRESS = contractAddress;
+
 interface SovereignSeasConfig {
-  contractAddress: `0x${string}`;
-  celoTokenAddress: `0x${string}`;
+  contractAddress?: `0x${string}`;
   chainId?: number;
 }
 
-export const useSovereignSeas = ({
-  contractAddress,
-  celoTokenAddress,
-}: SovereignSeasConfig) => {
+export const useSovereignSeas = (config?: SovereignSeasConfig) => {
   const { address: walletAddress } = useAccount();
   const publicClient = usePublicClient({
-    chainId: chainId,
+    chainId: config?.chainId || chainId,
   });
   const { data: walletClient } = useWalletClient(
-    { chainId: chainId }
+    { chainId: config?.chainId || chainId }
   );
+  
+  const actualContractAddress = config?.contractAddress || contractAddress;
   
   const [isInitialized, setIsInitialized] = useState(false);
   
-  // Contract instances
+  // Contract instance
   const [contract, setContract] = useState<any>(null);
-  const [celoToken, setCeloToken] = useState<any>(null);
   
   // State
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -114,74 +116,66 @@ export const useSovereignSeas = ({
     hash: writeData,
   });
 
-  // Initialize contract instances
+  // Initialize contract instance
   useEffect(() => {
-    if (!publicClient || !contractAddress || !celoTokenAddress) return;
+    if (!publicClient || !actualContractAddress) return;
     
     const sovereignSeasContract = getContract({
-      address: contractAddress,
+      address: actualContractAddress,
       abi: sovereignSeasAbi,
       client: publicClient,
     });
     
-    const celoTokenContract = getContract({
-      address: celoTokenAddress,
-      abi: celoTokenAbi,
-      client: publicClient,
-    });
-    
     setContract(sovereignSeasContract);
-    setCeloToken(celoTokenContract);
     setIsInitialized(true);
-  }, [publicClient, contractAddress, celoTokenAddress]);
+  }, [publicClient, actualContractAddress]);
 
   // Check if current user is super admin
   useEffect(() => {
-   // Replace the existing checkSuperAdmin function with this updated version
-   const checkSuperAdmin = async () => {
-    if (!isInitialized || !publicClient || !walletAddress) {
-      setIsSuperAdmin(false);
-      return;
-    }
-  
-    try {
-      // Check if the walletAddress is a super admin
-      const isSuperAdmin = await publicClient.readContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'superAdmins',
-        args: [walletAddress],
-      }) as boolean;
-  
-      // Get contract deployer address from environment variable
-      const contractDeployer = process.env.NEXT_PUBLIC_CONTRACT_DEPLOYER as string;
-      
-      // Ensure both addresses are normalized to lowercase for comparison
-      const normalizedDeployer = contractDeployer ? contractDeployer.toLowerCase() : '';
-      const normalizedWallet = walletAddress ? walletAddress.toLowerCase() : '';
-      
-      console.log("Normalized deployer:", normalizedDeployer);
-      console.log("Normalized wallet:", normalizedWallet);
-      console.log("Are they equal?", normalizedDeployer === normalizedWallet);
-  
-      // Check if walletAddress is either a super admin or the deployer
-      const isDeployer = !!normalizedDeployer && !!normalizedWallet && normalizedDeployer === normalizedWallet;
-      
-      console.log("isSuperAdmin:", isSuperAdmin);
-      console.log("isDeployer:", isDeployer);
-      
-      setIsSuperAdmin(isSuperAdmin || isDeployer);
-      
-      console.log("Final isSuperAdmin value:", isSuperAdmin || isDeployer);
-  
-    } catch (error) {
-      console.error('Error checking super admin status:', error);
-      setIsSuperAdmin(false);
-    }
-  };
+    const checkSuperAdmin = async () => {
+      if (!isInitialized || !publicClient || !walletAddress) {
+        setIsSuperAdmin(false);
+        return;
+      }
+    
+      try {
+        // Check if the walletAddress is a super admin
+        const isSuperAdmin = await publicClient.readContract({
+          address: actualContractAddress,
+          abi: sovereignSeasAbi,
+          functionName: 'superAdmins',
+          args: [walletAddress],
+        }) as boolean;
+    
+        // Get contract deployer address from environment variable
+        const contractDeployer = process.env.NEXT_PUBLIC_CONTRACT_DEPLOYER as string;
+        
+        // Ensure both addresses are normalized to lowercase for comparison
+        const normalizedDeployer = contractDeployer ? contractDeployer.toLowerCase() : '';
+        const normalizedWallet = walletAddress ? walletAddress.toLowerCase() : '';
+        
+        console.log("Normalized deployer:", normalizedDeployer);
+        console.log("Normalized wallet:", normalizedWallet);
+        console.log("Are they equal?", normalizedDeployer === normalizedWallet);
+    
+        // Check if walletAddress is either a super admin or the deployer
+        const isDeployer = !!normalizedDeployer && !!normalizedWallet && normalizedDeployer === normalizedWallet;
+        
+        console.log("isSuperAdmin:", isSuperAdmin);
+        console.log("isDeployer:", isDeployer);
+        
+        setIsSuperAdmin(isSuperAdmin || isDeployer);
+        
+        console.log("Final isSuperAdmin value:", isSuperAdmin || isDeployer);
+    
+      } catch (error) {
+        console.error('Error checking super admin status:', error);
+        setIsSuperAdmin(false);
+      }
+    };
 
     checkSuperAdmin();
-  }, [isInitialized, walletAddress, contractAddress, publicClient]);
+  }, [isInitialized, walletAddress, actualContractAddress, publicClient]);
 
   // Load available creation fees
   const loadCreationFees = async () => {
@@ -191,7 +185,7 @@ export const useSovereignSeas = ({
       setLoadingFees(true);
       
       const fees = await publicClient.readContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'getAvailableCreationFees',
       }) as bigint;
@@ -214,7 +208,7 @@ export const useSovereignSeas = ({
       const amountBigInt = amount === "0" ? BigInt(0) : parseEther(amount);
       
       writeContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'withdrawCreationFees',
         args: [amountBigInt],
@@ -224,104 +218,150 @@ export const useSovereignSeas = ({
     }
   };
 
-  // Load all campaigns
-  const loadCampaigns = async () => {
-    if (!contract || !publicClient) return [];
+  // First, let's fix the formatIpfsUrl helper function to handle the "File selected:" case
+
+const formatIpfsUrl = (url: string) => {
+  if (!url) return '';
+  
+  // Skip processing if it's just a file selection placeholder
+  if (url && url.startsWith('File selected:')) {
+    // Return an empty string or a placeholder image URL
+    return '';
+  }
+  
+  // Check if it's an IPFS hash or path
+  if (url.includes('ipfs/') || url.startsWith('ipfs://')) {
+    // Extract the IPFS hash
+    let ipfsHash;
     
-    try {
-      setLoadingCampaigns(true);
-      
-      const campaignCount = await publicClient.readContract({
-        address: contractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'getCampaignCount',
-      }) as bigint;
-      
-      const campaignPromises = [];
-      for (let i = 0; i < Number(campaignCount); i++) {
-        campaignPromises.push(publicClient.readContract({
-          address: contractAddress,
-          abi: sovereignSeasAbi,
-          functionName: 'getCampaign',
-          args: [BigInt(i)],
-        }));
-      }
-
-
-      
-      const campaignResults = await Promise.all(campaignPromises);
-      
-      // Transform the results to match the Campaign type
-      // Since getCampaign now returns multiple values instead of a struct
-      //dont returncampaigns whose ids are in spam
-      //cast next public spam camapins from .env to list of bigints
-
-      const spam: bigint[] = process.env.NEXT_PUBLIC_SPAM_CAMPAIGNS ? process.env.NEXT_PUBLIC_SPAM_CAMPAIGNS.split(',').map((id: string) => BigInt(id)) : [];
-
-      const formattedCampaigns = campaignResults.map((result: any) => {
-        return {
-          id: result[0],
-          admin: result[1],
-          name: result[2],
-          description: result[3],
-          logo: result[4],
-          demoVideo: result[5],
-          startTime: result[6],
-          endTime: result[7],
-          adminFeePercentage: result[8],
-          voteMultiplier: result[9],
-          maxWinners: result[10],
-          useQuadraticDistribution: result[11],
-          active: result[12],
-          totalFunds: result[13]
-        } as Campaign;
-      });
-      //remove spam campaigns
-      for (let i = 0; i < formattedCampaigns.length; i++) {
-        if(spam.includes(formattedCampaigns[i].id)){
-          formattedCampaigns.splice(i, 1);
-        }
-      }
-      
-      setCampaigns(formattedCampaigns);
-      return formattedCampaigns;
-    } catch (error) {
-      console.error('Error loading campaigns:', error);
-      return [];
-    } finally {
-      setLoadingCampaigns(false);
+    if (url.includes('ipfs/')) {
+      // For format: something/ipfs/HASH or ipfs/HASH
+      ipfsHash = url.split('ipfs/')[1];
+    } else if (url.startsWith('ipfs://')) {
+      // For format: ipfs://HASH
+      ipfsHash = url.replace('ipfs://', '');
     }
-  };
+    
+    // Clean up the hash - remove any path or query params
+    if (ipfsHash && ipfsHash.includes('/')) {
+      ipfsHash = ipfsHash.split('/')[0];
+    }
+    
+    if (ipfsHash && ipfsHash.includes('?')) {
+      ipfsHash = ipfsHash.split('?')[0];
+    }
+    
+    // Return formatted URL using a public IPFS gateway
+    return `https://ipfs.io/ipfs/${ipfsHash}`;
+  }
+  
+  // Handle URLs that already have undefined/ prefix
+  if (url.startsWith('undefined/')) {
+    return url.replace('undefined/', '');
+  }
+  
+  // Return the URL as is if it's a normal URL
+  return url;
+};
+
+// Then modify your loadCampaigns function:
+const loadCampaigns = async () => {
+  if (!contract || !publicClient) return [];
+  
+  try {
+    setLoadingCampaigns(true);
+    
+    const campaignCount = await publicClient.readContract({
+      address: actualContractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'getCampaignCount',
+    }) as bigint;
+    
+    const campaignPromises = [];
+    for (let i = 0; i < Number(campaignCount); i++) {
+      campaignPromises.push(publicClient.readContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'getCampaign',
+        args: [BigInt(i)],
+      }));
+    }
+    
+    const campaignResults = await Promise.all(campaignPromises);
+    
+    //don't return campaigns whose ids are in spam
+    const spam: bigint[] = process.env.NEXT_PUBLIC_SPAM_CAMPAIGNS 
+      ? process.env.NEXT_PUBLIC_SPAM_CAMPAIGNS.split(',').map((id: string) => BigInt(id)) 
+      : [];
+
+    const formattedCampaigns = campaignResults.map((result: any) => {
+      return {
+        id: result[0],
+        admin: result[1],
+        name: result[2],
+        description: result[3],
+        logo: formatIpfsUrl(result[4]),       // Format the logo URL
+        demoVideo: formatIpfsUrl(result[5]),  // Format the demo video URL
+        startTime: result[6],
+        endTime: result[7],
+        adminFeePercentage: result[8],
+        voteMultiplier: result[9],
+        maxWinners: result[10],
+        useQuadraticDistribution: result[11],
+        active: result[12],
+        totalFunds: result[13]
+      } as Campaign;
+    }).filter(campaign => !spam.includes(campaign.id));
+    
+    setCampaigns(formattedCampaigns);
+    return formattedCampaigns;
+  } catch (error) {
+    console.error('Error loading campaigns:', error);
+    return [];
+  } finally {
+    setLoadingCampaigns(false);
+  }
+};
 
   // Load projects for a specific campaign
-  const loadProjects = async (campaignId: bigint | number) => {
-    if (!contract || !publicClient) return [];
+const loadProjects = async (campaignId: bigint | number) => {
+  if (!contract || !publicClient) return [];
+  
+  try {
+    const projectCount = await publicClient.readContract({
+      address: actualContractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'getProjectCount',
+      args: [BigInt(campaignId)],
+    }) as bigint;
     
-    try {
-      const projectCount = await publicClient.readContract({
-        address: contractAddress,
+    const projectPromises = [];
+    for (let i = 0; i < Number(projectCount); i++) {
+      projectPromises.push(publicClient.readContract({
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
-        functionName: 'getProjectCount',
-        args: [BigInt(campaignId)],
-      }) as bigint;
-      
-      const projectPromises = [];
-      for (let i = 0; i < Number(projectCount); i++) {
-        projectPromises.push(publicClient.readContract({
-          address: contractAddress,
-          abi: sovereignSeasAbi,
-          functionName: 'getProject',
-          args: [BigInt(campaignId), BigInt(i)],
-        }));
-      }
-      
-      const projectResults = await Promise.all(projectPromises);
-      return projectResults as Project[];
-    } catch (error) {
-      console.error(`Error loading projects for campaign ${campaignId}:`, error);
-      return [];
+        functionName: 'getProject',
+        args: [BigInt(campaignId), BigInt(i)],
+      }));
     }
-  };
+    
+    const projectResults = await Promise.all(projectPromises);
+    
+    // Format the IPFS links in project data
+    return (projectResults as Project[]).map((project: Project) => {
+      return {
+        ...project,
+        // Format IPFS URLs
+        logo: formatIpfsUrl(project.logo),
+        demoVideo: formatIpfsUrl(project.demoVideo),
+        githubLink: formatIpfsUrl(project.githubLink),
+      };
+    }) as Project[];
+  } catch (error) {
+    console.error(`Error loading projects for campaign ${campaignId}:`, error);
+    return [];
+  }
+};
 
   // Check if user is a campaign admin
   const isCampaignAdmin = async (campaignId: bigint | number) => {
@@ -329,7 +369,7 @@ export const useSovereignSeas = ({
     
     try {
       return await publicClient.readContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'isCampaignAdmin',
         args: [BigInt(campaignId), walletAddress],
@@ -346,7 +386,7 @@ export const useSovereignSeas = ({
     
     try {
       return await publicClient.readContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'getSortedProjects',
         args: [BigInt(campaignId)],
@@ -363,7 +403,7 @@ export const useSovereignSeas = ({
     
     try {
       return await publicClient.readContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'getUserVotesForProject',
         args: [BigInt(campaignId), walletAddress, BigInt(projectId)],
@@ -380,7 +420,7 @@ export const useSovereignSeas = ({
     
     try {
       return await publicClient.readContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'getUserTotalVotesInCampaign',
         args: [BigInt(campaignId), walletAddress],
@@ -397,7 +437,7 @@ export const useSovereignSeas = ({
     
     try {
       return await publicClient.readContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'getUserVoteHistory',
         args: [walletAddress],
@@ -408,319 +448,327 @@ export const useSovereignSeas = ({
     }
   };
 
-  // Super Admin Functions
-
-  // Vote for a project
+  // Vote for a project (updated for native token)
   const vote = async (campaignId: bigint | number, projectId: bigint | number, amount: string) => {
-    if (!walletClient) return;
-    if (!publicClient) {
-      console.error('Public client not initialized');
-      return;
-    }
- 
+    if (!walletClient || !publicClient) return;
     
     try {
-      // First approve token spending
       const amountInWei = parseEther(amount);
       
-      await writeContract({
-        address: celoTokenAddress,
-        abi: celoTokenAbi,
-        functionName: 'approve',
-        args: [contractAddress, amountInWei],
-      });
-      // await publicClient.waitForTransactionReceipt({ hash: writeData  as "0x${string}"});
-      
-      // Then vote
+      // Direct vote with native token (no approval needed)
       writeContract({
-        address: contractAddress,
+        address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'vote',
-        args: [BigInt(campaignId), BigInt(projectId), amountInWei],
+        args: [BigInt(campaignId), BigInt(projectId)],
+        value: amountInWei
       });
-      await publicClient.waitForTransactionReceipt({ hash: writeData  as "0x${string}"});
+      
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
     } catch (error) {
       console.error('Error voting for project:', error);
     }
   };
 
- 
-
-
-// Add a new super admin
-const addSuperAdmin = async (newAdminAddress: string) => {
-  if (!walletClient || !isSuperAdmin || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'addSuperAdmin',
-      args: [newAdminAddress],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error adding super admin:', error);
-  }
-};
-
-// Remove a super admin
-const removeSuperAdmin = async (adminAddress: string) => {
-  if (!walletClient || !isSuperAdmin || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'removeSuperAdmin',
-      args: [adminAddress],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error removing super admin:', error);
-  }
-};
-
-// Add a campaign admin
-const addCampaignAdmin = async (campaignId: bigint | number, newAdminAddress: string) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'addCampaignAdmin',
-      args: [BigInt(campaignId), newAdminAddress],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error adding campaign admin:', error);
-  }
-};
-
-// Remove a campaign admin
-const removeCampaignAdmin = async (campaignId: bigint | number, adminAddress: string) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'removeCampaignAdmin',
-      args: [BigInt(campaignId), adminAddress],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error removing campaign admin:', error);
-  }
-};
-
-// Create a new campaign
-const createCampaign = async (
-  name: string,
-  description: string,
-  logo: string,
-  demoVideo: string,
-  startTime: number,
-  endTime: number,
-  adminFeePercentage: number,
-  voteMultiplier: number,
-  maxWinners: number,
-  useQuadraticDistribution: boolean
-) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    // First approve token spending for the campaign creation fee
-    const campaignFee = parseEther(CAMPAIGN_CREATION_FEE);
+  // Add a new super admin
+  const addSuperAdmin = async (newAdminAddress: string) => {
+    if (!walletClient || !isSuperAdmin || !publicClient) return;
     
-    await writeContract({
-      address: celoTokenAddress,
-      abi: celoTokenAbi,
-      functionName: 'approve',
-      args: [contractAddress, campaignFee],
-    });
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'addSuperAdmin',
+        args: [newAdminAddress],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error adding super admin:', error);
+    }
+  };
 
+  // Remove a super admin
+  const removeSuperAdmin = async (adminAddress: string) => {
+    if (!walletClient || !isSuperAdmin || !publicClient) return;
     
-    // Then create the campaign
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'createCampaign',
-      args: [
-        name, 
-        description,
-        logo,
-        demoVideo,
-        BigInt(startTime), 
-        BigInt(endTime), 
-        BigInt(adminFeePercentage), 
-        BigInt(voteMultiplier),
-        BigInt(maxWinners),
-        useQuadraticDistribution
-      ],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error creating campaign:', error);
-  }
-};
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'removeSuperAdmin',
+        args: [adminAddress],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error removing super admin:', error);
+    }
+  };
 
-// Update a campaign
-const updateCampaign = async (
-  campaignId: bigint | number,
-  name: string,
-  description: string,
-  logo: string,
-  demoVideo: string,
-  startTime: number,
-  endTime: number,
-  adminFeePercentage: number
-) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'updateCampaign',
-      args: [
-        BigInt(campaignId),
-        name, 
-        description,
-        logo,
-        demoVideo,
-        BigInt(startTime), 
-        BigInt(endTime), 
-        BigInt(adminFeePercentage)
-      ],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error updating campaign:', error);
-  }
-};
-
-// Submit a project to a campaign
-const submitProject = async (
-  campaignId: bigint | number,
-  name: string,
-  description: string,
-  githubLink: string = '',
-  socialLink: string = '',
-  testingLink: string = '',
-  logo: string = '',
-  demoVideo: string = '',
-  contracts: string[] = []
-) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    // First approve token spending for the project creation fee
-    const projectFee = parseEther(PROJECT_CREATION_FEE);
+  // Add a campaign admin
+  const addCampaignAdmin = async (campaignId: bigint | number, newAdminAddress: string) => {
+    if (!walletClient || !publicClient) return;
     
-    await writeContract({
-      address: celoTokenAddress,
-      abi: celoTokenAbi,
-      functionName: 'approve',
-      args: [contractAddress, projectFee],
-    });
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'addCampaignAdmin',
+        args: [BigInt(campaignId), newAdminAddress],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error adding campaign admin:', error);
+    }
+  };
+
+  // Remove a campaign admin
+  const removeCampaignAdmin = async (campaignId: bigint | number, adminAddress: string) => {
+    if (!walletClient || !publicClient) return;
     
-    // Then submit the project
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'submitProject',
-      args: [
-        BigInt(campaignId), 
-        name, 
-        description, 
-        githubLink, 
-        socialLink, 
-        testingLink,
-        logo,
-        demoVideo,
-        contracts
-      ],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error submitting project:', error);
-  }
-};
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'removeCampaignAdmin',
+        args: [BigInt(campaignId), adminAddress],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error removing campaign admin:', error);
+    }
+  };
 
-// Update a project
-const updateProject = async (
-  campaignId: bigint | number,
-  projectId: bigint | number,
-  name: string,
-  description: string,
-  githubLink: string = '',
-  socialLink: string = '',
-  testingLink: string = '',
-  logo: string = '',
-  demoVideo: string = '',
-  contracts: string[] = []
-) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'updateProject',
-      args: [
-        BigInt(campaignId),
-        BigInt(projectId),
-        name, 
-        description, 
-        githubLink, 
-        socialLink, 
-        testingLink,
-        logo,
-        demoVideo,
-        contracts
-      ],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error updating project:', error);
-  }
-};
+  // Create a new campaign (updated for native token)
+  const createCampaign = async (
+    name: string,
+    description: string,
+    logo: string,
+    demoVideo: string,
+    startTime: number,
+    endTime: number,
+    adminFeePercentage: number,
+    voteMultiplier: number,
+    maxWinners: number,
+    useQuadraticDistribution: boolean
+  ) => {
+    if (!walletClient || !publicClient) return;
+    
+    try {
+      // Create the campaign with native token fee
+      const campaignFee = parseEther(CAMPAIGN_CREATION_FEE);
+      
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'createCampaign',
+        args: [
+          name, 
+          description,
+          logo,
+          demoVideo,
+          BigInt(startTime), 
+          BigInt(endTime), 
+          BigInt(adminFeePercentage), 
+          BigInt(voteMultiplier),
+          BigInt(maxWinners),
+          useQuadraticDistribution
+        ],
+        value: campaignFee
+      });
+      
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+    }
+  };
 
-// Approve a project
-const approveProject = async (campaignId: bigint | number, projectId: bigint | number) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'approveProject',
-      args: [BigInt(campaignId), BigInt(projectId)],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error approving project:', error);
-  }
-};
+  // Update a campaign
+  const updateCampaign = async (
+    campaignId: bigint | number,
+    name: string,
+    description: string,
+    logo: string,
+    demoVideo: string,
+    startTime: number,
+    endTime: number,
+    adminFeePercentage: number
+  ) => {
+    if (!walletClient || !publicClient) return;
+    
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'updateCampaign',
+        args: [
+          BigInt(campaignId),
+          name, 
+          description,
+          logo,
+          demoVideo,
+          BigInt(startTime), 
+          BigInt(endTime), 
+          BigInt(adminFeePercentage)
+        ],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+    }
+  };
 
-// Distribute funds
-const distributeFunds = async (campaignId: bigint | number) => {
-  if (!walletClient || !publicClient) return;
-  
-  try {
-    writeContract({
-      address: contractAddress,
-      abi: sovereignSeasAbi,
-      functionName: 'distributeFunds',
-      args: [BigInt(campaignId)],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-  } catch (error) {
-    console.error('Error distributing funds:', error);
-  }
-};
+  // Submit a project to a campaign (updated for native token)
+  const submitProject = async (
+    campaignId: bigint | number,
+    name: string,
+    description: string,
+    githubLink: string = '',
+    socialLink: string = '',
+    testingLink: string = '',
+    logo: string = '',
+    demoVideo: string = '',
+    contracts: string[] = []
+  ) => {
+    if (!walletClient || !publicClient) return;
+    
+    try {
+      // Submit the project with native token fee
+      const projectFee = parseEther(PROJECT_CREATION_FEE);
+      
+      // Check if the user is a campaign admin
+      const isAdmin = await isCampaignAdmin(campaignId);
+      
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'submitProject',
+        args: [
+          BigInt(campaignId), 
+          name, 
+          description, 
+          githubLink, 
+          socialLink, 
+          testingLink,
+          logo,
+          demoVideo,
+          contracts
+        ],
+        // Only send value if not an admin
+        value: isAdmin ? BigInt(0) : projectFee
+      });
+      
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error submitting project:', error);
+    }
+  };
+
+  // Update a project
+  const updateProject = async (
+    campaignId: bigint | number,
+    projectId: bigint | number,
+    name: string,
+    description: string,
+    githubLink: string = '',
+    socialLink: string = '',
+    testingLink: string = '',
+    logo: string = '',
+    demoVideo: string = '',
+    contracts: string[] = []
+  ) => {
+    if (!walletClient || !publicClient) return;
+    
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'updateProject',
+        args: [
+          BigInt(campaignId),
+          BigInt(projectId),
+          name, 
+          description, 
+          githubLink, 
+          socialLink, 
+          testingLink,
+          logo,
+          demoVideo,
+          contracts
+        ],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error updating project:', error);
+    }
+  };
+
+  // Approve a project
+  const approveProject = async (campaignId: bigint | number, projectId: bigint | number) => {
+    if (!walletClient || !publicClient) return;
+    
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'approveProject',
+        args: [BigInt(campaignId), BigInt(projectId)],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error approving project:', error);
+    }
+  };
+
+  // Deactivate a project (new function)
+  const deactivateProject = async (campaignId: bigint | number, projectId: bigint | number) => {
+    if (!walletClient || !publicClient) return;
+    
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'deactivateProject',
+        args: [BigInt(campaignId), BigInt(projectId)],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error deactivating project:', error);
+    }
+  };
+
+  // Deactivate a campaign (new function)
+  const deactivateCampaign = async (campaignId: bigint | number) => {
+    if (!walletClient || !publicClient || !isSuperAdmin) return;
+    
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'deactivateCampaign',
+        args: [BigInt(campaignId)],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error deactivating campaign:', error);
+    }
+  };
+
+  // Distribute funds
+  const distributeFunds = async (campaignId: bigint | number) => {
+    if (!walletClient || !publicClient) return;
+    
+    try {
+      writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'distributeFunds',
+        args: [BigInt(campaignId)],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+    } catch (error) {
+      console.error('Error distributing funds:', error);
+    }
+  };
 
   // Check if a campaign is active
   const isCampaignActive = (campaign: Campaign) => {
@@ -756,7 +804,10 @@ const distributeFunds = async (campaignId: bigint | number) => {
   };
 
   return {
-    //clients
+    // Config
+    contractAddress: actualContractAddress,
+    
+    // Clients
     publicClient,
     walletClient,
     
@@ -795,6 +846,7 @@ const distributeFunds = async (campaignId: bigint | number) => {
     addSuperAdmin,
     removeSuperAdmin,
     withdrawCreationFees,
+    deactivateCampaign,
     
     // Campaign Admin functions
     addCampaignAdmin,
@@ -806,6 +858,7 @@ const distributeFunds = async (campaignId: bigint | number) => {
     submitProject,
     updateProject,
     approveProject,
+    deactivateProject,
     vote,
     distributeFunds,
     

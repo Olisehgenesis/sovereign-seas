@@ -7,11 +7,6 @@ import { CalendarRange, ChevronDown, Clock, Coins, Settings, Users, Waves, Check
 import { useSovereignSeas, CAMPAIGN_CREATION_FEE, PROJECT_CREATION_FEE } from '../../../hooks/useSovereignSeas';
 import { uploadToIPFS } from '@/app/utils/imageUtils';
 
-// Placeholder for the contract addresses - replace with your actual addresses
-//get const CONTRACT_ADDRESS AND CELO_TOKEN_ADDRESS  FRON  ,env next.js
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CAMPAIGN_ADDRESS as `0x${string}` | undefined;
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_MCELO_ADDRESS as `0x${string}` | undefined;
-
 export default function CreateCampaign() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
@@ -59,10 +54,7 @@ export default function CreateCampaign() {
     isWaitingForTx,
     isTxSuccess,
     txReceipt,
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS!,
-    celoTokenAddress: CELO_TOKEN_ADDRESS!,
-  });
+  } = useSovereignSeas();
   
   useEffect(() => {
     setIsMounted(true);

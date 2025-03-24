@@ -11,7 +11,7 @@ import { useSovereignSeas } from '../hooks/useSovereignSeas';
 import { celo, celoAlfajores } from 'viem/chains';
 
 // Get chain values from environment variables
-const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CELO_CHAIN_ID as string);
+const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID as string);
 const CHAIN_NAME = process.env.NEXT_PUBLIC_CHAIN_NAME || 'Celo';
 const IS_TESTNET = process.env.NEXT_PUBLIC_IS_TESTNET === 'true';
 
@@ -40,10 +40,7 @@ export default function Header() {
   const pathname = usePathname();
   
   // Use the sovereign seas hook to get the clients
-  const { publicClient, walletClient } = useSovereignSeas({
-    contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-    celoTokenAddress: process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`,
-  });
+  const { publicClient, walletClient } = useSovereignSeas();
 
   // Check if user is on the correct chain
   useEffect(() => {
@@ -59,6 +56,7 @@ export default function Header() {
           } else {
             setShowChainAlert(false);
           }
+          console.log("Current chain ID:", chainId);
         } catch (error) {
           console.error("Error getting chain ID:", error);
         }

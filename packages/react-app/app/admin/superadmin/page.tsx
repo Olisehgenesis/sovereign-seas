@@ -18,10 +18,6 @@ import { useSovereignSeas } from '../../../hooks/useSovereignSeas';
 import { useAccount } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 
-// Contract addresses
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`
-
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const { address } = useAccount();
@@ -59,10 +55,7 @@ export default function SuperAdminDashboard() {
     writeError,
     resetWrite,
     txReceipt,
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
 
   // Initialize component
   useEffect(() => {

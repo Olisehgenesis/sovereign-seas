@@ -32,15 +32,14 @@ import {
 import { useSovereignSeas, PROJECT_CREATION_FEE } from '../../../../hooks/useSovereignSeas';
 import { uploadToIPFS } from '@/app/utils/imageUtils';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`; 
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`; 
-
 
 export default function SubmitProject() {
   const router = useRouter();
   const { campaignId } = useParams();
   const { address, isConnected } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+
   
   // Form stages (1: Basic Info, 2: Media, 3: Contracts, 4: Review & Submit)
   const [currentStage, setCurrentStage] = useState(1);
@@ -100,10 +99,7 @@ export default function SubmitProject() {
     txReceipt,
     writeError,
     resetWrite
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
   
   useEffect(() => {
     setIsMounted(true);
@@ -287,7 +283,6 @@ export default function SubmitProject() {
       window.scrollTo(0, 0);
     }
   };
-  
   const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     setErrorMessage('');
@@ -307,25 +302,50 @@ export default function SubmitProject() {
       // Create a copy of the project data to work with
       const projectData = {...project};
       
-      // Upload logo if it's a file selection
-      if (projectData.logo && projectData.logo.includes('File selected:') && logoFileInputRef.current?.files?.[0]) {
+      // Upload logo if a file was selected - use the stored file object instead of trying to get it from the ref
+      if (projectData.logo && projectData.logo.startsWith('File selected:') && logoFile) {
         setIsUploadingLogo(true);
+        
         try {
-          const logoFile = logoFileInputRef.current.files[0];
-          const logoIpfsUrl = await uploadToIPFS(logoFile);
+          console.log('Uploading logo file:', logoFile.name);
+          
+          const logoIpfsUrl = await uploadToIPFS(logoFile); // Use the stored file
+          console.log('IPFS upload result:', logoIpfsUrl);
+          
+          if (!logoIpfsUrl) {
+            throw new Error('Failed to get IPFS URL');
+          }
+          
           projectData.logo = logoIpfsUrl;
+          console.log('Logo uploaded to IPFS:', logoIpfsUrl);
         } catch (uploadError) {
           console.error('Error uploading logo:', uploadError);
-          setErrorMessage('Failed to upload logo. Please try again.');
+          if (uploadError instanceof Error) {
+            setErrorMessage(`Failed to upload logo: ${uploadError.message || 'Unknown error'}`);
+          } else {
+            setErrorMessage('Failed to upload logo: Unknown error');
+          }
           setLoading(false);
           setIsUploadingLogo(false);
           return;
         }
+        
         setIsUploadingLogo(false);
+      } else if (projectData.logo.startsWith('File selected:')) {
+        // If there's a file reference but no actual file, handle the error
+        setErrorMessage('File reference exists but no file was found. Please re-select your logo file.');
+        setLoading(false);
+        return;
       }
-      
       // Filter out empty contract addresses
       const contracts = projectData.contracts.filter(c => c.trim() !== '');
+      
+      console.log('Submitting project with data:', {
+        campaignId: Number(campaignId),
+        name: projectData.name,
+        logo: projectData.logo,
+        // other fields...
+      });
       
       // Submit the project with the updated data
       await submitProject(
@@ -335,13 +355,17 @@ export default function SubmitProject() {
         projectData.githubLink,
         projectData.socialLink,
         projectData.testingLink,
-        projectData.logo,  // This will be the IPFS URL if a file was uploaded
+        projectData.logo,
         projectData.demoVideo,
         contracts
       );
     } catch (error) {
       console.error('Error submitting project:', error);
-      setErrorMessage('Error submitting project. Please try again later.');
+      if (error instanceof Error) {
+        setErrorMessage(`Error submitting project: ${error.message || 'Please try again'}`);
+      } else {
+        setErrorMessage('Error submitting project: Please try again');
+      }
       setLoading(false);
     }
   };
@@ -438,6 +462,7 @@ export default function SubmitProject() {
     setPreviewUrl(url);
     setShowMediaPreview(true);
   };
+  
   
   // Get stage title
   const getStageTitle = (stage: number) => {
@@ -560,7 +585,10 @@ export default function SubmitProject() {
                   </button>
                 </h3>
                 <p className="text-amber-700 mt-1">
-                  A fee of <span className="font-semibold">{PROJECT_CREATION_FEE} CELO</span> will be charged to submit this project.
+                  A fee of <span className="font-semibold">{PROJECT_CREATION_FEE} CELO</span> will be charged to submit this project. 
+                </p>
+                <p className="text-amber-600 text-sm mt-2">
+                  Admins are exempt from this fee.
                 </p>
                 <p className="text-amber-600 text-sm mt-2">
                   This fee helps prevent spam submissions and ensures project quality.
@@ -762,39 +790,64 @@ export default function SubmitProject() {
                         Project media enhances visibility
                       </div>
                     </div>
-                    
                     <div>
   <label className="block text-emerald-700 font-medium mb-2 flex items-center">
     <ImageIcon className="h-4 w-4 mr-2" />
-    Logo (Upload or provide URL)
+    Logo (Upload an image)
   </label>
   
+  <div className="flex items-center space-x-3">
   <input
-    type="file"
-    ref={logoFileInputRef}
-    accept="image/*"
-    onChange={(e) => {
-      if (e.target.files && e.target.files[0]) {
-        // Just set a placeholder to indicate a file is selected
+  type="file"
+  ref={logoFileInputRef}
+  accept="image/*"
+  onChange={(e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file); // Store the actual file object
+      setProject({
+        ...project,
+        logo: `File selected: ${file.name}`
+      });
+    }
+  }}
+  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+/>
+    
+    {project.logo && (
+      <button
+      type="button"
+      onClick={() => {
+        // Clear the file input and logo state
+        if (logoFileInputRef.current) {
+          logoFileInputRef.current.value = '';
+        }
+        setLogoFile(null); // Clear the file object
         setProject({
           ...project,
-          logo: `File selected: ${e.target.files[0].name}`
+          logo: ''
         });
-      }
-    }}
-    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
-  />
+      }}
+      className="bg-gray-100 text-gray-600 p-2.5 rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
+    >
+      <X className="h-4 w-4" />
+    </button>
+    )}
+  </div>
   
-  <p className="my-2 text-center text-gray-500">OR</p>
+  {project.logo && (
+    <div className="mt-2 text-sm text-emerald-600 flex items-center">
+      <CheckIcon className="h-4 w-4 mr-1" />
+      {project.logo.replace('File selected: ', '')}
+    </div>
+  )}
   
-  <input
-    type="url"
-    value={project.logo}
-    onChange={(e) => handleInputChange('logo', e.target.value)}
-    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
-    placeholder="Enter an IPFS or image URL directly"
-  />
+  <p className="mt-1 text-gray-500 text-sm">Upload a logo image for your project</p>
 </div>
+
+
+                    
+                    
                     
                     <div>
                       <label className="block text-emerald-700 font-medium mb-2 flex items-center">
@@ -949,23 +1002,29 @@ export default function SubmitProject() {
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                       <h4 className="font-medium text-gray-800 mb-3">Media Content</h4>
                       <div className="space-y-2">
-                        {project.logo ? (
-                          <div className="flex items-center">
-                            <span className="font-medium text-gray-600 w-32">Logo:</span>
-                            <button
-                              type="button"
-                              onClick={() => openMediaPreview('image', project.logo)}
-                              className="text-blue-600 hover:text-blue-700 flex items-center"
-                            >
-                              <Eye className="h-4 w-4 mr-1" /> View Logo
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex">
-                            <span className="font-medium text-gray-600 w-32">Logo:</span>
-                            <span className="text-gray-500">None provided</span>
-                          </div>
-                        )}
+                      {project.logo ? (
+  <div className="flex items-center">
+    <span className="font-medium text-gray-600 w-32">Logo:</span>
+    {project.logo.startsWith('File selected:') ? (
+      <span className="text-gray-700">
+        {project.logo} (Will be uploaded on submission)
+      </span>
+    ) : (
+      <button
+        type="button"
+        onClick={() => openMediaPreview('image', project.logo)}
+        className="text-blue-600 hover:text-blue-700 flex items-center"
+      >
+        <Eye className="h-4 w-4 mr-1" /> View Logo
+      </button>
+    )}
+  </div>
+) : (
+  <div className="flex">
+    <span className="font-medium text-gray-600 w-32">Logo:</span>
+    <span className="text-gray-500">None provided</span>
+  </div>
+)}
                         
                         {project.demoVideo ? (
                           <div className="flex items-center">

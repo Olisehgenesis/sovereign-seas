@@ -36,12 +36,6 @@ import {
 import Image from 'next/image';
 import { useSovereignSeas } from '../../hooks/useSovereignSeas';
 
-// Contract addresses - replace with actual addresses
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` || 
-  '0x35128A5Ee461943fA6403672b3574346Ba7E4530' as `0x${string}`;
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` || 
-  '0x3FC1f6138F4b0F5Da3E1927412Afe5c68ed4527b' as `0x${string}`;
-
 // Campaign type
 type Campaign = {
   id: bigint;
@@ -95,10 +89,7 @@ export default function Campaigns() {
     getCampaignTimeRemaining,
     isCampaignActive,
     isSuperAdmin
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
 
   // Initialize component
   useEffect(() => {

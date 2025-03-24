@@ -26,12 +26,6 @@ import VoteModal from './components/VoteModal';
 import ActionPanel from './components/ActionPanel';
 import FundDistributionTable from './components/FundDistributionTable';
 
-
-
-// Contract addresses - replace with actual addresses
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}` 
-
 export default function CampaignDashboard() {
   const router = useRouter();
   const { campaignId } = useParams() as { campaignId: string };
@@ -63,7 +57,7 @@ export default function CampaignDashboard() {
     projectCount: 0
   });
   const [projectSortMethod, setProjectSortMethod] = useState('votes'); // votes, newest, alphabetical
-  const [projectStatusFilter, setProjectStatusFilter] = useState('all'); // all, approved, pending
+  const [projectStatusFilter, setProjectStatusFilter] = useState('approved'); // all, approved, pending
   const [sortedProjects, setSortedProjects] = useState<any[]>([]);
   const [projectRankingsVisible, setProjectRankingsVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' | null }>({ text: '', type: null });
@@ -89,10 +83,7 @@ export default function CampaignDashboard() {
     isTxSuccess,
     isSuperAdmin,
     resetWrite,
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
   
   useEffect(() => {
     setIsMounted(true);

@@ -28,9 +28,6 @@ import {
 import { useSovereignSeas } from '../../../../../../hooks/useSovereignSeas';
 import { ParamValue } from 'next/dist/server/request/params';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`; 
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`; 
-
 export default function EditProject() {
   const router = useRouter();
   const { campaignId, projectId } = useParams();
@@ -87,10 +84,7 @@ export default function EditProject() {
     txReceipt,
     writeError,
     resetWrite
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
   
   useEffect(() => {
     setIsMounted(true);

@@ -37,11 +37,6 @@ import {
   Hash
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../../hooks/useSovereignSeas';
-import { waitForTransactionReceipt } from 'viem/actions';
-
-// Contract addresses - replace with your actual addresses or environment variables
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}` 
-const CELO_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS as `0x${string}`
 
 export default function ProjectDetails() {
   const router = useRouter();
@@ -98,10 +93,7 @@ export default function ProjectDetails() {
     txReceipt,
     writeError,
     resetWrite
-  } = useSovereignSeas({
-    contractAddress: CONTRACT_ADDRESS,
-    celoTokenAddress: CELO_TOKEN_ADDRESS,
-  });
+  } = useSovereignSeas();
   
   useEffect(() => {
     setIsMounted(true);
