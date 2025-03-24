@@ -429,6 +429,7 @@ export const useSovereignSeas = ({
         functionName: 'approve',
         args: [contractAddress, amountInWei],
       });
+      // await publicClient.waitForTransactionReceipt({ hash: writeData  as "0x${string}"});
       
       // Then vote
       writeContract({

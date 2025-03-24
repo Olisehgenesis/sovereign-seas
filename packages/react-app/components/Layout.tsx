@@ -42,8 +42,7 @@ interface LayoutProps {
 
 export default function RootLayout({ children }: LayoutProps) {
   return (
-    <html lang="en">
-      <body>
+    <>
         <div className="bg-gradient-to-b from-emerald-50 to-teal-50 overflow-hidden flex flex-col min-h-screen">
           <Header />
           <div className="py-6 max-w-7xl mx-auto space-y-4 px-4 sm:px-6 lg:px-8">
@@ -59,7 +58,7 @@ export default function RootLayout({ children }: LayoutProps) {
           </div>
           <Footer />
         </div>
-      </body>
-    </html>
+  
+    </>
   );
 }
