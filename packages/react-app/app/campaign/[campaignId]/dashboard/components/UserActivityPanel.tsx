@@ -81,7 +81,7 @@ const UserActivityPanel: React.FC<UserActivityPanelProps> = ({
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Vote Count:</span>
                       <span className="text-purple-600 font-medium">
-                        {vote.voteCount.toString()}
+                        {formatTokenAmount(BigInt(vote.voteCount))}
                       </span>
                     </div>
                   </div>

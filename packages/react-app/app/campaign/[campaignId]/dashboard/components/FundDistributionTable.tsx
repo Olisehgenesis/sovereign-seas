@@ -121,11 +121,12 @@ const FundDistributionTable: React.FC<FundDistributionTableProps> = ({
                       {formatTokenAmount(BigInt(project.voteCount))}
                     </td>
                     <td className="py-2 px-3 text-right font-mono text-emerald-600">
-                      {formatTokenAmount(BigInt(project.fundsReceived))} CELO
-                    </td>
-                    <td className="py-2 px-3 text-right text-gray-800">
-                      {((Number(project.fundsReceived) / Number(totalFunds)) * 100).toFixed(1)}%
-                    </td>
+                        {Number(formatTokenAmount(BigInt(project.fundsReceived))).toFixed(1)} CELO
+                      </td>
+                      <td className="py-2 px-3 text-right text-gray-800">
+                        {((Number(formatTokenAmount(BigInt(project.fundsReceived))) / Number(totalFunds)) * 100).toFixed(1)}%
+                      </td>
+
                   </tr>
                 ))}
               </tbody>
