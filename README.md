@@ -7,6 +7,10 @@
 
 **Sovereign Seas** is a revolutionary decentralized application built on the Celo blockchain that empowers communities to collectively fund innovative projects through transparent, democratic voting. Our platform creates an ecosystem where the best ideas rise to the surface through the power of community decision-making.
 
+
+## contracts
+-campaign contract  -0x7409a371c705d41a53E1d9F262b788B7C7e168D7 on celo mainnet
+
 ## ⚙️ Core Components
 
 ### 🗳️ Voting Mechanism
