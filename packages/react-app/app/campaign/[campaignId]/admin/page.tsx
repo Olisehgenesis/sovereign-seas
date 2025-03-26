@@ -604,7 +604,7 @@ export default function CampaignAdminDashboard() {
                       )}
                       
                       <button
-                        onClick={() => router.push(`/campaign/${campaignId}/edit`)}
+                        onClick={() => router.push(`/campaign/${campaignId}/update`)}
                         className="w-full py-2 rounded-full text-sm bg-white text-gray-700 font-medium border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center shadow-sm"
                       >
                         <Settings className="h-4 w-4 mr-1.5" />

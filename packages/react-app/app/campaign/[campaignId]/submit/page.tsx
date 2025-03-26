@@ -67,9 +67,12 @@ export default function SubmitProject() {
   const [formErrors, setFormErrors] = useState({
     name: '',
     description: '',
+    github: '',
+    social: '',
     // logo: '',
     demoVideo: '',
     contracts: [''],
+
   });
   
   // UI state
@@ -175,6 +178,8 @@ export default function SubmitProject() {
       ...formErrors,
       name: '',
       description: '',
+      github: '',
+      social: '',
     };
     
     if (!project.name.trim()) {
@@ -187,6 +192,14 @@ export default function SubmitProject() {
       isValid = false;
     } else if (project.description.trim().length < 20) {
       errors.description = 'Description must be at least 20 characters long';
+      isValid = false;
+    }
+    if (!project.githubLink.trim()) {
+      errors.github = 'GitHub repository link is required';
+      isValid = false;
+    }
+    if (!project.socialLink.trim()) {
+      errors.social = 'Karma Gap project link is required';
       isValid = false;
     }
     
@@ -385,8 +398,11 @@ export default function SubmitProject() {
       name: '',
       description: '',
       // logo: '',
+      github: '',
+      social: '',
       demoVideo: '',
       contracts: [''],
+
     });
     setCurrentStage(1);
   };
@@ -736,31 +752,39 @@ export default function SubmitProject() {
                     <div>
                       <label className="block text-emerald-700 font-medium mb-2 flex items-center">
                         <Github className="h-4 w-4 mr-2" />
-                        GitHub Repository (Optional)
+                        GitHub Repository *
                       </label>
                       <input
                         type="url"
+                        required={true}
                         value={project.githubLink}
                         onChange={(e) => handleInputChange('githubLink', e.target.value)}
                         className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
                         placeholder="https://github.com/yourusername/yourproject"
                       />
                       <p className="mt-1 text-gray-500 text-sm">Link to your project's GitHub repository</p>
+                      {formErrors.github && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.github}</p>
+                      )}
                     </div>
                     
                     <div>
                       <label className="block text-emerald-700 font-medium mb-2 flex items-center">
                         <Globe className="h-4 w-4 mr-2" />
-                        Social Media Link (Optional)
+                        Karma Gap  Project Link*
                       </label>
                       <input
                         type="url"
                         value={project.socialLink}
+                        required={true}
                         onChange={(e) => handleInputChange('socialLink', e.target.value)}
                         className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
-                        placeholder="https://twitter.com/yourproject"
+                        placeholder="https://gap.karmahq.xyz/project/sovereign-seas"
                       />
-                      <p className="mt-1 text-gray-500 text-sm">Link to your project's social media page</p>
+                      <p className="mt-1 text-gray-500 text-sm">Link to your project's Karma Gap page</p>
+                      {formErrors.social && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.social}</p>
+                      )}
                     </div>
                     
                     <div>
@@ -986,7 +1010,7 @@ export default function SubmitProject() {
                         )}
                         {project.socialLink && (
                           <div className="flex items-center">
-                            <span className="font-medium text-gray-600 w-32">Social Media:</span>
+                            <span className="font-medium text-gray-600 w-32">Project Karma GAP link:</span>
                             <a href={project.socialLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 truncate">{project.socialLink}</a>
                           </div>
                         )}

@@ -32,6 +32,7 @@ yarn-error.log*
 .vercel
 .env
 .env.dev
+.env.live
 
 
 # typescript

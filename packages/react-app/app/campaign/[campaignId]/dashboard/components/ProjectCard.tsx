@@ -106,7 +106,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 className="text-blue-600 hover:text-blue-700 flex items-center"
               >
                 <Globe className="h-4 w-4 mr-1" />
-                Social
+                Karma Gap Page
               </a>
             )}
             
