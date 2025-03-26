@@ -441,7 +441,7 @@ export default function ProjectDetails() {
                     >
                       <Globe className="h-5 w-5 mr-3" />
                       <div>
-                        <div className="font-medium">Social Media</div>
+                        <div className="font-medium">Karma Gap Profile</div>
                         <div className="text-xs text-gray-500 truncate max-w-[200px]">
                           {project.socialLink}
                         </div>

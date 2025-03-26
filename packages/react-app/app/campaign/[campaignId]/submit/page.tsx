@@ -63,16 +63,16 @@ export default function SubmitProject() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   
-  // Form validation
+  // Form validation - Fixed to include all fields
   const [formErrors, setFormErrors] = useState({
     name: '',
     description: '',
     github: '',
     social: '',
-    // logo: '',
+    testingLink: '',
+    logo: '',
     demoVideo: '',
     contracts: [''],
-
   });
   
   // UI state
@@ -172,6 +172,7 @@ export default function SubmitProject() {
     }
   };
   
+  // Fixed validateBasicInfo function
   const validateBasicInfo = () => {
     let isValid = true;
     const errors = {
@@ -180,6 +181,7 @@ export default function SubmitProject() {
       description: '',
       github: '',
       social: '',
+      testingLink: '',
     };
     
     if (!project.name.trim()) {
@@ -194,10 +196,12 @@ export default function SubmitProject() {
       errors.description = 'Description must be at least 20 characters long';
       isValid = false;
     }
+    
     if (!project.githubLink.trim()) {
       errors.github = 'GitHub repository link is required';
       isValid = false;
     }
+    
     if (!project.socialLink.trim()) {
       errors.social = 'Karma Gap project link is required';
       isValid = false;
@@ -207,17 +211,17 @@ export default function SubmitProject() {
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
     
     if (project.githubLink && !urlRegex.test(project.githubLink)) {
-      errors.name = 'Please enter a valid GitHub URL';
+      errors.github = 'Please enter a valid GitHub URL'; // Fixed: was errors.name
       isValid = false;
     }
     
     if (project.socialLink && !urlRegex.test(project.socialLink)) {
-      errors.name = 'Please enter a valid social media URL';
+      errors.social = 'Please enter a valid Karma Gap URL'; // Fixed: was errors.name
       isValid = false;
     }
     
     if (project.testingLink && !urlRegex.test(project.testingLink)) {
-      errors.name = 'Please enter a valid testing/demo URL';
+      errors.testingLink = 'Please enter a valid testing/demo URL'; // Fixed: was errors.name
       isValid = false;
     }
     
@@ -225,20 +229,23 @@ export default function SubmitProject() {
     return isValid;
   };
   
+  // Fixed validateMedia function
   const validateMedia = () => {
     let isValid = true;
     const errors = {
       ...formErrors,
-      // logo: '',
+      logo: '',
       demoVideo: '',
     };
     
     // Validate URLs if provided
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
     // Skip validation if it's a file selection placeholder
-  
+    if (project.logo && !project.logo.startsWith('File selected:') && !urlRegex.test(project.logo)) {
+      errors.logo = 'Please enter a valid logo URL';
+      isValid = false;
+    }
     
-  
     if (project.demoVideo && !urlRegex.test(project.demoVideo)) {
       errors.demoVideo = 'Please enter a valid demo video URL';
       isValid = false;
@@ -296,6 +303,7 @@ export default function SubmitProject() {
       window.scrollTo(0, 0);
     }
   };
+  
   const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     setErrorMessage('');
@@ -383,6 +391,7 @@ export default function SubmitProject() {
     }
   };
   
+  // Updated resetForm to include all form fields
   const resetForm = () => {
     setProject({
       name: '',
@@ -397,14 +406,15 @@ export default function SubmitProject() {
     setFormErrors({
       name: '',
       description: '',
-      // logo: '',
       github: '',
       social: '',
+      testingLink: '',
+      logo: '',
       demoVideo: '',
       contracts: [''],
-
     });
     setCurrentStage(1);
+    setLogoFile(null);
   };
   
   const handleInputChange = (field: string, value: string) => {
@@ -451,7 +461,6 @@ export default function SubmitProject() {
       contracts: [...formErrors.contracts, '']
     });
   };
-  
   const handleRemoveContract = (index: number) => {
     if (project.contracts.length <= 1) return;
     
@@ -750,7 +759,7 @@ export default function SubmitProject() {
                     </div>
                     
                     <div>
-                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+                    <label className="block text-emerald-700 font-medium mb-2 flex items-center">
                         <Github className="h-4 w-4 mr-2" />
                         GitHub Repository *
                       </label>
@@ -799,6 +808,9 @@ export default function SubmitProject() {
                         className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
                         placeholder="https://demo.yourproject.com"
                       />
+                      {formErrors.testingLink && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.testingLink}</p>
+                      )}
                       <p className="mt-1 text-gray-500 text-sm">Link to a demo or testing version of your project</p>
                     </div>
                   </div>
@@ -815,63 +827,63 @@ export default function SubmitProject() {
                       </div>
                     </div>
                     <div>
-  <label className="block text-emerald-700 font-medium mb-2 flex items-center">
-    <ImageIcon className="h-4 w-4 mr-2" />
-    Logo (Upload an image)
-  </label>
-  
-  <div className="flex items-center space-x-3">
-  <input
-  type="file"
-  ref={logoFileInputRef}
-  accept="image/*"
-  onChange={(e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setLogoFile(file); // Store the actual file object
-      setProject({
-        ...project,
-        logo: `File selected: ${file.name}`
-      });
-    }
-  }}
-  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
-/>
-    
-    {project.logo && (
-      <button
-      type="button"
-      onClick={() => {
-        // Clear the file input and logo state
-        if (logoFileInputRef.current) {
-          logoFileInputRef.current.value = '';
-        }
-        setLogoFile(null); // Clear the file object
-        setProject({
-          ...project,
-          logo: ''
-        });
-      }}
-      className="bg-gray-100 text-gray-600 p-2.5 rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
-    >
-      <X className="h-4 w-4" />
-    </button>
-    )}
-  </div>
-  
-  {project.logo && (
-    <div className="mt-2 text-sm text-emerald-600 flex items-center">
-      <CheckIcon className="h-4 w-4 mr-1" />
-      {project.logo.replace('File selected: ', '')}
-    </div>
-  )}
-  
-  <p className="mt-1 text-gray-500 text-sm">Upload a logo image for your project</p>
-</div>
-
-
-                    
-                    
+                      <label className="block text-emerald-700 font-medium mb-2 flex items-center">
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Logo (Upload an image)
+                      </label>
+                      
+                      <div className="flex items-center space-x-3">
+                      <input
+                      type="file"
+                      ref={logoFileInputRef}
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          setLogoFile(file); // Store the actual file object
+                          setProject({
+                            ...project,
+                            logo: `File selected: ${file.name}`
+                          });
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                    />
+                        
+                        {project.logo && (
+                          <button
+                          type="button"
+                          onClick={() => {
+                            // Clear the file input and logo state
+                            if (logoFileInputRef.current) {
+                              logoFileInputRef.current.value = '';
+                            }
+                            setLogoFile(null); // Clear the file object
+                            setProject({
+                              ...project,
+                              logo: ''
+                            });
+                          }}
+                          className="bg-gray-100 text-gray-600 p-2.5 rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        )}
+                      </div>
+                      
+                      {project.logo && (
+                        <div className="mt-2 text-sm text-emerald-600 flex items-center">
+                          <CheckIcon className="h-4 w-4 mr-1" />
+                          {project.logo.replace('File selected: ', '')}
+                        </div>
+                      )}
+                      
+                      {formErrors.logo && (
+                        <p className="mt-1 text-red-500 text-sm">{formErrors.logo}</p>
+                      )}
+                      
+                      <p className="mt-1 text-gray-500 text-sm">Upload a logo image for your project</p>
+                    </div>
                     
                     <div>
                       <label className="block text-emerald-700 font-medium mb-2 flex items-center">
@@ -1027,28 +1039,28 @@ export default function SubmitProject() {
                       <h4 className="font-medium text-gray-800 mb-3">Media Content</h4>
                       <div className="space-y-2">
                       {project.logo ? (
-  <div className="flex items-center">
-    <span className="font-medium text-gray-600 w-32">Logo:</span>
-    {project.logo.startsWith('File selected:') ? (
-      <span className="text-gray-700">
-        {project.logo} (Will be uploaded on submission)
-      </span>
-    ) : (
-      <button
-        type="button"
-        onClick={() => openMediaPreview('image', project.logo)}
-        className="text-blue-600 hover:text-blue-700 flex items-center"
-      >
-        <Eye className="h-4 w-4 mr-1" /> View Logo
-      </button>
-    )}
-  </div>
-) : (
-  <div className="flex">
-    <span className="font-medium text-gray-600 w-32">Logo:</span>
-    <span className="text-gray-500">None provided</span>
-  </div>
-)}
+                        <div className="flex items-center">
+                          <span className="font-medium text-gray-600 w-32">Logo:</span>
+                          {project.logo.startsWith('File selected:') ? (
+                            <span className="text-gray-700">
+                              {project.logo} (Will be uploaded on submission)
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openMediaPreview('image', project.logo)}
+                              className="text-blue-600 hover:text-blue-700 flex items-center"
+                            >
+                              <Eye className="h-4 w-4 mr-1" /> View Logo
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex">
+                          <span className="font-medium text-gray-600 w-32">Logo:</span>
+                          <span className="text-gray-500">None provided</span>
+                        </div>
+                      )}
                         
                         {project.demoVideo ? (
                           <div className="flex items-center">
