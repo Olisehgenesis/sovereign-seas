@@ -23,7 +23,8 @@ import {
   HelpCircle,
   Eye,
   Lock,
-  Edit
+  Edit,
+  Hash
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../../../hooks/useSovereignSeas';
 import { ParamValue } from 'next/dist/server/request/params';
@@ -59,6 +60,8 @@ export default function EditProject() {
   const [formErrors, setFormErrors] = useState({
     name: '',
     description: '',
+    github: '',
+    social: '',
     logo: '',
     demoVideo: '',
     contracts: [''],
@@ -199,6 +202,8 @@ export default function EditProject() {
     const errors = {
       name: '',
       description: '',
+      github: '',
+      social: '',
       logo: '',
       demoVideo: '',
       contracts: [''],
@@ -219,17 +224,29 @@ export default function EditProject() {
         isValid = false;
       }
     }
+
+    // Validate GitHub link (now required)
+    if (!project.githubLink.trim()) {
+      errors.github = 'GitHub repository link is required';
+      isValid = false;
+    }
+
+    // Validate Karma Gap link (now required)
+    if (!project.socialLink.trim()) {
+      errors.social = 'Karma Gap project link is required';
+      isValid = false;
+    }
     
     // Validate URLs if provided
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
     
     if (project.githubLink && !urlRegex.test(project.githubLink)) {
-      errors.name = 'Please enter a valid GitHub URL';
+      errors.github = 'Please enter a valid GitHub URL';
       isValid = false;
     }
     
     if (project.socialLink && !urlRegex.test(project.socialLink)) {
-      errors.name = 'Please enter a valid social media URL';
+      errors.social = 'Please enter a valid Karma Gap URL';
       isValid = false;
     }
     
@@ -413,7 +430,7 @@ export default function EditProject() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
         <div className="flex flex-col items-center text-center max-w-md mx-auto p-6">
-          <Lock className="h-16 w-16 text-yellow-400 mb-4" />
+        <Lock className="h-16 w-16 text-yellow-400 mb-4" />
           <h1 className="text-2xl font-bold mb-3">Access Denied</h1>
           <p className="text-slate-300 mb-6">You do not have permission to edit this project. Only the project owner or campaign administrators can make changes.</p>
           <button
@@ -557,31 +574,39 @@ export default function EditProject() {
                   <div>
                     <label className="block text-lime-300 mb-2 flex items-center">
                       <Github className="h-4 w-4 mr-2" />
-                      GitHub Repository (Optional)
+                      GitHub Repository *
                     </label>
                     <input
                       type="url"
+                      required={true}
                       value={project.githubLink}
                       onChange={(e) => handleInputChange('githubLink', e.target.value)}
                       className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
                       placeholder="https://github.com/yourusername/yourproject"
                     />
                     <p className="mt-1 text-slate-400 text-sm">Link to your project's GitHub repository</p>
+                    {formErrors.github && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.github}</p>
+                    )}
                   </div>
                   
                   <div>
                     <label className="block text-lime-300 mb-2 flex items-center">
                       <Globe className="h-4 w-4 mr-2" />
-                      Social Media Link (Optional)
+                      Karma Gap Project Link *
                     </label>
                     <input
                       type="url"
                       value={project.socialLink}
+                      required={true}
                       onChange={(e) => handleInputChange('socialLink', e.target.value)}
                       className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
-                      placeholder="https://twitter.com/yourproject"
+                      placeholder="https://gap.karmahq.xyz/project/sovereign-seas"
                     />
-                    <p className="mt-1 text-slate-400 text-sm">Link to your project's social media page</p>
+                    <p className="mt-1 text-slate-400 text-sm">Link to your project's Karma Gap page</p>
+                    {formErrors.social && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.social}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -691,7 +716,7 @@ export default function EditProject() {
                   
                   <div className="mb-3">
                     <label className="flex justify-between items-center text-lime-300 mb-3">
-                      <span className="flex items-center">
+                    <span className="flex items-center">
                         <Code className="h-4 w-4 mr-2" />
                         Contract Addresses (Optional)
                       </span>
@@ -716,134 +741,134 @@ export default function EditProject() {
                         />
                         {project.contracts.length > 1 && (
                           <button
-                          type="button"
-                          onClick={() => handleRemoveContract(index)}
-                          className="bg-slate-700 text-slate-300 px-3 py-2 rounded-r-lg hover:bg-slate-600 transition-colors"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      )}
+                            type="button"
+                            onClick={() => handleRemoveContract(index)}
+                            className="bg-slate-700 text-slate-300 px-3 py-2 rounded-r-lg hover:bg-slate-600 transition-colors"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
-                  ))}
+                    ))}
+                    
+                    {formErrors.contracts[0] && (
+                      <p className="mt-1 text-red-400 text-sm">{formErrors.contracts[0]}</p>
+                    )}
+                    <p className="mt-1 text-slate-400 text-sm">
+                      Add Ethereum-compatible contract addresses associated with your project
+                    </p>
+                  </div>
                   
-                  {formErrors.contracts[0] && (
-                    <p className="mt-1 text-red-400 text-sm">{formErrors.contracts[0]}</p>
-                  )}
-                  <p className="mt-1 text-slate-400 text-sm">
-                    Add Ethereum-compatible contract addresses associated with your project
-                  </p>
-                </div>
-                
-                <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
-                  <div className="flex items-start">
-                    <AlertTriangle className="h-5 w-5 text-yellow-400 mr-3 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-slate-300 text-sm">
-                        <span className="font-medium text-white">Important:</span> Only add verified contracts that are part of your project. Contract addresses must be valid Ethereum-format addresses (0x followed by 40 hexadecimal characters).
-                      </p>
-                      <p className="text-slate-400 text-sm mt-2">
-                        These contracts will be publicly linked to your project and visible to all users.
-                      </p>
+                  <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
+                    <div className="flex items-start">
+                      <AlertTriangle className="h-5 w-5 text-yellow-400 mr-3 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-slate-300 text-sm">
+                          <span className="font-medium text-white">Important:</span> Only add verified contracts that are part of your project. Contract addresses must be valid Ethereum-format addresses (0x followed by 40 hexadecimal characters).
+                        </p>
+                        <p className="text-slate-400 text-sm mt-2">
+                          These contracts will be publicly linked to your project and visible to all users.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-            
-            <div className="mt-8 mb-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <button
-                  type="submit"
-                  disabled={isWritePending || isWaitingForTx || !isConnected}
-                  className="flex-1 py-3 px-6 bg-lime-500 text-slate-900 font-semibold rounded-lg hover:bg-lime-400 transition-colors disabled:bg-slate-500 disabled:text-slate-300 disabled:cursor-not-allowed"
-                >
-                  {isWritePending || isWaitingForTx ? (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      {isWritePending ? 'Preparing Update...' : 'Updating...'}
-                    </div>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => router.push(`/campaign/${campaignId}/project/${projectId}`)}
-                  className="py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-              
-              {!isConnected && (
-                <p className="mt-3 text-yellow-400 text-center">
-                  Please connect your wallet to edit this project
-                </p>
               )}
-            </div>
-          </form>
+              
+              <div className="mt-8 mb-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <button
+                    type="submit"
+                    disabled={isWritePending || isWaitingForTx || !isConnected}
+                    className="flex-1 py-3 px-6 bg-lime-500 text-slate-900 font-semibold rounded-lg hover:bg-lime-400 transition-colors disabled:bg-slate-500 disabled:text-slate-300 disabled:cursor-not-allowed"
+                  >
+                    {isWritePending || isWaitingForTx ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        {isWritePending ? 'Preparing Update...' : 'Updating...'}
+                      </div>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/campaign/${campaignId}/project/${projectId}`)}
+                    className="py-3 px-6 bg-transparent border border-slate-500 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                
+                {!isConnected && (
+                  <p className="mt-3 text-yellow-400 text-center">
+                    Please connect your wallet to edit this project
+                  </p>
+                )}
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
-    
-    {/* Media Preview Modal */}
-    {showMediaPreview && previewUrl && (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-        <div className="bg-slate-800 rounded-xl w-full max-w-2xl p-6 relative">
-          <button
-            onClick={() => setShowMediaPreview(false)}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          
-          <h3 className="text-xl font-bold mb-4">
-            {previewType === 'image' ? 'Logo Preview' : 'Demo Video Preview'}
-          </h3>
-          
-          <div className="flex items-center justify-center bg-slate-900 rounded-lg p-4 min-h-[300px]">
-            {previewType === 'image' ? (
-              <img 
-                src={previewUrl} 
-                alt="Project Logo" 
-                className="max-w-full max-h-[400px] object-contain rounded"
-                onError={(e) => {
-                  e.currentTarget.src = '/placeholder-image.png';
-                  setErrorMessage('Could not load image. Please check the URL.');
-                }}
-              />
-            ) : (
-              <div className="w-full">
-                <video 
-                  src={previewUrl}
-                  controls
-                  className="max-w-full max-h-[400px] mx-auto rounded"
-                  onError={() => {
-                    setErrorMessage('Could not load video. Please check the URL or try a different format.');
-                  }}
-                >
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-4 text-center">
-            <p className="text-slate-400 text-sm break-all">{previewUrl}</p>
-          </div>
-          
-          <div className="mt-6 flex justify-center">
+      
+      {/* Media Preview Modal */}
+      {showMediaPreview && previewUrl && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-2xl p-6 relative">
             <button
               onClick={() => setShowMediaPreview(false)}
-              className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
             >
-              Close Preview
+              <X className="h-5 w-5" />
             </button>
+            
+            <h3 className="text-xl font-bold mb-4">
+              {previewType === 'image' ? 'Logo Preview' : 'Demo Video Preview'}
+            </h3>
+            
+            <div className="flex items-center justify-center bg-slate-900 rounded-lg p-4 min-h-[300px]">
+              {previewType === 'image' ? (
+                <img 
+                  src={previewUrl} 
+                  alt="Project Logo" 
+                  className="max-w-full max-h-[400px] object-contain rounded"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder-image.png';
+                    setErrorMessage('Could not load image. Please check the URL.');
+                  }}
+                />
+              ) : (
+                <div className="w-full">
+                  <video 
+                    src={previewUrl}
+                    controls
+                    className="max-w-full max-h-[400px] mx-auto rounded"
+                    onError={() => {
+                      setErrorMessage('Could not load video. Please check the URL or try a different format.');
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 text-center">
+              <p className="text-slate-400 text-sm break-all">{previewUrl}</p>
+            </div>
+            
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setShowMediaPreview(false)}
+                className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
 }
