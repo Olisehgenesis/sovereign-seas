@@ -69,9 +69,8 @@ export default function SubmitProject() {
     description: '',
     github: '',
     social: '',
-    testingLink: '',
     logo: '',
-    demoVideo: '',
+  
     contracts: [''],
   });
   
@@ -181,7 +180,6 @@ export default function SubmitProject() {
       description: '',
       github: '',
       social: '',
-      testingLink: '',
     };
     
     if (!project.name.trim()) {
@@ -220,11 +218,6 @@ export default function SubmitProject() {
       isValid = false;
     }
     
-    if (project.testingLink && !urlRegex.test(project.testingLink)) {
-      errors.testingLink = 'Please enter a valid testing/demo URL'; // Fixed: was errors.name
-      isValid = false;
-    }
-    
     setFormErrors(errors);
     return isValid;
   };
@@ -234,8 +227,7 @@ export default function SubmitProject() {
     let isValid = true;
     const errors = {
       ...formErrors,
-      logo: '',
-      demoVideo: '',
+      logo: ''
     };
     
     // Validate URLs if provided
@@ -245,11 +237,7 @@ export default function SubmitProject() {
       errors.logo = 'Please enter a valid logo URL';
       isValid = false;
     }
-    
-    if (project.demoVideo && !urlRegex.test(project.demoVideo)) {
-      errors.demoVideo = 'Please enter a valid demo video URL';
-      isValid = false;
-    }
+  
     
     setFormErrors(errors);
     return isValid;
@@ -408,9 +396,9 @@ export default function SubmitProject() {
       description: '',
       github: '',
       social: '',
-      testingLink: '',
+      
       logo: '',
-      demoVideo: '',
+      
       contracts: [''],
     });
     setCurrentStage(1);
@@ -808,9 +796,7 @@ export default function SubmitProject() {
                         className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
                         placeholder="https://demo.yourproject.com"
                       />
-                      {formErrors.testingLink && (
-                        <p className="mt-1 text-red-500 text-sm">{formErrors.testingLink}</p>
-                      )}
+                      
                       <p className="mt-1 text-gray-500 text-sm">Link to a demo or testing version of your project</p>
                     </div>
                   </div>
@@ -897,9 +883,7 @@ export default function SubmitProject() {
                         className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
                         placeholder="https://example.com/demo.mp4 or IPFS hash"
                       />
-                      {formErrors.demoVideo && (
-                        <p className="mt-1 text-red-500 text-sm">{formErrors.demoVideo}</p>
-                      )}
+                     
                       <p className="mt-1 text-gray-500 text-sm">Add a video demonstrating your project</p>
                     </div>
                     
