@@ -1,5 +1,6 @@
 // components/ProjectInfoModal.jsx
 import { X, User, Edit, Award, ExternalLink, Code, Github, Globe, FileText, ImageIcon, Video, History } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface ProjectInfoModalProps {
   project: any;
@@ -30,12 +31,19 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
   setVoteModalVisible,
   setProjectInfoModalVisible
 }) => {
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    // Reset logo error state when project changes
+    setLogoError(false);
+  }, [project]);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 md:p-4">
-      <div className="bg-white rounded-xl w-full max-w-2xl p-4 md:p-6 relative max-h-[90vh] overflow-y-auto shadow-xl">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 md:p-4">
+      <div className="bg-white rounded-xl w-full max-w-2xl p-4 md:p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200">
         <button 
           onClick={() => setProjectInfoModalVisible(false)} 
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 hover:bg-gray-100 transition-colors"
         >
           <X className="h-4 w-4 md:h-5 md:w-5" />
         </button>
@@ -77,18 +85,32 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
             </a>
           )}
         </div>
+
+        {/* Display project logo if available */}
+        {project.logo && !logoError && (
+          <div className="mb-4 flex justify-center">
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-md max-w-xs">
+              <img 
+                src={project.logo} 
+                alt={`${project.name} logo`}
+                className="w-full h-auto object-contain max-h-40"
+                onError={() => setLogoError(true)}
+              />
+            </div>
+          </div>
+        )}
         
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-6">
           <div className="w-full md:w-2/3">
             {/* Description section */}
-            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100 shadow-sm">
               <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-1.5 md:mb-2">Description</h4>
               <p className="text-gray-800 text-xs md:text-sm">{project.description}</p>
             </div>
             
             {/* Contracts section */}
             {project.contracts && project.contracts.length > 0 && (
-              <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+              <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100 shadow-sm">
                 <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-1.5 md:mb-2 flex items-center">
                   <Code className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 text-purple-600" />
                   Contract Addresses
@@ -104,7 +126,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
             )}
             
             {/* Links Section */}
-            <div className="rounded-xl bg-gray-50 p-3 md:p-4 border border-gray-100">
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 border border-gray-100 shadow-sm">
               <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-1.5 md:mb-2">Links</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                 {project.githubLink && (
@@ -112,7 +134,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.githubLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200 hover:bg-blue-50 transition-colors"
                   >
                     <Github className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     GitHub Repository
@@ -124,10 +146,10 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.socialLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200 hover:bg-blue-50 transition-colors"
                   >
                     <Globe className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
-                    Social Media
+                    Karma Gap Page
                   </a>
                 )}
                 
@@ -136,22 +158,10 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.testingLink} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200 hover:bg-blue-50 transition-colors"
                   >
                     <FileText className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     Demo / Testing
-                  </a>
-                )}
-                
-                {project.logo && (
-                  <a 
-                    href={project.logo} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
-                  >
-                    <ImageIcon className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
-                    Project Logo
                   </a>
                 )}
                 
@@ -160,7 +170,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     href={project.demoVideo} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200"
+                    className="flex items-center text-blue-600 hover:text-blue-700 py-1.5 md:py-2 px-2.5 md:px-3 text-xs md:text-sm bg-white rounded-lg border border-gray-200 hover:bg-blue-50 transition-colors"
                   >
                     <Video className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                     Demo Video
@@ -173,9 +183,9 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
           {/* Right sidebar */}
           <div className="w-full md:w-1/3">
             {/* Vote statistics card */}
-            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100 shadow-sm">
               <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-2 md:mb-3">Vote Statistics</h4>
-              <div className="bg-white rounded-lg px-3 md:px-4 py-3 md:py-5 text-center mb-2 md:mb-3 border border-gray-200 shadow-sm">
+              <div className="bg-white rounded-lg px-3 md:px-4 py-3 md:py-5 text-center mb-2 md:mb-3 border border-gray-200 shadow-sm hover:border-emerald-200 transition-colors">
                 <div className="text-xl md:text-2xl font-bold text-emerald-600">
                   {formatTokenAmount(project.voteCount)}
                 </div>
@@ -183,7 +193,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
               </div>
               
               {address && isConnected && (
-                <div className="bg-white rounded-lg px-3 md:px-4 py-2 md:py-3 text-center border border-gray-200 shadow-sm">
+                <div className="bg-white rounded-lg px-3 md:px-4 py-2 md:py-3 text-center border border-gray-200 shadow-sm hover:border-purple-200 transition-colors">
                   <div className="text-base md:text-lg font-bold text-purple-600 flex items-center justify-center">
                     <History className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
                     <span id="user-vote-count">
@@ -199,12 +209,12 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
             </div>
             
             {/* Project info card */}
-            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100">
+            <div className="rounded-xl bg-gray-50 p-3 md:p-4 mb-3 md:mb-4 border border-gray-100 shadow-sm">
               <h4 className="text-xs md:text-sm font-medium text-gray-600 mb-2 md:mb-3">Project Info</h4>
               <div className="space-y-2 md:space-y-3">
                 <div className="flex justify-between">
                   <span className="text-xs md:text-sm text-gray-500">Status:</span>
-                  <span className={`text-xs md:text-sm ${project.approved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <span className={`text-xs md:text-sm font-medium ${project.approved ? 'text-emerald-600' : 'text-amber-600'}`}>
                     {project.approved ? 'Approved' : 'Pending Approval'}
                   </span>
                 </div>
@@ -212,7 +222,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                 {fundsDistributed && (
                   <div className="flex justify-between">
                     <span className="text-xs md:text-sm text-gray-500">Funds Received:</span>
-                    <span className="text-xs md:text-sm text-emerald-600">
+                    <span className="text-xs md:text-sm font-medium text-emerald-600">
                       {formatTokenAmount(project.fundsReceived)} CELO
                     </span>
                   </div>
@@ -229,7 +239,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
                     setVoteModalVisible(true);
                     setProjectInfoModalVisible(false);
                   }}
-                  className="w-full py-2 md:py-3 rounded-full text-xs md:text-sm bg-emerald-500 text-white font-medium md:font-semibold hover:bg-emerald-600 transition-colors flex items-center justify-center shadow-md"
+                  className="w-full py-2 md:py-3 rounded-full text-xs md:text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium md:font-semibold hover:from-emerald-600 hover:to-teal-600 transition-colors flex items-center justify-center shadow-md"
                 >
                   <Award className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                   Vote for this Project
@@ -238,7 +248,7 @@ const ProjectInfoModal: React.FC<ProjectInfoModalProps> = ({
               
               <a 
                 href={`/campaign/${campaignId}/project/${project.id}`}
-                className="w-full py-2 md:py-3 rounded-full text-xs md:text-sm bg-teal-500 text-white font-medium md:font-semibold hover:bg-teal-600 transition-colors flex items-center justify-center shadow-md"
+                className="w-full py-2 md:py-3 rounded-full text-xs md:text-sm bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-medium md:font-semibold hover:from-teal-600 hover:to-cyan-600 transition-colors flex items-center justify-center shadow-md"
               >
                 <ExternalLink className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
                 View Full Project Page
