@@ -11,18 +11,18 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { celo, celoAlfajores } from 'wagmi/chains';
 
 import Layout from '../components/Layout';
-import { injectedWallet, rainbowWallet, metaMaskWallet, valoraWallet } from '@rainbow-me/rainbowkit/wallets';
+import { injectedWallet, rainbowWallet, metaMaskWallet, valoraWallet, trustWallet } from '@rainbow-me/rainbowkit/wallets';
 
 const connectors = connectorsForWallets(
   [
     {
       groupName: 'Recommended',
-      wallets: [injectedWallet, rainbowWallet, metaMaskWallet, valoraWallet],
+      wallets: [injectedWallet, rainbowWallet, metaMaskWallet, valoraWallet, trustWallet],
     },
   ],
   {
-    appName: 'Celo Composer',
-    projectId: process.env.WC_PROJECT_ID ?? '044601f65212332475a09bc14ceb3c34',
+    appName: 'Sovereign Seas',
+    projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? '044601f65212332475a09bc14ceb3c34',
   }
 );
 

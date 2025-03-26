@@ -43,8 +43,8 @@ const VoteModal: React.FC<VoteModalProps> = ({
           <label className="block text-gray-600 mb-2">CELO Amount</label>
           <input 
             type="number"
-            min="0.1"
-            step="0.1"
+            min="1"
+            step="1"
             value={voteAmount}
             onChange={(e) => setVoteAmount(e.target.value)}
             className="w-full px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
@@ -52,9 +52,9 @@ const VoteModal: React.FC<VoteModalProps> = ({
           />
           <p className="mt-2 text-sm text-gray-500">
             Each CELO token is worth {campaign.voteMultiplier.toString()} votes.
-            {voteAmount && !isNaN(parseFloat(voteAmount)) && parseFloat(voteAmount) > 0 && (
+            {voteAmount && !isNaN(parseInt(voteAmount)) && parseInt(voteAmount) > 0 && (
               <span className="block mt-1 text-emerald-600">
-                Your vote will be worth {parseFloat(voteAmount) * Number(campaign.voteMultiplier)} votes.
+                Your vote will be worth {parseInt(voteAmount) * Number(campaign.voteMultiplier)} votes.
               </span>
             )}
           </p>
@@ -63,7 +63,7 @@ const VoteModal: React.FC<VoteModalProps> = ({
         <div className="flex gap-3">
           <button
             onClick={handleVote}
-            disabled={isWritePending || isWaitingForTx || !voteAmount || parseFloat(voteAmount) <= 0}
+            disabled={isWritePending || isWaitingForTx || !voteAmount || parseInt(voteAmount) <= 0}
             className="flex-1 py-3 px-6 bg-emerald-500 text-white font-semibold rounded-full hover:bg-emerald-600 transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed shadow-md"
           >
             {isWritePending || isWaitingForTx ? (
