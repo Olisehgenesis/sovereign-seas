@@ -36,6 +36,8 @@ type FeaturedCampaign = {
   isActive: boolean;
   endsIn?: string;
   startsIn?: string;
+  startTime?: string|number;
+  endTime?: string|number;
 };
 
 export default function Home() {
@@ -51,6 +53,17 @@ export default function Home() {
   const [totalFunds, setTotalFunds] = useState('0');
   const [featuredCampaigns, setFeaturedCampaigns] = useState<FeaturedCampaign[]>([]);
   const [loading, setLoading] = useState(true);
+  // Add this state for real-time countdowns
+const [timeNow, setTimeNow] = useState(Math.floor(Date.now() / 1000));
+
+// Add this effect to update the time every second
+useEffect(() => {
+  const timer = setInterval(() => {
+    setTimeNow(Math.floor(Date.now() / 1000));
+  }, 1000);
+  
+  return () => clearInterval(timer);
+}, []);
 
   // Use the hook to interact with the contract
   const {
@@ -128,6 +141,25 @@ export default function Home() {
             const timeRemaining = getCampaignTimeRemaining(campaign);
             const now = Math.floor(Date.now() / 1000);
             const hasStarted = now >= Number(campaign.startTime);
+            if (hasStarted) {
+              const endDiff = Number(campaign.endTime) - now;
+              const endDays = Math.floor(endDiff / 86400);
+              const endHours = Math.floor((endDiff % 86400) / 3600);
+              const endMinutes = Math.floor((endDiff % 3600) / 60);
+              const endSeconds = Math.floor(endDiff % 60);
+              const endsInText = `${endDays}d ${endHours}h ${endMinutes}m ${endSeconds}s`;
+            }
+            
+            // Calculate time until campaign starts if it hasn't started yet
+            let startsInText;
+            if (!hasStarted) {
+              const startDiff = Number(campaign.startTime) - now;
+              const startDays = Math.floor(startDiff / 86400);
+              const startHours = Math.floor((startDiff % 86400) / 3600);
+              const startMinutes = Math.floor((startDiff % 3600) / 60);
+              const startSeconds = Math.floor(startDiff % 60);
+              startsInText = `${startDays}d ${startHours}h ${startMinutes}m ${startSeconds}s`;
+            }
             
             featured.push({
               id: campaign.id.toString(),
@@ -138,7 +170,8 @@ export default function Home() {
               totalFunds: formatTokenAmount(campaign.totalFunds),
               isActive: isActive,
               endsIn: hasStarted ? `${timeRemaining.days}d ${timeRemaining.hours}h` : undefined,
-              startsIn: !hasStarted ? formatCampaignTime(campaign.startTime) : undefined
+              startsIn: !hasStarted ? startsInText : undefined,
+              startTime: Number(campaign.startTime)
             });
           }
         }
@@ -362,74 +395,111 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredCampaigns.map((campaign) => (
               <div 
-                key={campaign.id}
-                onClick={() => navigateToCampaignDetails(campaign.id)}
-                className="group relative bg-white rounded-xl overflow-hidden shadow-md border border-emerald-50 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer"
-              >
-                <div className="h-40 bg-gradient-to-r from-teal-100 to-emerald-100 relative overflow-hidden">
-                  {campaign.logo ? (
-                    <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${campaign.logo})`, opacity: 0.9 }}></div>
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                      <Image 
-                        src="/logo.svg" 
-                        alt="Sovereign Seas Logo"
-                        width={60}
-                        height={60}
-                      />
-                    </div>
-                  )}
-                  
-                  {campaign.demoVideo && (
-                    <div className="absolute top-3 left-3 p-1.5 bg-white/80 rounded-full text-emerald-600 hover:bg-white transition-colors">
-                      <Video className="h-4 w-4" />
-                    </div>
-                  )}
-                  
-                  <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-medium flex items-center ${
-                    campaign.isActive 
-                      ? 'bg-emerald-500 text-white' 
-                      : campaign.startsIn 
-                        ? 'bg-yellow-400 text-yellow-900' 
-                        : 'bg-gray-200 text-gray-700'
-                  }`}>
-                    {campaign.isActive ? (
-                      <><Activity className="h-3 w-3 mr-1" /> Active</>
-                    ) : campaign.startsIn ? (
-                      <><Clock className="h-3 w-3 mr-1" /> Coming Soon</>
-                    ) : (
-                      <><CheckCircle className="h-3 w-3 mr-1" /> Ended</>
-                    )}
+              key={campaign.id}
+              onClick={() => navigateToCampaignDetails(campaign.id)}
+              className="group relative bg-white rounded-xl overflow-hidden shadow-md border border-emerald-50 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+            >
+              {/* Enhanced with border gradient and stronger shadow */}
+              <div className="absolute inset-0 rounded-xl border border-gradient-to-r from-emerald-200 to-teal-200 opacity-70"></div>
+              
+              <div className="h-40 bg-gradient-to-r from-teal-100 to-emerald-100 relative overflow-hidden">
+                {campaign.logo ? (
+                  <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${campaign.logo})`, opacity: 0.9 }}></div>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                    <Image 
+                      src="/logo.svg" 
+                      alt="Sovereign Seas Logo"
+                      width={60}
+                      height={60}
+                    />
                   </div>
-                  
-                  {campaign.isActive && campaign.endsIn && (
-                    <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-black/50 text-white text-xs rounded-full backdrop-blur-sm">
-                      <Clock className="h-3 w-3 inline mr-1" /> {campaign.endsIn} remaining
-                    </div>
+                )}
+                
+                {campaign.demoVideo && (
+                  <div className="absolute top-3 left-3 p-1.5 bg-white/80 rounded-full text-emerald-600 hover:bg-white transition-colors">
+                    <Video className="h-4 w-4" />
+                  </div>
+                )}
+                
+                <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-medium flex items-center ${
+                  campaign.isActive 
+                    ? 'bg-emerald-500 text-white' 
+                    : campaign.startsIn 
+                      ? 'bg-yellow-400 text-yellow-900' 
+                      : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {campaign.isActive ? (
+                    <><Activity className="h-3 w-3 mr-1" /> Active</>
+                  ) : campaign.startsIn ? (
+                    <><Clock className="h-3 w-3 mr-1" /> Coming Soon</>
+                  ) : (
+                    <><CheckCircle className="h-3 w-3 mr-1" /> Ended</>
                   )}
                 </div>
-                
-                <div className="p-5">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-emerald-600 transition-colors">{campaign.name}</h3>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{campaign.description}</p>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="text-emerald-600 font-medium flex items-center text-sm">
-                      <BarChart className="h-3.5 w-3.5 mr-1" />
-                      {campaign.totalFunds} CELO
-                    </div>
-                    <button 
-                      className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigateToCampaignDetails(campaign.id);
-                      }}
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
+                {!campaign.isActive && campaign.startTime && (
+  <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-yellow-500/40 text-white text-xs rounded-full backdrop-blur-sm shadow-sm border border-white/10 flex items-center">
+    <Clock className="h-3 w-3 mr-1.5 animate-pulse" /> 
+    {(() => {
+      const startDiff = Number(campaign.startTime) - timeNow;
+      const days = Math.floor(startDiff / 86400);
+      const hours = Math.floor((startDiff % 86400) / 3600);
+      const minutes = Math.floor((startDiff % 3600) / 60);
+      const seconds = Math.floor(startDiff % 60);
+      return `Launches in ${days}d ${hours}h ${minutes}m ${seconds}s`;
+    })()}
+  </div>
+)}
+
+{campaign.isActive && campaign.endTime && (
+  <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/40 text-white text-xs rounded-full backdrop-blur-sm shadow-sm border border-white/10 flex items-center">
+    <Clock className="h-3 w-3 mr-1.5 animate-pulse" /> 
+    {(() => {
+      const endDiff = Number(campaign.endTime) - timeNow;
+      const days = Math.floor(endDiff / 86400);
+      const hours = Math.floor((endDiff % 86400) / 3600);
+      const minutes = Math.floor((endDiff % 3600) / 60);
+      const seconds = Math.floor(endDiff % 60);
+      return `${days}d ${hours}h ${minutes}m ${seconds}s remaining`;
+    })()}
+  </div>
+)}
+                {/* Replace the time indicators with enhanced versions */}
+                {campaign.isActive && campaign.endsIn && (
+                  <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/40 text-white text-xs rounded-full backdrop-blur-sm shadow-sm border border-white/10 flex items-center">
+                    <Clock className="h-3 w-3 mr-1.5 animate-pulse" /> {campaign.endsIn} remaining
                   </div>
+                )}
+                
+                {/* Add this block for campaigns that haven't started yet */}
+                {!campaign.isActive && campaign.startsIn && (
+                  <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-yellow-500/50 text-white text-xs rounded-full backdrop-blur-sm shadow-sm border border-white/10 flex items-center">
+                    <Clock className="h-3 w-3 mr-1.5 animate-pulse" /> Launches in {campaign.startTime ? formatCampaignTime(BigInt(campaign.startTime)) : 'N/A'}
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-5 relative z-10">
+                <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-emerald-600 transition-colors">{campaign.name}</h3>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{campaign.description}</p>
+                
+                <div className="flex justify-between items-center">
+                  <div className="text-emerald-600 font-medium flex items-center text-sm">
+                    <BarChart className="h-3.5 w-3.5 mr-1" />
+                    {campaign.totalFunds} CELO
+                  </div>
+                  <button 
+                    className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm hover:shadow-md"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigateToCampaignDetails(campaign.id);
+                    }}
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
+            </div>
             ))}
           </div>
         ) : (
