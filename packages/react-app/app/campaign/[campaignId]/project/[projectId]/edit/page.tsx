@@ -63,7 +63,6 @@ export default function EditProject() {
     github: '',
     social: '',
     logo: '',
-    demoVideo: '',
     contracts: [''],
   });
   
@@ -205,7 +204,7 @@ export default function EditProject() {
       github: '',
       social: '',
       logo: '',
-      demoVideo: '',
+      
       contracts: [''],
     };
     
@@ -250,20 +249,14 @@ export default function EditProject() {
       isValid = false;
     }
     
-    if (project.testingLink && !urlRegex.test(project.testingLink)) {
-      errors.name = 'Please enter a valid testing/demo URL';
-      isValid = false;
-    }
+    
     
     if (project.logo && !urlRegex.test(project.logo)) {
       errors.logo = 'Please enter a valid logo URL';
       isValid = false;
     }
     
-    if (project.demoVideo && !urlRegex.test(project.demoVideo)) {
-      errors.demoVideo = 'Please enter a valid demo video URL';
-      isValid = false;
-    }
+   
     
     // Validate contracts if any are provided
     const validContracts = project.contracts.filter(c => c.trim() !== '');
@@ -680,9 +673,7 @@ export default function EditProject() {
                       className="w-full px-4 py-2 rounded-lg bg-slate-700/60 border border-slate-600 focus:border-lime-500 focus:outline-none focus:ring-1 focus:ring-lime-500 text-white"
                       placeholder="https://example.com/demo.mp4 or IPFS hash"
                     />
-                    {formErrors.demoVideo && (
-                      <p className="mt-1 text-red-400 text-sm">{formErrors.demoVideo}</p>
-                    )}
+                   
                     <p className="mt-1 text-slate-400 text-sm">Add a video demonstrating your project</p>
                   </div>
                   
