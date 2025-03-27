@@ -1,4 +1,3 @@
-
 # 🌊 Sovereign Seas: Decentralized Voting Platform
 
 > *"Where the ocean decides, and the vote rules the tides"* 🌊
@@ -67,11 +66,12 @@ Built with cutting-edge blockchain technology:
 - ✅ Prototype delivery and validation
 
 ### 🌊 Phase 2: Enhancement (Next Month)
-- 🤖 AI-powered project assistant for submissions and descriptions
-- 💬 Conversational AI interface for project creation and management
-- 📊 Advanced analytics dashboard for real-time campaign insights
-- 🧩 Customizable campaign templates for diverse funding models
-- 🛡️ Enhanced anti-spam and security features
+- 🌐 **Web2 Voting Integration** for broader accessibility and user adoption
+  - 📱 SMS verification for secure non-crypto voting options
+  - 📧 Email-based voting for traditional users
+  - 🔑 OAuth integration (Google, Apple, etc.) for simplified login
+  - 🔄 On/off-ramp solutions for seamless crypto to fiat conversion
+
 
 ### 🌊 Phase 3: Expansion (Q4 2025 - Q2 2026)
 - ⛓️ Multi-blockchain support
@@ -79,6 +79,15 @@ Built with cutting-edge blockchain technology:
 - 🏛️ Platform governance token launch with staking mechanisms
 - 🌉 Cross-campaign funding opportunities for project synergies
 - 🌐 International expansion with multi-language support
+
+### 🌊 Phase 3.5: AI Enhancement (One Month After Multi-blockchain Support)
+- 🧠 **Advanced AI Integration**
+  - 🔮 Predictive analytics for project success probability
+  - 🤖 AI-driven personalized project recommendations based on voting history
+  - 🎯 Smart campaign matching algorithm to connect projects with ideal voters
+  - 📝 Automated content generation for project descriptions and updates
+  - 💡 Intelligent fraud detection to identify suspicious voting patterns
+  - 🗣️ Multilingual AI assistant for global community support
 
 ### 🌊 Phase 4: Ecosystem Growth (Q3 2026 - Beyond)
 - 📱 Mobile application launch for on-the-go voting
@@ -105,6 +114,13 @@ Our platform democratizes project funding by:
 **Deployed and Active:**
 - Demo: [demo.sovseas.xyz](https://demo.sovseas.xyz)
 - Production: [sovseas.xyz](https://sovseas.xyz)
+- 
+Smart contracts
+-demo on aljaores
+https://alfajores.celoscan.io/address/0xb8f936be2b12406391b4232647593cdb62df2203
+-on live
+https://celoscan.io/address/0x7409a371c705d41a53E1d9F262b788B7C7e168D7
+
 
 ---
 
