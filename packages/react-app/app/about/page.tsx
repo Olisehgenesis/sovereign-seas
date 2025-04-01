@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { 
   Waves, 
   Globe, 
-  LifeBuoy, 
   Anchor, 
   Users, 
   FileText, 
@@ -14,13 +13,13 @@ import {
   Award,
   ArrowRight,
   Github,
-  Twitter,
-  Mail,
-  Navigation,
   Coins,
   BarChart3,
   TrendingUp,
-  Zap
+  Zap,
+  HelpCircle,
+  LayoutDashboard,
+  Info
 } from 'lucide-react';
 
 export default function About() {
@@ -76,7 +75,7 @@ export default function About() {
                 </div>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-                About <span className="text-yellow-400">Sovereign Seas</span>
+                About <span className="text-lime-400">Sovereign Seas</span>
               </h1>
             </div>
             
@@ -117,7 +116,7 @@ export default function About() {
       <div className="container mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-4 flex items-center justify-center">
-            <Coins className="h-8 w-8 text-yellow-400 mr-3" />
+            <Coins className="h-8 w-8 text-lime-400 mr-3" />
             Core Components
           </h2>
           <p className="text-lime-100 max-w-2xl mx-auto">
@@ -135,24 +134,24 @@ export default function About() {
             </div>
             <ul className="text-slate-300 space-y-2">
               <li className="flex items-start">
-                <span className="text-yellow-400 mr-2">•</span>
+                <span className="text-lime-400 mr-2">•</span>
                 <span>CELO token used as the voting medium</span>
               </li>
               <li className="flex items-start">
-                <span className="text-yellow-400 mr-2">•</span>
+                <span className="text-lime-400 mr-2">•</span>
                 <span>Configurable vote multiplier (1-5x per token)</span>
               </li>
               <li className="flex items-start">
-                <span className="text-yellow-400 mr-2">•</span>
+                <span className="text-lime-400 mr-2">•</span>
                 <span>Transparent, on-chain voting for full auditability</span>
               </li>
             </ul>
           </div>
           
           {/* Economic Structure */}
-          <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 border-t-4 border-yellow-400 transform hover:-translate-y-1 transition-all">
+          <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 border-t-4 border-lime-400 transform hover:-translate-y-1 transition-all">
             <div className="flex items-center mb-4">
-              <FileText className="h-6 w-6 text-yellow-400 mr-2" />
+              <FileText className="h-6 w-6 text-lime-400 mr-2" />
               <h3 className="text-xl font-bold text-white">Economic Structure</h3>
             </div>
             <ul className="text-slate-300 space-y-2">
@@ -179,15 +178,15 @@ export default function About() {
             </div>
             <ul className="text-slate-300 space-y-2">
               <li className="flex items-start">
-                <span className="text-yellow-400 mr-2">•</span>
+                <span className="text-lime-400 mr-2">•</span>
                 <span>Create themed funding campaigns</span>
               </li>
               <li className="flex items-start">
-                <span className="text-yellow-400 mr-2">•</span>
+                <span className="text-lime-400 mr-2">•</span>
                 <span>Submit and approve community projects</span>
               </li>
               <li className="flex items-start">
-                <span className="text-yellow-400 mr-2">•</span>
+                <span className="text-lime-400 mr-2">•</span>
                 <span>Choose linear or quadratic fund distribution</span>
               </li>
             </ul>
@@ -199,7 +198,7 @@ export default function About() {
       <div className="container mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-4 flex items-center justify-center">
-            <Users className="h-8 w-8 text-yellow-400 mr-3" />
+            <Users className="h-8 w-8 text-lime-400 mr-3" />
             User Roles
           </h2>
           <p className="text-lime-100 max-w-2xl mx-auto">
@@ -210,8 +209,8 @@ export default function About() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Platform Administrators */}
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 hover:bg-slate-800/50 transition-all">
-            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-yellow-500 rounded-full flex items-center justify-center mb-4">
-              <Navigation className="h-6 w-6 text-slate-900" />
+            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-lime-600 rounded-full flex items-center justify-center mb-4">
+              <LayoutDashboard className="h-6 w-6 text-slate-900" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Super Admins</h3>
             <p className="text-slate-300 mb-4">
@@ -222,7 +221,7 @@ export default function About() {
           
           {/* Campaign Administrators */}
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 hover:bg-slate-800/50 transition-all">
-            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-yellow-500 rounded-full flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-lime-600 rounded-full flex items-center justify-center mb-4">
               <TrendingUp className="h-6 w-6 text-slate-900" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Campaign Administrators</h3>
@@ -234,7 +233,7 @@ export default function About() {
           
           {/* Project Owners */}
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 hover:bg-slate-800/50 transition-all">
-            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-yellow-500 rounded-full flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-lime-600 rounded-full flex items-center justify-center mb-4">
               <Zap className="h-6 w-6 text-slate-900" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Project Owners</h3>
@@ -246,7 +245,7 @@ export default function About() {
           
           {/* Voters */}
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 hover:bg-slate-800/50 transition-all">
-            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-yellow-500 rounded-full flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-lime-500 to-lime-600 rounded-full flex items-center justify-center mb-4">
               <Vote className="h-6 w-6 text-slate-900" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Voters</h3>
@@ -302,7 +301,7 @@ export default function About() {
               
               <div className="p-6 bg-slate-700/30 border-t border-slate-700/50">
                 <p className="text-slate-300 text-center">
-                  Built on the <span className="text-yellow-400">Celo</span> blockchain for low environmental impact and global accessibility.
+                  Built on the <span className="text-lime-400">Celo</span> blockchain for low environmental impact and global accessibility.
                 </p>
               </div>
             </div>
@@ -314,7 +313,7 @@ export default function About() {
       <div className="container mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-4 flex items-center justify-center">
-            <Award className="h-8 w-8 text-yellow-400 mr-3" />
+            <Award className="h-8 w-8 text-lime-400 mr-3" />
             Roadmap
           </h2>
           <p className="text-lime-100 max-w-2xl mx-auto">
@@ -325,7 +324,7 @@ export default function About() {
         <div className="max-w-4xl mx-auto">
           <div className="relative">
             {/* Vertical Line */}
-            <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-lime-500 via-yellow-400 to-lime-500 transform -translate-x-1/2 hidden md:block"></div>
+            <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-lime-500 via-lime-400 to-lime-500 transform -translate-x-1/2 hidden md:block"></div>
             
             {/* Phase 1 */}
             <div className="mb-16 relative">
@@ -334,19 +333,19 @@ export default function About() {
                   <h3 className="text-2xl font-bold text-white mb-3">Phase 1: Foundation</h3>
                   <ul className="text-slate-300 space-y-2 md:ml-auto">
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Develop core smart contracts</span>
                     </li>
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Create intuitive user interface</span>
                     </li>
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Implement CELO integration</span>
                     </li>
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Launch alpha testing with limited campaigns</span>
                     </li>
                   </ul>
@@ -371,30 +370,30 @@ export default function About() {
                   <h3 className="text-2xl font-bold text-white mb-3">Phase 2: Enhancement</h3>
                   <ul className="text-slate-300 space-y-2">
                     <li className="flex items-start">
-                      <span className="text-yellow-400 mr-2">•</span>
+                      <span className="text-lime-400 mr-2">•</span>
                       <span>Add advanced analytics for campaigns</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-yellow-400 mr-2">•</span>
+                      <span className="text-lime-400 mr-2">•</span>
                       <span>Implement reputation system for creators</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-yellow-400 mr-2">•</span>
+                      <span className="text-lime-400 mr-2">•</span>
                       <span>Develop templates for easier campaign creation</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-yellow-400 mr-2">•</span>
+                      <span className="text-lime-400 mr-2">•</span>
                       <span>Anti-spam measures with creation fees</span>
                     </li>
                   </ul>
                 </div>
                 
-                <div className="hidden md:flex md:w-8 md:h-8 rounded-full bg-yellow-400 absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center shadow-lg">
+                <div className="hidden md:flex md:w-8 md:h-8 rounded-full bg-lime-400 absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center shadow-lg">
                   <span className="text-slate-900 font-bold">2</span>
                 </div>
                 
                 <div className="md:w-1/2 order-0 md:order-1 md:text-right md:hidden">
-                  <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg mb-4">
+                  <div className="w-8 h-8 rounded-full bg-lime-400 flex items-center justify-center shadow-lg mb-4">
                     <span className="text-slate-900 font-bold">2</span>
                   </div>
                 </div>
@@ -408,19 +407,19 @@ export default function About() {
                   <h3 className="text-2xl font-bold text-white mb-3">Phase 3: Expansion</h3>
                   <ul className="text-slate-300 space-y-2 md:ml-auto">
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Integration with additional blockchains</span>
                     </li>
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Support for multiple voting tokens</span>
                     </li>
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Launch governance token for platform decisions</span>
                     </li>
                     <li className="flex items-start md:justify-end">
-                      <span className="md:order-2 text-yellow-400 mr-2 md:mr-0 md:ml-2">•</span>
+                      <span className="md:order-2 text-lime-400 mr-2 md:mr-0 md:ml-2">•</span>
                       <span>Create cross-campaign funding opportunities</span>
                     </li>
                   </ul>
@@ -444,9 +443,9 @@ export default function About() {
       {/* Vision Section */}
       <div className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-gradient-to-r from-lime-900/40 to-yellow-900/40 backdrop-blur-md rounded-2xl p-8 border border-lime-500/30">
+          <div className="bg-gradient-to-r from-lime-900/40 to-lime-800/40 backdrop-blur-md rounded-2xl p-8 border border-lime-500/30">
             <div className="flex items-center mb-6">
-              <Waves className="h-7 w-7 text-yellow-400 mr-3" />
+              <Waves className="h-7 w-7 text-lime-400 mr-3" />
               <h2 className="text-2xl md:text-3xl font-bold text-white">Our Vision</h2>
             </div>
             
@@ -465,7 +464,7 @@ export default function About() {
         </div>
       </div>
       
-      {/* Team Section (Optional) */}
+      {/* Team Section */}
       <div className="container mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-4">Our Team</h2>
@@ -476,33 +475,33 @@ export default function About() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 text-center border border-lime-600/20 transform hover:-translate-y-1 transition-all">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-yellow-600 mx-auto mb-4 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-lime-500 mx-auto mb-4 flex items-center justify-center">
               <span className="text-slate-900 font-bold text-2xl">OG</span>
             </div>
             <h3 className="text-xl font-bold text-white mb-1">Oliseh Genesis</h3>
-            <p className="text-yellow-400 mb-3">Designer & Founder</p>
+            <p className="text-lime-400 mb-3">Designer & Founder</p>
             <p className="text-slate-300 mb-4 text-sm">
               Creative visionary behind Sovereign Seas with a passion for combining blockchain and community governance.
             </p>
           </div>
           
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 text-center border border-lime-600/20 transform hover:-translate-y-1 transition-all">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-yellow-600 mx-auto mb-4 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-lime-500 mx-auto mb-4 flex items-center justify-center">
               <span className="text-slate-900 font-bold text-2xl">ST</span>
             </div>
             <h3 className="text-xl font-bold text-white mb-1">Sam The Tutor</h3>
-            <p className="text-yellow-400 mb-3">Lead Developer</p>
+            <p className="text-lime-400 mb-3">Lead Developer</p>
             <p className="text-slate-300 mb-4 text-sm">
               Blockchain expert developing the secure, transparent infrastructure of Sovereign Seas.
             </p>
           </div>
           
           <div className="bg-slate-800/30 backdrop-blur-md rounded-xl p-6 text-center border border-lime-600/20 transform hover:-translate-y-1 transition-all">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-yellow-600 mx-auto mb-4 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-600 to-lime-500 mx-auto mb-4 flex items-center justify-center">
               <span className="text-slate-900 font-bold text-2xl">YU</span>
             </div>
             <h3 className="text-xl font-bold text-white mb-1">You</h3>
-            <p className="text-yellow-400 mb-3">Community Member</p>
+            <p className="text-lime-400 mb-3">Community Member</p>
             <p className="text-slate-300 mb-4 text-sm">
               Become part of our vibrant ecosystem as a voter, project creator, or campaign admin.
             </p>
@@ -510,39 +509,31 @@ export default function About() {
         </div>
       </div>
       
-      {/* Contact Section */}
+      {/* Contact Section - Simplified without socials */}
       <div className="container mx-auto px-6 py-16">
       <div className="max-w-4xl mx-auto bg-slate-800/40 backdrop-blur-md rounded-xl p-8 border border-lime-600/20">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="mb-8 md:mb-0">
-              <h2 className="text-2xl font-bold text-white mb-4">Connect With Us</h2>
+              <h2 className="text-2xl font-bold text-white mb-4">Join Our Community</h2>
               <p className="text-slate-300 mb-6">
-                Join our mission to revolutionize project funding through decentralized community action.
+                Be part of our mission to revolutionize project funding through decentralized community action.
               </p>
               
-              <div className="space-y-4">
-                <a href="https://github.com/sovereign-seas" className="flex items-center text-lime-300 hover:text-lime-400 transition-colors">
-                  <Github className="h-5 w-5 mr-3" />
-                  <span>github.com/sovereign-seas</span>
-                </a>
-                
-                <a href="https://twitter.com/sovereign_seas" className="flex items-center text-lime-300 hover:text-lime-400 transition-colors">
-                  <Twitter className="h-5 w-5 mr-3" />
-                  <span>@sovereign_seas</span>
-                </a>
-                
-                <a href="mailto:info@sovereignseas.org" className="flex items-center text-lime-300 hover:text-lime-400 transition-colors">
-                  <Mail className="h-5 w-5 mr-3" />
-                  <span>info@sovereignseas.org</span>
-                </a>
+              <div className="flex items-center">
+                <Github className="h-5 w-5 text-lime-400 mr-3" />
+                <span className="text-lime-300">GitHub repository coming soon</span>
               </div>
             </div>
             
             <div className="bg-slate-700/50 p-6 rounded-xl w-full md:w-auto">
-              <h3 className="text-xl font-bold text-white mb-4">Newsletter</h3>
-              <p className="text-slate-300 mb-4 text-sm">
-                Stay updated on new campaigns and platform features.
-              </p>
+              <h3 className="text-xl font-bold text-white mb-4">Development Updates</h3>
+              <div className="flex items-start mb-4">
+                <Info className="h-5 w-5 text-lime-400 mr-2 flex-shrink-0 mt-1" />
+                <p className="text-slate-300 text-sm">
+                  This platform is in active development. 
+                  Subscribe to receive updates about new features and launch details.
+                </p>
+              </div>
               
               <div className="flex">
                 <input 
@@ -562,7 +553,7 @@ export default function About() {
       {/* CTA Section */}
       <div className="py-16">
         <div className="container mx-auto px-6">
-          <div className="bg-gradient-to-r from-lime-900/40 to-yellow-900/40 backdrop-blur-md rounded-2xl p-8 border border-lime-500/30">
+          <div className="bg-gradient-to-r from-lime-900/40 to-lime-800/40 backdrop-blur-md rounded-2xl p-8 border border-lime-500/30">
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="mb-6 md:mb-0">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Ready to make an impact?</h2>
@@ -571,7 +562,7 @@ export default function About() {
               <div className="flex flex-wrap gap-4">
                 <button 
                   onClick={navigateToCreateCampaign}
-                  className="px-6 py-3 rounded-full bg-yellow-400 text-slate-900 font-semibold hover:bg-yellow-300 transition-all flex items-center"
+                  className="px-6 py-3 rounded-full bg-lime-500 text-slate-900 font-semibold hover:bg-lime-400 transition-all flex items-center"
                 >
                   Start a Campaign <Waves className="ml-2 h-5 w-5" />
                 </button>
@@ -588,34 +579,7 @@ export default function About() {
       </div>
       
       {/* Footer */}
-      <footer className="bg-slate-900/80 border-t border-lime-900/30 py-12">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-6 md:mb-0">
-              <div className="relative h-10 w-10 mr-3">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-lime-500 to-yellow-500 opacity-40"></div>
-                <div className="absolute inset-0.5 rounded-full bg-slate-900 flex items-center justify-center">
-                  <Image 
-                    src="/logo.svg" 
-                    alt="Sovereign Seas Logo"
-                    width={20}
-                    height={20}
-                    className="h-5 w-5"
-                  />
-                </div>
-              </div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
-                Sovereign <span className="text-yellow-400">Seas</span>
-              </h2>
-            </div>
-            
-            <div className="text-slate-400 text-sm mb-6 md:mb-0 text-center md:text-right">
-              <p>© 2025 Sovereign Seas. All rights reserved.</p>
-              <p>Built on Celo Blockchain</p>
-            </div>
-          </div>
-        </div>
-      </footer>
+     
     </div>
   );
 }
