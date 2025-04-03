@@ -16,13 +16,16 @@ contract SovSeasVote is ReentrancyGuard {
     
     // Vote struct
     struct Vote {
-        address voter;
-        uint256 campaignId;
-        uint256 entityId;
-        uint256 amount;
-        uint256 voteCount;
-        bool refunded;
-    }
+    address voter;
+    string voterName;
+    address voterWallet;
+    uint256 campaignId;
+    uint256 entityId;
+    uint256 amount;
+    uint256 voteCount;
+    bool refunded;
+}
+
     
     // Storage
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public userVotes; // campaignId => user => entityId => voteAmount
