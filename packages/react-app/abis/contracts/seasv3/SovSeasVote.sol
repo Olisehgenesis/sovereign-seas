@@ -13,121 +13,121 @@ contract SovSeasVote is ReentrancyGuard {
     // Reference to campaign and admin contracts
     SovSeasCampaign public campaignContract;
     SovSeasAdmin public adminContract;
-    
+
+    uint256 public constant PLATFORM_FEE_PERCENT = 10; // 10% fee on refunds
+    address payable public platformTreasury; // Address to collect platform fees
+
     // Vote struct
     struct Vote {
-    address voter;
-    string voterName;
-    address voterWallet;
-    uint256 campaignId;
-    uint256 entityId;
-    uint256 amount;
-    uint256 voteCount;
-    bool refunded;
-}
+        address voter;
+        string voterName;
+        address voterWallet;
+        uint256 campaignId;
+        uint256 entityId;
+        uint256 amount;
+        uint256 voteCount;
+        bool refunded;
+    }
 
-    
     // Storage
     mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public userVotes; // campaignId => user => entityId => voteAmount
     mapping(uint256 => mapping(address => uint256)) public totalUserVotesInCampaign; // campaignId => user => totalVotes
     mapping(address => Vote[]) public userVoteHistory;
-    
+
     // Events
     event VoteCast(
-        address indexed voter, uint256 indexed campaignId, uint256 indexed entityId, uint256 amount, uint256 voteCount
+        address indexed voter,
+        uint256 indexed campaignId,
+        uint256 indexed entityId,
+        uint256 amount,
+        uint256 voteCount,
+        string voterName,
+        address voterWallet
     );
-    event VoteRefunded(address indexed voter, uint256 indexed campaignId, uint256 indexed entityId, uint256 amount);
     
+    event VoteRefunded(
+        address indexed voter,
+        uint256 indexed campaignId,
+        uint256 indexed entityId,
+        uint256 amount
+    );
+
     /**
-     * @dev Constructor sets reference to campaign and admin contracts
+     * @dev Constructor sets reference to campaign, admin, and treasury contracts
      * @param _campaignContract Address of the campaign contract
      * @param _adminContract Address of the admin contract
+     * @param _platformTreasury Address to collect platform fees
      */
-    constructor(address _campaignContract, address _adminContract) {
+    constructor(address _campaignContract, address _adminContract, address payable _platformTreasury) {
         campaignContract = SovSeasCampaign(_campaignContract);
         adminContract = SovSeasAdmin(payable(_adminContract));
+        platformTreasury = _platformTreasury; // Set treasury address
     }
-    
-    /**
-     * @dev Helper function to validate campaign for voting
-     * @param _campaignId Campaign ID
-     * @param _entityId Entity ID
-     * @param _voter Voter address
-     */
-    // For the _validateVoteRequirements function:
-function _validateVoteRequirements(
-    uint256 _campaignId, 
-    uint256 _entityId, 
-    address _voter
-) internal view returns (
-    uint256 voteMultiplier,
-    SovSeasCampaign.Entity memory entity
-) {
-    // Get campaign basic info
-    (
-        , // id
-        , // admin
-        , // name
-        , // description
-        , // logo
-        , // demoVideo
-        uint256 startTime, 
-        uint256 endTime
-    ) = campaignContract.getCampaignBasicInfo(_campaignId);
-    
-    (
-    , , , , , 
-    bool refundable,
-    bool isPrivate, // <--- This was missing
-    bool active,
-    
-    ) = campaignContract.getCampaignConfigInfo(_campaignId);
 
-    
-    // Rest of the function...
+    /**
+     * @dev Validate campaign and entity for voting
+     */
+    function _validateVoteRequirements(
+        uint256 _campaignId, 
+        uint256 _entityId, 
+        address _voter
+    ) internal view returns (
+        uint256 voteMultiplier,
+        SovSeasCampaign.Entity memory entity
+    ) {
+        (
+            , , , , , , 
+            uint256 startTime, 
+            uint256 endTime
+        ) = campaignContract.getCampaignBasicInfo(_campaignId);
+        
+        (
+            , , , , , 
+            bool refundable,
+            bool isPrivate,
+            bool active,
+            // Add a placeholder for the extra returned value
+            // or assign it to a variable if needed
+            // Example: bool extraValue
+        ) = campaignContract.getCampaignConfigInfo(_campaignId);
 
         require(active, "Campaign is not active");
         require(block.timestamp >= startTime, "Campaign has not started");
         require(block.timestamp <= endTime, "Campaign has ended");
-        
-        // Check if campaign is private and voter is whitelisted
+
         if (isPrivate) {
             require(campaignContract.isVoterWhitelisted(_campaignId, _voter), "Not whitelisted for this private campaign");
         }
-        
-        // Check if entity exists, is approved and active
+
         entity = campaignContract.getEntity(_campaignId, _entityId);
         require(entity.approved, "Entity is not approved");
         require(entity.active, "Entity is not active");
     }
-    
+
     /**
-     * @dev Helper function to record a vote
-     * @param _campaignId Campaign ID
-     * @param _entityId Entity ID
-     * @param _amount Vote amount
-     * @param _voteCount Calculated vote count
+     * @dev Record a vote with voter name and wallet
      */
     function _recordVote(
         uint256 _campaignId, 
         uint256 _entityId, 
         uint256 _amount, 
-        uint256 _voteCount
+        uint256 _voteCount,
+        string memory _voterName,
+        address _voterWallet
     ) internal {
-        // Update vote tracking
+        address voterWallet = _voterWallet == address(0) ? msg.sender : _voterWallet; // Default to sender if not set
+        
         userVotes[_campaignId][msg.sender][_entityId] += _amount;
         totalUserVotesInCampaign[_campaignId][msg.sender] += _amount;
 
-        // Update entity vote count in campaign contract
         campaignContract.updateEntityVoteCount(_campaignId, _entityId, _voteCount);
-        
-        // Update campaign total funds in campaign contract
         campaignContract.updateCampaignFunds(_campaignId, _amount);
 
-        // Record vote in user history
         userVoteHistory[msg.sender].push(
             Vote({
                 voter: msg.sender,
+                voterName: _voterName,
+                voterWallet: voterWallet,
                 campaignId: _campaignId,
                 entityId: _entityId,
                 amount: _amount,
@@ -136,106 +136,97 @@ function _validateVoteRequirements(
             })
         );
 
-        emit VoteCast(msg.sender, _campaignId, _entityId, _amount, _voteCount);
+        emit VoteCast(msg.sender, _campaignId, _entityId, _amount, _voteCount, _voterName, voterWallet);
     }
-    
-    /**
-     * @dev Vote for an entity using native CELO tokens
-     * @param _campaignId Campaign ID
-     * @param _entityId Entity ID
-     */
-    function vote(uint256 _campaignId, uint256 _entityId) external payable nonReentrant {
-        require(msg.value > 0, "Amount must be greater than 0");
-        
-        // Validate vote requirements
-        (uint256 voteMultiplier, ) = _validateVoteRequirements(_campaignId, _entityId, msg.sender);
 
-        // Calculate vote count based on vote multiplier
-        uint256 voteCount = msg.value * voteMultiplier;
-        
-        // Record the vote
-        _recordVote(_campaignId, _entityId, msg.value, voteCount);
-    }
-    
     /**
-     * @dev Helper function to validate refund requirements
-     * @param _campaignId Campaign ID
+     * @dev Vote for an entity using CELO tokens with voter name
      */
-    function _validateRefundRequirements(uint256 _campaignId) internal view {
-        // Get campaign config info
-        (
-            , , , , , 
-            bool refundable,
-            ,
-            bool active,
-            
-        ) = campaignContract.getCampaignConfigInfo(_campaignId);
-        
-        // Get end time from basic info
-        (
-            , , , , , , 
-            , 
-            uint256 endTime
-        ) = campaignContract.getCampaignBasicInfo(_campaignId);
-        
-        require(!active, "Campaign must be finalized for refunds");
-        require(refundable, "Campaign does not support refunds");
-        require(block.timestamp > endTime, "Campaign has not ended");
+    function vote(uint256 _campaignId, uint256 _entityId, string memory _voterName, address _voterWallet) external payable nonReentrant {
+        require(msg.value > 0, "Amount must be greater than 0");
+
+        (uint256 voteMultiplier, ) = _validateVoteRequirements(_campaignId, _entityId, msg.sender);
+        uint256 voteCount = msg.value * voteMultiplier;
+
+        _recordVote(_campaignId, _entityId, msg.value, voteCount, _voterName, _voterWallet);
     }
-    
+
     /**
-     * @dev Process refund for a single vote
-     * @param _voteIndex Index of vote in user's history
-     * @param _campaignId Campaign ID to validate
-     * @return Amount to refund if eligible, 0 otherwise
+     * @dev Process refund with 10% platform fee
      */
     function _processVoteRefund(
         uint256 _voteIndex, 
         uint256 _campaignId
     ) internal returns (uint256) {
         require(_voteIndex < userVoteHistory[msg.sender].length, "Invalid vote index");
-        
+
         Vote storage vote = userVoteHistory[msg.sender][_voteIndex];
         if (vote.campaignId != _campaignId || vote.refunded) {
             return 0;
         }
-        
-        // Only refund if the vote was for a winning entity in Poll campaigns
+
         SovSeasCampaign.Entity memory entity = campaignContract.getEntity(_campaignId, vote.entityId);
-        
-        // Check if the entity received funds (which means it was a winner)
+
         if (entity.fundsReceived > 0) {
+            uint256 refundAmount = vote.amount;
+            uint256 platformFee = (refundAmount * PLATFORM_FEE_PERCENT) / 100;
+            uint256 userRefund = refundAmount - platformFee;
+
             vote.refunded = true;
-            emit VoteRefunded(msg.sender, _campaignId, vote.entityId, vote.amount);
-            return vote.amount;
+            emit VoteRefunded(msg.sender, _campaignId, vote.entityId, userRefund);
+
+            (bool feeSent, ) = platformTreasury.call{value: platformFee}("");
+            require(feeSent, "Platform fee transfer failed");
+
+            return userRefund;
         }
-        
+
         return 0;
     }
-    
+
     /**
-     * @dev Request refund for votes in a refundable campaign
-     * @param _campaignId Campaign ID
-     * @param _voteIndexes Array of vote indexes in user's history to refund
+     * @dev Request refund for votes
      */
     function requestRefund(uint256 _campaignId, uint256[] memory _voteIndexes) external nonReentrant {
-        // Validate refund requirements
         _validateRefundRequirements(_campaignId);
-        
+
         uint256 totalRefundAmount = 0;
-        
-        // Process each vote for refund
+
         for (uint256 i = 0; i < _voteIndexes.length; i++) {
             totalRefundAmount += _processVoteRefund(_voteIndexes[i], _campaignId);
         }
-        
+
         require(totalRefundAmount > 0, "No refundable votes found");
-        
-        // Send the refund
+
         (bool success, ) = payable(msg.sender).call{value: totalRefundAmount}("");
         require(success, "Refund transfer failed");
     }
-    
+
+    /**
+     * @dev Validate refund requirements
+     */
+    function _validateRefundRequirements(uint256 _campaignId) internal view {
+         (
+            , , , , , , 
+            uint256 startTime, 
+            uint256 endTime
+        ) = campaignContract.getCampaignBasicInfo(_campaignId);
+        
+        (
+            , , , , , 
+            bool refundable,
+            bool isPrivate,
+            bool active,
+            // Add a placeholder for the extra returned value
+            // or assign it to a variable if needed
+            // Example: bool extraValue
+        ) = campaignContract.getCampaignConfigInfo(_campaignId);
+
+        require(!active, "Campaign must be finalized for refunds");
+        require(refundable, "Campaign does not support refunds");
+        require(block.timestamp > endTime, "Campaign has not ended");
+    }
+
     /**
      * @dev Get votes for an entity from a user
      * @param _campaignId Campaign ID
