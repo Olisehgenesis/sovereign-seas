@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cUSD to CELO Swapper</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container {
+            max-width: 600px;
+            margin-top: 50px;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .btn-celo {
+            background-color: #FCFF52;
+            color: #333;
+            font-weight: bold;
+        }
+        .btn-cusd {
+            background-color: #35D07F;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h3 class="mb-0">cUSD to CELO Swapper</h3>
+            </div>
+            <div class="card-body">
+                <div id="connect-section" class="text-center py-4">
+                    <button id="connect-wallet" class="btn btn-lg btn-primary">Connect Wallet</button>
+                    <p class="mt-2 text-muted small">Connect to Celo network (Mainnet or Alfajores)</p>
+                </div>
+                
+                <div id="swap-section" class="d-none">
+                    <div class="mb-4">
+                        <h5>Connected Account:</h5>
+                        <div id="account-address" class="form-control bg-light"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Balance:</h5>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="input-group">
+                                    <span class="input-group-text btn-cusd">cUSD</span>
+                                    <input type="text" id="cusd-balance" class="form-control" readonly>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="input-group">
+                                    <span class="input-group-text btn-celo">CELO</span>
+                                    <input type="text" id="celo-balance" class="form-control" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Swap cUSD to CELO:</h5>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text btn-cusd">cUSD</span>
+                            <input type="number" id="cusd-amount" class="form-control" placeholder="Amount to swap" step="0.1">
+                            <button class="btn btn-outline-secondary" type="button" id="max-button">MAX</button>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>↓</span>
+                            <button id="refresh-estimate" class="btn btn-sm btn-outline-primary">Refresh Rate</button>
+                            <span>↓</span>
+                        </div>
+                        
+                        <div class="input-group mb-3">
+                            <span class="input-group-text btn-celo">CELO</span>
+                            <input type="text" id="celo-estimate" class="form-control" placeholder="Estimated CELO" readonly>
+                        </div>
+                        
+                        <div class="form-text mb-3">
+                            Slippage Protection: <span id="min-amount-text">0</span> CELO minimum (5% slippage tolerance)
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button id="approve-button" class="btn btn-warning">Approve cUSD</button>
+                        <button id="swap-button" class="btn btn-success" disabled>Swap cUSD to CELO</button>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div id="transaction-status" class="alert d-none"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="small text-muted">
+                    Contract CELO Balance: <span id="contract-celo-balance">0</span> CELO
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - REPLACE THESE WITH YOUR ACTUAL VALUES
+        // const SWAPPER_ADDRESS = '0x123...'; // Your swapper contract address
+        const SWAPPER_ADDRESS = '0xYourContractAddressHere'; // Replace with your actual address
+        
+        // For mainnet:
+        const CUSD_ADDRESS = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
+        
+        // For Alfajores testnet:
+        // const CUSD_ADDRESS = '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1';
+        
+        const SLIPPAGE_TOLERANCE = 0.05; // 5%
+        
+        // ABIs - Replace with your actual contract ABIs if needed
+        const SWAPPER_ABI = [
+            {
+                "inputs": [{"internalType": "uint256","name": "_cusdAmount","type": "uint256"}],
+                "name": "estimateCeloAmount",
+                "outputs": [{"internalType": "uint256","name": "celoAmount","type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "uint256","name": "_cusdAmount","type": "uint256"},
+                    {"internalType": "uint256","name": "_minCeloAmount","type": "uint256"}
+                ],
+                "name": "swapCUSDtoCELO",
+                "outputs": [{"internalType": "uint256","name": "celoAmount","type": "uint256"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getContractCeloBalance",
+                "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+        
+        const ERC20_ABI = [
+            {
+                "constant": true,
+                "inputs": [{"name": "_owner","type": "address"},{"name": "_spender","type": "address"}],
+                "name": "allowance",
+                "outputs": [{"name": "","type": "uint256"}],
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [{"name": "_spender","type": "address"},{"name": "_value","type": "uint256"}],
+                "name": "approve",
+                "outputs": [{"name": "","type": "bool"}],
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [{"name": "_owner","type": "address"}],
+                "name": "balanceOf",
+                "outputs": [{"name": "balance","type": "uint256"}],
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [],
+                "name": "decimals",
+                "outputs": [{"name": "","type": "uint8"}],
+                "type": "function"
+            }
+        ];
+        
+        // Global variables
+        let web3;
+        let account = null;
+        let swapperContract;
+        let cusdContract;
+        
+        // DOM Elements
+        const connectWalletBtn = document.getElementById('connect-wallet');
+        const connectSection = document.getElementById('connect-section');
+        const swapSection = document.getElementById('swap-section');
+        const accountAddress = document.getElementById('account-address');
+        const cusdBalance = document.getElementById('cusd-balance');
+        const celoBalance = document.getElementById('celo-balance');
+        const cusdAmount = document.getElementById('cusd-amount');
+        const celoEstimate = document.getElementById('celo-estimate');
+        const minAmountText = document.getElementById('min-amount-text');
+        const maxButton = document.getElementById('max-button');
+        const refreshEstimateBtn = document.getElementById('refresh-estimate');
+        const approveButton = document.getElementById('approve-button');
+        const swapButton = document.getElementById('swap-button');
+        const transactionStatus = document.getElementById('transaction-status');
+        const contractCeloBalance = document.getElementById('contract-celo-balance');
+        
+        // Connect to wallet - works with MetaMask, Valora, etc.
+        async function connectWallet() {
+            try {
+                // First check if we have a modern provider
+                if (window.ethereum) {
+                    // Modern way (MetaMask, Valora, etc.)
+                    web3 = new Web3(window.ethereum);
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    account = accounts[0];
+                    
+                    // Listen for account changes
+                    window.ethereum.on('accountsChanged', function (accounts) {
+                        account = accounts[0];
+                        handleConnection();
+                    });
+                } else if (window.web3) {
+                    // Legacy way (older browsers)
+                    web3 = new Web3(window.web3.currentProvider);
+                    const accounts = await web3.eth.getAccounts();
+                    account = accounts[0];
+                } else {
+                    showStatus('No Ethereum wallet detected. Please install MetaMask or use Valora on mobile.', 'warning');
+                    return;
+                }
+                
+                if (!account) {
+                    showStatus('Could not get accounts. Please check your wallet.', 'danger');
+                    return;
+                }
+                
+                handleConnection();
+                
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                showStatus('Failed to connect wallet: ' + (error.message || 'Unknown error'), 'danger');
+            }
+        }
+        
+        // Handle successful connection
+        async function handleConnection() {
+            accountAddress.textContent = account;
+            
+            // Initialize contracts
+            swapperContract = new web3.eth.Contract(SWAPPER_ABI, SWAPPER_ADDRESS);
+            cusdContract = new web3.eth.Contract(ERC20_ABI, CUSD_ADDRESS);
+            
+            // Update UI
+            connectSection.classList.add('d-none');
+            swapSection.classList.remove('d-none');
+            
+            // Load balances
+            await updateBalances();
+            await updateContractBalance();
+            
+            // Check network
+            try {
+                const chainId = await web3.eth.getChainId();
+                console.log('Connected to chain ID:', chainId);
+                
+                if (chainId !== 42220 && chainId !== 44787) { // Not Celo Mainnet or Alfajores
+                    showStatus('Warning: Not connected to Celo network. Please switch to Celo Mainnet or Alfajores.', 'warning');
+                }
+            } catch (error) {
+                console.error('Error checking network:', error);
+            }
+        }
+        
+        // Update user balances
+        async function updateBalances() {
+            try {
+                // Get cUSD balance
+                const cusdWei = await cusdContract.methods.balanceOf(account).call();
+                const cusdValue = parseFloat(web3.utils.fromWei(cusdWei, 'ether')).toFixed(4);
+                cusdBalance.value = cusdValue;
+                
+                // Get CELO balance
+                const celoWei = await web3.eth.getBalance(account);
+                const celoValue = parseFloat(web3.utils.fromWei(celoWei, 'ether')).toFixed(4);
+                celoBalance.value = celoValue;
+                
+                // Check allowance
+                await checkAllowance();
+                
+            } catch (error) {
+                console.error("Error updating balances:", error);
+                showStatus('Error loading balances', 'danger');
+            }
+        }
+        
+        // Update contract balance
+        async function updateContractBalance() {
+            try {
+                const contractCeloWei = await swapperContract.methods.getContractCeloBalance().call();
+                contractCeloBalance.textContent = parseFloat(web3.utils.fromWei(contractCeloWei, 'ether')).toFixed(4);
+            } catch (error) {
+                console.error("Error updating contract balance:", error);
+                contractCeloBalance.textContent = 'Error';
+            }
+        }
+        
+        // Check allowance
+        async function checkAllowance() {
+            try {
+                if (!account) return;
+                
+                const amount = cusdAmount.value || '0';
+                const amountWei = web3.utils.toWei(amount, 'ether');
+                
+                const allowance = await cusdContract.methods.allowance(account, SWAPPER_ADDRESS).call();
+                
+                if (web3.utils.toBN(allowance).gte(web3.utils.toBN(amountWei))) {
+                    approveButton.innerText = 'Approved ✓';
+                    approveButton.classList.remove('btn-warning');
+                    approveButton.classList.add('btn-outline-success');
+                    approveButton.disabled = true;
+                    swapButton.disabled = false;
+                } else {
+                    approveButton.innerText = 'Approve cUSD';
+                    approveButton.classList.add('btn-warning');
+                    approveButton.classList.remove('btn-outline-success');
+                    approveButton.disabled = false;
+                    swapButton.disabled = true;
+                }
+            } catch (error) {
+                console.error("Error checking allowance:", error);
+            }
+        }
+        
+        // Update CELO estimate
+        async function updateCeloEstimate() {
+            try {
+                const amount = cusdAmount.value || '0';
+                if (parseFloat(amount) <= 0) {
+                    celoEstimate.value = '0';
+                    minAmountText.innerText = '0';
+                    return;
+                }
+                
+                const amountWei = web3.utils.toWei(amount, 'ether');
+                
+                // Call your contract's estimateCeloAmount function
+                const estimatedCeloWei = await swapperContract.methods.estimateCeloAmount(amountWei).call();
+                const estimatedCelo = web3.utils.fromWei(estimatedCeloWei, 'ether');
+                
+                celoEstimate.value = parseFloat(estimatedCelo).toFixed(6);
+                
+                // Calculate min amount with slippage
+                const minCelo = parseFloat(estimatedCelo) * (1 - SLIPPAGE_TOLERANCE);
+                minAmountText.innerText = minCelo.toFixed(6);
+                
+                await checkAllowance();
+                
+            } catch (error) {
+                console.error("Error updating CELO estimate:", error);
+                celoEstimate.value = 'Error';
+                minAmountText.innerText = '0';
+            }
+        }
+        
+        // Approve cUSD spending
+        async function approveCusd() {
+            try {
+                if (!account) {
+                    showStatus('Wallet not connected', 'warning');
+                    return;
+                }
+                
+                const amount = cusdAmount.value || '0';
+                if (parseFloat(amount) <= 0) {
+                    showStatus('Please enter a valid amount', 'warning');
+                    return;
+                }
+                
+                // Convert to wei (18 decimals)
+                const amountWei = web3.utils.toWei(amount, 'ether');
+                
+                showStatus('Approving cUSD...', 'info');
+                approveButton.disabled = true;
+                
+                // Call approve function on cUSD token
+                await cusdContract.methods.approve(SWAPPER_ADDRESS, amountWei).send({
+                    from: account
+                });
+                
+                showStatus('cUSD approved successfully!', 'success');
+                await checkAllowance();
+                
+            } catch (error) {
+                console.error("Approval error:", error);
+                showStatus('Approval failed: ' + (error.message || 'Unknown error'), 'danger');
+                approveButton.disabled = false;
+            }
+        }
+        
+        // Swap cUSD to CELO
+        async function swapCusdToCelo() {
+            try {
+                if (!account) {
+                    showStatus('Wallet not connected', 'warning');
+                    return;
+                }
+                
+                const amount = cusdAmount.value || '0';
+                if (parseFloat(amount) <= 0) {
+                    showStatus('Please enter a valid amount', 'warning');
+                    return;
+                }
+                
+                const amountWei = web3.utils.toWei(amount, 'ether');
+                
+                // Get estimated CELO and calculate minimum with slippage
+                const estimatedCeloWei = await swapperContract.methods.estimateCeloAmount(amountWei).call();
+                const minCeloWei = Math.floor(estimatedCeloWei * (1 - SLIPPAGE_TOLERANCE)).toString();
+                
+                showStatus('Swapping cUSD to CELO...', 'info');
+                swapButton.disabled = true;
+                
+                // Call the swap function
+                const tx = await swapperContract.methods.swapCUSDtoCELO(amountWei, minCeloWei).send({
+                    from: account
+                });
+                
+                showStatus(`Swap successful! Transaction: ${tx.transactionHash.substring(0, 10)}...`, 'success');
+                
+                // Clear form and update balances
+                cusdAmount.value = '';
+                celoEstimate.value = '';
+                minAmountText.innerText = '0';
+                
+                await updateBalances();
+                await updateContractBalance();
+                
+            } catch (error) {
+                console.error("Swap error:", error);
+                showStatus('Swap failed: ' + (error.message || 'Unknown error'), 'danger');
+                swapButton.disabled = false;
+            }
+        }
+        
+        // Show status message
+        function showStatus(message, type) {
+            transactionStatus.textContent = message;
+            transactionStatus.className = `alert alert-${type}`;
+            transactionStatus.classList.remove('d-none');
+            
+            // Auto hide success/info messages after 5 seconds
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    transactionStatus.classList.add('d-none');
+                }, 5000);
+            }
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect wallet
+            connectWalletBtn.addEventListener('click', connectWallet);
+            
+            // Input amount changed
+            cusdAmount.addEventListener('input', updateCeloEstimate);
+            
+            // MAX button clicked
+            maxButton.addEventListener('click', function() {
+                cusdAmount.value = cusdBalance.value;
+                updateCeloEstimate();
+            });
+            
+            // Refresh estimate button clicked
+            refreshEstimateBtn.addEventListener('click', updateCeloEstimate);
+            
+            // Approve button clicked
+            approveButton.addEventListener('click', approveCusd);
+            
+            // Swap button clicked
+            swapButton.addEventListener('click', swapCusdToCelo);
+        });
+    </script>
+</body>
+</html>
