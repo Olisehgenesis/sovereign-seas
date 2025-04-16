@@ -29,31 +29,59 @@ const navigation = [
 
 export default function Footer() {
   return (
-    <footer className="bg-white/90 backdrop-blur-sm mt-auto border-t border-emerald-100 shadow-sm">
-      <div className="mx-auto max-w-7xl py-4 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8">
+    <footer className="bg-white/90 backdrop-blur-sm mt-auto border-t border-blue-100 relative overflow-hidden">
+      {/* Wave pattern background */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+          <defs>
+            <pattern id="wave" x="0" y="0" width="120" height="20" patternUnits="userSpaceOnUse">
+              <path 
+                d="M0 10 Q30 20 60 10 Q90 0 120 10 V30 H0 Z" 
+                fill="#4F46E5" 
+                opacity="0.3"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#wave)" />
+        </svg>
+      </div>
+      
+      <div className="mx-auto max-w-7xl py-4 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8 relative">
         <div className="flex justify-center space-x-4 md:order-2">
           {navigation.map((item) => (
             <a
               key={item.name}
               href={item.href}
-              className="text-gray-500 hover:text-emerald-500 transition-colors"
+              className="text-blue-500 hover:text-indigo-600 transition-all hover:-translate-y-1 transform flex items-center justify-center h-8 w-8 bg-blue-50 rounded-full border border-blue-100 shadow-sm hover:shadow-md"
               target="_blank"
               rel="noopener noreferrer"
             >
               <span className="sr-only">{item.name}</span>
-              <item.icon className="h-5 w-5" aria-hidden="true" />
+              <item.icon className="h-4 w-4" aria-hidden="true" />
             </a>
           ))}
         </div>
         <div className="mt-2 md:order-1 md:mt-0">
           <p className="text-center text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} Developed with <span className="text-emerald-500">♦</span> by <span className="tilt-neon">Oliseh GENESIS</span>
+            &copy; {new Date().getFullYear()} Developed with <span className="inline-block animate-pulse text-blue-500">⚓</span> by <span className="tilt-neon bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-600 font-bold">Oliseh GENESIS</span>
           </p>
         </div>
       </div>
+           
+      {/* Animated gradient line */}
+      <div className="h-1 w-full bg-gradient-to-r from-blue-400 via-indigo-500 to-blue-400 animate-gradient-x"></div>
       
-      {/* Decorative gradient line */}
-      <div className="h-0.5 w-full bg-gradient-to-r from-teal-400 via-emerald-500 to-teal-400"></div>
+      {/* Decorative dots */}
+      <div className="absolute bottom-0 left-0 w-24 h-12 pointer-events-none opacity-20">
+        <div className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-blue-500"></div>
+        <div className="absolute bottom-6 left-8 w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+        <div className="absolute bottom-3 left-14 w-1 h-1 rounded-full bg-blue-400"></div>
+      </div>
+      <div className="absolute bottom-0 right-0 w-24 h-12 pointer-events-none opacity-20">
+        <div className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-blue-500"></div>
+        <div className="absolute bottom-6 right-8 w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+        <div className="absolute bottom-3 right-14 w-1 h-1 rounded-full bg-blue-400"></div>
+      </div>
     </footer>
   );
 }

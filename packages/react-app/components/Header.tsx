@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle, FileCode } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle, FileCode, Anchor } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
 import { celo, celoAlfajores } from 'viem/chains';
@@ -124,17 +124,20 @@ export default function Header() {
         </div>
       )}
 
-      {/* Shadow element for raised effect */}
-      <div className="absolute inset-x-0 h-1.5 bottom-0 translate-y-full bg-gradient-to-b from-emerald-800/20 to-transparent pointer-events-none"></div>
+      {/* Shadow element for raised effect - Blue version */}
+      <div className="absolute inset-x-0 h-3 bottom-0 translate-y-full bg-gradient-to-b from-blue-800/30 to-transparent pointer-events-none"></div>
       
-      <Disclosure as="nav" className="bg-gradient-to-r from-emerald-500 to-teal-500 border-b border-emerald-600/30 shadow-lg sticky top-0 z-50">
+      {/* Animated wave decoration at the bottom of the header */}
+      <div className="absolute left-0 right-0 bottom-0 translate-y-full h-4 wave-border opacity-30 pointer-events-none"></div>
+      
+      <Disclosure as="nav" className="bg-gradient-to-r from-blue-600 to-blue-500 border-b border-blue-700/30 shadow-xl sticky top-0 z-50">
         {({ open }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="relative flex h-16 items-center justify-between">
                 <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
-                  {/* Mobile menu button */}
-                  <Disclosure.Button className="inline-flex items-center justify-center rounded-full p-2 text-white hover:bg-emerald-600/20">
+                  {/* Mobile menu button with ripple effect */}
+                  <Disclosure.Button className="inline-flex items-center justify-center rounded-full p-2 text-white hover:bg-blue-600/30 transition-all duration-300 transform active:scale-95 relative overflow-hidden premium-button">
                     <span className="sr-only">Open main menu</span>
                     {open ? (
                       <X className="block h-5 w-5" aria-hidden="true" />
@@ -146,45 +149,50 @@ export default function Header() {
                 
                 {/* Logo and desktop navigation */}
                 <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
-                  <Link href="/" className="flex items-center">
-                    <div className="relative h-10 w-10 mr-2">
-                      <div className="absolute inset-0 rounded-full bg-white/30 animate-pulse-slow"></div>
-                      <div className="absolute inset-0.5 rounded-full bg-white flex items-center justify-center">
-                        <Image 
-                          src="/logo.svg" 
-                          alt="Sovereign Seas Logo"
-                          width={20}
-                          height={20}
-                          className="h-5 w-5"
-                        />
+                  <Link href="/" className="flex items-center group">
+                    <div className="relative h-10 w-10 mr-2 animate-float-slow">
+                      <div className="absolute inset-0 rounded-full bg-white/30 animate-pulse-blue"></div>
+                      <div className="absolute inset-0.5 rounded-full bg-white flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                        <Anchor className="h-5 w-5 text-blue-500" />
                       </div>
                     </div>
-                    <span className="text-xl font-bold text-white tilt-neon">
-                      <span className="hidden sm:inline">Sovereign</span> <span className="text-white">Seas</span>
+                    <span className="text-xl font-bold text-white tilt-neon relative">
+                      <span className="hidden sm:inline opacity-90 group-hover:opacity-100 transition-opacity">Sovereign</span> 
+                      <span className="text-white group-hover:text-sky-100 transition-colors">Seas</span>
+                      <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white/30 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
                     </span>
                   </Link>
                   
                   {/* Desktop Navigation Links */}
                   <div className="hidden sm:ml-8 sm:flex sm:space-x-2">
-                    {navigation.map((item) => {
+                    {navigation.map((item, index) => {
                       const NavIcon = item.icon;
                       const isActive = pathname === item.href || 
                                       (item.href !== '/' && pathname?.startsWith(item.href));
+                      const animationDelay = `${index * 0.1}s`;
+                      
                       return (
                         <Link
                           key={item.name}
                           href={item.href}
+                          style={{ animationDelay }}
                           className={`
-                            px-3 py-2 rounded-full text-sm font-medium transition-colors duration-200 flex items-center
+                            px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center relative
                             ${isActive 
-                              ? 'bg-white text-emerald-700' 
-                              : 'text-white hover:bg-emerald-600/20'}
+                              ? 'bg-white text-blue-700 shadow-md transform hover:-translate-y-1' 
+                              : 'text-white hover:bg-blue-600/20 hover:-translate-y-1'}
+                            animate-float-delay-${index+1}
                           `}
                         >
-                          <NavIcon className="h-4 w-4 mr-1.5" />
-                          <span className={isActive ? '' : ''}>
+                          <NavIcon className={`h-4 w-4 mr-1.5 ${isActive ? 'text-blue-500' : ''} transition-transform group-hover:rotate-3`} />
+                          <span className={isActive ? 'font-semibold' : ''}>
                             {item.name}
                           </span>
+                          
+                          {/* Active indicator */}
+                          {isActive && (
+                            <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-glow-blue"></span>
+                          )}
                         </Link>
                       );
                     })}
@@ -194,8 +202,8 @@ export default function Header() {
                 {/* Right side - Connect Wallet & User Menu */}
                 <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
                   {/* Network Badge */}
-                  <div className="mr-2 hidden sm:flex items-center rounded-full bg-white/20 text-white px-3 py-1 text-xs">
-                    <span className="h-2 w-2 rounded-full bg-white mr-1.5"></span>
+                  <div className="mr-2 hidden sm:flex items-center rounded-full bg-white/20 text-white px-3 py-1 text-xs border border-white/10 shadow-inner animate-float-delay-4">
+                    <span className="h-2 w-2 rounded-full bg-blue-200 mr-1.5 animate-pulse"></span>
                     {CHAIN_NAME} {IS_TESTNET ? 'Testnet' : ''}
                   </div>
                   
@@ -203,46 +211,46 @@ export default function Header() {
                     <div className="relative mr-2">
                       <button
                         onClick={() => setShowDropdown(!showDropdown)}
-                        className="flex items-center bg-white/20 hover:bg-white/30 text-white rounded-full py-1.5 px-3 text-sm transition-colors"
+                        className="flex items-center bg-white/20 hover:bg-white/30 text-white rounded-full py-1.5 px-3 text-sm transition-all duration-300 border border-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 premium-button"
                       >
-                        <Waves className="h-4 w-4 mr-1.5" />
+                        <Waves className="h-4 w-4 mr-1.5 animate-float-slow" />
                         Dashboard
-                        <ChevronDown className={`ml-1 h-3 w-3 transform transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`ml-1 h-3 w-3 transform transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
                       </button>
                       
-                      {/* Dropdown Menu */}
+                      {/* Dropdown Menu with enhanced animation */}
                       <Transition
                         show={showDropdown}
-                        enter="transition ease-out duration-100"
-                        enterFrom="transform opacity-0 scale-95"
-                        enterTo="transform opacity-100 scale-100"
-                        leave="transition ease-in duration-75"
-                        leaveFrom="transform opacity-100 scale-100"
-                        leaveTo="transform opacity-0 scale-95"
+                        enter="transition ease-out duration-200"
+                        enterFrom="transform opacity-0 scale-95 translate-y-2"
+                        enterTo="transform opacity-100 scale-100 translate-y-0"
+                        leave="transition ease-in duration-150"
+                        leaveFrom="transform opacity-100 scale-100 translate-y-0"
+                        leaveTo="transform opacity-0 scale-95 translate-y-2"
                       >
                         <div 
-                          className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg py-1 z-50"
+                          className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-2xl py-1 z-50 border border-blue-100 water-card"
                           onMouseLeave={() => setShowDropdown(false)}
                         >
                           <Link
                             href="/campaign/mycampaigns"
-                            className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
                           >
-                            <Globe className="mr-1.5 h-4 w-4 text-emerald-500" />
+                            <Globe className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Campaigns
                           </Link>
                           <Link
                             href="/votes"
-                            className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
                           >
-                            <Award className="mr-1.5 h-4 w-4 text-amber-500" />
+                            <Award className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Votes
                           </Link>
                           <Link
                             href="/myprojects"
-                            className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
                           >
-                            <FileCode className="mr-1.5 h-4 w-4 text-blue-500" />
+                            <FileCode className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Projects
                           </Link>
                         </div>
@@ -280,7 +288,7 @@ export default function Header() {
                                   return (
                                     <button 
                                       onClick={openConnectModal} 
-                                      className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-sm"
+                                      className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-blue-100 hover:-translate-y-1 animate-float premium-button"
                                     >
                                       Connect Wallet
                                     </button>
@@ -292,7 +300,7 @@ export default function Header() {
                                     <div className="flex items-center gap-2">
                                       <button
                                         onClick={handleSwitchToNetwork}
-                                        className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-full text-sm font-medium transition-colors shadow-sm"
+                                        className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-amber-400 hover:-translate-y-1 premium-button"
                                       >
                                         <AlertTriangle size={16} />
                                         Switch to {CHAIN_NAME}
@@ -305,7 +313,7 @@ export default function Header() {
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={openAccountModal}
-                                      className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                                      className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 premium-button"
                                     >
                                       {account.displayName}
                                     </button>
@@ -322,16 +330,16 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Mobile menu */}
+            {/* Mobile menu with enhanced animations */}
             <Disclosure.Panel className="sm:hidden">
               <div className="space-y-1 px-3 pt-2 pb-3">
                 {/* Mobile Network Badge */}
-                <div className="mb-3 flex items-center justify-center rounded-full bg-white/20 text-white px-3 py-1.5 text-sm">
-                  <span className="h-2 w-2 rounded-full bg-white mr-1.5"></span>
+                <div className="mb-3 flex items-center justify-center rounded-full bg-white/20 text-white px-3 py-1.5 text-sm border border-white/10 shadow-inner">
+                  <span className="h-2 w-2 rounded-full bg-blue-200 mr-1.5 animate-pulse"></span>
                   {CHAIN_NAME} {IS_TESTNET ? 'Testnet' : ''} Only
                 </div>
                 
-                {navigation.map((item) => {
+                {navigation.map((item, index) => {
                   const NavIcon = item.icon;
                   const isActive = pathname === item.href || 
                                  (item.href !== '/' && pathname?.startsWith(item.href));
@@ -341,15 +349,26 @@ export default function Header() {
                       as={Link}
                       href={item.href}
                       className={`
-                        flex items-center px-3 py-2 rounded-full text-sm font-medium ${
-                          isActive 
-                            ? 'bg-white text-emerald-700' 
-                            : 'text-white hover:bg-emerald-600/20'
+                        flex items-center px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 relative
+                        ${isActive 
+                          ? 'bg-white text-blue-700 shadow-lg' 
+                          : 'text-white hover:bg-blue-600/20'
                         }
                       `}
+                      style={{
+                        animationDelay: `${index * 0.1}s`,
+                        animation: 'fadeSlideIn 0.3s ease-out forwards',
+                        opacity: 0,
+                        transform: 'translateY(10px)'
+                      }}
                     >
-                      <NavIcon className="h-4 w-4 mr-2" />
+                      <NavIcon className={`h-4 w-4 mr-2 ${isActive ? 'text-blue-500' : ''}`} />
                       {item.name}
+                      
+                      {/* Active indicator */}
+                      {isActive && (
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-glow-blue"></span>
+                      )}
                     </Disclosure.Button>
                   );
                 })}
@@ -363,25 +382,43 @@ export default function Header() {
                       <Disclosure.Button
                         as={Link}
                         href="/campaign/mycampaigns"
-                        className="flex items-center mt-1.5 px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-emerald-600/20"
+                        className="flex items-center mt-1.5 px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
+                        style={{
+                          animation: 'fadeSlideIn 0.3s ease-out forwards',
+                          animationDelay: '0.4s',
+                          opacity: 0,
+                          transform: 'translateY(10px)'
+                        }}
                       >
-                        <Globe className="mr-2 h-4 w-4" />
+                        <Globe className="mr-2 h-4 w-4 text-blue-300" />
                         My Campaigns
                       </Disclosure.Button>
                       <Disclosure.Button
                         as={Link}
                         href="/votes"
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-emerald-600/20"
+                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
+                        style={{
+                          animation: 'fadeSlideIn 0.3s ease-out forwards',
+                          animationDelay: '0.5s',
+                          opacity: 0,
+                          transform: 'translateY(10px)'
+                        }}
                       >
-                        <Award className="mr-2 h-4 w-4" />
+                        <Award className="mr-2 h-4 w-4 text-blue-300" />
                         My Votes
                       </Disclosure.Button>
                       <Disclosure.Button
                         as={Link}
                         href="/myprojects"
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-emerald-600/20"
+                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
+                        style={{
+                          animation: 'fadeSlideIn 0.3s ease-out forwards',
+                          animationDelay: '0.6s',
+                          opacity: 0,
+                          transform: 'translateY(10px)'
+                        }}
                       >
-                        <FileCode className="mr-2 h-4 w-4" />
+                        <FileCode className="mr-2 h-4 w-4 text-blue-300" />
                         My Projects
                       </Disclosure.Button>
                     </div>
