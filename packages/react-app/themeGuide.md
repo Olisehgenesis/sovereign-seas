@@ -244,5 +244,3 @@ For decorative backgrounds:
 3. **Layer Animations**: Don't overuse animations, but strategically place them on important elements
 4. **Optimize Performance**: Use will-change for animated elements and ensure smooth transitions
 5. **Accessibility**: Ensure proper contrast ratios despite the glassmorphism effects
-
----

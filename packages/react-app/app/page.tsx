@@ -18,7 +18,6 @@ import {
   Video,
   CheckCircle,
   Wallet,
-  Wave,
   Star,
   Anchor,
   Zap,
