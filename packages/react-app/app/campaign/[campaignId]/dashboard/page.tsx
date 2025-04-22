@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
 import { useVotingSystem } from '../../../../hooks/useVotingSystem';
+import erc20Abi from '@/abis/MockCELO.json';
+import { formatEther } from 'viem';
 
 
 export default function CampaignDashboard() {
@@ -46,6 +48,7 @@ export default function CampaignDashboard() {
   const [slippagePercent, setSlippagePercent] = useState(0.5); // Default 0.5%
   const [allProjectVotes, setAllProjectVotes] = useState<any>(null);
   const [tokenVoteDistributionVisible, setTokenVoteDistributionVisible] = useState(false);
+  const [tokenBalances, setTokenBalances] = useState<{[key: string]: bigint}>({});
   
   // Vote history and stats states
   const [userVoteHistory, setUserVoteHistory] = useState<any[]>([]);
@@ -65,9 +68,11 @@ export default function CampaignDashboard() {
   const [projectRankingsVisible, setProjectRankingsVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' | null }>({ text: '', type: null });
   
+  
   // Contract interaction
   const sovereignSeas = useSovereignSeas();
   const votingSystem = useVotingSystem();
+  const celoswapper = votingSystem.celoSwapper;
   
   useEffect(() => {
     setIsMounted(true);
@@ -105,6 +110,126 @@ export default function CampaignDashboard() {
       return () => clearTimeout(timer);
     }
   }, [statusMessage]);
+  // Format token balance using formatEther for clean display with 3 decimal places
+const formatTokenBalance = (tokenAddress: string, balance: bigint) => {
+  if (!balance) return '0';
+  
+  const token = supportedTokens.find(t => t.address === tokenAddress);
+  
+  // Use formatEther for standard 18-decimal tokens
+  if (!token || token.decimals === 18) {
+    // Format with formatEther and limit to 3 decimal places
+    const formattedBalance = formatEther(balance);
+    const parts = formattedBalance.split('.');
+    
+    // Format integer part with commas
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    
+    // If there's a decimal part, keep only 3 places
+    if (parts[1]) {
+      return `${integerPart}.${parts[1].substring(0, 3)}`;
+    }
+    
+    return integerPart;
+  } else {
+    // For tokens with non-standard decimals
+    let divisor = BigInt(1);
+    for (let i = 0; i < token.decimals; i++) {
+        divisor *= BigInt(10);
+    }
+    const integerPart = balance / divisor;
+    const fractionalPart = balance % divisor;
+    
+    // Format integer part with commas
+    const formattedIntegerPart = integerPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    
+    // Format to 3 decimal places
+    if (fractionalPart > 0n) {
+      const fractionalStr = fractionalPart.toString().padStart(token.decimals, '0');
+      return `${formattedIntegerPart}.${fractionalStr.substring(0, 2)}`;
+    }
+    
+    return formattedIntegerPart;
+  }
+};
+
+const fetchAllTokenBalances = async () => {
+  if (!address || !supportedTokens.length) return;
+  
+  console.log("Proactively fetching balances for all tokens");
+  
+  try {
+    // Process tokens in parallel for faster loading
+    const fetchPromises = supportedTokens.map(async (token) => {
+      try {
+        if (token.address.toLowerCase() === votingSystem.CELO_ADDRESS.toLowerCase()) {
+          // Fetch native CELO balance
+          if (votingSystem.celoSwapper.publicClient) {
+            const balance = await votingSystem.celoSwapper.publicClient.getBalance({
+              address: address as `0x${string}`
+            });
+            return { address: token.address, balance };
+          }
+        } else {
+          // Fetch ERC20 token balance
+          if (votingSystem.celoSwapper.publicClient) {
+            const balance = await votingSystem.celoSwapper.publicClient.readContract({
+              address: token.address as `0x${string}`,
+              abi: erc20Abi,
+              functionName: 'balanceOf',
+              args: [address as `0x${string}`]
+            });
+            // format balance to 3dps 
+            const formattedBalance = formatEther(balance as BigInt);
+
+            return { address: token.address, balance };
+          }
+        }
+        return { address: token.address, balance: BigInt(0) };
+      } catch (error) {
+        console.error(`Error fetching balance for ${token.symbol}:`, error);
+        return { address: token.address, balance: BigInt(0) };
+      }
+    });
+
+    const results = await Promise.all(fetchPromises);
+    
+    // Update all balances at once
+    const newBalances = results.reduce((acc, result) => {
+      if (result) {
+        acc[result.address] = result.balance;
+      }
+      return acc;
+    }, {} as {[key: string]: bigint});
+    
+    setTokenBalances(prev => ({
+      ...prev,
+      ...newBalances
+    }));
+    
+    console.log("All token balances fetched successfully");
+  } catch (error) {
+    console.error("Error fetching all token balances:", error);
+  }
+};
+
+// Add this effect to load balances when supported tokens are available or address changes
+useEffect(() => {
+  if (address && supportedTokens.length > 0) {
+    fetchAllTokenBalances();
+  }
+}, [address, supportedTokens.length]);
+
+// Optional: Add this effect to refresh balances periodically (every 30 seconds)
+useEffect(() => {
+  if (address && supportedTokens.length > 0) {
+    const interval = setInterval(() => {
+      fetchAllTokenBalances();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }
+}, [address, supportedTokens.length]);
   
   // Apply sorting and filtering whenever projects, sort method, or filter changes
   useEffect(() => {
@@ -152,6 +277,9 @@ export default function CampaignDashboard() {
       console.error('Error loading supported tokens:', error);
     }
   };
+  
+  
+  
   
   const getTokenExchangeRate = async (tokenAddress, amount) => {
     if (!tokenAddress || !amount || parseFloat(amount) <= 0) return;
@@ -263,6 +391,7 @@ export default function CampaignDashboard() {
         
         // Get token votes summary
         const summary = await votingSystem.getUserCampaignVotes(Number(campaignId));
+        console.log('Token votes summary:', summary);
         if (summary) {
           // Update user vote stats with token votes
           setUserVoteStats(prev => ({
@@ -390,8 +519,8 @@ const StatusMessage = ({ text, type }) => {
     if (!selectedProject || !voteAmount || parseFloat(voteAmount) <= 0 || !campaignId || !selectedToken) return;
     
     try {
-      // Calculate slippage in basis points
-      const slippageBps = Math.floor(slippagePercent * 100);
+      // Fixed 2% slippage (200 basis points)
+      const slippageBps = 200;
       
       // Use the smart vote function that selects the right contract based on token
       await votingSystem.vote(
@@ -1404,7 +1533,7 @@ const StatusMessage = ({ text, type }) => {
         </div>
       </div>
       
-      {/* Multi-Token Vote Modal */}
+   {/* Multi-Token Vote Modal */}
 {voteModalVisible && selectedProject && (
   <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
     <div className="bg-white/95 backdrop-blur-sm rounded-2xl w-full max-w-md shadow-2xl border border-blue-200 relative overflow-hidden group animate-float-delay-1">
@@ -1462,7 +1591,11 @@ const StatusMessage = ({ text, type }) => {
             {supportedTokens.map((token) => (
               <button
                 key={token.address}
-                onClick={() => setSelectedToken(token.address)}
+                onClick={() => {
+                  setSelectedToken(token.address);
+                  // When token is selected, fetch its balance
+                  fetchAllTokenBalances();
+                }}
                 className={`py-2.5 px-3 rounded-lg border flex items-center justify-center text-sm transition-all duration-300 ${
                   selectedToken === token.address
                     ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 font-medium shadow-sm transform scale-105'
@@ -1479,20 +1612,26 @@ const StatusMessage = ({ text, type }) => {
             ))}
           </div>
           
-          {/* Wallet Balance (new) */}
-          {selectedToken && (
-            <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg mb-3 flex items-center justify-between border border-blue-100">
-              <span className="text-xs text-gray-600">Your wallet balance:</span>
-              <span className="text-sm font-medium text-blue-700">
-                {address && selectedToken ? (
-                  /*Placeholder for actual wallet balance*/
-                  `${supportedTokens.find(t => t.address === selectedToken)?.symbol || ''}`
-                ) : (
-                  <span className="animate-pulse">Connect wallet to view</span>
-                )}
-              </span>
-            </div>
-          )}
+          {/* Wallet Balance (with proper formatting) */}
+{selectedToken && (
+  <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg mb-3 flex items-center justify-between border border-blue-100">
+    <span className="text-xs text-gray-600">Your wallet balance:</span>
+    <span className="text-sm font-medium text-blue-700">
+      {address && selectedToken ? (
+        tokenBalances[selectedToken] !== undefined ? (
+          `${formatTokenBalance(selectedToken, tokenBalances[selectedToken])} ${supportedTokens.find(t => t.address === selectedToken)?.symbol || ''}`
+        ) : (
+          <span className="flex items-center">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500 mr-2"></div>
+            Loading...
+          </span>
+        )
+      ) : (
+        <span className="animate-pulse">Connect wallet to view</span>
+      )}
+    </span>
+  </div>
+)}
         </div>
         
         {/* Amount Input */}
@@ -1550,46 +1689,19 @@ const StatusMessage = ({ text, type }) => {
                     <span className="text-gray-600">Voting power (after fees):</span>
                     <span className="text-indigo-700 font-medium font-mono">{tokenExchangeRates[selectedToken].voteAmount}</span>
                   </div>
+                  <div className="flex justify-between border-t border-indigo-100 pt-1.5 mt-1.5">
+                    <span className="text-gray-600">Slippage tolerance:</span>
+                    <span className="text-green-600 font-medium">2.0%</span>
+                  </div>
                 </div>
               )
             )}
           </div>
         )}
-        
-        {/* Slippage Settings (for non-CELO tokens) */}
-        {selectedToken !== votingSystem.CELO_ADDRESS && (
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-gray-700 font-medium flex items-center">
-                <Filter className="h-4 w-4 mr-2 text-blue-500" />
-                Slippage Tolerance
-              </label>
-              <span className="text-blue-600 font-medium">{slippagePercent}%</span>
-            </div>
-            <div className="flex gap-2">
-              {[0.1, 0.5, 1.0, 2.0].map((percent) => (
-                <button
-                  key={percent}
-                  onClick={() => setSlippagePercent(percent)}
-                  className={`flex-1 py-2 text-sm rounded-lg transition-all duration-300 ${
-                    slippagePercent === percent
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 font-medium border border-blue-200 shadow-sm'
-                      : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  {percent}%
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Your transaction will revert if the price changes unfavorably by more than this percentage.
-            </p>
-          </div>
-        )}
 
         <div className="flex gap-3 mt-6">
           <button
-            onClick={handleVote}
+            onClick={handleVote} // Using our updated handleVote with fixed 2% slippage
             disabled={votingSystem.isLoading || !selectedToken || !voteAmount || parseFloat(voteAmount) <= 0}
             className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:shadow-none disabled:hover:translate-y-0 border border-blue-400/30 relative overflow-hidden group"
           >
