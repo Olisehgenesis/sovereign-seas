@@ -3,11 +3,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle, FileCode, Anchor } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle, FileCode, Anchor, Wallet } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
 import { celo, celoAlfajores } from 'viem/chains';
 import { usePrivy, useLogin } from '@privy-io/react-auth';
+import WalletModal from '@/components/walletModal';
 
 // Get chain values from environment variables
 const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID as string);
@@ -32,10 +33,11 @@ const navigation = [
 export default function Header() {
   const [hideConnectBtn, setHideConnectBtn] = useState(false);
   const { connect } = useConnect();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showChainAlert, setShowChainAlert] = useState(false);
   const [currentChainId, setCurrentChainId] = useState(null);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
   const pathname = usePathname();
   
   // Use Privy hooks for authentication
@@ -122,6 +124,22 @@ export default function Header() {
         walletChainType: 'ethereum-only'
       });
     }
+  };
+
+  // Function to open wallet modal
+  const openWalletModal = () => {
+    setWalletModalOpen(true);
+    setShowDropdown(false); // Close dropdown if open
+  };
+
+  // Function to close wallet modal
+  const closeWalletModal = () => {
+    setWalletModalOpen(false);
+  };
+
+  // Function to abbreviate address
+  const abbreviateAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
@@ -270,6 +288,13 @@ export default function Header() {
                             My Projects
                           </Link>
                           <button
+                            onClick={openWalletModal}
+                            className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
+                          >
+                            <Wallet className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
+                            My Wallet
+                          </button>
+                          <button
                             onClick={() => {
                               logout();
                               setShowDropdown(false);
@@ -306,12 +331,11 @@ export default function Header() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => setShowDropdown(!showDropdown)}
+                              onClick={openWalletModal}
                               className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 premium-button"
                             >
-                              {user?.wallet?.address ? 
-                                user.wallet.address.slice(0, 6) + '...' + user.wallet.address.slice(-4) : 
-                                user?.email?.address ? user.email.address.split('@')[0] : 'My Account'}
+                              <Wallet className="h-4 w-4 mr-2" />
+                              {address ? abbreviateAddress(address) : 'My Wallet'}
                             </button>
                           )}
                         </>
@@ -415,11 +439,25 @@ export default function Header() {
                       </Disclosure.Button>
                       <Disclosure.Button
                         as="button"
-                        onClick={() => logout()}
+                        onClick={openWalletModal}
                         className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300 w-full text-left"
                         style={{
                           animation: 'fadeSlideIn 0.3s ease-out forwards',
                           animationDelay: '0.7s',
+                          opacity: 0,
+                          transform: 'translateY(10px)'
+                        }}
+                      >
+                        <Wallet className="mr-2 h-4 w-4 text-blue-300" />
+                        My Wallet
+                      </Disclosure.Button>
+                      <Disclosure.Button
+                        as="button"
+                        onClick={() => logout()}
+                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300 w-full text-left"
+                        style={{
+                          animation: 'fadeSlideIn 0.3s ease-out forwards',
+                          animationDelay: '0.8s',
                           opacity: 0,
                           transform: 'translateY(10px)'
                         }}
@@ -435,6 +473,9 @@ export default function Header() {
           </>
         )}
       </Disclosure>
+
+      {/* Wallet Modal */}
+      <WalletModal isOpen={walletModalOpen} onClose={closeWalletModal} />
     </div>
   );
 }
