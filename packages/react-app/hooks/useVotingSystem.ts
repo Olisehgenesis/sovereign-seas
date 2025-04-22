@@ -137,46 +137,67 @@ const loadSupportedTokens = async () => {
   }
 };
   
-  /**
-   * Smart vote function that selects the appropriate contract based on the token
-   * @param token Token address to vote with (use CELO_ADDRESS for direct CELO votes)
-   * @param campaignId Campaign ID
-   * @param projectId Project ID
-   * @param amount Amount to vote with
-   * @param slippageInBps Slippage in basis points (for non-CELO tokens)
-   */
-  const vote = async (
-    token: string,
-    campaignId: bigint | number,
-    projectId: bigint | number,
-    amount: string,
-    slippageInBps: number = 50
-  ) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // If voting with CELO, use the SovereignSeas contract directly
-      if (token.toLowerCase() === CELO_ADDRESS.toLowerCase()) {
-        // Direct CELO vote
-        await sovereignSeas.vote(campaignId, projectId, amount);
-      } else {
-        // For any other token, use the swapper
-        await celoSwapper.swapAndVoteToken(token, campaignId, projectId, amount, slippageInBps);
-      }
-      
-      // Refresh vote summaries after voting
-      await getUserVoteSummary(campaignId, projectId);
-      
-      return true;
-    } catch (error) {
-      console.error('Error voting:', error);
-      setError(`Failed to vote: ${error || 'Unknown error'}`);
-      return false;
-    } finally {
-      setIsLoading(false);
+ /**
+ * Smart vote function that selects the appropriate contract based on the token
+ * @param token Token address to vote with (use CELO_ADDRESS for direct CELO votes)
+ * @param campaignId Campaign ID
+ * @param projectId Project ID
+ * @param amount Amount to vote with
+ * @param slippageInBps Slippage in basis points (for non-CELO tokens)
+ */
+const vote = async (
+  token: string,
+  campaignId: bigint | number,
+  projectId: bigint | number,
+  amount: string,
+  slippageInBps: number = 50
+) => {
+  try {
+    setIsLoading(true);
+    setError(null);
+    
+    let txResult;
+    
+    // If voting with CELO, use the SovereignSeas contract directly
+    if (token.toLowerCase() === CELO_ADDRESS.toLowerCase()) {
+      // Direct CELO vote
+      txResult = await sovereignSeas.vote(campaignId, projectId, amount);
+    } else {
+      // For any other token, use the swapper
+      txResult = await celoSwapper.swapAndVoteToken(token, campaignId, projectId, amount, slippageInBps);
     }
-  };
+    
+    // Wait for the transaction to be confirmed
+    // This prevents the UI from changing pages before MetaMask is done
+    if (txResult) {
+      console.log("Transaction sent, waiting for confirmation...");
+      
+      // If the transaction returns a hash, wait for it to be mined
+      if (typeof txResult === 'string' || txResult.transactionHash) {
+        const txHash = typeof txResult === 'string' ? txResult : txResult.transactionHash;
+        
+        // If we have the publicClient, wait for the transaction to be mined
+        if (celoSwapper.publicClient) {
+          const receipt = await celoSwapper.publicClient.waitForTransactionReceipt({
+            hash: txHash as `0x${string}`,
+          });
+          console.log("Transaction confirmed:", receipt);
+        }
+      }
+    }
+    
+    // Refresh vote summaries after voting
+    await getUserVoteSummary(campaignId, projectId);
+    
+    return true;
+  } catch (error) {
+    console.error('Error voting:', error);
+    setError(`Failed to vote: ${error instanceof Error ? error.message : String(error)}`);
+    return false;
+  } finally {
+    setIsLoading(false);
+  }
+};
   
   
   /**

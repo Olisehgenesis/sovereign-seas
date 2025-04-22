@@ -720,14 +720,14 @@ const swapAndVoteToken = async (
       const minCeloAmount = await calculateMinCeloAmount(token, tokenAmount, slippageInBps);
       
       console.log("Calculated min CELO amount:", minCeloAmount.toString());
-      const approveTx = await writeContract({
+      const approveTx = writeContract({
         address: token as `0x${string}`,
         abi: erc20Abi,
         functionName: 'approve',
         args: [actualContractAddress, amountBigInt],
       });
    
-      const swapTx = await writeContract({
+      const swapTx = writeContract({
         address: actualContractAddress,
         abi: celoSwapperV3Abi,
         functionName: 'swapAndVoteToken',
@@ -740,13 +740,13 @@ const swapAndVoteToken = async (
         ],
       });
       
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: swapTx as `0x${string}` });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: swapTx as unknown as `0x${string}` });
       console.log("Swap transaction confirmed:", receipt);
       
       // Parse logs to find SwappedAndVoted event
       const events = receipt.logs.map(log => {
         try {
-          return publicClient.decodeEventLog({
+          return contract?.decodeEventLog({
             abi: celoSwapperV3Abi,
             data: log.data,
             topics: log.topics,

@@ -1,6 +1,4 @@
 import { Disclosure, Transition } from '@headlessui/react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount } from 'wagmi';
@@ -9,6 +7,7 @@ import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, W
 import { usePathname } from 'next/navigation';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
 import { celo, celoAlfajores } from 'viem/chains';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
 
 // Get chain values from environment variables
 const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID as string);
@@ -36,8 +35,12 @@ export default function Header() {
   const { isConnected } = useAccount();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showChainAlert, setShowChainAlert] = useState(false);
-  const [currentChainId, setCurrentChainId] = useState<number | null>(null);
+  const [currentChainId, setCurrentChainId] = useState(null);
   const pathname = usePathname();
+  
+  // Use Privy hooks for authentication
+  const { authenticated, user, logout, ready } = usePrivy();
+  const { login } = useLogin();
   
   // Use the sovereign seas hook to get the clients
   const { publicClient, walletClient } = useSovereignSeas();
@@ -72,7 +75,7 @@ export default function Header() {
 
   // Handle MiniPay connection
   useEffect(() => {
-    if (window.ethereum && window.ethereum.isMiniPay) {
+    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isMiniPay) {
       setHideConnectBtn(true);
       connect({ connector: injected({ target: 'metaMask' }) });
     }
@@ -92,7 +95,7 @@ export default function Header() {
       console.error(`Error switching to ${CHAIN_NAME}:`, error);
       
       // If chain doesn't exist in the wallet, try to add it
-      if ((error as any).code === 4902) { // Chain doesn't exist
+      if (error && (error as any)?.code === 4902) { // Chain doesn't exist
         try {
           const chainConfig = getChainConfig();
           
@@ -105,6 +108,19 @@ export default function Header() {
           console.error(`Error adding ${CHAIN_NAME} chain:`, addError);
         }
       }
+    }
+  };
+
+  // Handle wallet connection with Privy login
+  const handleLogin = () => {
+    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isMiniPay) {
+      connect({ connector: injected({ target: 'metaMask' }) });
+    } else {
+      // Use Privy login
+      login({
+        loginMethods: ['email', 'wallet', 'google'],
+        walletChainType: 'ethereum-only'
+      });
     }
   };
 
@@ -207,7 +223,7 @@ export default function Header() {
                     {CHAIN_NAME} {IS_TESTNET ? 'Testnet' : ''}
                   </div>
                   
-                  {isConnected && (
+                  {authenticated && (
                     <div className="relative mr-2">
                       <button
                         onClick={() => setShowDropdown(!showDropdown)}
@@ -253,77 +269,53 @@ export default function Header() {
                             <FileCode className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Projects
                           </Link>
+                          <button
+                            onClick={() => {
+                              logout();
+                              setShowDropdown(false);
+                            }}
+                            className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
+                          >
+                            <Settings className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
+                            Disconnect
+                          </button>
                         </div>
                       </Transition>
                     </div>
                   )}
                   
                   {!hideConnectBtn && (
-                    <div className="custom-connect-button">
-                      <ConnectButton.Custom>
-                        {({
-                          account,
-                          chain,
-                          openAccountModal,
-                          openChainModal,
-                          openConnectModal,
-                          mounted,
-                        }) => {
-                          const ready = mounted;
-                          const connected = ready && account && chain;
-                          
-                          return (
-                            <div
-                              {...(!ready && {
-                                'aria-hidden': true,
-                                style: {
-                                  opacity: 0,
-                                  pointerEvents: 'none',
-                                  userSelect: 'none',
-                                },
-                              })}
+                    <div>
+                      {!authenticated ? (
+                        <button 
+                          onClick={handleLogin}
+                          disabled={!ready} 
+                          className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-blue-100 hover:-translate-y-1 animate-float premium-button disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Connect Wallet
+                        </button>
+                      ) : (
+                        <>
+                          {currentChainId !== CELO_CHAIN_ID ? (
+                            <button
+                              onClick={handleSwitchToNetwork}
+                              className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-amber-400 hover:-translate-y-1 premium-button"
                             >
-                              {(() => {
-                                if (!connected) {
-                                  return (
-                                    <button 
-                                      onClick={openConnectModal} 
-                                      className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-blue-100 hover:-translate-y-1 animate-float premium-button"
-                                    >
-                                      Connect Wallet
-                                    </button>
-                                  );
-                                }
-                                
-                                if (chain.id !== CELO_CHAIN_ID) {
-                                  return (
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={handleSwitchToNetwork}
-                                        className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-amber-400 hover:-translate-y-1 premium-button"
-                                      >
-                                        <AlertTriangle size={16} />
-                                        Switch to {CHAIN_NAME}
-                                      </button>
-                                    </div>
-                                  );
-                                }
-                                
-                                return (
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={openAccountModal}
-                                      className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 premium-button"
-                                    >
-                                      {account.displayName}
-                                    </button>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          );
-                        }}
-                      </ConnectButton.Custom>
+                              <AlertTriangle size={16} />
+                              Switch to {CHAIN_NAME}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setShowDropdown(!showDropdown)}
+                              className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 premium-button"
+                            >
+                              {user?.wallet?.address ? 
+                                user.wallet.address.slice(0, 6) + '...' + user.wallet.address.slice(-4) : 
+                                user?.email?.address ? user.email.address.split('@')[0] : 'My Account'}
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -373,7 +365,7 @@ export default function Header() {
                   );
                 })}
                 
-                {isConnected && (
+                {authenticated && (
                   <>
                     <div className="mt-3 pt-3 border-t border-white/20">
                       <div className="px-2 text-xs uppercase text-white/70 font-semibold">
@@ -420,6 +412,20 @@ export default function Header() {
                       >
                         <FileCode className="mr-2 h-4 w-4 text-blue-300" />
                         My Projects
+                      </Disclosure.Button>
+                      <Disclosure.Button
+                        as="button"
+                        onClick={() => logout()}
+                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300 w-full text-left"
+                        style={{
+                          animation: 'fadeSlideIn 0.3s ease-out forwards',
+                          animationDelay: '0.7s',
+                          opacity: 0,
+                          transform: 'translateY(10px)'
+                        }}
+                      >
+                        <Settings className="mr-2 h-4 w-4 text-blue-300" />
+                        Disconnect
                       </Disclosure.Button>
                     </div>
                   </>
