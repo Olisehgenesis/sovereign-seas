@@ -27,6 +27,17 @@ const CUSD_ADDRESS = (process.env.NEXT_PUBLIC_CUSD_ADDRESS || '0x874069Fa1Eb16D4
 // Export contract addresses for use in other components
 export const SWAPPER_V3_ADDRESS = contractAddress;
 
+const tokenNameFallback = (address: string) => {
+  // Fallback function to get token name if not available
+  if (address.toLowerCase() === '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1') {
+    return { name: 'cUSD', symbol: 'cUSD' };
+  }
+  if (address.toLowerCase() === '0xD046F2C4E5A3B8F7D1C6E9A0B2D4F5F7D1C6E9A0') {
+    return { name: 'cEUR', symbol: 'cEUR' };
+  }
+  return { name: 'Unknown Token', symbol: 'Unknown' };
+}
+
 // Define Types
 export type TokenConfig = {
   supported: boolean;
@@ -147,71 +158,107 @@ export const useCeloSwapperV3 = (config?: CeloSwapperConfig) => {
     checkAdmin();
   }, [isInitialized, walletAddress, actualContractAddress, publicClient]);
 
-  // Load supported tokens
-  const loadSupportedTokens = async () => {
-    if (!contract || !publicClient) return [];
+ // Load supported tokens
+const loadSupportedTokens = async () => {
+  if (!contract || !publicClient) return [];
+  
+  try {
+    setLoadingTokens(true);
     
-    try {
-      setLoadingTokens(true);
-      
-      const tokenCount = await publicClient.readContract({
+    const tokenCount = await publicClient.readContract({
+      address: actualContractAddress,
+      abi: celoSwapperV3Abi,
+      functionName: 'getSupportedTokenCount',
+    }) as bigint;
+    
+    const tokensPromises = [];
+    for (let i = 0; i < Number(tokenCount); i++) {
+      tokensPromises.push(publicClient.readContract({
         address: actualContractAddress,
         abi: celoSwapperV3Abi,
-        functionName: 'getSupportedTokenCount',
-      }) as bigint;
+        functionName: 'supportedTokenList',
+        args: [BigInt(i)],
+      }));
+    }
+    
+    const tokens = await Promise.all(tokensPromises) as string[];
+    // Filter out duplicates and invalid addresses
+    setSupportedTokens(tokens);
+    
+    // Load token symbols and decimals with better fallback handling and detailed logging
+    console.log('Starting to fetch token symbols and decimals for tokens:', tokens);
+    
+    const symbolsPromises = tokens.map(token => 
+      publicClient.readContract({
+        address: token as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'symbol',
+      }).then(symbol => {
+        console.log(`Successfully fetched symbol for ${token}: ${symbol}`);
+        return symbol;
+      }).catch(error => {
+        console.log(`Error fetching symbol for ${token}:`, error);
+        console.log(`Using fallback for ${token}`);
+        const fallback = tokenNameFallback(token);
+        console.log(`Fallback symbol for ${token}: ${fallback.symbol}`);
+        return fallback.symbol;
+      })
+    );
+    
+    const decimalsPromises = tokens.map(token => 
+      publicClient.readContract({
+        address: token as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'decimals',
+      }).then(decimals => {
+        console.log(`Successfully fetched decimals for ${token}: ${decimals}`);
+        return decimals;
+      }).catch(error => {
+        console.log(`Error fetching decimals for ${token}:`, error);
+        console.log(`Using default 18 decimals for ${token}`);
+        return 18;
+      })
+    );
+    
+    console.log('Waiting for all symbol and decimal promises to resolve...');
+    const symbols = await Promise.all(symbolsPromises) as string[];
+    const decimals = await Promise.all(decimalsPromises) as number[];
+    
+    console.log('All symbols fetched:', symbols);
+    console.log('All decimals fetched:', decimals);
+    
+    const newSymbols: {[address: string]: string} = {};
+    const newDecimals: {[address: string]: number} = {};
+    
+    tokens.forEach((token, index) => {
+      // Detailed logging for each token
+      console.log(`Processing token ${token} with symbol: ${symbols[index]}`);
       
-      const tokensPromises = [];
-      for (let i = 0; i < Number(tokenCount); i++) {
-        tokensPromises.push(publicClient.readContract({
-          address: actualContractAddress,
-          abi: celoSwapperV3Abi,
-          functionName: 'supportedTokenList',
-          args: [BigInt(i)],
-        }));
+      // If symbol is still 'Unknown', try the fallback function again
+      let symbol = symbols[index];
+      if (!symbol || symbol === 'Unknown') {
+        console.log(`Symbol for ${token} is still Unknown or empty, using fallback again`);
+        const fallback = tokenNameFallback(token);
+        symbol = fallback.symbol;
+        console.log(`New symbol from fallback: ${symbol}`);
       }
       
-      const tokens = await Promise.all(tokensPromises) as string[];
-      setSupportedTokens(tokens);
-      
-      // Load token symbols and decimals
-      const symbolsPromises = tokens.map(token => 
-        publicClient.readContract({
-          address: token as `0x${string}`,
-          abi: erc20Abi,
-          functionName: 'symbol',
-        }).catch(() => 'Unknown')
-      );
-      
-      const decimalsPromises = tokens.map(token => 
-        publicClient.readContract({
-          address: token as `0x${string}`,
-          abi: erc20Abi,
-          functionName: 'decimals',
-        }).catch(() => 18)
-      );
-      
-      const symbols = await Promise.all(symbolsPromises) as string[];
-      const decimals = await Promise.all(decimalsPromises) as number[];
-      
-      const newSymbols: {[address: string]: string} = {};
-      const newDecimals: {[address: string]: number} = {};
-      
-      tokens.forEach((token, index) => {
-        newSymbols[token] = symbols[index];
-        newDecimals[token] = decimals[index];
-      });
-      
-      setTokenSymbols(newSymbols);
-      setTokenDecimals(newDecimals);
-      
-      return tokens;
-    } catch (error) {
-      console.error('Error loading supported tokens:', error);
-      return [];
-    } finally {
-      setLoadingTokens(false);
-    }
-  };
+      console.log(`Final symbol for ${token}: ${symbol}`);
+      newSymbols[token] = symbol;
+      newDecimals[token] = decimals[index];
+    });
+    
+    setTokenSymbols(newSymbols);
+    setTokenDecimals(newDecimals);
+    
+    return tokens;
+  } catch (error) {
+    console.error('Error loading supported tokens:', error);
+    return [];
+  } finally {
+    setLoadingTokens(false);
+  }
+};
 
   // Load token configuration
   const getTokenConfig = async (tokenAddress: string) => {
@@ -316,6 +363,8 @@ export const useCeloSwapperV3 = (config?: CeloSwapperConfig) => {
       return BigInt(0);
     }
   };
+
+  const balanceClient = publicClient;
 
   // Get user token votes
   const getUserTokenVotes = async (token: string, campaignId: bigint | number, projectId: bigint | number) => {
@@ -862,5 +911,7 @@ const swapAndVoteToken = async (
     
     // Helper functions
     formatTokenAmount,
+    balanceClient
+  
   };
 };

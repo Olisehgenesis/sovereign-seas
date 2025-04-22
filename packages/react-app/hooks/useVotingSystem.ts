@@ -4,6 +4,17 @@ import { useSovereignSeas, Campaign, Project, Vote } from './useSovereignSeas';
 import { useCeloSwapperV3, SwapResult } from './useCeloSwapperV3';
 import { formatEther, parseEther } from 'viem';
 
+const tokenNameFallback = (address: string) => {
+  // Fallback function to get token name if not available
+  if (address.toLowerCase() === '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1') {
+    return { name: 'cUSD', symbol: 'cUSD' };
+  }
+  if (address.toLowerCase() === '0xD046F2C4E5A3B8F7D1C6E9A0B2D4F5F7D1C6E9A0') {
+    return { name: 'cEUR', symbol: 'cEUR' };
+  }
+  return { name: 'Unknown Token', symbol: 'Unknown' };
+}
+
 // Define a unified vote type that includes both direct CELO votes and token votes
 export type VoteSummary = {
   campaignId: bigint;
@@ -58,47 +69,73 @@ export const useVotingSystem = () => {
     }
   }, [isInitialized]);
   
-  /**
-   * Load all supported tokens including CELO and tokens from the swapper
-   */
-  const loadSupportedTokens = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Add CELO as the native token
-      const tokens: TokenSupport[] = [{
-        address: CELO_ADDRESS,
-        symbol: 'CELO',
-        decimals: 18,
-        name: 'Celo',
-        isNative: true
-      }];
-      
-      // Load tokens from swapper
-      const swapperTokens = await celoSwapper.loadSupportedTokens();
-      
-      // Add each swapper token with its metadata
-      for (const tokenAddress of swapperTokens) {
-        if (tokenAddress.toLowerCase() !== CELO_ADDRESS.toLowerCase()) {
-          tokens.push({
-            address: tokenAddress,
-            symbol: celoSwapper.tokenSymbols[tokenAddress] || 'Unknown',
-            decimals: celoSwapper.tokenDecimals[tokenAddress] || 18,
-            name: celoSwapper.tokenSymbols[tokenAddress] || 'Unknown Token'
-          });
+/**
+ * Load all supported tokens including CELO and tokens from the swapper
+ */
+const loadSupportedTokens = async () => {
+  try {
+    setIsLoading(true);
+    
+    // Add CELO as the native token
+    const tokens: TokenSupport[] = [{
+      address: CELO_ADDRESS,
+      symbol: 'CELO',
+      decimals: 18,
+      name: 'Celo',
+      isNative: true
+    }];
+    
+    // Load tokens from swapper
+    const swapperTokens = await celoSwapper.loadSupportedTokens();
+    
+    // Add each swapper token with its metadata
+    for (const tokenAddress of swapperTokens) {
+      if (tokenAddress.toLowerCase() !== CELO_ADDRESS.toLowerCase()) {
+        // Get symbol from swapper, but ensure we have a fallback
+        let symbol = celoSwapper.tokenSymbols[tokenAddress];
+        let name = symbol;
+        
+        console.log(`Processing token in useVotingSystem: ${tokenAddress} with symbol from swapper: ${symbol}`);
+        
+        // If symbol is still undefined, empty, or 'Unknown', use our improved fallback
+        if (!symbol || symbol === 'Unknown') {
+          console.log(`Symbol missing or unknown for ${tokenAddress}, using fallback`);
+          // Use our improved tokenNameFallback function
+          const shortAddr = `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}`;
+          symbol = `Token-${shortAddr}`;
+          name = `Token-${shortAddr}`;
+          
+          // Check for known tokens
+          if (tokenAddress.toLowerCase() === '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1'.toLowerCase()) {
+            symbol = 'cUSD';
+            name = 'Celo Dollar';
+          } else if (tokenAddress.toLowerCase() === '0xD046F2C4E5A3B8F7D1C6E9A0B2D4F5F7D1C6E9A0'.toLowerCase()) {
+            symbol = 'cEUR';
+            name = 'Celo Euro';
+          }
         }
+        
+        console.log(`Final token info for ${tokenAddress}: symbol=${symbol}, name=${name}`);
+        
+        tokens.push({
+          address: tokenAddress,
+          symbol: symbol,
+          decimals: celoSwapper.tokenDecimals[tokenAddress] || 18,
+          name: name
+        });
       }
-      
-      setSupportedTokens(tokens);
-      return tokens;
-    } catch (error) {
-      console.error('Error loading supported tokens:', error);
-      setError('Failed to load supported tokens');
-      return [];
-    } finally {
-      setIsLoading(false);
     }
-  };
+    
+    setSupportedTokens(tokens);
+    return tokens;
+  } catch (error) {
+    console.error('Error loading supported tokens:', error);
+    setError('Failed to load supported tokens');
+    return [];
+  } finally {
+    setIsLoading(false);
+  }
+};
   
   /**
    * Smart vote function that selects the appropriate contract based on the token
@@ -134,7 +171,7 @@ export const useVotingSystem = () => {
       return true;
     } catch (error) {
       console.error('Error voting:', error);
-      setError(`Failed to vote: ${error.message || 'Unknown error'}`);
+      setError(`Failed to vote: ${error || 'Unknown error'}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -187,12 +224,22 @@ export const useVotingSystem = () => {
             formatEther(tokenAmount)
           );
           
+          // Apply token name fallback if necessary
+          let tokenName = token.name || 'Unknown';
+          let tokenSymbol = token.symbol;
+          
+          if (tokenName.toLowerCase() === 'unknown token' || tokenSymbol.toLowerCase() === 'unknown') {
+            const fallback = tokenNameFallback(token.address);
+            tokenName = fallback.name;
+            tokenSymbol = fallback.symbol;
+          }
+          
           summary.tokenVotes.push({
-            token: token.name || 'Unknown',
+            token: tokenName,
             tokenAddress: token.address,
             tokenAmount: tokenAmount,
             celoEquivalent: voteAmount,
-            symbol: token.symbol
+            symbol: tokenSymbol
           });
           
           // Add to total CELO equivalent
@@ -256,7 +303,21 @@ export const useVotingSystem = () => {
               totalTokenVotes[existingIndex].celoEquivalent += tokenVote.celoEquivalent;
             } else {
               // Add new token entry
-              totalTokenVotes.push({ ...tokenVote });
+              // Apply token name fallback if needed
+              let token = tokenVote.token;
+              let symbol = tokenVote.symbol;
+              
+              if (token.toLowerCase() === 'unknown token' || symbol.toLowerCase() === 'unknown') {
+                const fallback = tokenNameFallback(tokenVote.tokenAddress);
+                token = fallback.name;
+                symbol = fallback.symbol;
+              }
+              
+              totalTokenVotes.push({
+                ...tokenVote,
+                token,
+                symbol
+              });
             }
           }
           
@@ -313,7 +374,11 @@ export const useVotingSystem = () => {
    */
   const formatAmount = (token: string, amount: bigint) => {
     const tokenInfo = supportedTokens.find(t => t.address.toLowerCase() === token.toLowerCase());
-    if (!tokenInfo) return `${formatEther(amount)} Unknown`;
+    if (!tokenInfo) {
+      // Apply fallback for unknown tokens
+      const fallback = tokenNameFallback(token);
+      return `${formatEther(amount)} ${fallback.symbol}`;
+    }
     
     // If token has custom decimals, use them
     const formattedAmount = tokenInfo.decimals === 18 
@@ -336,6 +401,7 @@ export const useVotingSystem = () => {
   };
   
   return {
+    
     // Main functionality
     vote,
     getUserVoteSummary,
