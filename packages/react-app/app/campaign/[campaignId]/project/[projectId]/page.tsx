@@ -34,9 +34,13 @@ import {
   Coins,
   History,
   BarChart,
-  Hash
+  Hash,
+  CreditCard,
+  DollarSign,
+  Repeat
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../../hooks/useSovereignSeas';
+import { useVotingSystem } from '../../../../../hooks/useVotingSystem';
 
 export default function ProjectDetails() {
   const router = useRouter();
@@ -50,11 +54,18 @@ export default function ProjectDetails() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [userVotes, setUserVotes] = useState<bigint>(BigInt(0));
+  const [voteSummary, setVoteSummary] = useState<any>(null);
   const [userVoteHistory, setUserVoteHistory] = useState<any[]>([]);
   const [isProjectOwner, setIsProjectOwner] = useState(false);
   const [projectRanking, setProjectRanking] = useState({ rank: 0, totalProjects: 0 });
   
+  // Token-related states
+  const [supportedTokens, setSupportedTokens] = useState<any[]>([]);
+  const [selectedToken, setSelectedToken] = useState('');
+  const [tokenBalances, setTokenBalances] = useState<{[key: string]: string}>({});
+  const [tokenExchangeRates, setTokenExchangeRates] = useState<{[key: string]: {expectedCelo: string, voteAmount: string}}>({});
+  const [loadingExchangeRates, setLoadingExchangeRates] = useState(false);
+
   // UI states
   const [voteModalVisible, setVoteModalVisible] = useState(false);
   const [voteAmount, setVoteAmount] = useState('');
@@ -64,49 +75,42 @@ export default function ProjectDetails() {
   const [showContractsSection, setShowContractsSection] = useState(false);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
   const [showProjectStats, setShowProjectStats] = useState(true);
+  const [slippagePercent, setSlippagePercent] = useState(0.5); // Default 0.5%
   
   // Media content refs
   const logoRef = useRef<HTMLImageElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  // Contract interaction
-  const {
-    isInitialized,
-    publicClient,
-    loadCampaigns,
-    loadProjects,
-    getSortedProjects,
-    getUserVoteHistory,
-    getUserVotesForProject,
-    getUserTotalVotesInCampaign,
-    approveProject,
-    updateProject,
-    vote,
-    formatTokenAmount,
-    formatCampaignTime,
-    getCampaignTimeRemaining,
-    isCampaignActive,
-    isCampaignAdmin,
-    isWritePending,
-    isWaitingForTx,
-    isTxSuccess,
-    txReceipt,
-    writeError,
-    resetWrite
-  } = useSovereignSeas();
+  // Contract interaction with both hooks
+  const sovereignSeas = useSovereignSeas();
+  const votingSystem = useVotingSystem();
   
   useEffect(() => {
     setIsMounted(true);
   }, []);
   
   useEffect(() => {
-    if (isInitialized && campaignId && projectId) {
+    if (
+      sovereignSeas.isInitialized && 
+      votingSystem.isInitialized && 
+      campaignId && 
+      projectId
+    ) {
       loadProjectData();
+      loadSupportedTokens();
       if (address) {
         loadUserVoteData();
       }
     }
-  }, [isInitialized, campaignId, projectId, address, isTxSuccess]);
+  }, [
+    sovereignSeas.isInitialized,
+    votingSystem.isInitialized, 
+    campaignId, 
+    projectId, 
+    address, 
+    sovereignSeas.isTxSuccess,
+    votingSystem.celoSwapper.isTxSuccess
+  ]);
   
   // Clear status message after 5 seconds
   useEffect(() => {
@@ -121,20 +125,53 @@ export default function ProjectDetails() {
   
   // Handle write errors
   useEffect(() => {
-    if (writeError) {
+    if (sovereignSeas.writeError) {
       setStatusMessage({
-        text: `Transaction error: ${writeError.message || 'Please try again.'}`,
+        text: `Transaction error: ${sovereignSeas.writeError.message || 'Please try again.'}`,
         type: 'error'
       });
-      resetWrite();
+      sovereignSeas.resetWrite();
     }
-  }, [writeError, resetWrite]);
+    
+    if (votingSystem.error) {
+      setStatusMessage({
+        text: `Error: ${votingSystem.error}`,
+        type: 'error'
+      });
+    }
+  }, [sovereignSeas.writeError, votingSystem.error]);
+  
+  // Update exchange rates when token or amount changes
+  useEffect(() => {
+    if (selectedToken && voteAmount && parseFloat(voteAmount) > 0) {
+      getTokenExchangeRate(selectedToken, voteAmount);
+    }
+  }, [selectedToken, voteAmount]);
+
+  const loadSupportedTokens = async () => {
+    try {
+      const tokens = await votingSystem.loadSupportedTokens();
+      setSupportedTokens(tokens);
+      
+      // Set CELO as default selected token
+      if (tokens.length > 0) {
+        const celoToken = tokens.find(t => t.isNative);
+        if (celoToken) {
+          setSelectedToken(celoToken.address);
+        } else {
+          setSelectedToken(tokens[0].address);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading supported tokens:', error);
+    }
+  };
   
   const loadProjectData = async () => {
     setLoading(true);
     try {
       // Load campaign data
-      const allCampaigns = await loadCampaigns();
+      const allCampaigns = await sovereignSeas.loadCampaigns();
       
       if (Array.isArray(allCampaigns) && allCampaigns.length > 0) {
         // Find this specific campaign by ID
@@ -145,13 +182,13 @@ export default function ProjectDetails() {
           
           // Check if current user is the admin
           if (address) {
-            const isAdmin = await isCampaignAdmin(Number(campaignId));
+            const isAdmin = await sovereignSeas.isCampaignAdmin(Number(campaignId));
             setIsAdmin(isAdmin || campaignData.admin.toLowerCase() === address.toLowerCase());
-            setIsSuperAdmin(isSuperAdmin);
+            setIsSuperAdmin(sovereignSeas.isSuperAdmin);
           }
           
           // Load projects for this campaign
-          const projectsData = await loadProjects(Number(campaignId));
+          const projectsData = await sovereignSeas.loadProjects(Number(campaignId));
           
           if (Array.isArray(projectsData) && projectsData.length > 0) {
             // Find the specific project
@@ -167,7 +204,7 @@ export default function ProjectDetails() {
               
               // Get project ranking
               try {
-                const sortedProjects = await getSortedProjects(Number(campaignId));
+                const sortedProjects = await sovereignSeas.getSortedProjects(Number(campaignId));
                 const projectIndex = sortedProjects.findIndex(p => p.id.toString() === projectId);
                 if (projectIndex !== -1) {
                   setProjectRanking({
@@ -207,12 +244,12 @@ export default function ProjectDetails() {
     if (!isConnected || !address || !campaignId || !projectId) return;
     
     try {
-      // Get user votes for this project
-      const votes = await getUserVotesForProject(Number(campaignId), Number(projectId));
-      setUserVotes(votes);
+      // Get comprehensive vote summary from the unified system
+      const summary = await votingSystem.getUserVoteSummary(Number(campaignId), Number(projectId));
+      setVoteSummary(summary);
       
-      // Get user vote history
-      const history = await getUserVoteHistory();
+      // Get user vote history from SovereignSeas for direct CELO votes
+      const history = await sovereignSeas.getUserVoteHistory();
       // Filter for votes on this project
       const projectVotes = history.filter(vote => 
         vote.campaignId.toString() === campaignId && 
@@ -225,18 +262,70 @@ export default function ProjectDetails() {
     }
   };
   
-  const handleVote = async () => {
-    if (!voteAmount || parseFloat(voteAmount) <= 0) return;
+  const getTokenExchangeRate = async (tokenAddress: string, amount: string) => {
+    if (!tokenAddress || !amount || parseFloat(amount) <= 0) return;
     
     try {
-      // Get the transaction hash from your vote function
-    const txHash = await vote(Number(campaignId), Number(projectId), voteAmount);
-    //wait until vite is done
-
-    // await new Promise(r => setTimeout(r, 15000));
-   
-   
-
+      setLoadingExchangeRates(true);
+      
+      // Skip calculation for CELO - 1:1 rate
+      if (tokenAddress.toLowerCase() === votingSystem.CELO_ADDRESS.toLowerCase()) {
+        setTokenExchangeRates({
+          ...tokenExchangeRates,
+          [tokenAddress]: {
+            expectedCelo: amount,
+            voteAmount: amount
+          }
+        });
+        return;
+      }
+      
+      // For other tokens, get expected CELO amount
+      const { expectedCelo, voteAmount } = await votingSystem.celoSwapper.getExpectedVoteAmount(
+        tokenAddress,
+        amount
+      );
+      
+      setTokenExchangeRates({
+        ...tokenExchangeRates,
+        [tokenAddress]: {
+          expectedCelo: votingSystem.formatAmount(votingSystem.CELO_ADDRESS, expectedCelo),
+          voteAmount: votingSystem.formatAmount(votingSystem.CELO_ADDRESS, voteAmount)
+        }
+      });
+    } catch (error) {
+      console.error('Error getting token exchange rate:', error);
+    } finally {
+      setLoadingExchangeRates(false);
+    }
+  };
+  
+  const handleVote = async () => {
+    if (!selectedToken || !voteAmount || parseFloat(voteAmount) <= 0) return;
+    
+    try {
+      setStatusMessage({ text: 'Processing your vote...', type: 'info' });
+      
+      // Calculate slippage in basis points
+      const slippageBps = Math.floor(slippagePercent * 100);
+      
+      console.log("Vote parameters:", {
+        selectedToken,
+        campaignId: Number(campaignId),
+        projectId: Number(projectId),
+        voteAmount,
+        slippageBps
+      });
+      
+      // Use the smart vote function
+      await votingSystem.vote(
+        selectedToken,
+        Number(campaignId),
+        Number(projectId),
+        voteAmount,
+        slippageBps
+      );
+      
       setVoteModalVisible(false);
       setVoteAmount('');
       setStatusMessage({ 
@@ -251,9 +340,15 @@ export default function ProjectDetails() {
       }, 2000);
       
     } catch (error) {
-      console.error('Error voting:', error);
+      console.error('Detailed error when voting:', error);
+      
+      let errorMessage = "Error submitting vote. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
       setStatusMessage({ 
-        text: 'Error submitting vote. Please try again.', 
+        text: errorMessage, 
         type: 'error' 
       });
     }
@@ -263,7 +358,7 @@ export default function ProjectDetails() {
     if (!isAdmin) return;
     
     try {
-      await approveProject(Number(campaignId), Number(projectId));
+      await sovereignSeas.approveProject(Number(campaignId), Number(projectId));
       setStatusMessage({ 
         text: 'Project approved successfully!', 
         type: 'success' 
@@ -308,18 +403,21 @@ export default function ProjectDetails() {
     );
   }
   
-  const isActive = isCampaignActive(campaign);
+  const isActive = sovereignSeas.isCampaignActive(campaign);
   const now = Math.floor(Date.now() / 1000);
   const hasStarted = now >= Number(campaign.startTime);
   const hasEnded = now >= Number(campaign.endTime);
   const canVote = isActive && project.approved && isConnected;
-  const timeRemaining = getCampaignTimeRemaining(campaign);
+  const timeRemaining = sovereignSeas.getCampaignTimeRemaining(campaign);
   const votingEnded = hasEnded || !campaign.active;
   const hasFundsReceived = Number(project.fundsReceived) > 0;
   
   // Check if project has media and contracts
   const hasMedia = project.logo || project.demoVideo;
   const hasContracts = project.contracts && project.contracts.length > 0;
+  
+  // Get direct CELO votes
+  const directCeloVotes = voteSummary ? voteSummary.directCeloAmount : BigInt(0);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800">
@@ -381,7 +479,7 @@ export default function ProjectDetails() {
                   {hasFundsReceived && (
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full border border-blue-200 inline-flex items-center shadow-sm">
                       <Coins className="h-3.5 w-3.5 mr-1.5" />
-                      Funded: {formatTokenAmount(project.fundsReceived)} CELO
+                      Funded: {sovereignSeas.formatTokenAmount(project.fundsReceived)} CELO
                     </span>
                   )}
                   
@@ -564,7 +662,7 @@ export default function ProjectDetails() {
                   {project.approved && (
                     <div className="flex items-center text-gray-600">
                       <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                      Campaign ends: <span className="ml-1">{formatCampaignTime(campaign.endTime)}</span>
+                      Campaign ends: <span className="ml-1">{sovereignSeas.formatCampaignTime(campaign.endTime)}</span>
                     </div>
                   )}
                   
@@ -584,14 +682,42 @@ export default function ProjectDetails() {
                     <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mb-2">
                       <Heart className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <div className="text-3xl font-bold text-gray-800 mb-1">{formatTokenAmount(project.voteCount)}</div>
+                    <div className="text-3xl font-bold text-gray-800 mb-1">{sovereignSeas.formatTokenAmount(project.voteCount)}</div>
                     <div className="text-sm text-gray-500 mb-4">
                       Total {Number(campaign.voteMultiplier) > 1 ? `(${campaign.voteMultiplier.toString()}x)` : ''} Votes
                     </div>
                     
-                    {userVotes > BigInt(0) && (
-                      <div className="text-sm text-emerald-600 mb-4 text-center">
-                        You've voted {formatTokenAmount(userVotes)} CELO on this project
+                    {/* Show unified vote summary */}
+                    {voteSummary && (
+                      <div className="text-sm mb-4 text-center w-full">
+                        {/* Direct CELO votes */}
+                        {directCeloVotes > BigInt(0) && (
+                          <div className="text-emerald-600 mb-2">
+                            You've voted {votingSystem.formatAmount(votingSystem.CELO_ADDRESS, directCeloVotes)} directly
+                          </div>
+                        )}
+                        
+                        {/* Token votes */}
+                        {voteSummary.tokenVotes && voteSummary.tokenVotes.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-blue-600 mb-1">Your token votes:</div>
+                            <div className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100 flex flex-col gap-1.5">
+                              {voteSummary.tokenVotes.map((vote, index) => (
+                                <div key={index} className="flex justify-between items-center">
+                                  <span className="text-gray-600">{vote.symbol}:</span>
+                                  <span className="text-blue-600 font-medium">{votingSystem.formatAmount(vote.tokenAddress, vote.tokenAmount)}</span>
+                                </div>
+                              ))}
+                              <div className="border-t border-gray-200 pt-1 mt-1 flex justify-between items-center">
+                              <span className="text-gray-600">Total CELO value:</span>
+                              <span className="text-emerald-600 font-medium">
+                                  {parseFloat(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, voteSummary.totalCeloEquivalent)).toFixed(1)} CELO
+                                </span>
+                                
+                                </div>
+                            </div>
+                          </div>
+                        )}
                         
                         {userVoteHistory.length > 0 && (
                           <button
@@ -608,13 +734,13 @@ export default function ProjectDetails() {
                     {/* Vote History (conditionally displayed) */}
                     {showVoteHistory && userVoteHistory.length > 0 && (
                       <div className="w-full mb-4 border-t border-gray-200 pt-3">
-                        <h4 className="text-sm font-medium text-center text-blue-600 mb-2">Your Vote History</h4>
+                        <h4 className="text-sm font-medium text-center text-blue-600 mb-2">Your CELO Vote History</h4>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {userVoteHistory.map((vote, index) => (
                             <div key={index} className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100">
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Amount:</span>
-                                <span className="text-emerald-600 font-medium">{formatTokenAmount(vote.amount)} CELO</span>
+                                <span className="text-emerald-600 font-medium">{sovereignSeas.formatTokenAmount(vote.amount)} CELO</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Votes:</span>
@@ -630,20 +756,20 @@ export default function ProjectDetails() {
                       {canVote && (
                         <button
                           onClick={() => setVoteModalVisible(true)}
-                          className="w-full py-2.5 px-4 bg-pink-500 hover:bg-pink-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm"
+                          className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm"
                         >
-                          <Award className="h-4 w-4 mr-2" />
-                          Vote for Project
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Vote with Tokens
                         </button>
                       )}
                       
                       {(isAdmin || isSuperAdmin) && !project.approved && (
                         <button
                           onClick={handleApproveProject}
-                          disabled={isWritePending || isWaitingForTx}
+                          disabled={sovereignSeas.isWritePending || sovereignSeas.isWaitingForTx}
                           className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm disabled:bg-gray-300 disabled:text-gray-500"
                         >
-                          {isWritePending || isWaitingForTx ? (
+                          {sovereignSeas.isWritePending || sovereignSeas.isWaitingForTx ? (
                             <div className="flex items-center justify-center">
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               Processing...
@@ -753,7 +879,7 @@ export default function ProjectDetails() {
                   <span className="text-sm text-gray-600">Total Votes</span>
                 </div>
                 <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-gray-800">{formatTokenAmount(project.voteCount)}</span>
+                  <span className="text-2xl font-bold text-gray-800">{sovereignSeas.formatTokenAmount(project.voteCount)}</span>
                 </div>
                 <div className="mt-1 text-xs text-gray-500">
                   Multiplier: {campaign.voteMultiplier.toString()}x
@@ -769,11 +895,11 @@ export default function ProjectDetails() {
                     <span className="text-sm text-gray-600">Funds Received</span>
                   </div>
                   <div className="flex items-baseline">
-                    <span className="text-2xl font-bold text-amber-600">{formatTokenAmount(project.fundsReceived)}</span>
+                    <span className="text-2xl font-bold text-amber-600">{sovereignSeas.formatTokenAmount(project.fundsReceived)}</span>
                     <span className="text-gray-500 ml-1">CELO</span>
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
-                    Campaign Total: {formatTokenAmount(campaign.totalFunds)} CELO
+                    Campaign Total: {sovereignSeas.formatTokenAmount(campaign.totalFunds)} CELO
                   </div>
                 </div>
               )}
@@ -825,7 +951,7 @@ export default function ProjectDetails() {
             
             <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
               <div className="text-sm text-gray-500">Total Funds</div>
-              <div className="font-medium text-emerald-600">{formatTokenAmount(campaign.totalFunds)} CELO</div>
+              <div className="font-medium text-emerald-600">{sovereignSeas.formatTokenAmount(campaign.totalFunds)} CELO</div>
             </div>
           </div>
           
@@ -841,7 +967,7 @@ export default function ProjectDetails() {
         </div>
       </div>
       
-      {/* Vote Modal */}
+      {/* Enhanced Vote Modal with Token Selection */}
       {voteModalVisible && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-6 relative shadow-lg">
@@ -855,34 +981,125 @@ export default function ProjectDetails() {
             <h3 className="text-xl font-bold mb-1 text-gray-800">Vote for Project</h3>
             <p className="text-emerald-600 font-medium mb-4">{project.name}</p>
             
-            <div className="mb-6">
-              <label className="block text-gray-700 font-medium mb-2">CELO Amount</label>
-              <input 
-                type="number"
-                min="1"
-                step="1"
-                value={voteAmount}
-                onChange={(e) => setVoteAmount(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
-                placeholder="Enter amount"
-              />
-              <p className="mt-2 text-sm text-gray-500">
-                Each CELO token is worth {campaign.voteMultiplier.toString()} votes.
-                {voteAmount && !isNaN(parseInt(voteAmount)) && parseInt(voteAmount) > 0 && (
-                  <span className="block mt-1 text-emerald-600">
-                    Your vote will be worth {parseInt(voteAmount) * Number(campaign.voteMultiplier)} votes.
-                  </span>
-                )}
-              </p>
+            {/* Token Selection */}
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">Select Token</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
+                {supportedTokens.map((token) => (
+                  <button
+                    key={token.address}
+                    onClick={() => setSelectedToken(token.address)}
+                    className={`py-2 px-3 rounded-lg border flex items-center justify-center text-sm transition-colors ${
+                      selectedToken === token.address
+                        ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {token.isNative ? (
+                      <Coins className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
+                    ) : (
+                      <CreditCard className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+                    )}
+                    {token.symbol}
+                  </button>
+                ))}
+              </div>
             </div>
             
-            {userVoteHistory.length > 0 && (
-              <div className="mb-6 p-3 bg-blue-50 rounded-xl border border-blue-100 shadow-sm">
+            {/* Amount Input */}
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">Amount</label>
+              <div className="relative">
+                <input 
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={voteAmount}
+                  onChange={(e) => setVoteAmount(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
+                  placeholder="Enter amount"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  {supportedTokens.find(t => t.address === selectedToken)?.symbol || ''}
+                </div>
+              </div>
+            </div>
+            
+            {/* Exchange Rate Info */}
+            {selectedToken && voteAmount && parseFloat(voteAmount) > 0 && selectedToken !== votingSystem.CELO_ADDRESS && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex items-center text-gray-600 mb-2">
+                  <Repeat className="h-4 w-4 mr-2 text-blue-500" />
+                  <span className="font-medium">Exchange Rate</span>
+                </div>
+                
+                {loadingExchangeRates ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin mr-2" />
+                    <span className="text-sm text-gray-500">Calculating exchange rate...</span>
+                  </div>
+                ) : (
+                  tokenExchangeRates[selectedToken] && (
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Approximate CELO:</span>
+                        <span className="text-blue-600 font-medium">{tokenExchangeRates[selectedToken].expectedCelo}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-gray-200 pt-1 mt-1">
+                        <span className="text-gray-500">Voting power (after fees):</span>
+                        <span className="text-emerald-600 font-medium">{tokenExchangeRates[selectedToken].voteAmount}</span>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+            
+            {/* Slippage Settings (for non-CELO tokens) */}
+            {selectedToken !== votingSystem.CELO_ADDRESS && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-gray-700 font-medium">Slippage Tolerance</label>
+                  <span className="text-blue-600 font-medium">{slippagePercent}%</span>
+                </div>
+                <div className="flex gap-2">
+                  {[0.1, 0.5, 1.0, 2.0].map((percent) => (
+                    <button
+                      key={percent}
+                      onClick={() => setSlippagePercent(percent)}
+                      className={`flex-1 py-1.5 text-sm rounded-lg transition-colors ${
+                        slippagePercent === percent
+                          ? 'bg-blue-50 text-blue-700 font-medium border border-blue-200'
+                          : 'bg-gray-50 text-gray-600 border border-gray-200'
+                      }`}
+                    >
+                      {percent}%
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Your transaction will revert if the price changes unfavorably by more than this percentage.
+                </p>
+              </div>
+            )}
+            
+            {/* Vote Information */}
+            {selectedToken === votingSystem.CELO_ADDRESS && voteAmount && !isNaN(parseFloat(voteAmount)) && parseFloat(voteAmount) > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100 shadow-sm">
                 <div className="flex items-start">
                   <Info className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-blue-700">You've already voted {formatTokenAmount(userVotes)} CELO on this project.</p>
-                    <p className="text-xs text-blue-600 mt-1">Your new vote will be added to your existing votes.</p>
+                    <p className="text-sm text-blue-700">
+                      Each CELO token is worth {campaign.voteMultiplier.toString()} votes.
+                    </p>
+                    <p className="text-sm text-blue-700 font-medium mt-1">
+                      Your vote will be worth {parseFloat(voteAmount) * Number(campaign.voteMultiplier)} votes.
+                    </p>
+                    {directCeloVotes > BigInt(0) && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        You've already voted {votingSystem.formatAmount(votingSystem.CELO_ADDRESS, directCeloVotes)} CELO on this project.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -891,10 +1108,10 @@ export default function ProjectDetails() {
             <div className="flex gap-3">
               <button
                 onClick={handleVote}
-                disabled={isWritePending || isWaitingForTx || !voteAmount || parseFloat(voteAmount) <= 0}
-                className="flex-1 py-3 px-6 bg-pink-500 text-white font-semibold rounded-full hover:bg-pink-600 transition-colors shadow-md disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
+                disabled={votingSystem.isLoading || !selectedToken || !voteAmount || parseFloat(voteAmount) <= 0}
+                className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-pink-500 text-white font-semibold rounded-full hover:from-blue-600 hover:to-pink-600 transition-colors shadow-md disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
               >
-                {isWritePending || isWaitingForTx ? (
+                {votingSystem.isLoading ? (
                   <div className="flex items-center justify-center">
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                     Processing...
@@ -936,6 +1153,7 @@ export default function ProjectDetails() {
                   src={project.logo} 
                   alt={`${project.name} Logo`} 
                   className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                  ref={logoRef}
                   onError={(e) => {
                     e.currentTarget.src = "https://placehold.co/600x400/f1f5f9/64748b?text=Logo%20Unavailable";
                   }}
