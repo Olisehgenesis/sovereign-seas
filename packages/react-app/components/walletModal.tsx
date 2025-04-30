@@ -45,6 +45,15 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   
+  // Helper function for BigInt exponentiation
+  const bigIntPow = (base: bigint, exponent: bigint): bigint => {
+    let result = BigInt(1);
+    for (let i = BigInt(0); i < exponent; i++) {
+      result *= base;
+    }
+    return result;
+  };
+
   // Get the celoSwapper hook
   const celoSwapper = useCeloSwapperV3();
 
@@ -93,6 +102,14 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         try {
           let balance: bigint;
           
+          if (!celoSwapper.publicClient) {
+            return {
+              ...token,
+              balance: BigInt(0),
+              formattedBalance: '0'
+            };
+          }
+          
           if (token.address.toLowerCase() === celoSwapper.CELO_ADDRESS.toLowerCase()) {
             balance = await celoSwapper.publicClient.getBalance({
               address: address as `0x${string}`
@@ -119,7 +136,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
             const parts = fullBalance.split('.');
             formattedBalance = parts[0] + (parts[1] ? ('.' + parts[1].substring(0, 3)) : '');
           } else {
-            const divisor = 10n ** BigInt(token.decimals);
+            const divisor = bigIntPow(BigInt(10), BigInt(token.decimals));
             const integerPart = balance / divisor;
             const fractionalPart = balance % divisor;
             const fractionalStr = fractionalPart.toString().padStart(token.decimals, '0');
@@ -148,8 +165,8 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         .filter(token => token.balance > BigInt(0))
         .sort((a, b) => {
           // Normalize to 18 decimals for comparison
-          const aValue = a.balance * (10n ** BigInt(18 - a.decimals));
-          const bValue = b.balance * (10n ** BigInt(18 - b.decimals));
+          const aValue = a.balance * bigIntPow(BigInt(10), BigInt(18 - a.decimals));
+          const bValue = b.balance * bigIntPow(BigInt(10), BigInt(18 - b.decimals));
           return bValue > aValue ? 1 : -1;
         });
       
@@ -180,7 +197,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       'cEUR': 'https://cryptologos.cc/logos/celo-euro-ceur-logo.png',
     };
     
-    return logos[symbol] || null;
+    return logos[symbol] || undefined;
   };
 
   const getTokenColor = (symbol: string) => {
@@ -378,17 +395,20 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                           >
                             <div className="flex items-center p-4">
                               <div className={`h-10 w-10 rounded-lg bg-gradient-to-b ${getTokenColor(token.symbol)} flex items-center justify-center mr-3 shadow-sm`}>
-                                {getTokenLogo(token.symbol) ? (
-                                  <img 
-                                    src={getTokenLogo(token.symbol)} 
-                                    alt={token.symbol} 
-                                    className="h-6 w-6" 
-                                  />
-                                ) : (
-                                  <span className="text-white font-bold text-sm">
-                                    {token.symbol.substring(0, 2)}
-                                  </span>
-                                )}
+                                {(() => {
+                                  const logoUrl = getTokenLogo(token.symbol);
+                                  return logoUrl ? (
+                                    <img 
+                                      src={logoUrl} 
+                                      alt={token.symbol} 
+                                      className="h-6 w-6" 
+                                    />
+                                  ) : (
+                                    <span className="text-white font-bold text-sm">
+                                      {token.symbol.substring(0, 2)}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                               <div className="flex-grow">
                                 <h3 className="font-semibold text-gray-800">{token.symbol}</h3>
@@ -451,11 +471,14 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                             }`}
                           >
                             <div className={`h-4 w-4 rounded-full bg-gradient-to-b ${getTokenColor(token.symbol)} mr-1.5 flex items-center justify-center`}>
-                              {getTokenLogo(token.symbol) ? (
-                                <img src={getTokenLogo(token.symbol)} alt={token.symbol} className="h-3 w-3" />
-                              ) : (
-                                <span className="text-white font-bold text-[8px]">{token.symbol.substring(0, 1)}</span>
-                              )}
+                              {(() => {
+                                const logoUrl = getTokenLogo(token.symbol);
+                                return logoUrl ? (
+                                  <img src={logoUrl} alt={token.symbol} className="h-3 w-3" />
+                                ) : (
+                                  <span className="text-white font-bold text-[8px]">{token.symbol.substring(0, 1)}</span>
+                                );
+                              })()}
                             </div>
                             {token.symbol}
                           </button>

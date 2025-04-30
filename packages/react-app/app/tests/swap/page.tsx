@@ -87,7 +87,7 @@ const SimpleSwapPage = () => {
   
   // Check if we need approval first
   const checkAllowance = async () => {
-    if (!isConnected || !address || !amount) return false;
+    if (!isConnected || !address || !amount || !publicClient) return false;
     
     try {
       const allowance = await publicClient.readContract({

@@ -18,6 +18,25 @@ import { useVotingSystem } from '../../../../hooks/useVotingSystem';
 import erc20Abi from '@/abis/MockCELO.json';
 import { formatEther } from 'viem';
 
+// Add these type definitions at the top of the file after imports
+type TokenVote = {
+  tokenAddress: string;
+  tokenAmount: bigint;
+  celoEquivalent: bigint;
+  symbol: string;
+  token?: string;
+};
+
+type ProjectVoteSummary = {
+  tokenVotes: TokenVote[];
+};
+
+type ChartDataItem = {
+  name: string;
+  value: number;
+  color: string;
+  percentage: string;
+};
 
 export default function CampaignDashboard() {
   const router = useRouter();
@@ -55,8 +74,12 @@ export default function CampaignDashboard() {
   const [voteHistoryVisible, setVoteHistoryVisible] = useState(false);
   const [projectInfoModalVisible, setProjectInfoModalVisible] = useState(false);
   const [projectInfoData, setProjectInfoData] = useState<any>(null);
-  const [userVoteStats, setUserVoteStats] = useState<any>({
-    totalVotes: 0,
+  const [userVoteStats, setUserVoteStats] = useState<{
+    totalVotes: string;
+    projectCount: number;
+    tokenVotes: TokenVote[];
+  }>({
+    totalVotes: '0',
     projectCount: 0,
     tokenVotes: []
   });
@@ -144,7 +167,7 @@ const formatTokenBalance = (tokenAddress: string, balance: bigint) => {
     const formattedIntegerPart = integerPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     
     // Format to 3 decimal places
-    if (fractionalPart > 0n) {
+    if (fractionalPart > BigInt(0)) {
       const fractionalStr = fractionalPart.toString().padStart(token.decimals, '0');
       return `${formattedIntegerPart}.${fractionalStr.substring(0, 2)}`;
     }
@@ -180,7 +203,7 @@ const fetchAllTokenBalances = async () => {
               args: [address as `0x${string}`]
             });
             // format balance to 3dps 
-            const formattedBalance = formatEther(balance as BigInt);
+            const formattedBalance = formatEther(balance as bigint);
 
             return { address: token.address, balance };
           }
@@ -197,7 +220,7 @@ const fetchAllTokenBalances = async () => {
     // Update all balances at once
     const newBalances = results.reduce((acc, result) => {
       if (result) {
-        acc[result.address] = result.balance;
+        acc[result.address] = result.balance as bigint;
       }
       return acc;
     }, {} as {[key: string]: bigint});
@@ -281,7 +304,7 @@ useEffect(() => {
   
   
   
-  const getTokenExchangeRate = async (tokenAddress, amount) => {
+  const getTokenExchangeRate = async (tokenAddress: string, amount: string) => {
     if (!tokenAddress || !amount || parseFloat(amount) <= 0) return;
     
     try {
@@ -319,7 +342,7 @@ useEffect(() => {
     }
   };
   
-  const formatValue = (value) => {
+  const formatValue = (value: string) => {
     const parsed = parseFloat(value);
     return Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1);
   };
@@ -394,7 +417,7 @@ useEffect(() => {
         console.log('Token votes summary:', summary);
         if (summary) {
           // Update user vote stats with token votes
-          setUserVoteStats(prev => ({
+          setUserVoteStats((prev: { totalVotes: string; projectCount: number; tokenVotes: TokenVote[] }) => ({
             ...prev,
             tokenVotes: summary.tokenVotes || []
           }));
@@ -405,29 +428,28 @@ useEffect(() => {
     }
   };
   
-{/* Status Message Component (can be rendered conditionally) */}
-const StatusMessage = ({ text, type }) => {
-  return (
-    <div 
-      className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg max-w-md text-center ${
-        type === 'success' 
-          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-          : 'bg-red-100 text-red-800 border border-red-200'
-      }`}
-    >
-      <span className="flex items-center justify-center">
-        {type === 'success' ? (
-          <svg className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-        ) : (
-          <AlertTriangle className="h-5 w-5 mr-2" />
-        )}
-        {text}
-      </span>
-    </div>
-  );
-};
+  const StatusMessage = ({ text, type }: { text: string; type: 'success' | 'error' | null }) => {
+    return (
+      <div 
+        className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg max-w-md text-center ${
+          type === 'success' 
+            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+            : 'bg-red-100 text-red-800 border border-red-200'
+        }`}
+      >
+        <span className="flex items-center justify-center">
+          {type === 'success' ? (
+            <svg className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <AlertTriangle className="h-5 w-5 mr-2" />
+          )}
+          {text}
+        </span>
+      </div>
+    );
+  };
   
   const loadUserVoteStats = async () => {
     try {
@@ -442,7 +464,7 @@ const StatusMessage = ({ text, type }) => {
           }
         });
         
-        setUserVoteStats(prev => ({
+        setUserVoteStats((prev: { totalVotes: string; projectCount: number; tokenVotes: TokenVote[] }) => ({
           ...prev,
           totalVotes: formatValue(sovereignSeas.formatTokenAmount(totalVotes)),
           projectCount: votedProjects.size
@@ -473,7 +495,7 @@ const StatusMessage = ({ text, type }) => {
       if (!campaignId || !selectedProject) return;
       
       // Get all token votes for this project
-      const projectVotes = await votingSystem.getAllProjectVotes(
+      const projectVotes = await votingSystem.getUserVoteSummary(
         Number(campaignId), 
         Number(selectedProject.id)
       );
@@ -525,7 +547,7 @@ const StatusMessage = ({ text, type }) => {
       // Use the smart vote function that selects the right contract based on token
       await votingSystem.vote(
         selectedToken,
-        campaignId,
+        parseInt(campaignId as string),
         selectedProject.id,
         voteAmount,
         slippageBps
@@ -601,7 +623,7 @@ const StatusMessage = ({ text, type }) => {
   };
   
   // Open the project info modal with the selected project
-  const openProjectInfo = (project) => {
+  const openProjectInfo = (project: any) => {
     setProjectInfoData(project);
     setProjectInfoModalVisible(true);
   };
@@ -838,7 +860,7 @@ const StatusMessage = ({ text, type }) => {
                                 {tokenVote.symbol}:
                               </span>
                               <span className="font-medium text-indigo-600">
-                                {formatValue(votingSystem.formatAmount(tokenVote.tokenAddress, tokenVote.tokenAmount))}
+                                {formatValue(votingSystem.formatAmount(tokenVote.tokenAddress, BigInt(tokenVote.tokenAmount)))}
                               </span>
                             </div>
                           ))}
@@ -1796,13 +1818,15 @@ const StatusMessage = ({ text, type }) => {
                       
                       {/* Display token vote data when available */}
                       {allProjectVotes && allProjectVotes.tokenVotes && 
-                       allProjectVotes.tokenVotes.map((tokenVote, index) => {
+                       allProjectVotes.tokenVotes.map((tokenVote: TokenVote, index: number) => {
                         // Skip CELO as it's shown above
                         if (tokenVote.symbol === "CELO") return null;
                         
                         // Calculate percentage of total
                         const totalCeloValue = Number(parseFloat(sovereignSeas.formatTokenAmount(selectedProject.voteCount)));
-                        const tokenCeloValue = Number(parseFloat(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, tokenVote.celoEquivalent)));
+                        const tokenCeloValue = Number(parseFloat(votingSystem.formatAmount(
+                          votingSystem.CELO_ADDRESS, BigInt(tokenVote.celoEquivalent)
+                        )));
                         const percentage = ((tokenCeloValue / totalCeloValue) * 100).toFixed(1);
                         
                         // Generate a color based on the index
@@ -1821,10 +1845,10 @@ const StatusMessage = ({ text, type }) => {
                               </div>
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-600">
-                              {formatValue(votingSystem.formatAmount(tokenVote.tokenAddress, tokenVote.tokenAmount))}
+                              {formatValue(votingSystem.formatAmount(tokenVote.tokenAddress, BigInt(tokenVote.tokenAmount)))}
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-600">
-                              {formatValue(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, tokenVote.celoEquivalent))}
+                              {formatValue(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, BigInt(tokenVote.celoEquivalent)))}
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-right">
                               <span className={`px-2 py-1 text-xs font-medium rounded-full bg-${color}-100 text-${color}-700`}>
@@ -1839,7 +1863,7 @@ const StatusMessage = ({ text, type }) => {
                       {(!allProjectVotes || !allProjectVotes.tokenVotes || 
                         allProjectVotes.tokenVotes.length === 0) && (
                         <tr>
-                          <td colSpan="4" className="px-3 py-4 text-center text-sm text-gray-500">
+                          <td colSpan={4} className="px-3 py-4 text-center text-sm text-gray-500">
                             No additional token votes recorded for this project yet
                           </td>
                         </tr>
@@ -1868,19 +1892,21 @@ const StatusMessage = ({ text, type }) => {
 }
 
 // Helper function to get a color based on index
-function getTokenColor(index) {
+function getTokenColor(index: number) {
   const colors = ["blue", "indigo", "purple", "pink", "cyan"];
   return colors[index % colors.length];
 }
 
 // Token Vote Pie Chart Component
-const TokenVotePieChart = ({ projectData, voteSummary }) => {
-  const [chartData, setChartData] = useState([]);
+const TokenVotePieChart = ({ projectData, voteSummary }: { projectData: any; voteSummary: ProjectVoteSummary }) => {
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]);
+  const sovereignSeas = useSovereignSeas();
+  const votingSystem = useVotingSystem();
   
   useEffect(() => {
     // Default data if nothing else is available
-    let data = [
-      { name: "CELO", value: 100, color: "#3B82F6" }
+    let data: ChartDataItem[] = [
+      { name: "CELO", value: 100, color: "#3B82F6", percentage: "100" }
     ];
     
     if (projectData && voteSummary && voteSummary.tokenVotes && voteSummary.tokenVotes.length > 0) {
@@ -1893,16 +1919,16 @@ const TokenVotePieChart = ({ projectData, voteSummary }) => {
           name: "CELO", 
           value: totalCeloValue, 
           color: "#3B82F6",
-          percentage: 100 
+          percentage: "100" 
         }
       ];
       
       // Add other tokens
-      voteSummary.tokenVotes.forEach((tokenVote, index) => {
+      voteSummary.tokenVotes.forEach((tokenVote: TokenVote, index: number) => {
         if (tokenVote.symbol === "CELO") return; // Skip CELO as it's handled above
         
         const tokenCeloValue = Number(parseFloat(votingSystem.formatAmount(
-          votingSystem.CELO_ADDRESS, tokenVote.celoEquivalent
+          votingSystem.CELO_ADDRESS, BigInt(tokenVote.celoEquivalent)
         )));
         
         const percentage = ((tokenCeloValue / totalCeloValue) * 100).toFixed(1);

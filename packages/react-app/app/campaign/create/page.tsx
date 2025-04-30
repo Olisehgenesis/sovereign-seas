@@ -222,19 +222,26 @@ export default function CreateCampaign() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800">
-      <div className="container mx-auto px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 text-gray-800 relative">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/3 left-1/4 w-64 h-64 rounded-full bg-gradient-to-r from-blue-400/10 to-indigo-400/10 animate-float-slower blur-2xl"></div>
+        <div className="absolute top-2/3 right-1/4 w-96 h-96 rounded-full bg-gradient-to-r from-sky-400/10 to-blue-400/10 animate-float-slow blur-2xl"></div>
+      </div>
+      
+      <div className="container mx-auto px-4 py-12 relative z-10">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center mb-8">
-            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3">
-              <Hash className="h-6 w-6 text-emerald-600" />
+            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+              <Hash className="h-6 w-6 text-blue-600" />
             </div>
-            <h1 className="text-3xl font-bold tilt-neon text-gray-800">Create New Campaign</h1>
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Create New Campaign</h1>
           </div>
           
           {/* Fee Notice */}
-          <div className="mb-6 bg-amber-50 rounded-xl p-4 border border-amber-100 shadow-sm relative">
-            <div className="flex items-start">
+          <div className="mb-6 bg-amber-50 rounded-xl p-4 border border-amber-100 shadow-sm relative group hover:shadow-md transition-all hover:-translate-y-1 duration-300">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-xl opacity-0 group-hover:opacity-5 blur-sm transition-all duration-500"></div>
+            <div className="relative z-10 flex items-start">
               <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center mr-3 flex-shrink-0">
                 <Shield className="h-5 w-5 text-amber-600" />
               </div>
@@ -257,7 +264,7 @@ export default function CreateCampaign() {
                 </p>
                 
                 {showFeeTooltip && (
-                  <div className="absolute right-4 top-4 w-64 p-3 bg-white rounded-xl shadow-lg z-10 text-sm border border-amber-100">
+                  <div className="absolute right-4 top-4 w-64 p-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg z-10 text-sm border border-amber-100">
                     <p className="text-amber-700">
                       These fees are collected to prevent spam and maintain platform quality. Fees are managed by platform superadmins and support ongoing development.
                     </p>
@@ -274,377 +281,383 @@ export default function CreateCampaign() {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-md hover:-translate-y-1 hover:shadow-lg transition-all duration-200">
-            <form onSubmit={handleSubmit}>
-              {/* Basic Information */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4 text-emerald-600 flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  Campaign Details
-                </h2>
-                
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-emerald-600 mb-2">Campaign Name</label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Enter campaign name"
-                    />
-                    {formErrors.name && <p className="mt-1 text-red-500 text-sm">{formErrors.name}</p>}
-                  </div>
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 border border-blue-100 shadow-lg group hover:shadow-xl transition-all hover:-translate-y-2 duration-300 relative overflow-hidden">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
+            <div className="relative z-10">
+              <form onSubmit={handleSubmit}>
+                {/* Basic Information */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center">
+                    <Settings className="h-5 w-5 mr-2 text-blue-500" />
+                    Campaign Details
+                  </h2>
                   
-                  <div>
-                    <label className="block text-emerald-600 mb-2">Campaign Description</label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 h-24"
-                      placeholder="Describe your campaign"
-                    />
-                    {formErrors.description && <p className="mt-1 text-red-500 text-sm">{formErrors.description}</p>}
-                  </div>
-                  
-                  {/* Logo field with file upload */}
-                  <div>
-                    <label className="block text-emerald-600 mb-2 flex items-center">
-                      <ImageIcon className="h-4 w-4 mr-2" />
-                      Logo URL or Upload
-                    </label>
-                    
-                    <input
-                      type="file"
-                      ref={logoFileInputRef}
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          // Just show a placeholder when file is selected
-                          setLogo(`File selected: ${e.target.files[0].name}`);
-                        }
-                      }}
-                      className="hidden" // Hide the native file input
-                    />
-                    
-                    <div className="flex gap-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => logoFileInputRef.current?.click()}
-                        className="px-4 py-2 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-                        disabled={isUploadingLogo}
-                      >
-                        {isUploadingLogo ? (
-                          <div className="flex items-center">
-                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                            Uploading...
-                          </div>
-                        ) : (
-                          <div className="flex items-center">
-                            <Upload className="h-4 w-4 mr-2" />
-                            Upload Logo
-                          </div>
-                        )}
-                      </button>
-                      <span className="text-gray-500">or</span>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-blue-600 mb-2">Campaign Name</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                        placeholder="Enter campaign name"
+                      />
+                      {formErrors.name && <p className="mt-1 text-red-500 text-sm">{formErrors.name}</p>}
                     </div>
                     
-                    <input
-                      type="text"
-                      value={logo}
-                      onChange={(e) => setLogo(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Enter logo URL or IPFS hash"
-                    />
-                    <p className="mt-1 text-gray-500 text-sm">
-                      Provide a campaign logo image for better visibility
-                    </p>
-                  </div>
-                  
-                  {/* Demo video field */}
-                  <div>
-                    <label className="block text-emerald-600 mb-2 flex items-center">
-                      <Video className="h-4 w-4 mr-2" />
-                      Demo Video URL (optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={demoVideo}
-                      onChange={(e) => setDemoVideo(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Enter demo video URL or IPFS hash"
-                    />
-                    <p className="mt-1 text-gray-500 text-sm">
-                      Add a demonstration video to showcase your campaign's purpose
-                    </p>
-                    {formErrors.demoVideo && <p className="mt-1 text-red-500 text-sm">{formErrors.demoVideo}</p>}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Timeline */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4 text-emerald-600 flex items-center">
-                  <CalendarRange className="h-5 w-5 mr-2" />
-                  Campaign Timeline
-                </h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-emerald-600 mb-2">Start Date</label>
-                    <input
-                      type="datetime-local"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      min={new Date().toISOString().slice(0, 16)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                    {formErrors.startDate && <p className="mt-1 text-red-500 text-sm">{formErrors.startDate}</p>}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-emerald-600 mb-2">End Date</label>
-                    <input
-                      type="datetime-local"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      min={startDate || new Date().toISOString().slice(0, 16)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                    {formErrors.endDate && <p className="mt-1 text-red-500 text-sm">{formErrors.endDate}</p>}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Voting Settings */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4 text-emerald-600 flex items-center">
-                  <Coins className="h-5 w-5 mr-2" />
-                  Voting & Distribution Settings
-                </h2>
-                
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-emerald-600 mb-2">Admin Fee Percentage (%)</label>
-                    <input
-                      type="number"
-                      value={adminFee}
-                      onChange={(e) => setAdminFee(parseInt(e.target.value))}
-                      min="0"
-                      max="30"
-                      className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                    <p className="mt-1 text-gray-500 text-sm">
-                      This is your fee as the campaign admin (max 30%). The platform also takes a 15% fee.
-                    </p>
-                    {formErrors.adminFee && <p className="mt-1 text-red-500 text-sm">{formErrors.adminFee}</p>}
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-emerald-600">Vote Multiplier</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setShowVoteTooltip(!showVoteTooltip)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                      </button>
+                    <div>
+                      <label className="block text-blue-600 mb-2">Campaign Description</label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 h-24 transition-all duration-300"
+                        placeholder="Describe your campaign"
+                      />
+                      {formErrors.description && <p className="mt-1 text-red-500 text-sm">{formErrors.description}</p>}
                     </div>
                     
-                    {showVoteTooltip && (
-                      <div className="absolute right-0 w-64 p-3 bg-white rounded-xl shadow-lg z-10 text-sm border border-gray-200">
-                        This determines how many votes each CELO token is worth. Higher multipliers make each token more impactful.
-                        <button 
-                          type="button" 
-                          className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 transition-colors"
-                          onClick={() => setShowVoteTooltip(false)}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
-                    
-                    <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((value) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setVoteMultiplier(value)}
-                          className={`flex-1 py-2 rounded-full ${
-                            voteMultiplier === value 
-                              ? 'bg-emerald-500 text-white shadow-sm' 
-                              : 'bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 transition-colors'
-                          }`}
-                        >
-                          {value}x
-                        </button>
-                      ))}
-                    </div>
-                    <p className="mt-1 text-gray-500 text-sm">
-                      Each CELO will be worth {voteMultiplier} vote{voteMultiplier !== 1 ? 's' : ''}.
-                    </p>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-emerald-600">Distribution Method</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setShowDistributionTooltip(!showDistributionTooltip)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                      </button>
-                    </div>
-                    
-                    {showDistributionTooltip && (
-                      <div className="absolute right-0 w-64 p-3 bg-white rounded-xl shadow-lg z-10 text-sm border border-gray-200">
-                        Quadratic distribution makes funding more equitable by using the square root of votes to determine shares. Linear distribution is directly proportional to votes.
-                        <button 
-                          type="button" 
-                          className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 transition-colors"
-                          onClick={() => setShowDistributionTooltip(false)}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
-                    
-                    <div className="flex space-x-4">
-                      <button
-                        type="button"
-                        onClick={() => setUseQuadratic(true)}
-                        className={`flex-1 py-3 px-4 rounded-full flex items-center justify-center ${
-                          useQuadratic 
-                            ? 'bg-emerald-500 text-white shadow-sm' 
-                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 transition-colors'
-                        }`}
-                      >
-                        {useQuadratic && <Check className="h-4 w-4 mr-2" />}
-                        Quadratic
-                      </button>
+                    {/* Logo field with file upload */}
+                    <div>
+                      <label className="block text-blue-600 mb-2 flex items-center">
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Logo URL or Upload
+                      </label>
                       
-                      <button
-                        type="button"
-                        onClick={() => setUseQuadratic(false)}
-                        className={`flex-1 py-3 px-4 rounded-full flex items-center justify-center ${
-                          !useQuadratic 
-                            ? 'bg-emerald-500 text-white shadow-sm' 
-                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 transition-colors'
-                        }`}
-                      >
-                        {!useQuadratic && <Check className="h-4 w-4 mr-2" />}
-                        Linear
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-emerald-600">Max Winners</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setShowWinnersTooltip(!showWinnersTooltip)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                      </button>
-                    </div>
-                    
-                    {showWinnersTooltip && (
-                      <div className="absolute right-0 w-64 p-3 bg-white rounded-xl shadow-lg z-10 text-sm border border-gray-200">
-                        Set the maximum number of projects that can receive funding. Set to 0 for unlimited winners.
-                        <button 
-                          type="button" 
-                          className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 transition-colors"
-                          onClick={() => setShowWinnersTooltip(false)}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
-                    
-                    <div className="relative mb-2">
-                      <select
-                        value={useCustomWinners ? 'custom' : maxWinners.toString()}
+                      <input
+                        type="file"
+                        ref={logoFileInputRef}
+                        accept="image/*"
                         onChange={(e) => {
-                          if (e.target.value === 'custom') {
-                            setUseCustomWinners(true);
-                          } else {
-                            setUseCustomWinners(false);
-                            setMaxWinners(parseInt(e.target.value));
+                          if (e.target.files && e.target.files[0]) {
+                            // Just show a placeholder when file is selected
+                            setLogo(`File selected: ${e.target.files[0].name}`);
                           }
                         }}
-                        className="w-full pl-4 pr-10 py-2.5 appearance-none rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      >
-                        <option value="0">All projects (unlimited)</option>
-                        {[1, 2, 3, 4, 5, 10].map((value) => (
-                          <option key={value} value={value.toString()}>
-                            Top {value} project{value !== 1 ? 's' : ''}
-                          </option>
-                        ))}
-                        <option value="custom">Custom number</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                        className="hidden" // Hide the native file input
+                      />
+                      
+                      <div className="flex gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => logoFileInputRef.current?.click()}
+                          className="px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-blue-400/30 relative overflow-hidden group"
+                          disabled={isUploadingLogo}
+                        >
+                          {isUploadingLogo ? (
+                            <div className="flex items-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                              Uploading...
+                            </div>
+                          ) : (
+                            <div className="flex items-center relative z-10">
+                              <Upload className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                              Upload Logo
+                            </div>
+                          )}
+                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                        </button>
+                        <span className="text-gray-500">or</span>
+                      </div>
+                      
+                      <input
+                        type="text"
+                        value={logo}
+                        onChange={(e) => setLogo(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                        placeholder="Enter logo URL or IPFS hash"
+                      />
+                      <p className="mt-1 text-gray-500 text-sm">
+                        Provide a campaign logo image for better visibility
+                      </p>
                     </div>
                     
-                    {useCustomWinners && (
-                      <div>
-                        <input
-                          type="number"
-                          value={customWinners}
-                          onChange={(e) => setCustomWinners(e.target.value)}
-                          min="1"
-                          placeholder="Enter number of winners"
-                          className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                        {formErrors.customWinners && <p className="mt-1 text-red-500 text-sm">{formErrors.customWinners}</p>}
-                      </div>
-                    )}
+                    {/* Demo video field */}
+                    <div>
+                      <label className="block text-blue-600 mb-2 flex items-center">
+                        <Video className="h-4 w-4 mr-2" />
+                        Demo Video URL (optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={demoVideo}
+                        onChange={(e) => setDemoVideo(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                        placeholder="Enter demo video URL or IPFS hash"
+                      />
+                      <p className="mt-1 text-gray-500 text-sm">
+                        Add a demonstration video to showcase your campaign's purpose
+                      </p>
+                      {formErrors.demoVideo && <p className="mt-1 text-red-500 text-sm">{formErrors.demoVideo}</p>}
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Submit Section */}
-              <div className="mt-10">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <button
-                    type="submit"
-                    disabled={isWritePending || isWaitingForTx || !isConnected}
-                    className="flex-1 py-3 px-6 bg-emerald-500 text-white font-semibold rounded-full hover:bg-emerald-600 shadow-sm hover:shadow-md transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    {isWritePending || isWaitingForTx ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                        {isWritePending ? 'Preparing...' : 'Processing...'}
-                      </div>
-                    ) : (
-                      'Create Campaign'
-                    )}
-                  </button>
+                
+                {/* Timeline */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center">
+                    <CalendarRange className="h-5 w-5 mr-2 text-blue-500" />
+                    Campaign Timeline
+                  </h2>
                   
-                  <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="flex-1 md:flex-initial py-3 px-6 bg-white border border-gray-200 text-emerald-600 font-semibold rounded-full hover:bg-gray-50 shadow-sm hover:shadow-md transition-all"
-                  >
-                    Cancel
-                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-blue-600 mb-2">Start Date</label>
+                      <input
+                        type="datetime-local"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                      />
+                      {formErrors.startDate && <p className="mt-1 text-red-500 text-sm">{formErrors.startDate}</p>}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-blue-600 mb-2">End Date</label>
+                      <input
+                        type="datetime-local"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate || new Date().toISOString().slice(0, 16)}
+                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                      />
+                      {formErrors.endDate && <p className="mt-1 text-red-500 text-sm">{formErrors.endDate}</p>}
+                    </div>
+                  </div>
                 </div>
                 
-                {!isConnected && (
-                  <p className="mt-3 text-amber-600 text-center">
-                    Please connect your wallet to create a campaign
-                  </p>
-                )}
+                {/* Voting Settings */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center">
+                    <Coins className="h-5 w-5 mr-2 text-blue-500" />
+                    Voting & Distribution Settings
+                  </h2>
+                  
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-blue-600 mb-2">Admin Fee Percentage (%)</label>
+                      <input
+                        type="number"
+                        value={adminFee}
+                        onChange={(e) => setAdminFee(parseInt(e.target.value))}
+                        min="0"
+                        max="30"
+                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                      />
+                      <p className="mt-1 text-gray-500 text-sm">
+                        This is your fee as the campaign admin (max 30%). The platform also takes a 15% fee.
+                      </p>
+                      {formErrors.adminFee && <p className="mt-1 text-red-500 text-sm">{formErrors.adminFee}</p>}
+                    </div>
+                    
+                    <div className="relative">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-blue-600">Vote Multiplier</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setShowVoteTooltip(!showVoteTooltip)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      {showVoteTooltip && (
+                        <div className="absolute right-0 w-64 p-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg z-10 text-sm border border-blue-100">
+                          This determines how many votes each CELO token is worth. Higher multipliers make each token more impactful.
+                          <button 
+                            type="button" 
+                            className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            onClick={() => setShowVoteTooltip(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-2">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setVoteMultiplier(value)}
+                            className={`flex-1 py-2 rounded-full ${
+                              voteMultiplier === value 
+                                ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm' 
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 transition-colors'
+                            }`}
+                          >
+                            {value}x
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-gray-500 text-sm">
+                        Each CELO will be worth {voteMultiplier} vote{voteMultiplier !== 1 ? 's' : ''}.
+                      </p>
+                    </div>
+                    
+                    <div className="relative">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-blue-600">Distribution Method</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setShowDistributionTooltip(!showDistributionTooltip)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      {showDistributionTooltip && (
+                        <div className="absolute right-0 w-64 p-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg z-10 text-sm border border-blue-100">
+                          Quadratic distribution makes funding more equitable by using the square root of votes to determine shares. Linear distribution is directly proportional to votes.
+                          <button 
+                            type="button" 
+                            className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            onClick={() => setShowDistributionTooltip(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-4">
+                        <button
+                          type="button"
+                          onClick={() => setUseQuadratic(true)}
+                          className={`flex-1 py-3 px-4 rounded-full flex items-center justify-center ${
+                            useQuadratic 
+                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm' 
+                              : 'bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 transition-colors'
+                          }`}
+                        >
+                          {useQuadratic && <Check className="h-4 w-4 mr-2" />}
+                          Quadratic
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setUseQuadratic(false)}
+                          className={`flex-1 py-3 px-4 rounded-full flex items-center justify-center ${
+                            !useQuadratic 
+                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm' 
+                              : 'bg-white border border-gray-200 text-gray-600 hover:bg-blue-50 transition-colors'
+                          }`}
+                        >
+                          {!useQuadratic && <Check className="h-4 w-4 mr-2" />}
+                          Linear
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="relative">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-blue-600">Max Winners</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setShowWinnersTooltip(!showWinnersTooltip)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      {showWinnersTooltip && (
+                        <div className="absolute right-0 w-64 p-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg z-10 text-sm border border-blue-100">
+                          Set the maximum number of projects that can receive funding. Set to 0 for unlimited winners.
+                          <button 
+                            type="button" 
+                            className="absolute top-1 right-1 text-gray-400 hover:text-gray-600 transition-colors"
+                            onClick={() => setShowWinnersTooltip(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      <div className="relative mb-2">
+                        <select
+                          value={useCustomWinners ? 'custom' : maxWinners.toString()}
+                          onChange={(e) => {
+                            if (e.target.value === 'custom') {
+                              setUseCustomWinners(true);
+                            } else {
+                              setUseCustomWinners(false);
+                              setMaxWinners(parseInt(e.target.value));
+                            }
+                          }}
+                          className="w-full pl-4 pr-10 py-2.5 appearance-none rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                        >
+                          <option value="0">All projects (unlimited)</option>
+                          {[1, 2, 3, 4, 5, 10].map((value) => (
+                            <option key={value} value={value.toString()}>
+                              Top {value} project{value !== 1 ? 's' : ''}
+                            </option>
+                          ))}
+                          <option value="custom">Custom number</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                      </div>
+                      
+                      {useCustomWinners && (
+                        <div>
+                          <input
+                            type="number"
+                            value={customWinners}
+                            onChange={(e) => setCustomWinners(e.target.value)}
+                            min="1"
+                            placeholder="Enter number of winners"
+                            className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-300"
+                          />
+                          {formErrors.customWinners && <p className="mt-1 text-red-500 text-sm">{formErrors.customWinners}</p>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 
-              
-                <p className="mt-4 text-center text-gray-500 text-sm">
-                  By creating a campaign, you agree to pay the {CAMPAIGN_CREATION_FEE} CELO creation fee
-                </p>
-              </div>
-            </form>
+                {/* Submit Section */}
+                <div className="mt-10">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <button
+                      type="submit"
+                      disabled={isWritePending || isWaitingForTx || !isConnected}
+                      className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed border border-blue-400/30 relative overflow-hidden group"
+                    >
+                      {isWritePending || isWaitingForTx ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+                          {isWritePending ? 'Preparing...' : 'Processing...'}
+                        </div>
+                      ) : (
+                        <span className="relative z-10">Create Campaign</span>
+                      )}
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => router.back()}
+                      className="flex-1 md:flex-initial py-3 px-6 bg-white border border-blue-200 text-blue-600 font-semibold rounded-full hover:bg-blue-50 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group"
+                    >
+                      <span className="relative z-10">Cancel</span>
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                    </button>
+                  </div>
+                  
+                  {!isConnected && (
+                    <p className="mt-3 text-amber-600 text-center">
+                      Please connect your wallet to create a campaign
+                    </p>
+                  )}
+                  
+                
+                  <p className="mt-4 text-center text-gray-500 text-sm">
+                    By creating a campaign, you agree to pay the {CAMPAIGN_CREATION_FEE} CELO creation fee
+                  </p>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>

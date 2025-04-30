@@ -1,9 +1,5 @@
 
 
-import {
-  RainbowKitProvider,
-  connectorsForWallets,
-} from '@rainbow-me/rainbowkit';
 import {createConfig} from '@privy-io/wagmi';
 import {  http } from 'wagmi';
 import { celo, celoAlfajores } from 'wagmi/chains';

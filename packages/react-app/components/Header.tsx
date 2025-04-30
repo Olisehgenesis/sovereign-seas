@@ -36,7 +36,7 @@ export default function Header() {
   const { isConnected, address } = useAccount();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showChainAlert, setShowChainAlert] = useState(false);
-  const [currentChainId, setCurrentChainId] = useState(null);
+  const [currentChainId, setCurrentChainId] = useState<number | null>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const pathname = usePathname();
   
@@ -77,7 +77,7 @@ export default function Header() {
 
   // Handle MiniPay connection
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isMiniPay) {
+    if (window.ethereum && window.ethereum.isMiniPay) {
       setHideConnectBtn(true);
       connect({ connector: injected({ target: 'metaMask' }) });
     }

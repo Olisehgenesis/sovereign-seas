@@ -7,8 +7,8 @@ import Layout from '../components/Layout';
 import { config } from './config';
 import { celo, celoAlfajores } from 'viem/chains';
 
-const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-const clientId = process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID;
+const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID as string;
+const clientId = process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID as string;
 
 if (!appId || !clientId) {
   throw new Error(
@@ -30,6 +30,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               "logo": "https://auth.privy.io/logos/privy-logo.png",
               "walletChainType": "ethereum-only",
             },
+          
             defaultChain: celoAlfajores,
             supportedChains: [celo, celoAlfajores]
            

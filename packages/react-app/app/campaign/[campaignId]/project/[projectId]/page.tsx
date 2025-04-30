@@ -24,7 +24,6 @@ import {
   Video,
   Code,
   Edit,
-  Users,
   ChevronDown,
   ChevronUp,
   Info,
@@ -37,10 +36,64 @@ import {
   Hash,
   CreditCard,
   DollarSign,
-  Repeat
+  Repeat,
+  MousePointerClick,
+  Filter,
+  RefreshCw,
+  TrendingUp
 } from 'lucide-react';
 import { useSovereignSeas } from '../../../../../hooks/useSovereignSeas';
 import { useVotingSystem } from '../../../../../hooks/useVotingSystem';
+import erc20Abi from '@/abis/MockCELO.json';
+import { formatEther } from 'viem';
+
+type Campaign = any; // Assuming the Campaign type is imported from somewhere
+
+type TokenSupport = {
+  address: string;
+  symbol: string;
+  decimals: number;
+  isNative?: boolean;
+};
+
+type TokenBalances = {
+  [key: `0x${string}`]: bigint;
+};
+
+type TokenBalanceResult = {
+  address: `0x${string}`;
+  balance: bigint;
+};
+
+type Project = any; // Assuming the Project type is imported from somewhere
+
+type VoteSummary = any; // Assuming the VoteSummary type is imported from somewhere
+
+type Vote = any; // Assuming the Vote type is imported from somewhere
+
+type TokenVote = any; // Assuming the TokenVote type is imported from somewhere
+
+// Token Vote Pie Chart Component
+const TokenVotePieChart = ({ projectData, voteSummary }: { projectData: any, voteSummary: any }) => {
+  if (!projectData || !voteSummary) {
+    return <div className="flex items-center justify-center h-48 text-gray-500">No data available</div>;
+  }
+
+  // Simple placeholder for the pie chart
+  return (
+    <div className="flex flex-col items-center">
+      <div className="mx-auto h-48 w-48 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 border-4 border-white shadow-inner flex items-center justify-center">
+        <div className="text-blue-600 font-bold text-2xl">
+          {projectData.voteCount ? formatEther(projectData.voteCount).slice(0, 5) : "0"} 
+          <div className="text-sm font-normal text-gray-600">CELO votes</div>
+        </div>
+      </div>
+      <p className="mt-4 text-sm text-gray-600">
+        Token vote distribution visualization
+      </p>
+    </div>
+  );
+};
 
 export default function ProjectDetails() {
   const router = useRouter();
@@ -49,37 +102,39 @@ export default function ProjectDetails() {
   const [isMounted, setIsMounted] = useState(false);
   
   // Data states
-  const [campaign, setCampaign] = useState<any>(null);
-  const [project, setProject] = useState<any>(null);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [voteSummary, setVoteSummary] = useState<any>(null);
-  const [userVoteHistory, setUserVoteHistory] = useState<any[]>([]);
+  const [voteSummary, setVoteSummary] = useState<VoteSummary | null>(null);
+  const [userVoteHistory, setUserVoteHistory] = useState<Vote[]>([]);
   const [isProjectOwner, setIsProjectOwner] = useState(false);
   const [projectRanking, setProjectRanking] = useState({ rank: 0, totalProjects: 0 });
   
   // Token-related states
-  const [supportedTokens, setSupportedTokens] = useState<any[]>([]);
+  const [supportedTokens, setSupportedTokens] = useState<TokenSupport[]>([]);
   const [selectedToken, setSelectedToken] = useState('');
-  const [tokenBalances, setTokenBalances] = useState<{[key: string]: string}>({});
-  const [tokenExchangeRates, setTokenExchangeRates] = useState<{[key: string]: {expectedCelo: string, voteAmount: string}}>({});
+  const [tokenBalances, setTokenBalances] = useState<TokenBalances>({});
+  const [tokenExchangeRates, setTokenExchangeRates] = useState({});
   const [loadingExchangeRates, setLoadingExchangeRates] = useState(false);
+  const [tokenVoteDistributionVisible, setTokenVoteDistributionVisible] = useState(false);
+  const [allProjectVotes, setAllProjectVotes] = useState<VoteSummary | null>(null);
 
   // UI states
   const [voteModalVisible, setVoteModalVisible] = useState(false);
   const [voteAmount, setVoteAmount] = useState('');
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' });
   const [showMediaModal, setShowMediaModal] = useState(false);
-  const [activeMediaType, setActiveMediaType] = useState<string | null>(null);
+  const [activeMediaType, setActiveMediaType] = useState<'logo' | 'video' | null>(null);
   const [showContractsSection, setShowContractsSection] = useState(false);
   const [showVoteHistory, setShowVoteHistory] = useState(false);
   const [showProjectStats, setShowProjectStats] = useState(true);
   const [slippagePercent, setSlippagePercent] = useState(0.5); // Default 0.5%
   
   // Media content refs
-  const logoRef = useRef<HTMLImageElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const logoRef = useRef(null);
+  const videoRef = useRef(null);
   
   // Contract interaction with both hooks
   const sovereignSeas = useSovereignSeas();
@@ -147,6 +202,116 @@ export default function ProjectDetails() {
       getTokenExchangeRate(selectedToken, voteAmount);
     }
   }, [selectedToken, voteAmount]);
+
+  // Format token balance using formatEther for clean display with 3 decimal places
+  const formatTokenBalance = (tokenAddress: string, balance: bigint) => {
+    if (!balance) return '0';
+    
+    const token = supportedTokens.find(t => t.address === tokenAddress);
+    
+    // Use formatEther for standard 18-decimal tokens
+    if (!token || token.decimals === 18) {
+      // Format with formatEther and limit to 3 decimal places
+      const formattedBalance = formatEther(balance);
+      const parts = formattedBalance.split('.');
+      
+      // Format integer part with commas
+      const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      
+      // If there's a decimal part, keep only 3 places
+      if (parts[1]) {
+        return `${integerPart}.${parts[1].substring(0, 3)}`;
+      }
+      
+      return integerPart;
+    } else {
+      // For tokens with non-standard decimals
+      let divisor = BigInt(1);
+      for (let i = 0; i < token.decimals; i++) {
+          divisor *= BigInt(10);
+      }
+      const integerPart = balance / divisor;
+      const fractionalPart = balance % divisor;
+      
+      // Format integer part with commas
+      const formattedIntegerPart = integerPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      
+      // Format to 3 decimal places
+      if (fractionalPart > BigInt(0)) {
+        const fractionalStr = fractionalPart.toString().padStart(token.decimals, '0');
+        return `${formattedIntegerPart}.${fractionalStr.substring(0, 3)}`;
+      }
+      
+      return formattedIntegerPart;
+    }
+  };
+
+  const fetchAllTokenBalances = async () => {
+    if (!address || !supportedTokens.length) return;
+    
+    try {
+      // Process tokens in parallel for faster loading
+      const fetchPromises = supportedTokens.map(async (token) => {
+        try {
+          if (token.address.toLowerCase() === votingSystem.CELO_ADDRESS.toLowerCase()) {
+            // Fetch native CELO balance
+            if (votingSystem.celoSwapper.publicClient) {
+              const balance = await votingSystem.celoSwapper.publicClient.getBalance({
+                address: address
+              });
+              return { address: token.address, balance };
+            }
+          } else {
+            // Fetch ERC20 token balance
+            if (votingSystem.celoSwapper.publicClient) {
+              const balance = await votingSystem.celoSwapper.publicClient.readContract({
+                address: token.address as `0x${string}`,
+                abi: erc20Abi,
+                functionName: 'balanceOf',
+                args: [address]
+              });
+              return { address: token.address, balance };
+            }
+          }
+          return { address: token.address, balance: BigInt(0) };
+        } catch (error) {
+          console.error(`Error fetching balance for ${token.symbol}:`, error);
+          return { address: token.address, balance: BigInt(0) };
+        }
+      });
+
+      const results = await Promise.all(fetchPromises);
+      
+      // Update all balances at once
+      const newBalances = (results as (TokenBalanceResult | null)[]).reduce((acc: TokenBalances, result: TokenBalanceResult | null) => {
+        if (result) {
+          acc[result.address] = result.balance;
+        }
+        return acc;
+      }, {});
+      
+      setTokenBalances(prev => ({
+        ...prev,
+        ...newBalances
+      }));
+    } catch (error) {
+      console.error("Error fetching all token balances:", error);
+    }
+  };
+  
+  // Add this effect to load balances when supported tokens are available or address changes
+  useEffect(() => {
+    if (address && supportedTokens.length > 0) {
+      fetchAllTokenBalances();
+    }
+  }, [address, supportedTokens.length]);
+  
+  // Load token distribution data when visibility toggles
+  useEffect(() => {
+    if (tokenVoteDistributionVisible && campaignId && projectId) {
+      loadProjectTokenVotes();
+    }
+  }, [tokenVoteDistributionVisible, campaignId, projectId]);
 
   const loadSupportedTokens = async () => {
     try {
@@ -262,6 +427,21 @@ export default function ProjectDetails() {
     }
   };
   
+  // Added getAllProjectVotes function
+  const loadProjectTokenVotes = async () => {
+    try {
+      if (!campaignId || !projectId) return;
+      
+      // Get vote summary for the project - simulation for now
+      // In a real implementation, you would call a function to get all votes for this project
+      const summary = await votingSystem.getUserVoteSummary(Number(campaignId), Number(projectId));
+      
+      setAllProjectVotes(summary);
+    } catch (error) {
+      console.error('Error loading project token votes:', error);
+    }
+  };
+  
   const getTokenExchangeRate = async (tokenAddress: string, amount: string) => {
     if (!tokenAddress || !amount || parseFloat(amount) <= 0) return;
     
@@ -289,8 +469,8 @@ export default function ProjectDetails() {
       setTokenExchangeRates({
         ...tokenExchangeRates,
         [tokenAddress]: {
-          expectedCelo: votingSystem.formatAmount(votingSystem.CELO_ADDRESS, expectedCelo),
-          voteAmount: votingSystem.formatAmount(votingSystem.CELO_ADDRESS, voteAmount)
+          expectedCelo: formatValue(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, expectedCelo)),
+          voteAmount: formatValue(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, voteAmount))
         }
       });
     } catch (error) {
@@ -300,22 +480,19 @@ export default function ProjectDetails() {
     }
   };
   
+  const formatValue = (value: string) => {
+    const parsed = parseFloat(value);
+    return Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1);
+  };
+  
   const handleVote = async () => {
     if (!selectedToken || !voteAmount || parseFloat(voteAmount) <= 0) return;
     
     try {
       setStatusMessage({ text: 'Processing your vote...', type: 'info' });
       
-      // Calculate slippage in basis points
-      const slippageBps = Math.floor(slippagePercent * 100);
-      
-      console.log("Vote parameters:", {
-        selectedToken,
-        campaignId: Number(campaignId),
-        projectId: Number(projectId),
-        voteAmount,
-        slippageBps
-      });
+      // Fixed 2% slippage (200 basis points)
+      const slippageBps = 200;
       
       // Use the smart vote function
       await votingSystem.vote(
@@ -328,8 +505,13 @@ export default function ProjectDetails() {
       
       setVoteModalVisible(false);
       setVoteAmount('');
+      
+      // Get token symbol for message
+      const token = supportedTokens.find(t => t.address === selectedToken);
+      const tokenSymbol = token ? token.symbol : 'tokens';
+      
       setStatusMessage({ 
-        text: 'Vote submitted successfully!', 
+        text: `Vote successful! You voted ${voteAmount} ${tokenSymbol} for ${project.name}.`, 
         type: 'success' 
       });
       
@@ -383,7 +565,7 @@ export default function ProjectDetails() {
   };
   
   // Open media modal
-  const openMediaModal = (type: string) => {
+  const openMediaModal = (type: 'logo' | 'video') => {
     setActiveMediaType(type);
     setShowMediaModal(true);
   };
@@ -394,10 +576,10 @@ export default function ProjectDetails() {
   
   if (loading || !campaign || !project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 text-gray-800 flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <Loader2 className="h-12 w-12 text-emerald-500 animate-spin mb-4" />
-          <p className="text-lg text-emerald-600">Loading project details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-lg text-blue-600">Loading project details...</p>
         </div>
       </div>
     );
@@ -420,13 +602,20 @@ export default function ProjectDetails() {
   const directCeloVotes = voteSummary ? voteSummary.directCeloAmount : BigInt(0);
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800">
-      <div className="container mx-auto px-6 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 text-gray-800 relative">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-gradient-to-r from-blue-400/10 to-indigo-400/10 animate-float-slower blur-2xl"></div>
+        <div className="absolute top-2/3 right-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-sky-400/10 to-blue-400/10 animate-float-slow blur-2xl"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-72 h-72 rounded-full bg-gradient-to-r from-indigo-400/10 to-purple-400/10 animate-float blur-2xl"></div>
+      </div>
+      
+      <div className="container mx-auto px-6 py-8 relative z-10">
         {/* Navigation */}
         <div className="mb-6">
           <button
             onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-            className="inline-flex items-center text-gray-600 hover:text-emerald-600 transition-colors"
+            className="inline-flex items-center text-gray-600 hover:text-blue-600 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Campaign
@@ -435,18 +624,20 @@ export default function ProjectDetails() {
         
         {/* Status Message */}
         {statusMessage.text && (
-          <div className={`mb-6 p-4 rounded-xl shadow-sm ${
-            statusMessage.type === 'success' 
-              ? 'bg-emerald-50 border border-emerald-200' 
+          <div className={`mb-6 p-4 rounded-xl shadow-lg ${
+            statusMessage.type === 'success' || statusMessage.type === 'info'
+              ? 'bg-blue-50 border border-blue-200' 
               : 'bg-red-50 border border-red-200'
           }`}>
             <div className="flex items-start">
               {statusMessage.type === 'success' ? (
-                <ThumbsUp className="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0 mt-0.5" />
+                <ThumbsUp className="h-5 w-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" />
+              ) : statusMessage.type === 'info' ? (
+                <Info className="h-5 w-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" />
               ) : (
                 <AlertTriangle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
               )}
-              <p className={statusMessage.type === 'success' ? 'text-emerald-700' : 'text-red-700'}>
+              <p className={statusMessage.type === 'success' || statusMessage.type === 'info' ? 'text-blue-700' : 'text-red-700'}>
                 {statusMessage.text}
               </p>
             </div>
@@ -454,14 +645,15 @@ export default function ProjectDetails() {
         )}
         
         {/* Project Header */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6 shadow-md">
-          <div className="p-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl border border-blue-100 overflow-hidden mb-6 shadow-lg group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
+          <div className="p-6 relative z-10">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
               <div className="flex-grow">
                 {/* Project Title and Approval Status */}
                 <div className="flex flex-wrap items-center gap-3 mb-3">
-                  <h1 className="text-2xl font-bold flex items-center tilt-neon text-gray-800">
-                    <Hash className="h-7 w-7 text-emerald-500 mr-2" />
+                  <h1 className="text-2xl font-bold flex items-center bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                    <Hash className="h-7 w-7 text-blue-500 mr-2" />
                     {project.name}
                   </h1>
                   {project.approved ? (
@@ -500,705 +692,341 @@ export default function ProjectDetails() {
                   )}
                 </div>
                 
-                {/* Campaign Name */}
-                <p className="text-emerald-600 mb-4">
-                  Part of <span className="font-medium">{campaign.name}</span>
-                </p>
-                
-                {/* Project Description */}
-                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200 shadow-sm">
-                  <p className="text-gray-700 whitespace-pre-line">{project.description}</p>
-                </div>
-                
-                {/* Project Links */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {project.githubLink && (
-                    <a 
-                      href={project.githubLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
-                    >
-                      <Github className="h-5 w-5 mr-3" />
-                      <div>
-                        <div className="font-medium">GitHub Repository</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                          {project.githubLink}
-                        </div>
+                {/* Vote Stats and Actions */}
+                <div className="shrink-0 flex flex-col items-center">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 border border-blue-100 shadow-lg w-full md:w-auto group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
+                    <div className="relative z-10 flex flex-col items-center">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mb-2">
+                        <Heart className="h-5 w-5 text-blue-600" />
                       </div>
-                      <ExternalLink className="h-4 w-4 ml-auto" />
-                    </a>
-                  )}
-                  
-                  {project.socialLink && (
-                    <a 
-                      href={project.socialLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
-                    >
-                      <Globe className="h-5 w-5 mr-3" />
-                      <div>
-                        <div className="font-medium">Karma Gap Profile</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                          {project.socialLink}
-                        </div>
+                      <div className="text-3xl font-bold text-gray-800 mb-1">{formatValue(sovereignSeas.formatTokenAmount(project.voteCount))}</div>
+                      <div className="text-sm text-gray-500 mb-4">
+                        Total {Number(campaign.voteMultiplier) > 1 ? `(${campaign.voteMultiplier.toString()}x)` : ''} Votes
                       </div>
-                      <ExternalLink className="h-4 w-4 ml-auto" />
-                    </a>
-                  )}
-                  
-                  {project.testingLink && (
-                    <a 
-                      href={project.testingLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
-                    >
-                      <FileText className="h-5 w-5 mr-3" />
-                      <div>
-                        <div className="font-medium">Demo/Testing</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                          {project.testingLink}
+
+                      {/* Show unified vote summary */}
+                      {voteSummary && (
+                        <div className="text-sm mb-4 text-center w-full">
+                          {/* Direct CELO votes */}
+                          {directCeloVotes > BigInt(0) && (
+                            <div className="text-blue-600 mb-2">
+                              You've voted {votingSystem.formatAmount(votingSystem.CELO_ADDRESS, directCeloVotes)} directly
+                            </div>
+                          )}
+                          
+                          {/* Token votes */}
+                          {voteSummary.tokenVotes && voteSummary.tokenVotes.length > 0 && (
+                            <div className="mt-2">
+                              <div className="text-blue-600 mb-1">Your token votes:</div>
+                              <div className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100 flex flex-col gap-1.5">
+                                {voteSummary.tokenVotes.map((vote: TokenVote, index: number) => (
+                                  <div key={index} className="flex justify-between items-center">
+                                    <span className="text-gray-600">{vote.symbol}:</span>
+                                    <span className="text-blue-600 font-medium">{votingSystem.formatAmount(vote.tokenAddress, vote.tokenAmount)}</span>
+                                  </div>
+                                ))}
+                                <div className="border-t border-gray-200 pt-1 mt-1 flex justify-between items-center">
+                                  <span className="text-gray-600">Total CELO value:</span>
+                                  <span className="text-blue-600 font-medium">
+                                    {parseFloat(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, voteSummary.totalCeloEquivalent)).toFixed(2)} CELO
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {userVoteHistory.length > 0 && (
+                            <button
+                              onClick={() => setShowVoteHistory(!showVoteHistory)}
+                              className="flex items-center justify-center mt-2 text-xs text-blue-600 hover:text-blue-700"
+                            >
+                              <History className="h-3 w-3 mr-1" />
+                              {showVoteHistory ? 'Hide History' : 'View History'}
+                            </button>
+                          )}
                         </div>
-                      </div>
-                      <ExternalLink className="h-4 w-4 ml-auto" />
-                    </a>
-                  )}
-                </div>
-                
-                {/* Media content section */}
-                {hasMedia && (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-medium text-emerald-700 flex items-center">
-                        <Video className="h-4 w-4 mr-2 text-red-600" />
-                        Media Content
-                      </h3>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {project.logo && (
-                        <div className="bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl cursor-pointer border border-gray-200 shadow-sm"
-                             onClick={() => openMediaModal('logo')}>
-                          <div className="flex items-center mb-2">
-                            <ImageIcon className="h-5 w-5 text-blue-600 mr-2" />
-                            <div className="font-medium text-gray-800">Project Logo</div>
-                          </div>
-                          <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                            <img 
-                              src={project.logo} 
-                              alt={`${project.name} Logo`} 
-                              className="max-w-full max-h-40 object-contain"
-                              ref={logoRef}
-                              onError={(e) => {
-                                e.currentTarget.src = "https://placehold.co/400x300/f1f5f9/64748b?text=Logo%20Unavailable";
-                              }}
-                            />
+                      )}
+
+                      {/* Vote History (conditionally displayed) */}
+                      {showVoteHistory && userVoteHistory.length > 0 && (
+                        <div className="w-full mb-4 border-t border-gray-200 pt-3">
+                          <h4 className="text-sm font-medium text-center text-blue-600 mb-2">Your CELO Vote History</h4>
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {userVoteHistory.map((vote, index) => (
+                              <div key={index} className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Amount:</span>
+                                  <span className="text-blue-600 font-medium">{sovereignSeas.formatTokenAmount(vote.amount)} CELO</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Votes:</span>
+                                  <span className="text-gray-800 font-medium">{vote.voteCount.toString()}</span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
-                      
-                      {project.demoVideo && (
-                        <div className="bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl cursor-pointer border border-gray-200 shadow-sm"
-                             onClick={() => openMediaModal('video')}>
-                          <div className="flex items-center mb-2">
-                            <Video className="h-5 w-5 text-red-600 mr-2" />
-                            <div className="font-medium text-gray-800">Demo Video</div>
-                          </div>
-                          <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                            <div className="text-gray-500 flex flex-col items-center">
-                              <Video className="h-10 w-10 mb-2" />
-                              <span>Click to view video</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Contracts section */}
-                {hasContracts && (
-                  <div className="mb-6">
-                    <button 
-                      onClick={() => setShowContractsSection(!showContractsSection)}
-                      className="flex items-center justify-between w-full mb-3 bg-gray-50 p-3 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm"
-                    >
-                      <h3 className="text-lg font-medium text-emerald-700 flex items-center">
-                        <Code className="h-4 w-4 mr-2 text-purple-600" />
-                        Smart Contracts ({project.contracts?.length || 0})
-                      </h3>
-                      {showContractsSection ? 
-                        <ChevronUp className="h-4 w-4 text-gray-500" /> : 
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
-                      }
-                    </button>
-                    
-                    {showContractsSection && (
-                      <div className="space-y-2">
-                        {project.contracts.map((contract: string, index: number) => (
-                          <div key={index} className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm text-gray-500">Contract {index + 1}</span>
-                            </div>
-                            <div className="font-mono text-sm bg-gray-50 p-2 rounded-lg break-all border border-gray-100">
-                              {contract}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Project Info */}
-                <div className="flex flex-wrap gap-y-3 gap-x-6 text-sm">
-                  <div className="flex items-center text-gray-600">
-                    <User className="h-4 w-4 mr-2 text-gray-500" />
-                    Submitted by: <span className="ml-1 font-mono">{project.owner.slice(0, 6)}...{project.owner.slice(-4)}</span>
-                  </div>
-                  
-                  {project.approved && (
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                      Campaign ends: <span className="ml-1">{sovereignSeas.formatCampaignTime(campaign.endTime)}</span>
-                    </div>
-                  )}
-                  
-                  {projectRanking.rank > 0 && (
-                    <div className="flex items-center text-gray-600">
-                      <BarChart3 className="h-4 w-4 mr-2 text-gray-500" />
-                      Rank: <span className="ml-1 text-emerald-600 font-medium">{projectRanking.rank}</span> of {projectRanking.totalProjects}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Vote Stats and Actions */}
-              <div className="shrink-0 flex flex-col items-center">
-                <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-md w-full md:w-auto">
-                  <div className="flex flex-col items-center">
-                    <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mb-2">
-                      <Heart className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div className="text-3xl font-bold text-gray-800 mb-1">{sovereignSeas.formatTokenAmount(project.voteCount)}</div>
-                    <div className="text-sm text-gray-500 mb-4">
-                      Total {Number(campaign.voteMultiplier) > 1 ? `(${campaign.voteMultiplier.toString()}x)` : ''} Votes
-                    </div>
-                    
-                    {/* Show unified vote summary */}
-                    {voteSummary && (
-                      <div className="text-sm mb-4 text-center w-full">
-                        {/* Direct CELO votes */}
-                        {directCeloVotes > BigInt(0) && (
-                          <div className="text-emerald-600 mb-2">
-                            You've voted {votingSystem.formatAmount(votingSystem.CELO_ADDRESS, directCeloVotes)} directly
-                          </div>
-                        )}
-                        
-                        {/* Token votes */}
-                        {voteSummary.tokenVotes && voteSummary.tokenVotes.length > 0 && (
-                          <div className="mt-2">
-                            <div className="text-blue-600 mb-1">Your token votes:</div>
-                            <div className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100 flex flex-col gap-1.5">
-                              {voteSummary.tokenVotes.map((vote, index) => (
-                                <div key={index} className="flex justify-between items-center">
-                                  <span className="text-gray-600">{vote.symbol}:</span>
-                                  <span className="text-blue-600 font-medium">{votingSystem.formatAmount(vote.tokenAddress, vote.tokenAmount)}</span>
-                                </div>
-                              ))}
-                              <div className="border-t border-gray-200 pt-1 mt-1 flex justify-between items-center">
-                              <span className="text-gray-600">Total CELO value:</span>
-                              <span className="text-emerald-600 font-medium">
-                                  {parseFloat(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, voteSummary.totalCeloEquivalent)).toFixed(1)} CELO
-                                </span>
-                                
-                                </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {userVoteHistory.length > 0 && (
+
+                      {/* Project Token Votes Button */}
+                      <button 
+                        onClick={() => {
+                          setTokenVoteDistributionVisible(true);
+                          loadProjectTokenVotes();
+                        }}
+                        className="w-full py-2 mb-3 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center shadow-sm border border-blue-400/30 relative overflow-hidden group"
+                      >
+                        <span className="relative z-10 flex items-center">
+                          <PieChart className="h-4 w-4 mr-1.5 group-hover:rotate-12 transition-transform duration-300" />
+                          Token Distribution
+                        </span>
+                        <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                      </button>
+
+                      <div className="w-full space-y-3">
+                        {canVote && (
                           <button
-                            onClick={() => setShowVoteHistory(!showVoteHistory)}
-                            className="flex items-center justify-center mt-2 text-xs text-blue-600 hover:text-blue-700"
+                            onClick={() => setVoteModalVisible(true)}
+                            className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center shadow-sm border border-blue-400/30 relative overflow-hidden group"
                           >
-                            <History className="h-3 w-3 mr-1" />
-                            {showVoteHistory ? 'Hide History' : 'View History'}
+                            <span className="relative z-10 flex items-center">
+                              <CreditCard className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                              Vote with Tokens
+                            </span>
+                            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                           </button>
                         )}
-                      </div>
-                    )}
-                    
-                    {/* Vote History (conditionally displayed) */}
-                    {showVoteHistory && userVoteHistory.length > 0 && (
-                      <div className="w-full mb-4 border-t border-gray-200 pt-3">
-                        <h4 className="text-sm font-medium text-center text-blue-600 mb-2">Your CELO Vote History</h4>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {userVoteHistory.map((vote, index) => (
-                            <div key={index} className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100">
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Amount:</span>
-                                <span className="text-emerald-600 font-medium">{sovereignSeas.formatTokenAmount(vote.amount)} CELO</span>
+                        
+                        {(isAdmin || isSuperAdmin) && !project.approved && (
+                          <button
+                            onClick={handleApproveProject}
+                            disabled={sovereignSeas.isWritePending || sovereignSeas.isWaitingForTx}
+                            className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center shadow-sm disabled:bg-gray-300 disabled:text-gray-500 border border-amber-400/30 relative overflow-hidden group"
+                          >
+                            {sovereignSeas.isWritePending || sovereignSeas.isWaitingForTx ? (
+                              <div className="flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                                Processing...
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Votes:</span>
-                                <span className="text-gray-800 font-medium">{vote.voteCount.toString()}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                            ) : (
+                              <>
+                                <span className="relative z-10 flex items-center">
+                                  <BadgeCheck className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                                  Approve Project
+                                </span>
+                                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                              </>
+                            )}
+                          </button>
+                        )}
+
+                        {isProjectOwner && !votingEnded && (
+                          <button
+                            onClick={() => router.push(`/campaign/${campaignId}/project/${projectId}/edit`)}
+                            className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center shadow-sm border border-blue-400/30 relative overflow-hidden group"
+                          >
+                            <span className="relative z-10 flex items-center">
+                              <Edit className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                              Edit Project
+                            </span>
+                            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={shareProject}
+                          className="w-full py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center border border-gray-200 shadow-sm relative overflow-hidden group"
+                        >
+                          <span className="relative z-10 flex items-center">
+                            <Share2 className="h-4 w-4 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
+                            Share Project
+                          </span>
+                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-gray-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                        </button>
                       </div>
-                    )}
-                    
-                    <div className="w-full space-y-3">
-                      {canVote && (
-                        <button
-                          onClick={() => setVoteModalVisible(true)}
-                          className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm"
-                        >
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Vote with Tokens
-                        </button>
-                      )}
-                      
-                      {(isAdmin || isSuperAdmin) && !project.approved && (
-                        <button
-                          onClick={handleApproveProject}
-                          disabled={sovereignSeas.isWritePending || sovereignSeas.isWaitingForTx}
-                          className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm disabled:bg-gray-300 disabled:text-gray-500"
-                        >
-                          {sovereignSeas.isWritePending || sovereignSeas.isWaitingForTx ? (
-                            <div className="flex items-center justify-center">
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Processing...
-                            </div>
-                          ) : (
-                            <>
-                              <BadgeCheck className="h-4 w-4 mr-2" />
-                              Approve Project
-                            </>
-                          )}
-                        </button>
-                      )}
-                      
-                      {isProjectOwner && !votingEnded && (
-                        <button
-                          onClick={() => router.push(`/campaign/${campaignId}/project/${projectId}/edit`)}
-                          className="w-full py-2.5 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors flex items-center justify-center shadow-sm"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Project
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={shareProject}
-                        className="w-full py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-full transition-colors flex items-center justify-center border border-gray-200 shadow-sm"
-                      >
-                        <Share2 className="h-4 w-4 mr-2" />
-                        Share Project
-                      </button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          {/* Campaign Status Bar */}
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center mr-2">
-                <Hash className="h-4 w-4 text-emerald-600" />
-                </div>
-                <span className="font-medium text-gray-700">Campaign Status:</span>
-                <span className={`ml-2 ${
-                  hasEnded 
-                    ? 'text-gray-500' 
-                    : hasStarted 
-                      ? 'text-emerald-600' 
-                      : 'text-amber-600'
-                }`}>
-                  {hasEnded ? 'Ended' : hasStarted ? 'Active' : 'Not Started'}
-                </span>
-              </div>
+            
+            {/* Campaign Name */}
+            <p className="text-blue-600 mb-4">
+              Part of <span className="font-medium">{campaign.name}</span>
+            </p>
+            
+            {/* Project Description */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200 shadow-sm">
+              <p className="text-gray-700 whitespace-pre-line">{project.description}</p>
+            </div>
+            
+            {/* Project Links */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {project.githubLink && (
+                <a 
+                  href={project.githubLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
+                >
+                  <Github className="h-5 w-5 mr-3" />
+                  <div>
+                    <div className="font-medium">GitHub Repository</div>
+                    <div className="text-xs text-gray-500 truncate max-w-xs">
+                      {project.githubLink}
+                    </div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 ml-auto" />
+                </a>
+              )}
               
-              {hasStarted && !hasEnded && (
-                <div className="text-amber-600 text-sm font-medium px-3 py-1 bg-amber-50 rounded-full border border-amber-100 shadow-sm">
-                  ⏳ {timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m remaining
-                </div>
+              {project.socialLink && (
+                <a 
+                  href={project.socialLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
+                >
+                  <Globe className="h-5 w-5 mr-3" />
+                  <div>
+                    <div className="font-medium">Social Profile</div>
+                    <div className="text-xs text-gray-500 truncate max-w-xs">
+                      {project.socialLink}
+                    </div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 ml-auto" />
+                </a>
+              )}
+              
+              {project.testingLink && (
+                <a 
+                  href={project.testingLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl text-blue-600 hover:text-blue-700 border border-gray-200 shadow-sm"
+                >
+                  <FileText className="h-5 w-5 mr-3" />
+                  <div>
+                    <div className="font-medium">Demo/Testing</div>
+                    <div className="text-xs text-gray-500 truncate max-w-xs">
+                      {project.testingLink}
+                    </div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 ml-auto" />
+                </a>
               )}
             </div>
-          </div>
-        </div>
-        
-        {/* Project Statistics */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6 shadow-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800 flex items-center tilt-neon">
-              <LineChart className="h-5 w-5 mr-2 text-emerald-500" />
-              Project Statistics
-            </h2>
-            <button 
-              onClick={() => setShowProjectStats(!showProjectStats)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              {showProjectStats ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </button>
-          </div>
-          
-          {showProjectStats && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex items-center mb-1">
-                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                    <BarChart className="h-3.5 w-3.5 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-gray-600">Vote Ranking</span>
+            
+            {/* Media content section */}
+            {hasMedia && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center">
+                    <Video className="h-4 w-4 mr-2 text-red-600" />
+                    Media Content
+                  </h3>
                 </div>
-                <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-gray-800">{projectRanking.rank}</span>
-                  <span className="text-gray-500 ml-1">/ {projectRanking.totalProjects}</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {project.logo && (
+                    <div className="bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl cursor-pointer border border-gray-200 shadow-sm"
+                         onClick={() => openMediaModal('logo')}>
+                      <div className="flex items-center mb-2">
+                        <ImageIcon className="h-5 w-5 text-blue-600 mr-2" />
+                        <div className="font-medium text-gray-800">Project Logo</div>
+                      </div>
+                      <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        <img 
+                          src={project.logo} 
+                          alt={`${project.name} Logo`} 
+                          className="max-w-full max-h-40 object-contain"
+                          ref={logoRef}
+                          onError={(e) => {
+                            e.currentTarget.src = "https://placehold.co/400x300/f1f5f9/64748b?text=Logo%20Unavailable";
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {project.demoVideo && (
+                    <div className="bg-white hover:bg-gray-50 transition-colors p-3 rounded-xl cursor-pointer border border-gray-200 shadow-sm"
+                        onClick={() => openMediaModal('video')}>
+                      <div className="flex items-center mb-2">
+                        <Video className="h-5 w-5 text-red-600 mr-2" />
+                        <div className="font-medium text-gray-800">Demo Video</div>
+                      </div>
+                      <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        <div className="text-gray-500 flex flex-col items-center">
+                          <Video className="h-10 w-10 mb-2" />
+                          <span>Click to view video</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {projectRanking.rank <= Number(campaign.maxWinners) && Number(campaign.maxWinners) > 0 && (
-                  <div className="mt-1 text-xs text-emerald-600">
-                    <BadgeCheck className="h-3 w-3 inline mr-1" />
-                    Currently in winning position
+              </div>
+            )}
+
+            {/* Contracts section */}
+            {hasContracts && (
+              <div className="mb-6">
+                <button 
+                  onClick={() => setShowContractsSection(!showContractsSection)}
+                  className="flex items-center justify-between w-full mb-3 bg-gray-50 p-3 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm"
+                >
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center">
+                    <Code className="h-4 w-4 mr-2 text-indigo-600" />
+                    Smart Contracts ({project.contracts?.length || 0})
+                  </h3>
+                  {showContractsSection ? 
+                    <ChevronUp className="h-4 w-4 text-gray-500" /> : 
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  }
+                </button>
+                
+                {showContractsSection && (
+                  <div className="space-y-2">
+                    {project.contracts.map((contract: string, index: number) => (
+                      <div key={index} className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-gray-500">Contract {index + 1}</span>
+                        </div>
+                        <div className="font-mono text-sm bg-gray-50 p-2 rounded-lg break-all border border-gray-100">
+                          {contract}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-              
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex items-center mb-1">
-                  <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center mr-2">
-                    <Heart className="h-3.5 w-3.5 text-emerald-600" />
-                  </div>
-                  <span className="text-sm text-gray-600">Total Votes</span>
-                </div>
-                <div className="flex items-baseline">
-                  <span className="text-2xl font-bold text-gray-800">{sovereignSeas.formatTokenAmount(project.voteCount)}</span>
-                </div>
-                <div className="mt-1 text-xs text-gray-500">
-                  Multiplier: {campaign.voteMultiplier.toString()}x
-                </div>
+            )}
+
+            {/* Project Info */}
+            <div className="flex flex-wrap gap-y-3 gap-x-6 text-sm">
+              <div className="flex items-center text-gray-600">
+                <User className="h-4 w-4 mr-2 text-gray-500" />
+                Submitted by: <span className="ml-1 font-mono">{project.owner.slice(0, 6)}...{project.owner.slice(-4)}</span>
               </div>
               
-              {hasFundsReceived && (
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                  <div className="flex items-center mb-1">
-                    <div className="h-6 w-6 rounded-full bg-amber-100 flex items-center justify-center mr-2">
-                      <Coins className="h-3.5 w-3.5 text-amber-600" />
-                    </div>
-                    <span className="text-sm text-gray-600">Funds Received</span>
-                  </div>
-                  <div className="flex items-baseline">
-                    <span className="text-2xl font-bold text-amber-600">{sovereignSeas.formatTokenAmount(project.fundsReceived)}</span>
-                    <span className="text-gray-500 ml-1">CELO</span>
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    Campaign Total: {sovereignSeas.formatTokenAmount(campaign.totalFunds)} CELO
-                  </div>
+              {project.approved && (
+                <div className="flex items-center text-gray-600">
+                  <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                  Campaign ends: <span className="ml-1">{sovereignSeas.formatCampaignTime(campaign.endTime)}</span>
                 </div>
               )}
               
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex items-center mb-1">
-                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                    <Users className="h-3.5 w-3.5 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-gray-600">Distribution Method</span>
+              {projectRanking.rank > 0 && (
+                <div className="flex items-center text-gray-600">
+                  <BarChart3 className="h-4 w-4 mr-2 text-gray-500" />
+                  Rank: <span className="ml-1 text-blue-600 font-medium">{projectRanking.rank}</span> of {projectRanking.totalProjects}
                 </div>
-                <div className="text-xl font-bold text-gray-800">
-                  {campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}
-                </div>
-                <div className="mt-1 text-xs text-gray-500">
-                  Max Winners: {campaign.maxWinners.toString() === '0' ? 'All Projects' : campaign.maxWinners.toString()}
-                </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
-        
-        {/* Campaign Info Card */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6 shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center tilt-neon">
-            <Hash className="h-5 w-5 mr-2 text-emerald-500" />
-            About The Campaign
-          </h2>
-          
-          <p className="text-gray-600 mb-4">{campaign.description}</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
-              <div className="text-sm text-gray-500">Distribution Method</div>
-              <div className="font-medium text-gray-800">{campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}</div>
-            </div>
-            
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
-              <div className="text-sm text-gray-500">Vote Multiplier</div>
-              <div className="font-medium text-gray-800">{campaign.voteMultiplier.toString()}x</div>
-            </div>
-            
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
-              <div className="text-sm text-gray-500">Max Winners</div>
-              <div className="font-medium text-gray-800">
-                {campaign.maxWinners.toString() === '0' ? 'All Projects' : `Top ${campaign.maxWinners.toString()}`}
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 shadow-sm">
-              <div className="text-sm text-gray-500">Total Funds</div>
-              <div className="font-medium text-emerald-600">{sovereignSeas.formatTokenAmount(campaign.totalFunds)} CELO</div>
-            </div>
-          </div>
-          
-          <div className="mt-6">
-            <button
-              onClick={() => router.push(`/campaign/${campaignId}/dashboard`)}
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full transition-colors inline-flex items-center shadow-sm"
-            >
-              <Globe className="h-4 w-4 mr-2" />
-              View All Projects
-            </button>
           </div>
         </div>
       </div>
-      
-      {/* Enhanced Vote Modal with Token Selection */}
-      {voteModalVisible && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 relative shadow-lg">
-            <button 
-              onClick={() => setVoteModalVisible(false)} 
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            
-            <h3 className="text-xl font-bold mb-1 text-gray-800">Vote for Project</h3>
-            <p className="text-emerald-600 font-medium mb-4">{project.name}</p>
-            
-            {/* Token Selection */}
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium mb-2">Select Token</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
-                {supportedTokens.map((token) => (
-                  <button
-                    key={token.address}
-                    onClick={() => setSelectedToken(token.address)}
-                    className={`py-2 px-3 rounded-lg border flex items-center justify-center text-sm transition-colors ${
-                      selectedToken === token.address
-                        ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {token.isNative ? (
-                      <Coins className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />
-                    ) : (
-                      <CreditCard className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
-                    )}
-                    {token.symbol}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Amount Input */}
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium mb-2">Amount</label>
-              <div className="relative">
-                <input 
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={voteAmount}
-                  onChange={(e) => setVoteAmount(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-800"
-                  placeholder="Enter amount"
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  {supportedTokens.find(t => t.address === selectedToken)?.symbol || ''}
-                </div>
-              </div>
-            </div>
-            
-            {/* Exchange Rate Info */}
-            {selectedToken && voteAmount && parseFloat(voteAmount) > 0 && selectedToken !== votingSystem.CELO_ADDRESS && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                <div className="flex items-center text-gray-600 mb-2">
-                  <Repeat className="h-4 w-4 mr-2 text-blue-500" />
-                  <span className="font-medium">Exchange Rate</span>
-                </div>
-                
-                {loadingExchangeRates ? (
-                  <div className="flex items-center justify-center py-2">
-                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin mr-2" />
-                    <span className="text-sm text-gray-500">Calculating exchange rate...</span>
-                  </div>
-                ) : (
-                  tokenExchangeRates[selectedToken] && (
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Approximate CELO:</span>
-                        <span className="text-blue-600 font-medium">{tokenExchangeRates[selectedToken].expectedCelo}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-gray-200 pt-1 mt-1">
-                        <span className="text-gray-500">Voting power (after fees):</span>
-                        <span className="text-emerald-600 font-medium">{tokenExchangeRates[selectedToken].voteAmount}</span>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-            
-            {/* Slippage Settings (for non-CELO tokens) */}
-            {selectedToken !== votingSystem.CELO_ADDRESS && (
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-gray-700 font-medium">Slippage Tolerance</label>
-                  <span className="text-blue-600 font-medium">{slippagePercent}%</span>
-                </div>
-                <div className="flex gap-2">
-                  {[0.1, 0.5, 1.0, 2.0].map((percent) => (
-                    <button
-                      key={percent}
-                      onClick={() => setSlippagePercent(percent)}
-                      className={`flex-1 py-1.5 text-sm rounded-lg transition-colors ${
-                        slippagePercent === percent
-                          ? 'bg-blue-50 text-blue-700 font-medium border border-blue-200'
-                          : 'bg-gray-50 text-gray-600 border border-gray-200'
-                      }`}
-                    >
-                      {percent}%
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Your transaction will revert if the price changes unfavorably by more than this percentage.
-                </p>
-              </div>
-            )}
-            
-            {/* Vote Information */}
-            {selectedToken === votingSystem.CELO_ADDRESS && voteAmount && !isNaN(parseFloat(voteAmount)) && parseFloat(voteAmount) > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100 shadow-sm">
-                <div className="flex items-start">
-                  <Info className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-blue-700">
-                      Each CELO token is worth {campaign.voteMultiplier.toString()} votes.
-                    </p>
-                    <p className="text-sm text-blue-700 font-medium mt-1">
-                      Your vote will be worth {parseFloat(voteAmount) * Number(campaign.voteMultiplier)} votes.
-                    </p>
-                    {directCeloVotes > BigInt(0) && (
-                      <p className="text-xs text-blue-600 mt-1">
-                        You've already voted {votingSystem.formatAmount(votingSystem.CELO_ADDRESS, directCeloVotes)} CELO on this project.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="flex gap-3">
-              <button
-                onClick={handleVote}
-                disabled={votingSystem.isLoading || !selectedToken || !voteAmount || parseFloat(voteAmount) <= 0}
-                className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-pink-500 text-white font-semibold rounded-full hover:from-blue-600 hover:to-pink-600 transition-colors shadow-md disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
-              >
-                {votingSystem.isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Processing...
-                  </div>
-                ) : (
-                  'Confirm Vote'
-                )}
-              </button>
-              
-              <button
-                onClick={() => setVoteModalVisible(false)}
-                className="py-3 px-6 bg-white border border-gray-200 text-gray-700 font-semibold rounded-full hover:bg-gray-50 transition-colors shadow-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Media Modal */}
-      {showMediaModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl p-6 relative shadow-lg">
-            <button
-              onClick={() => setShowMediaModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            
-            <h3 className="text-xl font-bold mb-4 text-gray-800">
-              {activeMediaType === 'logo' ? 'Project Logo' : 'Demo Video'}
-            </h3>
-            
-            <div className="flex items-center justify-center bg-gray-50 rounded-xl p-4 min-h-[300px] border border-gray-200">
-              {activeMediaType === 'logo' && project.logo && (
-                <img 
-                  src={project.logo} 
-                  alt={`${project.name} Logo`} 
-                  className="max-w-full max-h-[60vh] object-contain rounded-lg"
-                  ref={logoRef}
-                  onError={(e) => {
-                    e.currentTarget.src = "https://placehold.co/600x400/f1f5f9/64748b?text=Logo%20Unavailable";
-                  }}
-                />
-              )}
-              
-              {activeMediaType === 'video' && project.demoVideo && (
-                <div className="w-full">
-                  <video 
-                    ref={videoRef}
-                    src={project.demoVideo}
-                    controls
-                    autoPlay
-                    className="max-w-full max-h-[60vh] mx-auto rounded-lg"
-                    onError={() => {
-                      setStatusMessage({
-                        text: 'Error loading video. Please check the URL or try another format.',
-                        type: 'error'
-                      });
-                      setShowMediaModal(false);
-                    }}
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
-              )}
-            </div>
-            
-            <div className="mt-4 text-center">
-              <p className="text-gray-500 text-sm break-all">
-                {activeMediaType === 'logo' ? project.logo : project.demoVideo}
-              </p>
-            </div>
-            
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() => setShowMediaModal(false)}
-                className="px-6 py-2.5 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors shadow-sm"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
