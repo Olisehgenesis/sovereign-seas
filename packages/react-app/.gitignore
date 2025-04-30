@@ -33,6 +33,7 @@ yarn-error.log*
 .env
 .env.dev
 .env.live
+.env.livetest
 
 
 # typescript

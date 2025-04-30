@@ -18,7 +18,7 @@ import erc20Abi from '../abis/MockCELO.json';
 // Get contract address from .env
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ? Number(process.env.NEXT_PUBLIC_CHAIN_ID) : undefined;
 const contractAddress = process.env.NEXT_PUBLIC_SWAPPER_ADDRESS as `0x${string}`;
-const celoSwapperV3Abi = celoSwapperV3ABI.abi ;
+const celoSwapperV3Abi = celoSwapperV3ABI;
 
 // CELO and cUSD addresses from .env or defaults
 const CELO_ADDRESS = (process.env.NEXT_PUBLIC_CELO_ADDRESS || '0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9') as `0x${string}`;
@@ -88,6 +88,12 @@ export const useCeloSwapperV3 = (config?: CeloSwapperConfig) => {
   const [tokenSymbols, setTokenSymbols] = useState<{[address: string]: string}>({});
   const [tokenDecimals, setTokenDecimals] = useState<{[address: string]: number}>({});
   const [swapHistory, setSwapHistory] = useState<SwapResult[]>([]);
+  
+  // Transaction status states
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'confirmed' | 'failed' | 'not-needed'>('not-needed');
+  const [swapStatus, setSwapStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
+  const [approvalTxHash, setApprovalTxHash] = useState<`0x${string}` | null>(null);
+  const [swapTxHash, setSwapTxHash] = useState<`0x${string}` | null>(null);
   
   // Write state
   const { 
@@ -672,136 +678,141 @@ const loadSupportedTokens = async () => {
 
   // Swap a token and vote with CELO
   // Swap a token and vote with CELO
+// Improved swap and vote token function that properly handles sequential transactions
 const swapAndVoteToken = async (
-    token: string,
-    campaignId: bigint | number,
-    projectId: bigint | number,
-    tokenAmount: string,
-    slippageInBps: number = 50 // Default 0.5%
-  ) => {
-    if (!walletClient || !publicClient) {
-      console.error("Wallet client or public client not available");
-      throw new Error("Wallet not connected");
+  token: string,
+  campaignId: bigint | number,
+  projectId: bigint | number,
+  tokenAmount: string,
+  slippageInBps: number = 50 // Default 0.5%
+) => {
+  if (!walletClient || !publicClient) {
+    console.error("Wallet client or public client not available");
+    throw new Error("Wallet not connected");
+  }
+
+  try {
+    // Log all parameters for debugging
+    console.log("Swap parameters:", {
+      token,
+      campaignId,
+      projectId,
+      tokenAmount,
+      slippageInBps
+    });
+
+    // Make sure token is a valid address
+    if (!token || !token.startsWith('0x')) {
+      console.error("Invalid token address:", token);
+      throw new Error("Invalid token address");
     }
-  
-    try {
-      // Log all parameters for debugging
-      console.log("Swap parameters:", {
-        token,
+
+
+    // Make sure campaign and project IDs are valid
+    if (campaignId === undefined || projectId === undefined) {
+      console.error("Invalid campaign or project ID:", { campaignId, projectId });
+      throw new Error("Invalid campaign or project ID");
+    }
+
+    // Make sure token amount is a valid number
+    if (!tokenAmount || isNaN(parseFloat(tokenAmount)) || parseFloat(tokenAmount) <= 0) {
+      console.error("Invalid token amount:", tokenAmount);
+      throw new Error("Invalid token amount");
+    }
+
+    // If token has decimals other than 18, use those
+    const decimals = tokenDecimals[token] || 18;
+    const amountBigInt = parseUnits(tokenAmount, decimals);
+    
+    // Calculate minimum CELO amount with slippage protection
+    const minCeloAmount = await calculateMinCeloAmount(token, tokenAmount, slippageInBps);
+    
+    console.log("Calculated min CELO amount:", minCeloAmount.toString());
+    const approveTx = writeContract({
+      address: token as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'approve',
+      args: [actualContractAddress, amountBigInt],
+    });
+
+    console.log("Mini celo", minCeloAmount)
+ 
+    const swapTx = writeContract({
+      address: actualContractAddress,
+      abi: celoSwapperV3Abi,
+      functionName: 'swapAndVoteToken',
+      args: [
+        token as `0x${string}`,
         campaignId,
         projectId,
-        tokenAmount,
-        slippageInBps
-      });
-  
-      // Make sure token is a valid address
-      if (!token || !token.startsWith('0x')) {
-        console.error("Invalid token address:", token);
-        throw new Error("Invalid token address");
+        amountBigInt,
+        minCeloAmount
+      ],
+    });
+    //wait for 5 secconds
+    await new Promise(resolve => setTimeout(resolve, 6000)); // Wait 6 seconds
+    
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: swapTx as unknown as `0x${string}` });
+    console.log("Swap transaction confirmed:", receipt);
+    
+    // Parse logs to find SwappedAndVoted event
+    const events = receipt.logs.map(log => {
+      try {
+        return contract?.decodeEventLog({
+          abi: celoSwapperV3Abi,
+          data: log.data,
+          topics: log.topics,
+        });
+      } catch (e) {
+        return null;
       }
-  
-      // Make sure campaign and project IDs are valid
-      if (campaignId === undefined || projectId === undefined) {
-        console.error("Invalid campaign or project ID:", { campaignId, projectId });
-        throw new Error("Invalid campaign or project ID");
-      }
-  
-      // Make sure token amount is a valid number
-      if (!tokenAmount || isNaN(parseFloat(tokenAmount)) || parseFloat(tokenAmount) <= 0) {
-        console.error("Invalid token amount:", tokenAmount);
-        throw new Error("Invalid token amount");
-      }
-  
-      // If token has decimals other than 18, use those
-      const decimals = tokenDecimals[token] || 18;
-      const amountBigInt = parseUnits(tokenAmount, decimals);
-      
-      // Calculate minimum CELO amount with slippage protection
-      const minCeloAmount = await calculateMinCeloAmount(token, tokenAmount, slippageInBps);
-      
-      console.log("Calculated min CELO amount:", minCeloAmount.toString());
-      const approveTx = writeContract({
-        address: token as `0x${string}`,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [actualContractAddress, amountBigInt],
-      });
-   
-      const swapTx = writeContract({
-        address: actualContractAddress,
-        abi: celoSwapperV3Abi,
-        functionName: 'swapAndVoteToken',
-        args: [
-          token as `0x${string}`,
-          campaignId,
-          projectId,
-          amountBigInt,
-          minCeloAmount
-        ],
-      });
-      
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: swapTx as unknown as `0x${string}` });
-      console.log("Swap transaction confirmed:", receipt);
-      
-      // Parse logs to find SwappedAndVoted event
-      const events = receipt.logs.map(log => {
-        try {
-          return contract?.decodeEventLog({
-            abi: celoSwapperV3Abi,
-            data: log.data,
-            topics: log.topics,
-          });
-        } catch (e) {
-          return null;
-        }
-      }).filter(event => event && event.eventName === 'SwappedAndVoted');
-      
-      if (events.length > 0) {
-        const event = events[0];
-        const result: SwapResult = {
-          user: event.args.user,
-          token: event.args.token,
-          campaignId: event.args.campaignId,
-          projectId: event.args.projectId,
-          tokenAmount: event.args.tokenAmount,
-          celoSwapped: event.args.celoSwapped,
-          celoVoted: event.args.celoVoted,
-          transactionHash: receipt.transactionHash
-        };
-        
-        // Add to swap history
-        setSwapHistory(prev => [result, ...prev]);
-        
-        return result;
-      }
-      
-      console.log("Transaction succeeded but no SwappedAndVoted event found");
-      return {
-        user: walletAddress || "",
-        token: token,
-        campaignId: BigInt(campaignId),
-        projectId: BigInt(projectId),
-        tokenAmount: amountBigInt,
-        celoSwapped: BigInt(0),
-        celoVoted: BigInt(0),
+    }).filter(event => event && event.eventName === 'SwappedAndVoted');
+    
+    if (events.length > 0) {
+      const event = events[0];
+      const result: SwapResult = {
+        user: event.args.user,
+        token: event.args.token,
+        campaignId: event.args.campaignId,
+        projectId: event.args.projectId,
+        tokenAmount: event.args.tokenAmount,
+        celoSwapped: event.args.celoSwapped,
+        celoVoted: event.args.celoVoted,
         transactionHash: receipt.transactionHash
-      } as SwapResult;
+      };
       
-    } catch (error) {
-      console.error('Error details in swapping and voting:', error);
+      // Add to swap history
+      setSwapHistory(prev => [result, ...prev]);
       
-      // Try to get a more descriptive error message
-      let errorMessage = "Error swapping and voting";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      }
-      
-      throw new Error(errorMessage);
+      return result;
     }
-  };
-
+    
+    console.log("Transaction succeeded but no SwappedAndVoted event found");
+    return {
+      user: walletAddress || "",
+      token: token,
+      campaignId: BigInt(campaignId),
+      projectId: BigInt(projectId),
+      tokenAmount: amountBigInt,
+      celoSwapped: BigInt(0),
+      celoVoted: BigInt(0),
+      transactionHash: receipt.transactionHash
+    } as SwapResult;
+    
+  } catch (error) {
+    console.error('Error details in swapping and voting:', error);
+    
+    // Try to get a more descriptive error message
+    let errorMessage = "Error swapping and voting";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === "string") {
+      errorMessage = error;
+    }
+    
+    throw new Error(errorMessage);
+  }
+};
   // The simplified cUSD swap and vote function for backwards compatibility
   const swapAndVote = async (
     campaignId: bigint | number,

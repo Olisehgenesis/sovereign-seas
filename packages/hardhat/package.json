@@ -36,6 +36,7 @@
     "tsc": "npx tsc -p . && cp typechain/*.d.ts dist/typechain/",
     "build": "yarn compile && yarn tsc",
     "mint": "pnpm hardhat run scripts/mint.ts --network alfajores",
+    "deploy": "hardhat run scripts/deploy.ts  --network celo",
 
     "clean": "hardhat clean",
     "run:node": "hardhat node",

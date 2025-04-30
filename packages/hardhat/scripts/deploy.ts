@@ -1,25 +1,29 @@
-import { createWalletClient, http, parseEther, createPublicClient } from 'viem';
+import { createWalletClient, http, createPublicClient, formatEther } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { celoAlfajores } from 'viem/chains';
+import { celo, celoAlfajores } from 'viem/chains';
 import * as dotenv from 'dotenv';
 import celoSwapperV3Abi from '../artifacts/contracts/swapVote.sol/CeloSwapperV3.json';
-import { readFileSync } from 'fs';
 
 dotenv.config();
 
-// Read configuration from environment variables
+// Environment configuration with defaults
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const RPC_URL = process.env.CELO_RPC_URL || 'https://alfajores-forno.celo-testnet.org';
+const USE_TESTNET = process.env.USE_TESTNET === 'true' || false; // Default to testnet for safety
+const RPC_URL = process.env.CELO_RPC_URL || (USE_TESTNET 
+  ? 'https://alfajores-forno.celo-testnet.org' 
+  : 'https://rpc.ankr.com/celo');
+
+// Contract parameters
 const BROKER_ADDRESS = process.env.BROKER_ADDRESS;
 const SOVEREIGN_SEAS_ADDRESS = process.env.SOVEREIGN_SEAS_ADDRESS || '0x7409a371c705d41a53E1d9F262b788B7C7e168D7';
 const EXCHANGE_PROVIDER = process.env.EXCHANGE_PROVIDER;
 
-// Initial tokens configuration - can be expanded with more tokens
-const CUSD_ADDRESS = process.env.CUSD_ADDRESS || '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1'; // cUSD on Alfajores
+// Initial tokens configuration
+const CUSD_ADDRESS = process.env.CUSD_ADDRESS || '0x765DE816845861e75A25fCA122bb6898B8B1282a'; // cUSD on Alfajores
 const CUSD_EXCHANGE_ID = process.env.CUSD_EXCHANGE_ID || process.env.EXCHANGE_ID; // Use EXCHANGE_ID as fallback
 const CUSD_MIN_AMOUNT = process.env.CUSD_MIN_AMOUNT || '1000000000000000000'; // Default 1 cUSD
 
-// Optional additional tokens - can be configured via env variables
+// Optional additional tokens
 const CEUR_ADDRESS = process.env.CEUR_ADDRESS || '0x10c892A6EC43a53E45D0B916B4b7D383B1b78C0F'; // cEUR on Alfajores
 const CEUR_EXCHANGE_ID = process.env.CEUR_EXCHANGE_ID;
 const CEUR_MIN_AMOUNT = process.env.CEUR_MIN_AMOUNT || '1000000000000000000'; // Default 1 cEUR
@@ -36,7 +40,7 @@ if (CEUR_EXCHANGE_ID) {
   initialMinAmounts.push(CEUR_MIN_AMOUNT);
 }
 
-// Validate environment variables
+// Validate required environment variables
 if (!PRIVATE_KEY) {
   console.error('Error: PRIVATE_KEY environment variable is required');
   process.exit(1);
@@ -57,38 +61,37 @@ if (!CUSD_EXCHANGE_ID) {
   process.exit(1);
 }
 
-// Read contract bytecode from file
-let contractBytecode: string;
-try {
-  contractBytecode = celoSwapperV3Abi.bytecode;
-  // Ensure bytecode starts with '0x'
-  if (!contractBytecode.startsWith('0x')) {
-    contractBytecode = '0x' + contractBytecode;
-  }
-} catch (error) {
-  console.error('Error reading contract bytecode file:', error);
-  console.error('Please make sure your contract is compiled and the bytecode file exists');
-  process.exit(1);
-}
-
 async function deployCeloSwapperV3() {
   try {
     console.log('Deploying CeloSwapperV3 contract...');
+    console.log(`Using ${USE_TESTNET ? 'Alfajores Testnet' : 'Celo Mainnet'}`);
+    console.log(`RPC URL: ${RPC_URL}`);
     
-    // Create wallet client with private key
+    // Setup wallet and public clients
     const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
+    const chain = USE_TESTNET ? celoAlfajores : celo;
+    
     const walletClient = createWalletClient({
       account,
-      chain: celoAlfajores,
+      chain,
       transport: http(RPC_URL)
     });
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain,
       transport: http(RPC_URL)
     });
     
-    console.log(`Using account: ${account.address}`);
+    // Check account balance
+    const balance = await publicClient.getBalance({ address: account.address });
+    console.log(`Account: ${account.address}`);
+    console.log(`Balance: ${formatEther(balance)} CELO`);
+    
+    if (balance < BigInt(1e16)) { // Less than 0.01 CELO
+      console.error('Warning: Account balance is very low, deployment might fail');
+    }
+    
+    // Log contract parameters
     console.log(`Broker address: ${BROKER_ADDRESS}`);
     console.log(`SovereignSeas address: ${SOVEREIGN_SEAS_ADDRESS}`);
     console.log(`Exchange provider: ${EXCHANGE_PROVIDER}`);
@@ -101,54 +104,76 @@ async function deployCeloSwapperV3() {
       console.log(`  Min Amount: ${initialMinAmounts[i]}`);
     }
 
-    let abi = celoSwapperV3Abi.abi;
-    // Check if ABI is valid
-    if (!abi || typeof abi !== 'object') {
-      throw new Error('Invalid ABI format');
+    // Read contract bytecode
+    let contractBytecode = celoSwapperV3Abi.bytecode;
+    if (!contractBytecode.startsWith('0x')) {
+      contractBytecode = '0x' + contractBytecode;
     }
-    
-    // Convert string arrays to appropriate formats
+
+    // Format constructor arguments
+    const tokensFormatted = initialTokens.map(addr => addr as `0x${string}`);
     const exchangeIdsFormatted = initialExchangeIds.map(id => id as `0x${string}`);
     const minAmountsFormatted = initialMinAmounts.map(amount => BigInt(amount));
     
-    // Deploy contract
+    // Deploy contract with explicit gas limit (no estimation)
     console.log('\nSending deployment transaction...');
-    const hash = await walletClient.deployContract({
+    const deploymentTx = await walletClient.deployContract({
       abi: celoSwapperV3Abi.abi,
       bytecode: contractBytecode as `0x${string}`,
       args: [
         BROKER_ADDRESS as `0x${string}`,
         SOVEREIGN_SEAS_ADDRESS as `0x${string}`,
         EXCHANGE_PROVIDER as `0x${string}`,
-        initialTokens.map(addr => addr as `0x${string}`),
+        tokensFormatted,
         exchangeIdsFormatted,
         minAmountsFormatted
-      ]
+      ],
+     
     });
     
-    console.log(`Deployment transaction hash: ${hash}`);
+    console.log(`Deployment transaction hash: ${deploymentTx}`);
     console.log('Waiting for transaction confirmation...');
     
-    // Wait for the transaction to be mined
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    // Wait for the transaction receipt
+    const receipt = await publicClient.waitForTransactionReceipt({ 
+      hash: deploymentTx,
+      timeout: 120_000 // 2 minutes timeout
+    });
     
     if (!receipt.contractAddress) {
       throw new Error('Contract deployment failed - no contract address in receipt');
     }
     
-    console.log('Contract deployed successfully!');
+    console.log('\nContract deployed successfully!');
     console.log(`Contract address: ${receipt.contractAddress}`);
+    console.log(`Gas used: ${receipt.gasUsed}`);
     console.log('');
-    console.log('Add this address to your .env file as SWAPPER_V3_ADDRESS to use it with the swap script.');
+    console.log('Next Steps:');
+    console.log('1. Add this address to your .env file as SWAPPER_V3_ADDRESS');
+    console.log('2. Run the swap script to test functionality');
     
     return receipt.contractAddress;
     
   } catch (error) {
-    console.error('Error deploying contract:', error);
-    if (error.message) console.error('Error details:', error.message);
-    if (error.cause) console.error('Error cause:', error.cause);
+    console.error('\nError deploying contract:');
+    console.error(error.message || error);
+    
+    if (error.shortMessage) {
+      console.error('\nError summary:', error.shortMessage);
+    }
+    
+    if (error.cause) {
+      console.error('\nError cause:', error.cause.message || error.cause);
+    }
+    
+    console.log('\nDeployment Debugging Tips:');
+    console.log('1. Check all address formats (must be valid 0x addresses)');
+    console.log('2. Verify exchange IDs format (must be 0x + 64 hex chars)');
+    console.log('3. Ensure you have enough CELO for deployment gas');
+    console.log('4. Try deploying on Alfajores testnet first (set USE_TESTNET=true)');
+    console.log('5. Check contract constructor for validation requirements');
   }
 }
 
 // Execute deployment
-deployCeloSwapperV3();
+deployCeloSwapperV3().catch(console.error);
