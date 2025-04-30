@@ -37,6 +37,7 @@
     "build": "yarn compile && yarn tsc",
     "mint": "pnpm hardhat run scripts/mint.ts --network alfajores",
     "deploy": "hardhat run scripts/deploy.ts  --network celo",
+    "withdraw": "pnpm hardhat run scripts/withdraw.ts --network celo",
 
     "clean": "hardhat clean",
     "run:node": "hardhat node",

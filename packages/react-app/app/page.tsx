@@ -139,6 +139,8 @@ export default function Home() {
         const topCampaigns = sortedCampaigns.slice(0, 3);
         
         for (const campaign of campaigns) {
+          //consoloe log the image
+          console.log('Campaign Logo:', campaign.logo);
           try {
             const projects = await loadProjects(campaign.id);
             projectCount += projects.length;
