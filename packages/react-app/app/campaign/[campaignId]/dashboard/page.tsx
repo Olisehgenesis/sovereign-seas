@@ -691,14 +691,17 @@ export default function CampaignDashboard() {
   
   // Reset status message after 5 seconds
   useEffect(() => {
+    let timer: string | number | NodeJS.Timeout | undefined;
     if (statusMessage.text) {
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         setStatusMessage({ text: '', type: null });
       }, 5000);
-      
-      return () => clearTimeout(timer);
     }
-  }, [statusMessage]);
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [statusMessage.text]); // Only depend on statusMessage.text
   
   // Fix: Improved token balance refresh with better safeguards
   useEffect(() => {
