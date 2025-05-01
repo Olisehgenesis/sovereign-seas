@@ -1385,24 +1385,49 @@ useEffect(() => {
                                     </div>
                                     
                                     <div className="relative z-10 flex flex-col md:flex-row gap-5 mt-6 md:mt-0"> {/* Added margin-top for mobile */}
-                                      {/* Project Image/Logo */}
-                                      <div className={`w-full md:w-28 h-28 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300 ${
-                                        !project.approved 
-                                          ? "bg-gradient-to-br from-gray-50 to-red-50 border border-red-100"
-                                          : "bg-gradient-to-br from-gray-50 to-blue-50 border border-blue-100"
-                                      }`}>
-                                        {project.logo ? (
-                                          <img 
-                                            src={project.logo} 
-                                            alt={project.name} 
-                                            className="w-full h-full object-cover"
-                                          />
-                                        ) : (
-                                          <Code className={`h-12 w-12 ${
-                                            !project.approved ? "text-red-300" : "text-blue-300"
-                                          }`} />
-                                        )}
-                                      </div>
+                                     {/* Project Image/Logo replaced with Rank Indicator */}
+<div className={`w-full md:w-28 h-28 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300 ${
+  !project.approved 
+    ? "bg-gradient-to-br from-gray-50 to-red-50 border border-red-100"
+    : "bg-gradient-to-br from-gray-50 to-blue-50 border border-blue-100"
+}`}>
+  {/* Calculate project rank based on votes */}
+  {(() => {
+    // Find index of current project in sorted projects list
+    const projectIndex = sortedProjects
+      .findIndex(p => p.id.toString() === project.id.toString());
+    
+    // Determine colors based on rank
+    let bgColor = "bg-gray-400";
+    let textColor = "text-white";
+    let rankText = (projectIndex + 1).toString();
+    
+    if (projectIndex === 0) {
+      bgColor = "bg-yellow-500"; // 1st place - gold
+      textColor = "text-white";
+    } else if (projectIndex === 1) {
+      bgColor = "bg-gray-400"; // 2nd place - silver
+      textColor = "text-white";
+    } else if (projectIndex === 2) {
+      bgColor = "bg-amber-700"; // 3rd place - bronze
+      textColor = "text-white";
+    } else if (projectIndex < 10) {
+      bgColor = "bg-blue-400"; // Top 10
+      textColor = "text-white";
+    }
+    
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <div className={`w-16 h-16 ${bgColor} rounded-full flex items-center justify-center mb-2`}>
+          <span className={`${textColor} text-2xl font-bold`}>{rankText}</span>
+        </div>
+        <span className="text-sm text-gray-600">
+          {projectIndex === -1 ? "Unranked" : `Rank #${projectIndex + 1}`}
+        </span>
+      </div>
+    );
+  })()}
+</div>
                                       
                                       {/* Project Info */}
                                       <div className="flex-grow">
