@@ -38,6 +38,8 @@
     "mint": "pnpm hardhat run scripts/mint.ts --network alfajores",
     "deploy": "hardhat run scripts/deploy.ts  --network celo",
     "withdraw": "pnpm hardhat run scripts/withdraw.ts --network celo",
+    "verify": "hardhat verify --network celo",
+    "vote": "hardhat run scripts/swapVote.ts ",
 
     "clean": "hardhat clean",
     "run:node": "hardhat node",

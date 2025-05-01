@@ -1,6 +1,6 @@
 import { createWalletClient, formatEther, http, parseUnits, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { celoAlfajores } from 'viem/chains';
+import { celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
 
 import erc20Abi from './abi/erc20.json';
@@ -9,17 +9,17 @@ import celoSwapperV3Abi from '../artifacts/contracts/swapVote.sol/CeloSwapperV3.
 dotenv.config();
 
 // Configuration
-const ALFAJORES_RPC = 'https://alfajores-forno.celo-testnet.org';
+const ALFAJORES_RPC = 'https://forno.celo-testnet.org';
 const SLIPPAGE = 0.005; // 0.5% slippage tolerance (50 basis points)
 
 // Get configuration from environment variables
-const SWAPPER_V3_ADDRESS = process.env.SWAPPER_V3_ADDRESS;
+const SWAPPER_V3_ADDRESS = process.env.newswapper;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const RPC_URL = process.env.CELO_RPC_URL || ALFAJORES_RPC;
-const CAMPAIGN_ID = process.env.CAMPAIGN_ID || '1';
-const PROJECT_ID = process.env.PROJECT_ID || '1';
-const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS || process.env.CUSD_ADDRESS || '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1'; // Default to cUSD
-const TOKEN_AMOUNT = process.env.TOKEN_AMOUNT || '2'; // Default to 2 tokens
+const CAMPAIGN_ID =2;
+const PROJECT_ID = 6;
+const TOKEN_ADDRESS = process.env.cUSD_ADDRESS ; // Default to cUSD
+const TOKEN_AMOUNT = process.env.TOKEN_AMOUNT || '1'; // Default to 2 tokens
 
 // Validate required environment variables
 if (!SWAPPER_V3_ADDRESS) {
@@ -38,12 +38,12 @@ async function swapAndVoteToken() {
     const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     const walletClient = createWalletClient({
       account,
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
     

@@ -114,6 +114,11 @@ export default function Header() {
   const abbreviateAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
+  
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setShowDropdown(false);
+  }, [pathname]);
 
   return (
     <div className="relative z-50">
@@ -138,7 +143,7 @@ export default function Header() {
       <div className="absolute left-0 right-0 bottom-0 translate-y-full h-4 wave-border opacity-30 pointer-events-none"></div>
       
       <Disclosure as="nav" className="bg-gradient-to-r from-blue-600 to-blue-500 border-b border-blue-700/30 shadow-xl sticky top-0 z-50">
-        {({ open }) => (
+        {({ open, close }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="relative flex h-16 items-center justify-between">
@@ -242,6 +247,7 @@ export default function Header() {
                           <Link
                             href="/campaign/mycampaigns"
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
+                            onClick={() => setShowDropdown(false)}
                           >
                             <Globe className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Campaigns
@@ -249,6 +255,7 @@ export default function Header() {
                           <Link
                             href="/votes"
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
+                            onClick={() => setShowDropdown(false)}
                           >
                             <Award className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Votes
@@ -256,27 +263,34 @@ export default function Header() {
                           <Link
                             href="/myprojects"
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
+                            onClick={() => setShowDropdown(false)}
                           >
                             <FileCode className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Projects
                           </Link>
-                          <button
-                            onClick={openWalletModal}
+                          <Link
+                            href="#"
                             className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openWalletModal();
+                            }}
                           >
                             <Wallet className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
                             My Wallet
-                          </button>
-                          <button
-                            onClick={() => {
-                                logout();
+                          </Link>
+                          <Link
+                            href="#"
+                            className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
+                            onClick={(e) => {
+                              // e.preventDefault();
+                              logout();
                               setShowDropdown(false);
                             }}
-                            className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
                           >
                             <Settings className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
-                            Disconnect
-                          </button>
+                            Logout
+                          </Link>
                         </div>
                       </Transition>
                     </div>
@@ -332,11 +346,12 @@ export default function Header() {
                   const NavIcon = item.icon;
                   const isActive = pathname === item.href || 
                                  (item.href !== '/' && pathname?.startsWith(item.href));
+                  
                   return (
-                    <Disclosure.Button
+                    <Link
                       key={item.name}
-                      as={Link}
                       href={item.href}
+                      onClick={() => close()}
                       className={`
                         flex items-center px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 relative
                         ${isActive 
@@ -358,7 +373,7 @@ export default function Header() {
                       {isActive && (
                         <span className="absolute right-3 top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-glow-blue"></span>
                       )}
-                    </Disclosure.Button>
+                    </Link>
                   );
                 })}
                 
@@ -368,9 +383,9 @@ export default function Header() {
                       <div className="px-2 text-xs uppercase text-white/70 font-semibold">
                         My Account
                       </div>
-                      <Disclosure.Button
-                        as={Link}
+                      <Link
                         href="/campaign/mycampaigns"
+                        onClick={() => close()}
                         className="flex items-center mt-1.5 px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
                         style={{
                           animation: 'fadeSlideIn 0.3s ease-out forwards',
@@ -381,10 +396,10 @@ export default function Header() {
                       >
                         <Globe className="mr-2 h-4 w-4 text-blue-300" />
                         My Campaigns
-                      </Disclosure.Button>
-                      <Disclosure.Button
-                        as={Link}
+                      </Link>
+                      <Link
                         href="/votes"
+                        onClick={() => close()}
                         className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
                         style={{
                           animation: 'fadeSlideIn 0.3s ease-out forwards',
@@ -395,10 +410,10 @@ export default function Header() {
                       >
                         <Award className="mr-2 h-4 w-4 text-blue-300" />
                         My Votes
-                      </Disclosure.Button>
-                      <Disclosure.Button
-                        as={Link}
+                      </Link>
+                      <Link
                         href="/myprojects"
+                        onClick={() => close()}
                         className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
                         style={{
                           animation: 'fadeSlideIn 0.3s ease-out forwards',
@@ -409,11 +424,15 @@ export default function Header() {
                       >
                         <FileCode className="mr-2 h-4 w-4 text-blue-300" />
                         My Projects
-                      </Disclosure.Button>
-                      <Disclosure.Button
-                        as="button"
-                        onClick={openWalletModal}
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300 w-full text-left"
+                      </Link>
+                      <Link
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openWalletModal();
+                          close();
+                        }}
+                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
                         style={{
                           animation: 'fadeSlideIn 0.3s ease-out forwards',
                           animationDelay: '0.7s',
@@ -423,11 +442,15 @@ export default function Header() {
                       >
                         <Wallet className="mr-2 h-4 w-4 text-blue-300" />
                         My Wallet
-                      </Disclosure.Button>
-                      <Disclosure.Button
-                        as="button"
-                        onClick={() => logout()}
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300 w-full text-left"
+                      </Link>
+                      <Link
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          logout();
+                          close();
+                        }}
+                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
                         style={{
                           animation: 'fadeSlideIn 0.3s ease-out forwards',
                           animationDelay: '0.8s',
@@ -436,8 +459,8 @@ export default function Header() {
                         }}
                       >
                         <Settings className="mr-2 h-4 w-4 text-blue-300" />
-                        Disconnect
-                      </Disclosure.Button>
+                        Logout
+                      </Link>
                     </div>
                   </>
                 )}

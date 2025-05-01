@@ -15,13 +15,15 @@ import {
   Coins,
   ArrowUpRight,
   ArrowDownLeft,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from 'lucide-react';
 import { Fragment } from 'react';
 import { useAccount } from 'wagmi';
 import { formatEther } from 'viem';
 import { useCeloSwapperV3 } from '../hooks/useCeloSwapperV3';
 import { abbreviateAddress } from '@/utils/formatting';
+import { usePrivy } from '@privy-io/react-auth';
 
 // Define token types for display
 type TokenBalance = {
@@ -36,6 +38,7 @@ type TokenBalance = {
 
 const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { address } = useAccount();
+  const { logout } = usePrivy();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'tokens' | 'send' | 'receive' | 'add'>('tokens');
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
@@ -71,6 +74,11 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         setCopied(false);
       }, 2000);
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    onClose();
   };
 
   const fetchTokenBalances = async () => {
@@ -259,7 +267,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                   <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                     <Wallet className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div>
+                  <div className="flex-grow">
                     <Dialog.Title
                       as="h3"
                       className="text-lg font-medium leading-6 text-gray-900"
@@ -292,11 +300,20 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                       )}
                     </div>
                   </div>
+                  {/* Logout button */}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-full text-sm font-medium transition-all duration-300 border border-red-100"
+                    title="Disconnect wallet"
+                  >
+                    <LogOut className="h-4 w-4 mr-1.5" />
+                    Logout
+                  </button>
                 </div>
 
                 {/* Tabs */}
                 <div className="border-b border-gray-200 mb-4">
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 overflow-x-auto hide-scrollbar">
                     <button
                       onClick={() => setActiveTab('tokens')}
                       className={`px-4 py-2 text-sm font-medium border-b-2 ${
@@ -648,6 +665,17 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                     </button>
                   </div>
                 )}
+
+                {/* Logout button at the bottom */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-full font-medium transition-colors flex items-center justify-center border border-red-100"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Disconnect Wallet
+                  </button>
+                </div>
               </Dialog.Panel>
             </Transition.Child>
           </div>

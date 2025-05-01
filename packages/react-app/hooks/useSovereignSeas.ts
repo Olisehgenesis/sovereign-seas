@@ -155,19 +155,16 @@ export const useSovereignSeas = (config?: SovereignSeasConfig) => {
         const normalizedDeployer = contractDeployer ? contractDeployer.toLowerCase() : '';
         const normalizedWallet = walletAddress ? walletAddress.toLowerCase() : '';
         
-        console.log("Normalized deployer:", normalizedDeployer);
-        console.log("Normalized wallet:", normalizedWallet);
-        console.log("Are they equal?", normalizedDeployer === normalizedWallet);
+        
     
         // Check if walletAddress is either a super admin or the deployer
         const isDeployer = !!normalizedDeployer && !!normalizedWallet && normalizedDeployer === normalizedWallet;
         
-        console.log("isSuperAdmin:", isSuperAdmin);
-        console.log("isDeployer:", isDeployer);
+     
         
         setIsSuperAdmin(isSuperAdmin || isDeployer);
         
-        console.log("Final isSuperAdmin value:", isSuperAdmin || isDeployer);
+       
     
       } catch (error) {
         console.error('Error checking super admin status:', error);

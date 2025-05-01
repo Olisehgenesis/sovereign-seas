@@ -56,6 +56,9 @@ const config: HardhatUserConfig = {
     cache: "./cache",
     artifacts: "./artifacts",
   },
+  sourcify: {
+    enabled: true
+  }
 };
 
 export default config;

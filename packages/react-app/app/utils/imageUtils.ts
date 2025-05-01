@@ -40,6 +40,9 @@ export const formatIpfsUrl = async (url: string, gateway = "https://ipfs.io/ipfs
 
   if (!cid) return url; // return as-is if not recognized as IPFS
 
+  console.log("CID:", cid);
+
   const convertedUrl = await pinata.gateways.public.convert(cid);
+  console.log("Converted URL:", convertedUrl);
   return convertedUrl;
 };

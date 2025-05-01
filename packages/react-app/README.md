@@ -1,62 +1,124 @@
-# React Framework + NextJS | Celo Composer
+> "What if your ENS link could *live*, hold value, speak for you, and connect you to the world?"  
+> — *Oliseh Genesis*
 
-Celo Composer support React boilerplate template with TailwindCSS. This is a starter kit with no additional boilerplate code. It's a perfect starter kit to get your project started on Celo blockchain.
+# 🌐 VEXO.social  
+**A Modular, ENS-Powered Social Identity Layer for Web3 Natives**
 
-## Setup & Installation
+VEXO.social is your onchain home — a decentralized profile built on top of your ENS domain. It’s more than just a link: it’s a living, ownable smart container that holds your identity, your links, your tokens, and your social presence across the web3 world.
 
+---
 
-### Set environment variables
+## 🚀 Overview
 
-Create a copy of `.env.example` and rename it to `.env`.
+VEXO.social transforms your ENS (e.g. `oliseh.base.eth`) into a dynamic, composable profile:
 
-#### Add Wallet Connect ID
+- **vexo.social/yourname.eth** becomes your shareable social hub
+- Minted from a wallet, **transferable**, **multi-access**, and **ENS-aware**
+- Supports individuals, DAOs, teams, creators, and degens alike
+- Profiles are smart: they can hold tokens, receive payments, and run logic
+- Extensible: built to scale, plug in new features, edit modules, grow communities
 
-Create a WalletConnect Cloud Project ID from [WalletConnect Cloud](https://cloud.walletconnect.com/)
+---
 
-Provide the WalletConnect Cloud Project ID in your `.env` file to use WalletConnect in your project. As shown in the `.env.example` file.
+## 🔑 Core Features
 
-```typescript
-NEXT_PUBLIC_WC_PROJECT_ID=YOUR_EXAMPLE_PROJECT_ID;
-```
+### ✅ ENS-Powered Smart Profiles
+- Each link is tied to an ENS name
+- Users mint their VEXO profile link with their wallet
+- The link is:
+  - **Transferable** or shared across multiple wallets
+  - **Ownable** and **programmable** (via smart contract modules)
+  - **Access-controlled** (delegated team roles or multisig)
 
+### 🧩 Modular Social Identity
+- Add/remove sections like:
+  - Featured links
+  - Mirror/blog posts
+  - Onchain resume
+  - NFTs and badges
+  - Social media & contact forms
+- Customize your theme, layout, and profile modules
 
-### Install dependencies
+### 🧠 ENS Awareness
+- If ENS is **not renewed**, profile enters **ReadMe Mode**
+  - Notifies viewers that the ENS has expired
+  - Optionally redirects to a backup identity (`username.vexo.eth`)
+- Profiles can be restored upon ENS reclaim by proof of ownership
 
-Install all the required dependencies to run the dApp.
+---
 
-Using **yarn**
+## 💰 Treasury & Wallet Integration
 
-```bash
-yarn
-```
+### Your Link Can Hold Value
+- VEXO links are wallet-enabled
+  - Accept ERC-20/721/1155 tokens
+  - Serve as tipping jars, team treasuries, bounties, or community funds
+- Access managed via:
+  - Wallet roles (individual, shared, multisig)
+  - Automation (drips, streaming, scheduled sends)
 
-or using **npm**
+---
 
-```bash
-npm i
-```
+## 💬 Social & Communication Layer
 
-> React + Tailwind CSS Template does not have any dependency on hardhat.
-> This starterkit does not include connection of Hardhat/Truffle with ReactJS. It's up to the user to integrate smart contract with ReactJS. This gives user more flexibility over the dApp.
+- **Contact Me** toggle for DMs (via XMTP, Push, or email)
+- **Token-gated** or **pay-to-message** contact options
+- Anonymous or verifiable replies
+- Embed Farcaster/Lens feeds or integrate community replies
 
-- To start the dApp, run the following command.
+---
 
-```bash
-yarn dev
-```
+## 🛡️ Privacy & Permissions
 
-## Dependencies
+- NFT or token-gated posts or sections
+- Public/private profile modes
+- Organization-level profiles with team member linking
+- Custom domains for profiles (e.g., `yourname.xyz` mapped to `vexo.social/yourname.eth`)
 
-### Default
+---
 
-- [Next.js](https://nextjs.org/) app framework
-- [TailwindCSS](https://tailwindcss.com/) for UI
+## 🔥 Advanced Features
 
-## Architecture
+- Auto-sync onchain activity (Mirror, Farcaster, Gitcoin, etc.)
+- "Degen Mode": No-KYC, meme-friendly fast setup
+- Profile monetization (tips, referrals, affiliate tracking)
+- Cross-profile mentions and community tagging
+- Organization dashboards with profile trees
 
-- `/pages` includes the main application components (specifically `layout.tsx` and `page.tsx`)
-  - `layout.tsx` includes configuration
-  - `page.tsx` is the main page of the application
-- `/components` includes components that are rendered in `page.tsx`
-- `/public` includes static files
+---
 
+## 🧠 Architecture Overview
+
+- Modular, upgradable contracts (per profile)
+- ENS-based or fallback `username.vexo.eth`
+- Storage via IPFS or Tableland
+- Access control with ERC-4337 or Passkey-native login
+- Open plugin system for developers
+
+---
+
+## 🌍 Use Cases
+
+- **Creators**: Showcase links, NFTs, accept payments
+- **DAOs & Protocols**: Share updates, team profiles, and treasury info
+- **Builders**: Display onchain contributions and bounties
+- **Communities**: Manage shared profiles and contact portals
+- **Degens**: Drop chaos with meme mode, tips, and open calls
+
+---
+
+## 🧪 Status
+
+VEXO.social is in early architecture phase.  
+Looking for contributors, builders, and testers. DM `@OlisehGenesis` to get involved.
+
+---
+
+## 📌 License
+
+MIT — build freely, fork boldly, share responsibly.
+
+---
+
+> Built for the modular future of identity. Powered by ENS.  
+> **Your ENS link is now alive.**

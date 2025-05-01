@@ -221,7 +221,6 @@ export default function CampaignDashboard() {
 const fetchAllTokenBalances = async () => {
   if (!address || !supportedTokens.length) return;
   
-  console.log("Proactively fetching balances for all tokens");
   
   try {
     // Process tokens in parallel for faster loading
@@ -272,7 +271,7 @@ const fetchAllTokenBalances = async () => {
       ...newBalances
     }));
     
-    console.log("All token balances fetched successfully");
+    
   } catch (error) {
     console.error("Error fetching all token balances:", error);
   }
@@ -417,7 +416,7 @@ useEffect(() => {
           // Load projects
           if (campaignId) {
             const projectsData = await sovereignSeas.loadProjects(Number(campaignId));
-            console.log('Loaded projects:', projectsData);
+           
             
             // Check if funds have been distributed
             const hasDistributed = !campaignData.active || 
@@ -456,7 +455,7 @@ useEffect(() => {
         
         // Get token votes summary
         const summary = await votingSystem.getUserCampaignVotes(Number(campaignId));
-        console.log('Token votes summary:', summary);
+        
         if (summary) {
           // Update user vote stats with token votes
           setUserVoteStats((prev: { totalVotes: string; projectCount: number; tokenVotes: TokenVote[] }) => ({
