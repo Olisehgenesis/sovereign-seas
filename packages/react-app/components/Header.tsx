@@ -6,8 +6,9 @@ import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, W
 import { usePathname } from 'next/navigation';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
 import { celo, celoAlfajores } from 'viem/chains';
-import { usePrivy, useLogin } from '@privy-io/react-auth';
+import { usePrivy, useLogin, useWallets } from '@privy-io/react-auth';
 import WalletModal from '@/components/walletModal';
+import { useWallet } from '@/hooks/useWallet';
 
 // Get chain values from environment variables
 const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID as string);
@@ -42,6 +43,9 @@ export default function Header() {
   // Use Privy hooks for authentication
   const { authenticated, user, logout, ready } = usePrivy();
   const { login } = useLogin();
+  
+  // Use the wallet hook to get the switch network function
+  const { handleSwitchToNetwork } = useWallet();
   
   // Use the sovereign seas hook to get the clients
   const { publicClient, walletClient } = useSovereignSeas();
@@ -81,37 +85,7 @@ export default function Header() {
       connect({ connector: injected({ target: 'metaMask' }) });
     }
   }, [connect]);
-
-  // Function to switch to the correct chain using the viem wallet client
-  const handleSwitchToNetwork = async () => {
-    if (!walletClient) {
-      console.error("Wallet client not available");
-      return;
-    }
-    
-    try {
-      await walletClient.switchChain({ id: CELO_CHAIN_ID });
-      setShowChainAlert(false);
-    } catch (error) {
-      console.error(`Error switching to ${CHAIN_NAME}:`, error);
-      
-      // If chain doesn't exist in the wallet, try to add it
-      if (error && (error as any)?.code === 4902) { // Chain doesn't exist
-        try {
-          const chainConfig = getChainConfig();
-          
-          await walletClient.addChain({
-            chain: chainConfig
-          });
-          // Try switching again after adding
-          await walletClient.switchChain({ id: CELO_CHAIN_ID });
-        } catch (addError) {
-          console.error(`Error adding ${CHAIN_NAME} chain:`, addError);
-        }
-      }
-    }
-  };
-
+  
   // Handle wallet connection with Privy login
   const handleLogin = () => {
     if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isMiniPay) {
@@ -144,7 +118,7 @@ export default function Header() {
   return (
     <div className="relative z-50">
       {/* Chain Warning Alert */}
-      {showChainAlert && (
+      {showChainAlert && isConnected && authenticated && (
         <div className="bg-amber-500 text-slate-900 py-2 px-4 flex items-center justify-center">
           <AlertTriangle className="h-5 w-5 mr-2" />
           <span className="font-medium">This app only supports the {CHAIN_NAME} network{IS_TESTNET ? ' (Testnet)' : ''}.</span>
@@ -295,7 +269,7 @@ export default function Header() {
                           </button>
                           <button
                             onClick={() => {
-                              logout();
+                                logout();
                               setShowDropdown(false);
                             }}
                             className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
