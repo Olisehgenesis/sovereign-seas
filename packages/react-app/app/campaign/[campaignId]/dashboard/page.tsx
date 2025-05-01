@@ -1,4 +1,3 @@
-// Fixed version of CampaignDashboard.jsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -18,6 +17,7 @@ import { useSovereignSeas } from '../../../../hooks/useSovereignSeas';
 import { useVotingSystem } from '../../../../hooks/useVotingSystem';
 import erc20Abi from '@/abis/MockCELO.json';
 import { formatEther } from 'viem';
+import StatusMessage from './components/StatusMessage';
 
 // Add these type definitions at the top of the file after imports
 type TokenVote = {
@@ -52,7 +52,7 @@ export default function CampaignDashboard() {
   const [campaign, setCampaign] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null); // Added error state
+  const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canDistributeFunds, setCanDistributeFunds] = useState(false);
   const [fundsDistributed, setFundsDistributed] = useState(false);
@@ -103,7 +103,7 @@ export default function CampaignDashboard() {
   // Constants
   const CUSD_ADDRESS = "0x471EcE3750Da237f93B8E339c536989b8978a438";
   
-  // Fix: Added a timeout for mounted state to handle potential race conditions
+  // Safe mount effect - no dependencies needed since this only runs once
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsMounted(true);
@@ -111,52 +111,8 @@ export default function CampaignDashboard() {
     return () => clearTimeout(timer);
   }, []);
   
-  // Fix: Improved data loading effect with better error handling and safeguards
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    // Fix: Add safeguards against undefined properties
-    const isReady = 
-      sovereignSeas && sovereignSeas.isInitialized && 
-      votingSystem && votingSystem.isInitialized && 
-      campaignId;
-    
-    if (isReady) {
-      // Add a small delay to ensure other state is ready
-      const timer = setTimeout(() => {
-        loadCampaignData();
-        loadSupportedTokens();
-        if (address) {
-          loadUserVoteData();
-          loadUserVoteStats();
-        }
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [
-    isMounted,
-    sovereignSeas?.isInitialized,
-    votingSystem?.isInitialized, 
-    campaignId, 
-    address, 
-    sovereignSeas?.isTxSuccess,
-    votingSystem?.celoSwapper?.isTxSuccess
-  ]);
-  
-  // Reset status message after 5 seconds
-  useEffect(() => {
-    if (statusMessage.text) {
-      const timer = setTimeout(() => {
-        setStatusMessage({ text: '', type: null });
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [statusMessage]);
-  
   // Format token balance using formatEther for clean display with 3 decimal places
-  const formatTokenBalance = (tokenAddress: string, balance: bigint) => {
+  const formatTokenBalance = useCallback((tokenAddress: string, balance: bigint) => {
     if (!balance) return '0';
     
     // Special handling for cUSD
@@ -212,10 +168,10 @@ export default function CampaignDashboard() {
       
       return formattedIntegerPart;
     }
-  };
+  }, [supportedTokens, CUSD_ADDRESS]);
   
   // Get a token symbol with fallback
-  const getTokenSymbol = (tokenAddress: string) => {
+  const getTokenSymbol = useCallback((tokenAddress: string) => {
     if (!tokenAddress) return '';
     
     // Special case for cUSD
@@ -230,7 +186,7 @@ export default function CampaignDashboard() {
     
     // Return a shortened address as fallback
     return `${tokenAddress.substring(0, 6)}...${tokenAddress.substring(tokenAddress.length - 4)}`;
-  };
+  }, [supportedTokens, CUSD_ADDRESS]);
 
   // Fix: Improved token balance fetching with better error handling
   const fetchAllTokenBalances = useCallback(async () => {
@@ -266,58 +222,10 @@ export default function CampaignDashboard() {
         type: 'error'
       });
     }
-  }, [address, supportedTokens, votingSystem?.celoSwapper?.publicClient, tokenBalances]);
-
-  // Fix: Improved token balance refresh with better safeguards
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    if (address && supportedTokens.length > 0) {
-      console.log("Initial token balance fetch");
-      fetchAllTokenBalances();
-      
-      // Use a reasonable interval to reduce API spam
-      const interval = setInterval(() => {
-        fetchAllTokenBalances();
-      }, 60000); // 60 seconds
-      
-      return () => {
-        console.log("Cleaning up token balance interval");
-        clearInterval(interval);
-      };
-    }
-  }, [fetchAllTokenBalances, address, supportedTokens.length, isMounted]);
-  
-  // Apply sorting and filtering whenever projects, sort method, or filter changes
-  useEffect(() => {
-    if (projects.length > 0) {
-      applySortingAndFiltering();
-    }
-  }, [projects, projectSortMethod, projectStatusFilter]);
-  
-  // Load rankings when toggle is activated
-  useEffect(() => {
-    if (projectRankingsVisible && campaign) {
-      loadProjectRankings();
-    }
-  }, [projectRankingsVisible, campaign]);
-  
-  // Update exchange rates when token or amount changes
-  useEffect(() => {
-    if (selectedToken && voteAmount && parseFloat(voteAmount) > 0) {
-      getTokenExchangeRate(selectedToken, voteAmount);
-    }
-  }, [selectedToken, voteAmount]);
-  
-  // Load token distribution data when visibility toggles
-  useEffect(() => {
-    if (tokenVoteDistributionVisible && campaignId && selectedProject) {
-      loadProjectTokenVotes();
-    }
-  }, [tokenVoteDistributionVisible, campaignId, selectedProject]);
+  }, [address, supportedTokens, votingSystem?.celoSwapper?.publicClient]);
   
   // Fix: Improved loadSupportedTokens with better error handling
-  const loadSupportedTokens = async () => {
+  const loadSupportedTokens = useCallback(async () => {
     try {
       if (!votingSystem || typeof votingSystem.loadSupportedTokens !== 'function') {
         console.error("votingSystem or loadSupportedTokens not available");
@@ -347,10 +255,10 @@ export default function CampaignDashboard() {
         type: 'error'
       });
     }
-  };
+  }, [votingSystem]);
   
   // Fix: Improved getTokenExchangeRate with better error handling
-  const getTokenExchangeRate = async (tokenAddress: string, amount: string) => {
+  const getTokenExchangeRate = useCallback(async (tokenAddress: string, amount: string) => {
     if (!tokenAddress || !amount || parseFloat(amount) <= 0 || !votingSystem) return;
     
     try {
@@ -358,13 +266,13 @@ export default function CampaignDashboard() {
       
       // Skip calculation for CELO - 1:1 rate
       if (tokenAddress.toLowerCase() === votingSystem.CELO_ADDRESS?.toLowerCase()) {
-        setTokenExchangeRates({
-          ...tokenExchangeRates,
+        setTokenExchangeRates(prev => ({
+          ...prev,
           [tokenAddress]: {
             expectedCelo: amount,
             voteAmount: amount
           }
-        });
+        }));
         setLoadingExchangeRates(false);
         return;
       }
@@ -375,13 +283,13 @@ export default function CampaignDashboard() {
         amount
       );
       
-      setTokenExchangeRates({
-        ...tokenExchangeRates,
+      setTokenExchangeRates(prev => ({
+        ...prev,
         [tokenAddress]: {
           expectedCelo: formatValue(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, expectedCelo)),
           voteAmount: formatValue(votingSystem.formatAmount(votingSystem.CELO_ADDRESS, voteAmount))
         }
-      });
+      }));
     } catch (error) {
       console.error('Error getting token exchange rate:', error);
       setStatusMessage({
@@ -391,15 +299,15 @@ export default function CampaignDashboard() {
     } finally {
       setLoadingExchangeRates(false);
     }
-  };
+  }, [votingSystem]);
   
-  const formatValue = (value: string) => {
+  const formatValue = useCallback((value: string) => {
     const parsed = parseFloat(value);
     return Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1);
-  };
+  }, []);
   
   // Fix: Improved loadCampaignData with better error handling and fallbacks
-  const loadCampaignData = async () => {
+  const loadCampaignData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -423,12 +331,18 @@ export default function CampaignDashboard() {
           if (address && 
              (campaignData.admin.toLowerCase() === address.toLowerCase() || sovereignSeas.isSuperAdmin)) {
             setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
           }
           
           // Check if funds can be distributed (campaign ended & is admin)
           const now = Math.floor(Date.now() / 1000);
+          const isAdminFlag = address && 
+             (campaignData.admin.toLowerCase() === address.toLowerCase() || sovereignSeas.isSuperAdmin);
           if (campaignData.active && now > Number(campaignData.endTime)) {
-            setCanDistributeFunds(isAdmin);
+            setCanDistributeFunds(!!isAdminFlag);
+          } else {
+            setCanDistributeFunds(false);
           }
           
           // Load projects
@@ -441,7 +355,12 @@ export default function CampaignDashboard() {
               const hasDistributed = !campaignData.active || 
                                     projectsData.some(p => Number(p.fundsReceived) > 0);
               setFundsDistributed(hasDistributed);
-              setCanDistributeFunds(isAdmin && !hasDistributed && now > Number(campaignData.endTime));
+              
+              if (isAdminFlag && !hasDistributed && now > Number(campaignData.endTime)) {
+                setCanDistributeFunds(true);
+              } else {
+                setCanDistributeFunds(false);
+              }
               
               // Show distribution table if funds were distributed
               if (hasDistributed) {
@@ -481,12 +400,12 @@ export default function CampaignDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sovereignSeas, campaignId, address, campaign]);
   
   // Fix: Improved loadUserVoteData with better error handling
-  const loadUserVoteData = async () => {
+  const loadUserVoteData = useCallback(async () => {
     try {
-      if (!address || !sovereignSeas || !votingSystem) return;
+      if (!address || !sovereignSeas || !votingSystem || !campaignId) return;
       
       // Get direct CELO vote history
       const history = await sovereignSeas.getUserVoteHistory();
@@ -522,33 +441,10 @@ export default function CampaignDashboard() {
       // Don't block rendering on error, just show empty state
       setUserVoteHistory([]);
     }
-  };
-  
-  const StatusMessage = ({ text, type }: { text: string; type: 'success' | 'error' | null }) => {
-    return (
-      <div 
-        className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg max-w-md text-center ${
-          type === 'success' 
-            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-            : 'bg-red-100 text-red-800 border border-red-200'
-        }`}
-      >
-        <span className="flex items-center justify-center">
-          {type === 'success' ? (
-            <svg className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-          ) : (
-            <AlertTriangle className="h-5 w-5 mr-2" />
-          )}
-          {text}
-        </span>
-      </div>
-    );
-  };
+  }, [address, sovereignSeas, votingSystem, campaignId]);
   
   // Fix: Improved loadUserVoteStats with better error handling
-  const loadUserVoteStats = async () => {
+  const loadUserVoteStats = useCallback(async () => {
     try {
       if (!address || !campaignId || !sovereignSeas) return;
       
@@ -571,12 +467,12 @@ export default function CampaignDashboard() {
       console.error('Error loading user vote stats:', error);
       // Don't block rendering on error
     }
-  };
+  }, [address, campaignId, sovereignSeas, userVoteHistory, formatValue]);
   
   // Fix: Improved loadProjectRankings with better error handling
-  const loadProjectRankings = async () => {
+  const loadProjectRankings = useCallback(async () => {
     try {
-      if (!campaign || !sovereignSeas) return;
+      if (!campaign || !sovereignSeas || !campaignId) return;
       
       const ranked = await sovereignSeas.getSortedProjects(Number(campaignId));
       if (Array.isArray(ranked)) {
@@ -591,10 +487,10 @@ export default function CampaignDashboard() {
         type: 'error'
       });
     }
-  };
+  }, [campaign, sovereignSeas, campaignId]);
   
   // Fix: Improved loadProjectTokenVotes with better error handling 
-  const loadProjectTokenVotes = async () => {
+  const loadProjectTokenVotes = useCallback(async () => {
     try {
       if (!campaignId || !selectedProject || !votingSystem) return;
       
@@ -610,10 +506,10 @@ export default function CampaignDashboard() {
       // Provide empty default data to prevent UI issues
       setAllProjectVotes({ tokenVotes: [] });
     }
-  };
+  }, [campaignId, selectedProject, votingSystem]);
   
   // Fix: Improved applySortingAndFiltering with error handling
-  const applySortingAndFiltering = () => {
+  const applySortingAndFiltering = useCallback(() => {
     try {
       // First filter
       let filtered = [...projects];
@@ -648,10 +544,9 @@ export default function CampaignDashboard() {
       // In case of error, just use the original projects
       setSortedProjects([...projects]);
     }
-  };
+  }, [projects, projectSortMethod, projectStatusFilter]);
   
-  // Fix: Improved handleVote with better error handling and validation
-  const handleVote = async () => {
+  const handleVote = useCallback(async () => {
     if (!selectedProject || !voteAmount || parseFloat(voteAmount) <= 0 || !campaignId || !selectedToken || !votingSystem) {
       setStatusMessage({
         text: 'Please select a project, token, and enter a valid amount.',
@@ -703,9 +598,22 @@ export default function CampaignDashboard() {
         type: 'error'
       });
     }
-  };
-  const handleDistributeFunds = async () => {
-    if (!canDistributeFunds) return;
+  }, [
+    selectedProject, 
+    voteAmount, 
+    campaignId, 
+    selectedToken, 
+    votingSystem, 
+    getTokenSymbol, 
+    loadUserVoteData, 
+    loadUserVoteStats, 
+    loadCampaignData, 
+    tokenVoteDistributionVisible, 
+    loadProjectTokenVotes
+  ]);
+  
+  const handleDistributeFunds = useCallback(async () => {
+    if (!canDistributeFunds || !sovereignSeas) return;
     
     try {
       await sovereignSeas.distributeFunds(Number(campaignId));
@@ -728,27 +636,117 @@ export default function CampaignDashboard() {
         type: 'error'
       });
     }
-  };
+  }, [canDistributeFunds, sovereignSeas, campaignId, loadCampaignData]);
   
   // Helper function to copy campaign link to clipboard
-  const shareCampaign = () => {
+  const shareCampaign = useCallback(() => {
     const url = window.location.origin + `/campaign/${campaignId}`;
     navigator.clipboard.writeText(url);
     setStatusMessage({
       text: 'Campaign link copied to clipboard!',
       type: 'success'
     });
-  };
+  }, [campaignId]);
   
   // Open the project info modal with the selected project
-  const openProjectInfo = (project: any) => {
+  const openProjectInfo = useCallback((project: any) => {
     setProjectInfoData(project);
     setProjectInfoModalVisible(true);
-  };
+  }, []);
   
-  if (!isMounted) {
-    return null;
-  }
+  // Fix: centralized data loading from multiple sources in one effect
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    // Fix: Add safeguards against undefined properties
+    const isReady = 
+      sovereignSeas && sovereignSeas.isInitialized && 
+      votingSystem && votingSystem.isInitialized && 
+      campaignId;
+    
+    if (isReady) {
+      // Add a small delay to ensure other state is ready
+      const timer = setTimeout(() => {
+        loadCampaignData();
+        loadSupportedTokens();
+        if (address) {
+          loadUserVoteData();
+          loadUserVoteStats();
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [
+    isMounted,
+    sovereignSeas?.isInitialized,
+    votingSystem?.isInitialized, 
+    campaignId, 
+    address, 
+    loadCampaignData,
+    loadSupportedTokens,
+    loadUserVoteData,
+    loadUserVoteStats
+  ]);
+  
+  // Reset status message after 5 seconds
+  useEffect(() => {
+    if (statusMessage.text) {
+      const timer = setTimeout(() => {
+        setStatusMessage({ text: '', type: null });
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [statusMessage]);
+  
+  // Fix: Improved token balance refresh with better safeguards
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    if (address && supportedTokens.length > 0) {
+      console.log("Initial token balance fetch");
+      fetchAllTokenBalances();
+      
+      // Use a reasonable interval to reduce API spam
+      const interval = setInterval(() => {
+        fetchAllTokenBalances();
+      }, 60000); // 60 seconds
+      
+      return () => {
+        console.log("Cleaning up token balance interval");
+        clearInterval(interval);
+      };
+    }
+  }, [isMounted, fetchAllTokenBalances, address, supportedTokens.length]);
+  
+  // Apply sorting and filtering whenever projects, sort method, or filter changes
+  useEffect(() => {
+    if (projects.length > 0) {
+      applySortingAndFiltering();
+    }
+  }, [projects, applySortingAndFiltering]);
+  
+  // Load rankings when toggle is activated
+  useEffect(() => {
+    if (projectRankingsVisible && campaign) {
+      loadProjectRankings();
+    }
+  }, [projectRankingsVisible, campaign, loadProjectRankings]);
+  
+  // Fix: Separate effect for exchange rate calculation to prevent infinite loops
+  useEffect(() => {
+    if (selectedToken && voteAmount && parseFloat(voteAmount) > 0) {
+      getTokenExchangeRate(selectedToken, voteAmount);
+    }
+  }, [selectedToken, voteAmount, getTokenExchangeRate]);
+  
+  // Load token distribution data when visibility toggles
+  useEffect(() => {
+    if (tokenVoteDistributionVisible && campaignId && selectedProject) {
+      loadProjectTokenVotes();
+    }
+  }, [tokenVoteDistributionVisible, campaignId, selectedProject, loadProjectTokenVotes]);
   
   if (loading || !campaign) {
     return (
