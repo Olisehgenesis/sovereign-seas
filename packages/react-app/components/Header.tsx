@@ -1,8 +1,7 @@
 import { Disclosure, Transition } from '@headlessui/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useConnect, useAccount } from 'wagmi';
-import { injected } from 'wagmi/connectors';
+import { useConnect, useAccount, injected } from 'wagmi';
 import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle, FileCode, Anchor, Wallet } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSovereignSeas } from '../hooks/useSovereignSeas';
