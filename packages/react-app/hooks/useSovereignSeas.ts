@@ -13,6 +13,7 @@ import { getContract } from 'viem';
 
 // Import ABI
 import sovereignSeasAbi from '../abis/SovereignSeasV2.json';
+import { formatIpfsUrl } from '@/app/utils/imageUtils';
 
 // get chain id and contract address from .env
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ? Number(process.env.NEXT_PUBLIC_CHAIN_ID) : undefined;
@@ -220,49 +221,6 @@ export const useSovereignSeas = (config?: SovereignSeasConfig) => {
 
   // First, let's fix the formatIpfsUrl helper function to handle the "File selected:" case
 
-const formatIpfsUrl = (url: string) => {
-  if (!url) return '';
-  
-  // Skip processing if it's just a file selection placeholder
-  if (url && url.startsWith('File selected:')) {
-    // Return an empty string or a placeholder image URL
-    return '';
-  }
-  
-  // Check if it's an IPFS hash or path
-  if (url.includes('ipfs/') || url.startsWith('ipfs://')) {
-    // Extract the IPFS hash
-    let ipfsHash;
-    
-    if (url.includes('ipfs/')) {
-      // For format: something/ipfs/HASH or ipfs/HASH
-      ipfsHash = url.split('ipfs/')[1];
-    } else if (url.startsWith('ipfs://')) {
-      // For format: ipfs://HASH
-      ipfsHash = url.replace('ipfs://', '');
-    }
-    
-    // Clean up the hash - remove any path or query params
-    if (ipfsHash && ipfsHash.includes('/')) {
-      ipfsHash = ipfsHash.split('/')[0];
-    }
-    
-    if (ipfsHash && ipfsHash.includes('?')) {
-      ipfsHash = ipfsHash.split('?')[0];
-    }
-    
-    // Return formatted URL using a public IPFS gateway
-    return `https://ipfs.io/ipfs/${ipfsHash}`;
-  }
-  
-  // Handle URLs that already have undefined/ prefix
-  if (url.startsWith('undefined/')) {
-    return url.replace('undefined/', '');
-  }
-  
-  // Return the URL as is if it's a normal URL
-  return url;
-};
 
 // Then modify your loadCampaigns function:
 const loadCampaigns = async () => {
@@ -294,24 +252,26 @@ const loadCampaigns = async () => {
       ? process.env.NEXT_PUBLIC_SPAM_CAMPAIGNS.split(',').map((id: string) => BigInt(id)) 
       : [];
 
-    const formattedCampaigns = campaignResults.map((result: any) => {
-      return {
-        id: result[0],
-        admin: result[1],
-        name: result[2],
-        description: result[3],
-        logo: formatIpfsUrl(result[4]),       // Format the logo URL
-        demoVideo: formatIpfsUrl(result[5]),  // Format the demo video URL
-        startTime: result[6],
-        endTime: result[7],
-        adminFeePercentage: result[8],
-        voteMultiplier: result[9],
-        maxWinners: result[10],
-        useQuadraticDistribution: result[11],
-        active: result[12],
-        totalFunds: result[13]
-      } as Campaign;
-    }).filter(campaign => !spam.includes(campaign.id));
+    const formattedCampaigns = await (await Promise.all(
+      campaignResults.map(async (result: any) => {
+        return {
+          id: result[0],
+          admin: result[1],
+          name: result[2],
+          description: result[3],
+          logo: await formatIpfsUrl(result[4]), // Await the logo URL
+          demoVideo: await formatIpfsUrl(result[5]), // Await the demo video URL
+          startTime: result[6],
+          endTime: result[7],
+          adminFeePercentage: result[8],
+          voteMultiplier: result[9],
+          maxWinners: result[10],
+          useQuadraticDistribution: result[11],
+          active: result[12],
+          totalFunds: result[13]
+        } as Campaign;
+      })
+    )).filter((campaign: { id: bigint; }) => !spam.includes(campaign.id));
     
     setCampaigns(formattedCampaigns);
     return formattedCampaigns;
@@ -348,15 +308,18 @@ const loadProjects = async (campaignId: bigint | number) => {
     const projectResults = await Promise.all(projectPromises);
     
     // Format the IPFS links in project data
-    return (projectResults as Project[]).map((project: Project) => {
-      return {
-        ...project,
-        // Format IPFS URLs
-        logo: formatIpfsUrl(project.logo),
-        demoVideo: formatIpfsUrl(project.demoVideo),
-        githubLink: formatIpfsUrl(project.githubLink),
-      };
-    }) as Project[];
+    return await Promise.all(
+      (projectResults as Project[]).map(async (project: Project) => {
+        console.log("project logo", project.logo);
+        return {
+          ...project,
+          // Await the formatted IPFS URLs
+          logo: await formatIpfsUrl(project.logo),
+          demoVideo: await formatIpfsUrl(project.demoVideo),
+          githubLink: await formatIpfsUrl(project.githubLink),
+        };
+      })
+    ) as Project[];
   } catch (error) {
     console.error(`Error loading projects for campaign ${campaignId}:`, error);
     return [];
