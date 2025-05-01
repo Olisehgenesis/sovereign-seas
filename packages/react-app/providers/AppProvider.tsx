@@ -31,7 +31,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               "walletChainType": "ethereum-only",
             },
           
-            defaultChain: celoAlfajores,
+            defaultChain: celo,
             supportedChains: [celo, celoAlfajores]
            
            
