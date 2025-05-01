@@ -1285,314 +1285,346 @@ useEffect(() => {
             )}
             
             {/* Projects Section */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl border border-blue-100 overflow-hidden shadow-lg group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
-              <div className="relative z-10">
-                <div className="p-6 pb-4 border-b border-gray-200">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <h2 className="text-xl font-semibold mb-2 md:mb-0 text-gray-800 flex items-center bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                      <Globe className="h-5 w-5 mr-2 text-blue-500" />
-                      Projects
-                    </h2>
-                    
-                    {/* Filtering and sorting controls */}
-                    <div className="flex flex-wrap gap-2">
-                      <div className="relative inline-block">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500 text-sm hidden md:inline">Status:</span>
-                          <select
-                            value={projectStatusFilter}
-                            onChange={(e) => setProjectStatusFilter(e.target.value)}
-                            className="bg-gray-50 border border-gray-200 text-gray-700 rounded-full px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="all">All</option>
-                            <option value="approved">Approved</option>
-                            <option value="pending">Pending</option>
-                          </select>
-                          <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+             <div className="bg-white/90 backdrop-blur-sm rounded-xl border border-blue-100 overflow-hidden shadow-lg group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative">
+                          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
+                          <div className="relative z-10">
+                            <div className="p-6 pb-4 border-b border-gray-200">
+                              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <h2 className="text-xl font-semibold mb-2 md:mb-0 text-gray-800 flex items-center bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                                  <Globe className="h-5 w-5 mr-2 text-blue-500" />
+                                  Projects
+                                </h2>
+                                
+                                {/* Filtering and sorting controls */}
+                                <div className="flex flex-wrap gap-2">
+                                  <div className="relative inline-block">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-500 text-sm hidden md:inline">Status:</span>
+                                      <select
+                                        value={projectStatusFilter}
+                                        onChange={(e) => setProjectStatusFilter(e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 text-gray-700 rounded-full px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                      >
+                                        <option value="all">All</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="pending">Pending</option>
+                                      </select>
+                                      <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="relative inline-block">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-500 text-sm hidden md:inline">Sort by:</span>
+                                      <select
+                                        value={projectSortMethod}
+                                        onChange={(e) => setProjectSortMethod(e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 text-gray-700 rounded-full px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                      >
+                                        <option value="votes">Most Votes</option>
+                                        <option value="newest">Newest</option>
+                                        <option value="alphabetical">A-Z</option>
+                                      </select>
+                                      <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <button
+                                    onClick={() => {
+                                      loadCampaignData();
+                                      setStatusMessage({
+                                        text: 'Projects refreshed',
+                                        type: 'success'
+                                      });
+                                    }}
+                                    className="bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full px-3 py-1.5 text-sm inline-flex items-center border border-gray-200"
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                                    Refresh
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Project List */}
+                            {/* Enhanced Project Card with improved theme styling */}
+                            <div className="grid grid-cols-1 gap-6 p-6">
+                              {sortedProjects.length > 0 ? (
+                                sortedProjects.map((project) => (
+                                  <div
+                                    key={project.id.toString()}
+                                    className={`${
+                                      // Use light red background for non-approved projects
+                                      !project.approved 
+                                        ? "bg-red-50/90 border-red-100"
+                                        : "bg-white/90 border-blue-100"
+                                    } backdrop-blur-sm rounded-xl border p-5 shadow-lg group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden`}
+                                  >
+                                    {/* Decorative gradient border effect on hover */}
+                                    <div className={`absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500 ${
+                                      !project.approved 
+                                        ? "bg-gradient-to-r from-red-500 to-orange-500"
+                                        : "bg-gradient-to-r from-blue-500 to-indigo-500"
+                                    }`}></div>
+                                    
+                                    {/* Project Status Indicator - Moved to top-right with increased width */}
+                                    <div className="absolute top-4 right-4 z-20">
+                                      {project.approved ? (
+                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm whitespace-nowrap">
+                                          Approved
+                                        </span>
+                                      ) : (
+                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200 shadow-sm whitespace-nowrap">
+                                          Awaiting Approval
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="relative z-10 flex flex-col md:flex-row gap-5 mt-6 md:mt-0"> {/* Added margin-top for mobile */}
+                                      {/* Project Image/Logo */}
+                                      <div className={`w-full md:w-28 h-28 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300 ${
+                                        !project.approved 
+                                          ? "bg-gradient-to-br from-gray-50 to-red-50 border border-red-100"
+                                          : "bg-gradient-to-br from-gray-50 to-blue-50 border border-blue-100"
+                                      }`}>
+                                        {project.logo ? (
+                                          <img 
+                                            src={project.logo} 
+                                            alt={project.name} 
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <Code className={`h-12 w-12 ${
+                                            !project.approved ? "text-red-300" : "text-blue-300"
+                                          }`} />
+                                        )}
+                                      </div>
+                                      
+                                      {/* Project Info */}
+                                      <div className="flex-grow">
+                                        <h3 className={`text-xl font-bold mb-1 pr-24 bg-clip-text text-transparent ${
+                                          !project.approved 
+                                            ? "bg-gradient-to-r from-red-700 to-orange-700"
+                                            : "bg-gradient-to-r from-blue-700 to-indigo-700"
+                                        }`}>
+                                          <a 
+                                            href={`/campaign/${campaignId}/project/${project.id}`}
+                                            className={`hover:underline decoration-2 underline-offset-4 transition-all ${
+                                              !project.approved ? "decoration-red-300" : "decoration-blue-300"
+                                            }`}
+                                          >
+                                            {project.name}
+                                          </a>
+                                        </h3>
+                                        
+                                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                                          {project.description}
+                                        </p>
+                                        
+                                        <div className="flex flex-wrap gap-3 mb-4">
+                                          {project.githubLink && (
+                                            <a 
+                                              href={project.githubLink}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm"
+                                            >
+                                              <Github className="h-3.5 w-3.5 mr-1.5" />
+                                              GitHub
+                                            </a>
+                                          )}
+                                          
+                                          {project.socialLink && (
+                                            <a 
+                                              href={project.socialLink}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm"
+                                            >
+                                              <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                                              Social
+                                            </a>
+                                          )}
+                                          
+                                          {project.testingLink && (
+                                            <a 
+                                              href={project.testingLink}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200 shadow-sm"
+                                            >
+                                              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                              Test App
+                                            </a>
+                                          )}
+                                          
+                                          {project.demoVideo && (
+                                            <a 
+                                              href={project.demoVideo}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-700 hover:bg-red-100 transition-colors border border-red-200 shadow-sm"
+                                            >
+                                              <Video className="h-3.5 w-3.5 mr-1.5" />
+                                              Demo
+                                            </a>
+                                          )}
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap items-center gap-4">
+                                          <div className="flex-grow max-w-md">
+                                            <div className="flex justify-between items-center mb-1.5 text-xs text-gray-500">
+                                              <span>Vote Progress</span>
+                                              <span className={`font-medium ${!project.approved ? "text-red-600" : "text-blue-600"}`}>
+                                                {formatValue(sovereignSeas.formatTokenAmount(project.voteCount))} votes
+                                              </span>
+                                            </div>
+                                            <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                              <div 
+                                                className={`absolute top-0 left-0 h-full rounded-full animate-pulse-slow ${
+                                                  !project.approved 
+                                                    ? "bg-gradient-to-r from-red-500 to-orange-500"
+                                                    : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                                }`} 
+                                                style={{ 
+                                                  width: `${Math.min(100, Number(sovereignSeas.formatTokenAmount(project.voteCount)) / Number(totalVotes) * 100)}%` 
+                                                }}
+                                              ></div>
+                                            </div>
+                                          </div>
+                                          
+                                          {fundsDistributed && Number(project.fundsReceived) > 0 && (
+                                            <span className="text-emerald-700 font-medium text-sm whitespace-nowrap flex items-center px-3 py-1 bg-emerald-50 rounded-full border border-emerald-200 shadow-sm">
+                                              <Award className="h-3.5 w-3.5 mr-1.5" />
+                                              {formatValue(sovereignSeas.formatTokenAmount(project.fundsReceived))} CELO
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Actions - Modified to ensure no overlap with status indicator */}
+                                      <div className="flex flex-row md:flex-col gap-3 mt-4 md:mt-10 justify-center md:justify-start md:items-end md:min-w-[120px]">
+                                        {/* Only show vote button for approved projects */}
+                                        {isActive && project.approved && (
+                                          <button
+                                            onClick={() => {
+                                              setSelectedProject(project);
+                                              setVoteModalVisible(true);
+                                            }}
+                                            disabled={!isConnected}
+                                            className="px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border border-blue-400/30 relative overflow-hidden group"
+                                          >
+                                            <span className="flex items-center relative z-10">
+                                              <TrendingUp className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-12 transition-transform duration-300" />
+                                              Vote
+                                            </span>
+                                            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                                          </button>
+                                        )}
+                                        
+                                        <button
+                                          onClick={() => {
+                                            setSelectedProject(project);
+                                            setTokenVoteDistributionVisible(true);
+                                            loadProjectTokenVotes();
+                                          }}
+                                          className={`px-4 py-2.5 rounded-full text-sm font-medium border hover:shadow-md relative overflow-hidden group ${
+                                            !project.approved 
+                                              ? "bg-white text-red-600 border-red-200 hover:bg-red-50"
+                                              : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                                          }`}
+                                        >
+                                          <span className="flex items-center relative z-10">
+                                            <PieChart className="h-3.5 w-3.5 mr-1.5 group-hover:translate-x-1 transition-transform duration-300" />
+                                            Details
+                                          </span>
+                                          <span className={`absolute inset-0 w-full h-full -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
+                                            !project.approved 
+                                              ? "bg-gradient-to-r from-transparent via-red-100/50 to-transparent"
+                                              : "bg-gradient-to-r from-transparent via-blue-100/50 to-transparent"
+                                          }`}></span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 flex items-start border border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+                                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
+                                  <div className="relative z-10">
+                                    {projectStatusFilter === 'approved' ? (
+                                      <>
+                                        <div className="flex items-start">
+                                          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
+                                            <AlertTriangle className="h-6 w-6 text-amber-500" />
+                                          </div>
+                                          <div>
+                                            <h3 className="text-xl font-bold text-gray-800 mb-2">No approved projects yet</h3>
+                                            <p className="text-gray-600 mb-4">
+                                              Be the first to submit a project to this campaign!
+                                            </p>
+                                            <button
+                                              onClick={() => router.push(`/campaign/${campaignId}/submit`)}
+                                              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
+                                            >
+                                              <span className="flex items-center relative z-10">
+                                                <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                                                Submit Project
+                                              </span>
+                                              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : projectStatusFilter === 'pending' ? (
+                                      <>
+                                        <div className="flex items-start">
+                                          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4 flex-shrink-0">
+                                            <Info className="h-6 w-6 text-blue-500" />
+                                          </div>
+                                          <div>
+                                            <h3 className="text-xl font-bold text-gray-800 mb-2">No pending projects</h3>
+                                            <p className="text-gray-600">
+                                              All submitted projects have been reviewed by the campaign administrators.
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="flex items-start">
+                                          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
+                                            <AlertTriangle className="h-6 w-6 text-amber-500" />
+                                          </div>
+                                          <div>
+                                            <h3 className="text-xl font-bold text-gray-800 mb-2">No projects found</h3>
+                                            <p className="text-gray-600 mb-4">
+                                              This campaign doesn't have any projects yet. Be the first to submit one!
+                                            </p>
+                                            <button
+                                              onClick={() => router.push(`/campaign/${campaignId}/submit`)}
+                                              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
+                                            >
+                                              <span className="flex items-center relative z-10">
+                                                <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                                                Submit Project
+                                              </span>
+                                              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="relative inline-block">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500 text-sm hidden md:inline">Sort by:</span>
-                          <select
-                            value={projectSortMethod}
-                            onChange={(e) => setProjectSortMethod(e.target.value)}
-                            className="bg-gray-50 border border-gray-200 text-gray-700 rounded-full px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="votes">Most Votes</option>
-                            <option value="newest">Newest</option>
-                            <option value="alphabetical">A-Z</option>
-                          </select>
-                          <div className="absolute right-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => {
-                          loadCampaignData();
-                          setStatusMessage({
-                            text: 'Projects refreshed',
-                            type: 'success'
-                          });
-                        }}
-                        className="bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full px-3 py-1.5 text-sm inline-flex items-center border border-gray-200"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                        Refresh
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                {/* Project List */}
-                {/* Enhanced Project Card with improved theme styling */}
-<div className="grid grid-cols-1 gap-6 p-6">
-  {sortedProjects.length > 0 ? (
-    sortedProjects.map((project) => (
-      <div
-        key={project.id.toString()}
-        className="bg-white/90 backdrop-blur-sm rounded-xl border border-blue-100 p-5 shadow-lg group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden"
-      >
-        {/* Decorative gradient border effect on hover */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
-        
-        {/* Project Status Indicator */}
-        <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
-          {project.approved ? (
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
-              Approved
-            </span>
-          ) : (
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200 shadow-sm">
-              Pending
-            </span>
-          )}
-        </div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row gap-5">
-          {/* Project Image/Logo */}
-          <div className="w-full md:w-28 h-28 rounded-lg bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center flex-shrink-0 overflow-hidden border border-blue-100 shadow-sm group-hover:shadow-md transition-all duration-300">
-            {project.logo ? (
-              <img 
-                src={project.logo} 
-                alt={project.name} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Code className="h-12 w-12 text-blue-300" />
-            )}
-          </div>
-          
-          {/* Project Info */}
-          <div className="flex-grow">
-            <h3 className="text-xl font-bold mb-1 pr-20 bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700">
-              <a 
-                href={`/campaign/${campaignId}/project/${project.id}`}
-                className="hover:underline decoration-blue-300 decoration-2 underline-offset-4 transition-all"
-              >
-                {project.name}
-              </a>
-            </h3>
-            
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-              {project.description}
-            </p>
-            
-            <div className="flex flex-wrap gap-3 mb-4">
-              {project.githubLink && (
-                <a 
-                  href={project.githubLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm"
-                >
-                  <Github className="h-3.5 w-3.5 mr-1.5" />
-                  GitHub
-                </a>
-              )}
-              
-              {project.socialLink && (
-                <a 
-                  href={project.socialLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm"
-                >
-                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                  Social
-                </a>
-              )}
-              
-              {project.testingLink && (
-                <a 
-                  href={project.testingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200 shadow-sm"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                  Test App
-                </a>
-              )}
-              
-              {project.demoVideo && (
-                <a 
-                  href={project.demoVideo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-700 hover:bg-red-100 transition-colors border border-red-200 shadow-sm"
-                >
-                  <Video className="h-3.5 w-3.5 mr-1.5" />
-                  Demo
-                </a>
-              )}
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-grow max-w-md">
-                <div className="flex justify-between items-center mb-1.5 text-xs text-gray-500">
-                  <span>Vote Progress</span>
-                  <span className="font-medium text-blue-600">
-                    {formatValue(sovereignSeas.formatTokenAmount(project.voteCount))} votes
-                  </span>
-                </div>
-                <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-pulse-slow" 
-                    style={{ 
-                      width: `${Math.min(100, Number(sovereignSeas.formatTokenAmount(project.voteCount)) / Number(totalVotes) * 100)}%` 
-                    }}
-                  ></div>
-                </div>
-              </div>
-              
-              {fundsDistributed && Number(project.fundsReceived) > 0 && (
-                <span className="text-emerald-700 font-medium text-sm whitespace-nowrap flex items-center px-3 py-1 bg-emerald-50 rounded-full border border-emerald-200 shadow-sm">
-                  <Award className="h-3.5 w-3.5 mr-1.5" />
-                  {formatValue(sovereignSeas.formatTokenAmount(project.fundsReceived))} CELO
-                </span>
-              )}
-            </div>
-          </div>
-          
-          {/* Actions */}
-          <div className="flex flex-row md:flex-col gap-3 mt-4 md:mt-0 justify-center md:justify-start md:items-end">
-            {isActive && (
-              <button
-                onClick={() => {
-                  setSelectedProject(project);
-                  setVoteModalVisible(true);
-                }}
-                disabled={!isConnected}
-                className="px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border border-blue-400/30 relative overflow-hidden group"
-              >
-                <span className="flex items-center relative z-10">
-                  <TrendingUp className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-12 transition-transform duration-300" />
-                  Vote
-                </span>
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-              </button>
-            )}
-            
-            <button
-              onClick={() => {
-                setSelectedProject(project);
-                setTokenVoteDistributionVisible(true);
-                loadProjectTokenVotes();
-              }}
-              className="px-4 py-2.5 rounded-full bg-white text-blue-600 text-sm font-medium border border-blue-200 hover:bg-blue-50 transition-all hover:shadow-md relative overflow-hidden group"
-            >
-              <span className="flex items-center relative z-10">
-                <PieChart className="h-3.5 w-3.5 mr-1.5 group-hover:translate-x-1 transition-transform duration-300" />
-                Details
-              </span>
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-            </button>
-          </div>
-        </div>
-      </div>
-    ))
-  ) : (
-    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 flex items-start border border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
-      <div className="relative z-10">
-        {projectStatusFilter === 'approved' ? (
-          <>
-            <div className="flex items-start">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No approved projects yet</h3>
-                <p className="text-gray-600 mb-4">
-                  Be the first to submit a project to this campaign!
-                </p>
-                <button
-                  onClick={() => router.push(`/campaign/${campaignId}/submit`)}
-                  className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
-                >
-                  <span className="flex items-center relative z-10">
-                    <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                    Submit Project
-                  </span>
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              </div>
-            </div>
-          </>
-        ) : projectStatusFilter === 'pending' ? (
-          <>
-            <div className="flex items-start">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4 flex-shrink-0">
-                <Info className="h-6 w-6 text-blue-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No pending projects</h3>
-                <p className="text-gray-600">
-                  All submitted projects have been reviewed by the campaign administrators.
-                </p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-start">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No projects found</h3>
-                <p className="text-gray-600 mb-4">
-                  This campaign doesn't have any projects yet. Be the first to submit one!
-                </p>
-                <button
-                  onClick={() => router.push(`/campaign/${campaignId}/submit`)}
-                  className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
-                >
-                  <span className="flex items-center relative z-10">
-                    <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                    Submit Project
-                  </span>
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  )}
-</div>
-
-                
-               {/* Rest of the project list logic would follow here */}
-              </div>
-            </div>
           </div>
         </div>
       </div>
