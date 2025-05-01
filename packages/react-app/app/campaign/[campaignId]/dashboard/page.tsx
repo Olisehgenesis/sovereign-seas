@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { 
@@ -18,6 +18,7 @@ import { useVotingSystem } from '../../../../hooks/useVotingSystem';
 import erc20Abi from '@/abis/MockCELO.json';
 import { formatEther } from 'viem';
 import StatusMessage from './components/StatusMessage';
+import React from 'react';
 
 // Add these type definitions at the top of the file after imports
 type TokenVote = {
@@ -93,6 +94,8 @@ export default function CampaignDashboard() {
   const [projectRankingsVisible, setProjectRankingsVisible] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' | null }>({ text: '', type: null });
   
+  // Add a ref to track if data has been loaded already
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Contract interaction
   const sovereignSeas = useSovereignSeas();
@@ -103,14 +106,15 @@ export default function CampaignDashboard() {
   // Constants
   const CUSD_ADDRESS = "0x471EcE3750Da237f93B8E339c536989b8978a438";
   
-  // Safe mount effect - no dependencies needed since this only runs once
+  // Set isMounted on component mount - fixing initial loading issue
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMounted(true);
-    }, 100);
-    return () => clearTimeout(timer);
+    setIsMounted(true);
+    // Cleanup on unmount
+    return () => {
+      setIsMounted(false);
+    };
   }, []);
-  
+ 
   // Format token balance using formatEther for clean display with 3 decimal places
   const formatTokenBalance = useCallback((tokenAddress: string, balance: bigint) => {
     if (!balance) return '0';
@@ -188,14 +192,12 @@ export default function CampaignDashboard() {
     return `${tokenAddress.substring(0, 6)}...${tokenAddress.substring(tokenAddress.length - 4)}`;
   }, [supportedTokens, CUSD_ADDRESS]);
 
-  // Fix: Improved token balance fetching with better error handling
+  // Fix: Improved token balance fetching with better error handling and debounce
   const fetchAllTokenBalances = useCallback(async () => {
     if (!address || !supportedTokens.length || !votingSystem?.celoSwapper?.publicClient) {
       console.log("Cannot fetch token balances - missing prerequisites");
       return;
     }
-    
-    console.log("Proactively fetching balances for all tokens");
     
     try {
       // Process tokens sequentially to avoid overwhelming the RPC
@@ -212,8 +214,11 @@ export default function CampaignDashboard() {
         }
       }
       
-      setTokenBalances(newBalances);
-      console.log("All token balances fetched successfully");
+      // Only update state if values have actually changed
+      if (JSON.stringify(Object.keys(newBalances).sort()) !== JSON.stringify(Object.keys(tokenBalances).sort()) ||
+          Object.keys(newBalances).some(key => newBalances[key] !== tokenBalances[key])) {
+        setTokenBalances(newBalances);
+      }
     } catch (error) {
       console.error("Error fetching all token balances:", error);
       // Even on error, ensure loading state is updated
@@ -222,8 +227,8 @@ export default function CampaignDashboard() {
         type: 'error'
       });
     }
-  }, [address, supportedTokens, votingSystem?.celoSwapper?.publicClient]);
-  
+  }, [address, supportedTokens, votingSystem?.celoSwapper?.publicClient, tokenBalances]);
+
   // Fix: Improved loadSupportedTokens with better error handling
   const loadSupportedTokens = useCallback(async () => {
     try {
@@ -256,6 +261,10 @@ export default function CampaignDashboard() {
       });
     }
   }, [votingSystem]);
+  const formatValue = useCallback((value: string) => {
+    const parsed = parseFloat(value);
+    return Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1);
+  }, []);
   
   // Fix: Improved getTokenExchangeRate with better error handling
   const getTokenExchangeRate = useCallback(async (tokenAddress: string, amount: string) => {
@@ -299,23 +308,21 @@ export default function CampaignDashboard() {
     } finally {
       setLoadingExchangeRates(false);
     }
-  }, [votingSystem]);
+  }, [votingSystem, formatValue]);
   
-  const formatValue = useCallback((value: string) => {
-    const parsed = parseFloat(value);
-    return Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1);
-  }, []);
   
-  // Fix: Improved loadCampaignData with better error handling and fallbacks
+  
+  // Fix: Improved loadCampaignData with better error handling, fallbacks, and flag to prevent duplicate loading
   const loadCampaignData = useCallback(async () => {
+    if (!sovereignSeas || typeof sovereignSeas.loadCampaigns !== 'function') {
+      console.error("sovereignSeas or loadCampaigns not available");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
     try {
-      if (!sovereignSeas || typeof sovereignSeas.loadCampaigns !== 'function') {
-        throw new Error("sovereignSeas or loadCampaigns not available");
-      }
-      
       // Load all campaigns
       const allCampaigns = await sovereignSeas.loadCampaigns();
       
@@ -325,7 +332,6 @@ export default function CampaignDashboard() {
         
         if (campaignData) {
           setCampaign(campaignData);
-          console.log("image", campaignData.logo)
           
           // Check if current user is the admin or super admin
           if (address && 
@@ -339,21 +345,24 @@ export default function CampaignDashboard() {
           const now = Math.floor(Date.now() / 1000);
           const isAdminFlag = address && 
              (campaignData.admin.toLowerCase() === address.toLowerCase() || sovereignSeas.isSuperAdmin);
+          
+          // Process admin rights and fund distribution status
+          let canDistribute = false;
           if (campaignData.active && now > Number(campaignData.endTime)) {
-            setCanDistributeFunds(!!isAdminFlag);
-          } else {
-            setCanDistributeFunds(false);
+            canDistribute = !!isAdminFlag;
           }
+          
+          setCanDistributeFunds(canDistribute);
           
           // Load projects
           if (campaignId) {
             const projectsData = await sovereignSeas.loadProjects(Number(campaignId));
-            console.log('Loaded projects:', projectsData);
             
             if (Array.isArray(projectsData)) {
               // Check if funds have been distributed
               const hasDistributed = !campaignData.active || 
                                     projectsData.some(p => Number(p.fundsReceived) > 0);
+              
               setFundsDistributed(hasDistributed);
               
               if (isAdminFlag && !hasDistributed && now > Number(campaignData.endTime)) {
@@ -368,9 +377,13 @@ export default function CampaignDashboard() {
               }
               
               setProjects(projectsData);
+              
+              // Apply sorting and filtering after projects are loaded
+              applySortingAndFiltering(projectsData, projectSortMethod, projectStatusFilter);
             } else {
               console.error("Unexpected projects data format:", projectsData);
               setProjects([]);
+              setSortedProjects([]);
             }
           }
         } else {
@@ -400,7 +413,7 @@ export default function CampaignDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [sovereignSeas, campaignId, address, campaign]);
+  }, [sovereignSeas, campaignId, address, campaign, projectSortMethod, projectStatusFilter]);
   
   // Fix: Improved loadUserVoteData with better error handling
   const loadUserVoteData = useCallback(async () => {
@@ -425,7 +438,6 @@ export default function CampaignDashboard() {
       // Get token votes summary
       try {
         const summary = await votingSystem.getUserCampaignVotes(Number(campaignId));
-        console.log('Token votes summary:', summary);
         if (summary) {
           // Update user vote stats with token votes
           setUserVoteStats((prev) => ({
@@ -508,22 +520,27 @@ export default function CampaignDashboard() {
     }
   }, [campaignId, selectedProject, votingSystem]);
   
-  // Fix: Improved applySortingAndFiltering with error handling
-  const applySortingAndFiltering = useCallback(() => {
+  // Fix: Improved applySortingAndFiltering with memoization
+  // Create a separate function for sorting and filtering that doesn't depend on state
+  const applySortingAndFiltering = useCallback((
+    projectList: any[],
+    sortMethod: string, 
+    statusFilter: string
+  ) => {
     try {
       // First filter
-      let filtered = [...projects];
+      let filtered = [...projectList];
       
-      if (projectStatusFilter === 'approved') {
+      if (statusFilter === 'approved') {
         filtered = filtered.filter(p => p.approved);
-      } else if (projectStatusFilter === 'pending') {
+      } else if (statusFilter === 'pending') {
         filtered = filtered.filter(p => !p.approved);
       }
       
       // Then sort
       let sorted;
       
-      switch (projectSortMethod) {
+      switch (sortMethod) {
         case 'votes':
           sorted = filtered.sort((a, b) => Number(b.voteCount) - Number(a.voteCount));
           break;
@@ -542,9 +559,9 @@ export default function CampaignDashboard() {
     } catch (error) {
       console.error('Error applying sorting and filtering:', error);
       // In case of error, just use the original projects
-      setSortedProjects([...projects]);
+      setSortedProjects([...projectList]);
     }
-  }, [projects, projectSortMethod, projectStatusFilter]);
+  }, []);
   
   const handleVote = useCallback(async () => {
     if (!selectedProject || !voteAmount || parseFloat(voteAmount) <= 0 || !campaignId || !selectedToken || !votingSystem) {
@@ -654,31 +671,64 @@ export default function CampaignDashboard() {
     setProjectInfoModalVisible(true);
   }, []);
   
-  // Fix: centralized data loading from multiple sources in one effect
+  // Fix: Load token balances only when tokens are available and not on every render
   useEffect(() => {
     if (!isMounted) return;
     
-    // Fix: Add safeguards against undefined properties
+    let isActive = true;
+    
+    if (address && supportedTokens.length > 0) {
+      // Use a setTimeout to debounce the request and prevent rapid refreshes
+      const timer = setTimeout(() => {
+        if (isActive) {
+          fetchAllTokenBalances();
+        }
+      }, 500);
+      
+      return () => {
+        isActive = false;
+        clearTimeout(timer);
+      };
+    }
+  }, [isMounted, address, supportedTokens, fetchAllTokenBalances]);
+  
+  // Fix: Centralized data loading with proper dependencies and data load guard
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    // Use a flag to only load initial data once
+    if (dataLoaded) return;
+    
     const isReady = 
       sovereignSeas && sovereignSeas.isInitialized && 
       votingSystem && votingSystem.isInitialized && 
       campaignId;
     
     if (isReady) {
-      // Add a small delay to ensure other state is ready
-      const timer = setTimeout(() => {
-        loadCampaignData();
-        loadSupportedTokens();
-        if (address) {
-          loadUserVoteData();
-          loadUserVoteStats();
-        }
-      }, 300);
+      let isLoading = false;
       
-      return () => clearTimeout(timer);
+      const loadData = async () => {
+        if (isLoading) return;
+        isLoading = true;
+        
+        try {
+          await loadCampaignData();
+          await loadSupportedTokens();
+          if (address) {
+            await loadUserVoteData();
+            await loadUserVoteStats();
+          }
+          setDataLoaded(true);
+        } finally {
+          isLoading = false;
+        }
+      };
+      
+      loadData();
     }
   }, [
     isMounted,
+    dataLoaded,
     sovereignSeas?.isInitialized,
     votingSystem?.isInitialized, 
     campaignId, 
@@ -689,68 +739,104 @@ export default function CampaignDashboard() {
     loadUserVoteStats
   ]);
   
-  // Reset status message after 5 seconds
-  useEffect(() => {
-    let timer: string | number | NodeJS.Timeout | undefined;
-    if (statusMessage.text) {
-      timer = setTimeout(() => {
-        setStatusMessage({ text: '', type: null });
-      }, 5000);
-    }
-    
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [statusMessage.text]); // Only depend on statusMessage.text
-  
-  // Fix: Improved token balance refresh with better safeguards
-  useEffect(() => {
-    if (!isMounted) return;
-    
-    if (address && supportedTokens.length > 0) {
-      console.log("Initial token balance fetch");
-      fetchAllTokenBalances();
-      
-      // Use a reasonable interval to reduce API spam
-      const interval = setInterval(() => {
-        fetchAllTokenBalances();
-      }, 60000); // 60 seconds
-      
-      return () => {
-        console.log("Cleaning up token balance interval");
-        clearInterval(interval);
-      };
-    }
-  }, [isMounted, fetchAllTokenBalances, address, supportedTokens.length]);
-  
-  // Apply sorting and filtering whenever projects, sort method, or filter changes
+  // Fix: Add a dedicated useEffect for project filter/sort changes
   useEffect(() => {
     if (projects.length > 0) {
-      applySortingAndFiltering();
+      applySortingAndFiltering(projects, projectSortMethod, projectStatusFilter);
     }
-  }, [projects, applySortingAndFiltering]);
+  }, [projects, projectSortMethod, projectStatusFilter, applySortingAndFiltering]);
   
-  // Load rankings when toggle is activated
+  // Fix: Load rankings only when toggle is activated
   useEffect(() => {
-    if (projectRankingsVisible && campaign) {
+    if (projectRankingsVisible && campaign && !loading) {
       loadProjectRankings();
     }
-  }, [projectRankingsVisible, campaign, loadProjectRankings]);
+  }, [projectRankingsVisible, campaign, loading, loadProjectRankings]);
   
-  // Fix: Separate effect for exchange rate calculation to prevent infinite loops
+  // Fix: Only calculate exchange rates when values actually change
   useEffect(() => {
     if (selectedToken && voteAmount && parseFloat(voteAmount) > 0) {
-      getTokenExchangeRate(selectedToken, voteAmount);
+      // Don't recalculate if we already have this exact rate
+      const currentRate = tokenExchangeRates[selectedToken];
+      const voteAmountFormatted = parseFloat(voteAmount).toString();
+      
+      if (!currentRate || 
+          currentRate.voteAmount !== voteAmountFormatted) {
+        
+        // Debounce exchange rate calculations to prevent rapid API calls
+        const timer = setTimeout(() => {
+          getTokenExchangeRate(selectedToken, voteAmount);
+        }, 500);
+        
+        return () => clearTimeout(timer);
+      }
     }
-  }, [selectedToken, voteAmount, getTokenExchangeRate]);
+  }, [selectedToken, voteAmount, getTokenExchangeRate, tokenExchangeRates]);
   
-  // Load token distribution data when visibility toggles
+  // Fix: Only load token distribution data when modal is opened
   useEffect(() => {
     if (tokenVoteDistributionVisible && campaignId && selectedProject) {
       loadProjectTokenVotes();
     }
   }, [tokenVoteDistributionVisible, campaignId, selectedProject, loadProjectTokenVotes]);
   
+  // Memoize calculated campaign values to prevent unnecessary re-renders
+  // Memoize calculated campaign values to prevent unnecessary re-renders
+  const campaignStats = useMemo(() => {
+    if (!campaign || !sovereignSeas) return null;
+    
+    const now = Math.floor(Date.now() / 1000);
+    const isActive = sovereignSeas.isCampaignActive(campaign);
+    const timeRemaining = sovereignSeas.getCampaignTimeRemaining(campaign);
+    const hasStarted = now >= Number(campaign.startTime);
+    const hasEnded = now >= Number(campaign.endTime);
+    
+    // Calculate stats
+    const totalProjects = projects.length;
+    const approvedProjects = projects.filter(p => p.approved).length;
+    const totalVotes = formatValue(projects.reduce(
+      (sum, project) => sum + Number(sovereignSeas.formatTokenAmount(project.voteCount)), 0
+    ));
+    const totalFunds = formatValue(sovereignSeas.formatTokenAmount(campaign.totalFunds));
+    
+    return {
+      isActive,
+      timeRemaining,
+      hasStarted,
+      hasEnded,
+      now,
+      totalProjects,
+      approvedProjects,
+      totalVotes,
+      totalFunds
+    };
+  }, [campaign, sovereignSeas, projects, formatValue]);
+  
+  // Memoize sorted distribution data
+  const distributionData = useMemo(() => {
+    if (!projects || !sovereignSeas || !campaignStats) return { sortedByFundsProjects: [], distributionSummary: [] };
+    
+    // Sort projects by fund received (for distribution table)
+    const sortedByFundsProjects = [...projects]
+      .filter(p => Number(p.fundsReceived) > 0)
+      .sort((a, b) => Number(b.fundsReceived) - Number(a.fundsReceived));
+    
+    // Create distribution summary - removed admin and platform fees
+    const distributionSummary = [
+      { name: "Distributed to Projects", amount: Number(campaignStats.totalFunds) },
+    ];
+    
+    return { sortedByFundsProjects, distributionSummary };
+  }, [projects, sovereignSeas, campaignStats]);
+  
+  // Memoize UI flag for campaign media
+  const hasCampaignMedia = useMemo(() => {
+    return campaign && (
+      (campaign.logo?.trim().length > 0) || 
+      (campaign.demoVideo?.trim().length > 0)
+    );
+  }, [campaign]);
+
   if (loading || !campaign) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 text-gray-800 flex items-center justify-center">
@@ -762,30 +848,23 @@ export default function CampaignDashboard() {
     );
   }
   
-  const isActive = sovereignSeas.isCampaignActive(campaign);
-  const timeRemaining = sovereignSeas.getCampaignTimeRemaining(campaign);
-  const now = Math.floor(Date.now() / 1000);
-  const hasStarted = now >= Number(campaign.startTime);
-  const hasEnded = now >= Number(campaign.endTime);
+  if (!campaignStats) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 text-gray-800 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-lg text-blue-600">Processing campaign data...</p>
+        </div>
+      </div>
+    );
+  }
   
-  // Calculate stats
-  const totalProjects = projects.length;
-  const approvedProjects = projects.filter(p => p.approved).length;
-  const totalVotes = formatValue(projects.reduce((sum, project) => sum + Number(sovereignSeas.formatTokenAmount(project.voteCount)), 0));
-  const totalFunds = formatValue(sovereignSeas.formatTokenAmount(campaign.totalFunds));
+  const { 
+    isActive, timeRemaining, hasStarted, hasEnded, now, 
+    totalProjects, approvedProjects, totalVotes, totalFunds 
+  } = campaignStats;
   
-  // Sort projects by fund received (for distribution table)
-  const sortedByFundsProjects = [...projects]
-    .filter(p => Number(p.fundsReceived) > 0)
-    .sort((a, b) => Number(b.fundsReceived) - Number(a.fundsReceived));
-  
-  // Create distribution summary - removed admin and platform fees
-  const distributionSummary = [
-    { name: "Distributed to Projects", amount: Number(totalFunds) },
-  ];
-  
-  // Check if campaign has media content
-  const hasCampaignMedia = campaign.logo?.trim().length > 0 || campaign.demoVideo?.trim().length > 0;
+  const { sortedByFundsProjects, distributionSummary } = distributionData;
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-50 text-gray-800">
@@ -1226,7 +1305,7 @@ export default function CampaignDashboard() {
                       <Download className="h-5 w-5 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
                       <span className="relative z-10">Export Campaign Data</span>
                       <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                    </button>
+                      </button>
                   )}
                 </div>
               </div>
@@ -1425,482 +1504,480 @@ export default function CampaignDashboard() {
                 {/* Project List */}
                 {/* Enhanced Project Card with improved theme styling */}
                 <div className="grid grid-cols-1 gap-6 p-6">
-  {sortedProjects.length > 0 ? (
-    sortedProjects.map((project) => (
-      <div
-        key={project.id.toString()}
-        className={`${
-          // Use light red background for non-approved projects
-          !project.approved 
-            ? "bg-red-50/90 border-red-100"
-            : "bg-white/90 border-blue-100"
-        } backdrop-blur-sm rounded-xl border p-5 shadow-lg group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden`}
-      >
-        {/* Decorative gradient border effect on hover */}
-        <div className={`absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500 ${
-          !project.approved 
-            ? "bg-gradient-to-r from-red-500 to-orange-500"
-            : "bg-gradient-to-r from-blue-500 to-indigo-500"
-        }`}></div>
-        
-        {/* Project Status Indicator - Moved to top-right with increased width */}
-        <div className="absolute top-4 right-4 z-20">
-          {project.approved ? (
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm whitespace-nowrap">
-              Approved
-            </span>
-          ) : (
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200 shadow-sm whitespace-nowrap">
-              Awaiting Approval
-            </span>
-          )}
-        </div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row gap-5 mt-6 md:mt-0"> {/* Added margin-top for mobile */}
-          {/* Project Image/Logo */}
-          <div className={`w-full md:w-28 h-28 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300 ${
-            !project.approved 
-              ? "bg-gradient-to-br from-gray-50 to-red-50 border border-red-100"
-              : "bg-gradient-to-br from-gray-50 to-blue-50 border border-blue-100"
-          }`}>
-            {project.logo ? (
-              <img 
-                src={project.logo} 
-                alt={project.name} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Code className={`h-12 w-12 ${
-                !project.approved ? "text-red-300" : "text-blue-300"
-              }`} />
-            )}
-          </div>
-          
-          {/* Project Info */}
-          <div className="flex-grow">
-            <h3 className={`text-xl font-bold mb-1 pr-24 bg-clip-text text-transparent ${
-              !project.approved 
-                ? "bg-gradient-to-r from-red-700 to-orange-700"
-                : "bg-gradient-to-r from-blue-700 to-indigo-700"
-            }`}>
-              <a 
-                href={`/campaign/${campaignId}/project/${project.id}`}
-                className={`hover:underline decoration-2 underline-offset-4 transition-all ${
-                  !project.approved ? "decoration-red-300" : "decoration-blue-300"
-                }`}
-              >
-                {project.name}
-              </a>
-            </h3>
-            
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-              {project.description}
-            </p>
-            
-            <div className="flex flex-wrap gap-3 mb-4">
-              {project.githubLink && (
-                <a 
-                  href={project.githubLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm"
-                >
-                  <Github className="h-3.5 w-3.5 mr-1.5" />
-                  GitHub
-                </a>
-              )}
-              
-              {project.socialLink && (
-                <a 
-                  href={project.socialLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm"
-                >
-                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                  Social
-                </a>
-              )}
-              
-              {project.testingLink && (
-                <a 
-                  href={project.testingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200 shadow-sm"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                  Test App
-                </a>
-              )}
-              
-              {project.demoVideo && (
-                <a 
-                  href={project.demoVideo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-700 hover:bg-red-100 transition-colors border border-red-200 shadow-sm"
-                >
-                  <Video className="h-3.5 w-3.5 mr-1.5" />
-                  Demo
-                </a>
-              )}
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-grow max-w-md">
-                <div className="flex justify-between items-center mb-1.5 text-xs text-gray-500">
-                  <span>Vote Progress</span>
-                  <span className={`font-medium ${!project.approved ? "text-red-600" : "text-blue-600"}`}>
-                    {formatValue(sovereignSeas.formatTokenAmount(project.voteCount))} votes
-                  </span>
-                </div>
-                <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className={`absolute top-0 left-0 h-full rounded-full animate-pulse-slow ${
-                      !project.approved 
-                        ? "bg-gradient-to-r from-red-500 to-orange-500"
-                        : "bg-gradient-to-r from-blue-500 to-indigo-600"
-                    }`} 
-                    style={{ 
-                      width: `${Math.min(100, Number(sovereignSeas.formatTokenAmount(project.voteCount)) / Number(totalVotes) * 100)}%` 
-                    }}
-                  ></div>
-                </div>
-              </div>
-              
-              {fundsDistributed && Number(project.fundsReceived) > 0 && (
-                <span className="text-emerald-700 font-medium text-sm whitespace-nowrap flex items-center px-3 py-1 bg-emerald-50 rounded-full border border-emerald-200 shadow-sm">
-                  <Award className="h-3.5 w-3.5 mr-1.5" />
-                  {formatValue(sovereignSeas.formatTokenAmount(project.fundsReceived))} CELO
-                </span>
-              )}
-            </div>
-          </div>
-          
-          {/* Actions - Modified to ensure no overlap with status indicator */}
-          <div className="flex flex-row md:flex-col gap-3 mt-4 md:mt-10 justify-center md:justify-start md:items-end md:min-w-[120px]">
-            {/* Only show vote button for approved projects */}
-            {isActive && project.approved && (
-              <button
-                onClick={() => {
-                  setSelectedProject(project);
-                  setVoteModalVisible(true);
-                }}
-                disabled={!isConnected}
-                className="px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border border-blue-400/30 relative overflow-hidden group"
-              >
-                <span className="flex items-center relative z-10">
-                  <TrendingUp className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-12 transition-transform duration-300" />
-                  Vote
-                </span>
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-              </button>
-            )}
-            
-            <button
-              onClick={() => {
-                setSelectedProject(project);
-                setTokenVoteDistributionVisible(true);
-                loadProjectTokenVotes();
-              }}
-              className={`px-4 py-2.5 rounded-full text-sm font-medium border hover:shadow-md relative overflow-hidden group ${
-                !project.approved 
-                  ? "bg-white text-red-600 border-red-200 hover:bg-red-50"
-                  : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
-              }`}
-            >
-              <span className="flex items-center relative z-10">
-                <PieChart className="h-3.5 w-3.5 mr-1.5 group-hover:translate-x-1 transition-transform duration-300" />
-                Details
-              </span>
-              <span className={`absolute inset-0 w-full h-full -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
-                !project.approved 
-                  ? "bg-gradient-to-r from-transparent via-red-100/50 to-transparent"
-                  : "bg-gradient-to-r from-transparent via-blue-100/50 to-transparent"
-              }`}></span>
-            </button>
-          </div>
-        </div>
-      </div>
-    ))
-  ) : (
-    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 flex items-start border border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
-      <div className="relative z-10">
-        {projectStatusFilter === 'approved' ? (
-          <>
-            <div className="flex items-start">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No approved projects yet</h3>
-                <p className="text-gray-600 mb-4">
-                  Be the first to submit a project to this campaign!
-                </p>
-                <button
-                  onClick={() => router.push(`/campaign/${campaignId}/submit`)}
-                  className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
-                >
-                  <span className="flex items-center relative z-10">
-                    <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                    Submit Project
-                  </span>
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              </div>
-            </div>
-          </>
-        ) : projectStatusFilter === 'pending' ? (
-          <>
-            <div className="flex items-start">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4 flex-shrink-0">
-                <Info className="h-6 w-6 text-blue-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No pending projects</h3>
-                <p className="text-gray-600">
-                  All submitted projects have been reviewed by the campaign administrators.
-                </p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-start">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No projects found</h3>
-                <p className="text-gray-600 mb-4">
-                  This campaign doesn't have any projects yet. Be the first to submit one!
-                </p>
-                <button
-                  onClick={() => router.push(`/campaign/${campaignId}/submit`)}
-                  className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
-                >
-                  <span className="flex items-center relative z-10">
-                    <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                    Submit Project
-                  </span>
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  )}
-</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-   {/* Multi-Token Vote Modal */}
-{voteModalVisible && selectedProject && (
-  <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl w-full max-w-md shadow-2xl border border-blue-200 relative overflow-hidden group animate-float-delay-1">
-      {/* Background decorative elements */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-xl"></div>
-      <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-gradient-to-tr from-indigo-400/20 to-purple-400/20 rounded-full blur-xl"></div>
-      
-      {/* Gradient border effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-20 transition-opacity duration-700 rounded-2xl"></div>
-      
-      <div className="relative p-6 z-10">
-        <button 
-          onClick={() => setVoteModalVisible(false)} 
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:rotate-90 transition-all duration-300"
-        >
-          <X className="h-5 w-5" />
-        </button>
-        
-        {/* Header with project details */}
-        <div className="mb-6 pb-6 border-b border-gray-200">
-          <div className="flex items-center mb-2">
-            <Hash className="h-5 w-5 text-blue-500 mr-2" />
-            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-              Vote for Project
-            </h3>
-          </div>
-          
-          <div className="flex items-center mt-3">
-            {selectedProject.logo ? (
-              <div className="w-12 h-12 rounded-lg overflow-hidden border border-blue-100 shadow-sm mr-3 flex-shrink-0">
-                <img src={selectedProject.logo} alt={selectedProject.name} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                <Code className="h-6 w-6 text-blue-400" />
-              </div>
-            )}
-            <div>
-              <p className="text-lg font-semibold text-gray-800">{selectedProject.name}</p>
-              <p className="text-sm text-blue-600 flex items-center">
-                <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
-                {formatValue(sovereignSeas.formatTokenAmount(selectedProject.voteCount))} votes
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Token Selection */}
-        <div className="mb-5">
-          <label className="block text-gray-700 font-medium mb-2 flex items-center">
-            <CreditCard className="h-4 w-4 mr-2 text-blue-500" />
-            Select Token
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-            {supportedTokens.map((token) => (
-              <button
-                key={token.address}
-                onClick={() => {
-                  setSelectedToken(token.address);
-                  // When token is selected, fetch its balance
-                  fetchAllTokenBalances();
-                }}
-                className={`py-2.5 px-3 rounded-lg border flex items-center justify-center text-sm transition-all duration-300 ${
-                  selectedToken === token.address
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 font-medium shadow-sm transform scale-105'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {token.isNative ? (
-                  <Coins className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
-                ) : (
-                  <CreditCard className="h-3.5 w-3.5 mr-1.5 text-indigo-500" />
-                )}
-                {token.symbol || getTokenSymbol(token.address)}
-              </button>
-            ))}
-          </div>
-          
-          {/* Wallet Balance (with proper formatting) */}
-          {selectedToken && (
-            <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg mb-3 flex items-center justify-between border border-blue-100">
-              <span className="text-xs text-gray-600">Your wallet balance:</span>
-              <span className="text-sm font-medium text-blue-700">
-                {address && selectedToken ? (
-                  tokenBalances[selectedToken] !== undefined ? (
-                    `${formatTokenBalance(selectedToken, tokenBalances[selectedToken])} ${getTokenSymbol(selectedToken)}`
+                  {sortedProjects.length > 0 ? (
+                    sortedProjects.map((project) => (
+                      <div
+                        key={project.id.toString()}
+                        className={`${
+                          // Use light red background for non-approved projects
+                          !project.approved 
+                            ? "bg-red-50/90 border-red-100"
+                            : "bg-white/90 border-blue-100"
+                        } backdrop-blur-sm rounded-xl border p-5 shadow-lg group hover:shadow-xl transition-all hover:-translate-y-1 duration-300 relative overflow-hidden`}
+                      >
+                        {/* Decorative gradient border effect on hover */}
+                        <div className={`absolute -inset-0.5 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500 ${
+                          !project.approved 
+                            ? "bg-gradient-to-r from-red-500 to-orange-500"
+                            : "bg-gradient-to-r from-blue-500 to-indigo-500"
+                        }`}></div>
+                        
+                        {/* Project Status Indicator - Moved to top-right with increased width */}
+                        <div className="absolute top-4 right-4 z-20">
+                          {project.approved ? (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm whitespace-nowrap">
+                              Approved
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200 shadow-sm whitespace-nowrap">
+                              Awaiting Approval
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="relative z-10 flex flex-col md:flex-row gap-5 mt-6 md:mt-0"> {/* Added margin-top for mobile */}
+                          {/* Project Image/Logo */}
+                          <div className={`w-full md:w-28 h-28 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300 ${
+                            !project.approved 
+                              ? "bg-gradient-to-br from-gray-50 to-red-50 border border-red-100"
+                              : "bg-gradient-to-br from-gray-50 to-blue-50 border border-blue-100"
+                          }`}>
+                            {project.logo ? (
+                              <img 
+                                src={project.logo} 
+                                alt={project.name} 
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Code className={`h-12 w-12 ${
+                                !project.approved ? "text-red-300" : "text-blue-300"
+                              }`} />
+                            )}
+                          </div>
+                          
+                          {/* Project Info */}
+                          <div className="flex-grow">
+                            <h3 className={`text-xl font-bold mb-1 pr-24 bg-clip-text text-transparent ${
+                              !project.approved 
+                                ? "bg-gradient-to-r from-red-700 to-orange-700"
+                                : "bg-gradient-to-r from-blue-700 to-indigo-700"
+                            }`}>
+                              <a 
+                                href={`/campaign/${campaignId}/project/${project.id}`}
+                                className={`hover:underline decoration-2 underline-offset-4 transition-all ${
+                                  !project.approved ? "decoration-red-300" : "decoration-blue-300"
+                                }`}
+                              >
+                                {project.name}
+                              </a>
+                            </h3>
+                            
+                            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                              {project.description}
+                            </p>
+                            
+                            <div className="flex flex-wrap gap-3 mb-4">
+                              {project.githubLink && (
+                                <a 
+                                  href={project.githubLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm"
+                                >
+                                  <Github className="h-3.5 w-3.5 mr-1.5" />
+                                  GitHub
+                                </a>
+                              )}
+                              
+                              {project.socialLink && (
+                                <a 
+                                  href={project.socialLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm"
+                                >
+                                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                                  Social
+                                </a>
+                              )}
+                              
+                              {project.testingLink && (
+                                <a 
+                                  href={project.testingLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200 shadow-sm"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                  Test App
+                                </a>
+                              )}
+                              
+                              {project.demoVideo && (
+                                <a 
+                                  href={project.demoVideo}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-full bg-red-50 text-red-700 hover:bg-red-100 transition-colors border border-red-200 shadow-sm"
+                                >
+                                  <Video className="h-3.5 w-3.5 mr-1.5" />
+                                  Demo
+                                </a>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-4">
+                              <div className="flex-grow max-w-md">
+                                <div className="flex justify-between items-center mb-1.5 text-xs text-gray-500">
+                                  <span>Vote Progress</span>
+                                  <span className={`font-medium ${!project.approved ? "text-red-600" : "text-blue-600"}`}>
+                                    {formatValue(sovereignSeas.formatTokenAmount(project.voteCount))} votes
+                                  </span>
+                                </div>
+                                <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`absolute top-0 left-0 h-full rounded-full animate-pulse-slow ${
+                                      !project.approved 
+                                        ? "bg-gradient-to-r from-red-500 to-orange-500"
+                                        : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                    }`} 
+                                    style={{ 
+                                      width: `${Math.min(100, Number(sovereignSeas.formatTokenAmount(project.voteCount)) / Number(totalVotes) * 100)}%` 
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                              
+                              {fundsDistributed && Number(project.fundsReceived) > 0 && (
+                                <span className="text-emerald-700 font-medium text-sm whitespace-nowrap flex items-center px-3 py-1 bg-emerald-50 rounded-full border border-emerald-200 shadow-sm">
+                                  <Award className="h-3.5 w-3.5 mr-1.5" />
+                                  {formatValue(sovereignSeas.formatTokenAmount(project.fundsReceived))} CELO
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Actions - Modified to ensure no overlap with status indicator */}
+                          <div className="flex flex-row md:flex-col gap-3 mt-4 md:mt-10 justify-center md:justify-start md:items-end md:min-w-[120px]">
+                            {/* Only show vote button for approved projects */}
+                            {isActive && project.approved && (
+                              <button
+                                onClick={() => {
+                                  setSelectedProject(project);
+                                  setVoteModalVisible(true);
+                                }}
+                                disabled={!isConnected}
+                                className="px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border border-blue-400/30 relative overflow-hidden group"
+                              >
+                                <span className="flex items-center relative z-10">
+                                  <TrendingUp className="h-3.5 w-3.5 mr-1.5 group-hover:rotate-12 transition-transform duration-300" />
+                                  Vote
+                                </span>
+                                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                              </button>
+                            )}
+                            
+                            <button
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setTokenVoteDistributionVisible(true);
+                                loadProjectTokenVotes();
+                              }}
+                              className={`px-4 py-2.5 rounded-full text-sm font-medium border hover:shadow-md relative overflow-hidden group ${
+                                !project.approved 
+                                  ? "bg-white text-red-600 border-red-200 hover:bg-red-50"
+                                  : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                              }`}
+                            >
+                              <span className="flex items-center relative z-10">
+                                <PieChart className="h-3.5 w-3.5 mr-1.5 group-hover:translate-x-1 transition-transform duration-300" />
+                                Details
+                              </span>
+                              <span className={`absolute inset-0 w-full h-full -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
+                                !project.approved 
+                                  ? "bg-gradient-to-r from-transparent via-red-100/50 to-transparent"
+                                  : "bg-gradient-to-r from-transparent via-blue-100/50 to-transparent"
+                              }`}></span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
                   ) : (
-                    <span className="flex items-center">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500 mr-2"></div>
-                      Loading...
-                    </span>
-                  )
-                ) : (
-                  <span className="animate-pulse">Connect wallet to view</span>
-                )}
-              </span>
-            </div>
-          )}
-        </div>
-        
-        {/* Amount Input */}
-        <div className="mb-5">
-          <label className="block text-gray-700 font-medium mb-2 flex items-center">
-            <DollarSign className="h-4 w-4 mr-2 text-blue-500" />
-            Amount
-          </label>
-          <div className="relative">
-            <input 
-              type="number"
-              min="0.1"
-              step="0.1"
-              value={voteAmount}
-              onChange={(e) => setVoteAmount(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-800 transition-all duration-300"
-              placeholder="Enter amount"
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              {getTokenSymbol(selectedToken)}
-            </div>
-          </div>
-          {selectedToken === votingSystem.CELO_ADDRESS && voteAmount && !isNaN(parseFloat(voteAmount)) && parseFloat(voteAmount) > 0 && (
-            <div className="mt-2 rounded-lg px-3 py-2 bg-blue-50 text-blue-700 text-sm border border-blue-100">
-              <div className="flex items-center">
-                <Info className="h-4 w-4 mr-2 text-blue-500" />
-                <span className="font-medium">Voting Power:</span>
-                <span className="ml-2 font-mono">{parseFloat(voteAmount) * Number(campaign.voteMultiplier)} votes</span>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* Exchange Rate Info */}
-        {selectedToken && voteAmount && parseFloat(voteAmount) > 0 && selectedToken !== votingSystem.CELO_ADDRESS && (
-          <div className="mb-5 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 shadow-sm">
-            <div className="flex items-center text-indigo-700 mb-2 font-medium">
-              <Repeat className="h-4 w-4 mr-2 text-indigo-500" />
-              <span>Exchange Rate</span>
-            </div>
-            
-            {loadingExchangeRates ? (
-              <div className="flex items-center justify-center py-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
-                <span className="text-sm text-gray-500">Calculating exchange rate...</span>
-              </div>
-            ) : (
-              tokenExchangeRates[selectedToken] && (
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Approximate CELO:</span>
-                    <span className="text-blue-700 font-medium font-mono">{tokenExchangeRates[selectedToken].expectedCelo}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-indigo-100 pt-1.5 mt-1.5">
-                    <span className="text-gray-600">Voting power (after fees):</span>
-                    <span className="text-indigo-700 font-medium font-mono">{tokenExchangeRates[selectedToken].voteAmount}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-indigo-100 pt-1.5 mt-1.5">
-                    <span className="text-gray-600">Slippage tolerance:</span>
-                    <span className="text-green-600 font-medium">2.0%</span>
-                  </div>
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 flex items-start border border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-10 blur-sm transition-all duration-500"></div>
+                      <div className="relative z-10">
+                        {projectStatusFilter === 'approved' ? (
+                          <>
+                            <div className="flex items-start">
+                              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
+                                <AlertTriangle className="h-6 w-6 text-amber-500" />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">No approved projects yet</h3>
+                                <p className="text-gray-600 mb-4">
+                                  Be the first to submit a project to this campaign!
+                                </p>
+                                <button
+                                  onClick={() => router.push(`/campaign/${campaignId}/submit`)}
+                                  className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
+                                >
+                                  <span className="flex items-center relative z-10">
+                                    <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                                    Submit Project
+                                  </span>
+                                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        ) : projectStatusFilter === 'pending' ? (
+                          <>
+                            <div className="flex items-start">
+                              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4 flex-shrink-0">
+                                <Info className="h-6 w-6 text-blue-500" />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">No pending projects</h3>
+                                <p className="text-gray-600">
+                                  All submitted projects have been reviewed by the campaign administrators.
+                                </p>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-start">
+                              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mr-4 flex-shrink-0">
+                                <AlertTriangle className="h-6 w-6 text-amber-500" />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">No projects found</h3>
+                                <p className="text-gray-600 mb-4">
+                                  This campaign doesn't have any projects yet. Be the first to submit one!
+                                </p>
+                                <button
+                                  onClick={() => router.push(`/campaign/${campaignId}/submit`)}
+                                  className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-flex items-center border border-blue-400/30 relative overflow-hidden group"
+                                >
+                                  <span className="flex items-center relative z-10">
+                                    <Plus className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                                    Submit Project
+                                  </span>
+                                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )
-            )}
-          </div>
-        )}
-
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={handleVote} // Using our updated handleVote with fixed 2% slippage
-            disabled={votingSystem.isLoading || !selectedToken || !voteAmount || parseFloat(voteAmount) <= 0}
-            className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:shadow-none disabled:hover:translate-y-0 border border-blue-400/30 relative overflow-hidden group"
-          >
-            {votingSystem.isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Processing...
               </div>
-            ) : (
-              <>
-                <span className="relative z-10 flex items-center justify-center">
-                  <MousePointerClick className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                  Confirm Vote
-                </span>
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-              </>
-            )}
-          </button>
-          
-          <button
-            onClick={() => setVoteModalVisible(false)}
-            className="py-3 px-6 bg-white text-blue-600 font-medium border border-blue-200 rounded-full hover:bg-blue-50 transition-colors shadow-sm hover:shadow relative overflow-hidden group"
-          >
-            <span className="relative z-10">Cancel</span>
-            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-          </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-)}
+      
+      {/* Multi-Token Vote Modal */}
+      {voteModalVisible && selectedProject && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl w-full max-w-md shadow-2xl border border-blue-200 relative overflow-hidden group animate-float-delay-1">
+            {/* Background decorative elements */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-xl"></div>
+            <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-gradient-to-tr from-indigo-400/20 to-purple-400/20 rounded-full blur-xl"></div>
+            
+            {/* Gradient border effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-20 transition-opacity duration-700 rounded-2xl"></div>
+            
+            <div className="relative p-6 z-10">
+              <button 
+                onClick={() => setVoteModalVisible(false)} 
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:rotate-90 transition-all duration-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              
+              {/* Header with project details */}
+              <div className="mb-6 pb-6 border-b border-gray-200">
+                <div className="flex items-center mb-2">
+                  <Hash className="h-5 w-5 text-blue-500 mr-2" />
+                  <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                    Vote for Project
+                    </h3>
+                </div>
+                
+                <div className="flex items-center mt-3">
+                  {selectedProject.logo ? (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-blue-100 shadow-sm mr-3 flex-shrink-0">
+                      <img src={selectedProject.logo} alt={selectedProject.name} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
+                      <Code className="h-6 w-6 text-blue-400" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-lg font-semibold text-gray-800">{selectedProject.name}</p>
+                    <p className="text-sm text-blue-600 flex items-center">
+                      <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
+                      {formatValue(sovereignSeas.formatTokenAmount(selectedProject.voteCount))} votes
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Token Selection */}
+              <div className="mb-5">
+                <label className="block text-gray-700 font-medium mb-2 flex items-center">
+                  <CreditCard className="h-4 w-4 mr-2 text-blue-500" />
+                  Select Token
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                  {supportedTokens.map((token) => (
+                    <button
+                      key={token.address}
+                      onClick={() => {
+                        setSelectedToken(token.address);
+                      }}
+                      className={`py-2.5 px-3 rounded-lg border flex items-center justify-center text-sm transition-all duration-300 ${
+                        selectedToken === token.address
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 text-blue-700 font-medium shadow-sm transform scale-105'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {token.isNative ? (
+                        <Coins className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+                      ) : (
+                        <CreditCard className="h-3.5 w-3.5 mr-1.5 text-indigo-500" />
+                      )}
+                      {token.symbol || getTokenSymbol(token.address)}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Wallet Balance (with proper formatting) */}
+                {selectedToken && (
+                  <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg mb-3 flex items-center justify-between border border-blue-100">
+                    <span className="text-xs text-gray-600">Your wallet balance:</span>
+                    <span className="text-sm font-medium text-blue-700">
+                      {address && selectedToken ? (
+                        tokenBalances[selectedToken] !== undefined ? (
+                          `${formatTokenBalance(selectedToken, tokenBalances[selectedToken])} ${getTokenSymbol(selectedToken)}`
+                        ) : (
+                          <span className="flex items-center">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500 mr-2"></div>
+                            Loading...
+                          </span>
+                        )
+                      ) : (
+                        <span className="animate-pulse">Connect wallet to view</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Amount Input */}
+              <div className="mb-5">
+                <label className="block text-gray-700 font-medium mb-2 flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2 text-blue-500" />
+                  Amount
+                </label>
+                <div className="relative">
+                  <input 
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={voteAmount}
+                    onChange={(e) => setVoteAmount(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 text-gray-800 transition-all duration-300"
+                    placeholder="Enter amount"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    {getTokenSymbol(selectedToken)}
+                  </div>
+                </div>
+                {selectedToken === votingSystem?.CELO_ADDRESS && voteAmount && !isNaN(parseFloat(voteAmount)) && parseFloat(voteAmount) > 0 && (
+                  <div className="mt-2 rounded-lg px-3 py-2 bg-blue-50 text-blue-700 text-sm border border-blue-100">
+                    <div className="flex items-center">
+                      <Info className="h-4 w-4 mr-2 text-blue-500" />
+                      <span className="font-medium">Voting Power:</span>
+                      <span className="ml-2 font-mono">{parseFloat(voteAmount) * Number(campaign.voteMultiplier)} votes</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Exchange Rate Info */}
+              {selectedToken && voteAmount && parseFloat(voteAmount) > 0 && selectedToken !== votingSystem?.CELO_ADDRESS && (
+                <div className="mb-5 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 shadow-sm">
+                  <div className="flex items-center text-indigo-700 mb-2 font-medium">
+                    <Repeat className="h-4 w-4 mr-2 text-indigo-500" />
+                    <span>Exchange Rate</span>
+                  </div>
+                  
+                  {loadingExchangeRates ? (
+                    <div className="flex items-center justify-center py-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                      <span className="text-sm text-gray-500">Calculating exchange rate...</span>
+                    </div>
+                  ) : (
+                    tokenExchangeRates[selectedToken] && (
+                      <div className="space-y-1.5 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Approximate CELO:</span>
+                          <span className="text-blue-700 font-medium font-mono">{tokenExchangeRates[selectedToken].expectedCelo}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-indigo-100 pt-1.5 mt-1.5">
+                          <span className="text-gray-600">Voting power (after fees):</span>
+                          <span className="text-indigo-700 font-medium font-mono">{tokenExchangeRates[selectedToken].voteAmount}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-indigo-100 pt-1.5 mt-1.5">
+                          <span className="text-gray-600">Slippage tolerance:</span>
+                          <span className="text-green-600 font-medium">2.0%</span>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleVote} // Using our updated handleVote with fixed 2% slippage
+                  disabled={votingSystem?.isLoading || !selectedToken || !voteAmount || parseFloat(voteAmount) <= 0}
+                  className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:shadow-none disabled:hover:translate-y-0 border border-blue-400/30 relative overflow-hidden group"
+                >
+                  {votingSystem?.isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    <>
+                      <span className="relative z-10 flex items-center justify-center">
+                        <MousePointerClick className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                        Confirm Vote
+                      </span>
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => setVoteModalVisible(false)}
+                  className="py-3 px-6 bg-white text-blue-600 font-medium border border-blue-200 rounded-full hover:bg-blue-50 transition-colors shadow-sm hover:shadow relative overflow-hidden group"
+                >
+                  <span className="relative z-10">Cancel</span>
+                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Token Vote Distribution Modal */}
       {tokenVoteDistributionVisible && selectedProject && allProjectVotes && (
@@ -1922,7 +1999,13 @@ export default function CampaignDashboard() {
               {/* Pie Chart - takes 2 columns on large screens */}
               <div className="lg:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-center">
                 <div className="w-full max-w-xs">
-                  <TokenVotePieChart projectData={selectedProject} voteSummary={allProjectVotes} />
+                  <TokenVotePieChart 
+                    projectData={selectedProject} 
+                    voteSummary={allProjectVotes}
+                    formatValue={formatValue}
+                    sovereignSeas={sovereignSeas}
+                    votingSystem={votingSystem}
+                  />
                 </div>
               </div>
               
@@ -1966,7 +2049,7 @@ export default function CampaignDashboard() {
                       {allProjectVotes && allProjectVotes.tokenVotes && 
                        allProjectVotes.tokenVotes.map((tokenVote: TokenVote, index: number) => {
                         // Skip CELO as it's shown above
-                        if (tokenVote.tokenAddress.toLowerCase() === votingSystem.CELO_ADDRESS.toLowerCase()) return null;
+                        if (tokenVote.tokenAddress.toLowerCase() === votingSystem?.CELO_ADDRESS?.toLowerCase()) return null;
                         
                         // Calculate percentage of total
                         const totalCeloValue = Number(parseFloat(sovereignSeas.formatTokenAmount(selectedProject.voteCount)));
@@ -2044,63 +2127,83 @@ function getTokenColor(index: number) {
   return colors[index % colors.length];
 }
 
-// Token Vote Pie Chart Component
-const TokenVotePieChart = ({ projectData, voteSummary }: { projectData: any; voteSummary: ProjectVoteSummary }) => {
+// Token Vote Pie Chart Component - Optimized as a memoized component
+const TokenVotePieChart = React.memo(({ 
+  projectData, 
+  voteSummary,
+  formatValue,
+  sovereignSeas,
+  votingSystem
+}: { 
+  projectData: any; 
+  voteSummary: ProjectVoteSummary;
+  formatValue: (value: string) => string;
+  sovereignSeas: any;
+  votingSystem: any;
+}) => {
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
-  const sovereignSeas = useSovereignSeas();
-  const votingSystem = useVotingSystem();
   
+  // Compute chart data only when inputs change
   useEffect(() => {
     // Default data if nothing else is available
     let data: ChartDataItem[] = [
       { name: "CELO", value: 100, color: "#3B82F6", percentage: "100" }
     ];
     
-    if (projectData && voteSummary && voteSummary.tokenVotes && voteSummary.tokenVotes.length > 0) {
-      // Build data from token votes
-      const totalCeloValue = Number(parseFloat(sovereignSeas.formatTokenAmount(projectData.voteCount)));
-      
-      // Start with CELO as the main segment
-      data = [
-        { 
-          name: "CELO", 
-          value: totalCeloValue, 
-          color: "#3B82F6",
-          percentage: "100" 
-        }
-      ];
-      
-      // Add other tokens
-      voteSummary.tokenVotes.forEach((tokenVote: TokenVote, index: number) => {
-        if (tokenVote.tokenAddress.toLowerCase() === votingSystem.CELO_ADDRESS.toLowerCase()) return; // Skip CELO as it's handled above
+    if (projectData && voteSummary && voteSummary.tokenVotes && voteSummary.tokenVotes.length > 0 && 
+        sovereignSeas && votingSystem) {
+      try {
+        // Build data from token votes
+        const totalCeloValue = Number(parseFloat(sovereignSeas.formatTokenAmount(projectData.voteCount)));
         
-        const tokenCeloValue = Number(parseFloat(votingSystem.formatAmount(
-          votingSystem.CELO_ADDRESS, BigInt(tokenVote.celoEquivalent)
-        )));
+        // Start with CELO as the main segment
+        data = [
+          { 
+            name: "CELO", 
+            value: totalCeloValue, 
+            color: "#3B82F6",
+            percentage: "100" 
+          }
+        ];
         
-        const percentage = ((tokenCeloValue / totalCeloValue) * 100).toFixed(1);
-        
-        // Color palette
-        const colors = ["#4F46E5", "#8B5CF6", "#EC4899", "#06B6D4", "#6366F1"];
-        const colorIndex = index % colors.length;
-        
-        // Use the token symbol or a fallback
-        const tokenName = tokenVote.symbol || 
-                         (tokenVote.tokenAddress.toLowerCase() === "0x471EcE3750Da237f93B8E339c536989b8978a438" ? 
-                          "cUSD" : 
-                          `${tokenVote.tokenAddress.slice(0,6)}...${tokenVote.tokenAddress.slice(-4)}`);
-        
-        data.push({
-          name: tokenName,
-          value: tokenCeloValue,
-          color: colors[colorIndex],
-          percentage: percentage
+        // Add other tokens
+        voteSummary.tokenVotes.forEach((tokenVote: TokenVote, index: number) => {
+          if (tokenVote.tokenAddress.toLowerCase() === votingSystem.CELO_ADDRESS?.toLowerCase()) return; // Skip CELO as it's handled above
+          
+          try {
+            const tokenCeloValue = Number(parseFloat(votingSystem.formatAmount(
+              votingSystem.CELO_ADDRESS, BigInt(tokenVote.celoEquivalent)
+            )));
+            
+            const percentage = ((tokenCeloValue / totalCeloValue) * 100).toFixed(1);
+            
+            // Color palette
+            const colors = ["#4F46E5", "#8B5CF6", "#EC4899", "#06B6D4", "#6366F1"];
+            const colorIndex = index % colors.length;
+            
+            // Use the token symbol or a fallback
+            const tokenName = tokenVote.symbol || 
+                          (tokenVote.tokenAddress.toLowerCase() === "0x471EcE3750Da237f93B8E339c536989b8978a438" ? 
+                            "cUSD" : 
+                            `${tokenVote.tokenAddress.slice(0,6)}...${tokenVote.tokenAddress.slice(-4)}`);
+            
+            data.push({
+              name: tokenName,
+              value: tokenCeloValue,
+              color: colors[colorIndex],
+              percentage: percentage
+            });
+          } catch (err) {
+            console.error("Error processing token vote", err);
+          }
         });
-      });
+      } catch (err) {
+        console.error("Error processing chart data", err);
+      }
     }
     
     setChartData(data);
-  }, [projectData, voteSummary]);
+  }, [projectData, voteSummary, sovereignSeas, votingSystem]);
   
   // If no data or React component isn't available, show placeholder
   if (!chartData || chartData.length === 0) {
@@ -2169,5 +2272,7 @@ const TokenVotePieChart = ({ projectData, voteSummary }: { projectData: any; vot
       </div>
     </div>
   );
-};
-                  
+});
+
+// Add display name for React DevTools
+TokenVotePieChart.displayName = "TokenVotePieChart";
