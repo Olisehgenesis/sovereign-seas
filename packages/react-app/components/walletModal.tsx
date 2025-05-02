@@ -16,14 +16,16 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   RefreshCw,
-  LogOut
+  LogOut,
+  AlertCircle
 } from 'lucide-react';
 import { Fragment } from 'react';
 import { useAccount } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, parseEther, parseUnits } from 'viem';
 import { useCeloSwapperV3 } from '../hooks/useCeloSwapperV3';
 import { abbreviateAddress } from '@/utils/formatting';
 import { usePrivy } from '@privy-io/react-auth';
+import {  useSendTransaction } from 'wagmi';
 
 // Define token types for display
 type TokenBalance = {
@@ -47,6 +49,9 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
   const [sendAmountInput, setSendAmountInput] = useState('');
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
   
   // Helper function for BigInt exponentiation
   const bigIntPow = (base: bigint, exponent: bigint): bigint => {
@@ -225,6 +230,116 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
     ];
     
     return colors[symbol] || defaultColors[Math.floor(symbol.length % defaultColors.length)];
+  };
+
+  // Function to handle sending tokens
+  const handleSendTokens = async () => {
+    if (!selectedToken || !address || !sendAddressInput || !sendAmountInput || !celoSwapper.publicClient || !celoSwapper.walletClient) {
+      setSendError("Missing required information");
+      return;
+    }
+    
+    try {
+      setSendError(null);
+      setSendSuccess(null);
+      setIsSending(true);
+      
+      // Validate address
+      if (!sendAddressInput.startsWith('0x') || sendAddressInput.length !== 42) {
+        setSendError("Invalid recipient address");
+        setIsSending(false);
+        return;
+      }
+      
+      // Parse amount
+      const selectedTokenInfo = tokenBalances.find(t => t.address === selectedToken);
+      if (!selectedTokenInfo) {
+        setSendError("Token not found");
+        setIsSending(false);
+        return;
+      }
+      
+      let parsedAmount: bigint;
+      try {
+        if (selectedTokenInfo.decimals === 18) {
+          parsedAmount = parseEther(sendAmountInput);
+        } else {
+          parsedAmount = parseUnits(sendAmountInput, selectedTokenInfo.decimals);
+        }
+      } catch (error) {
+        setSendError("Invalid amount");
+        setIsSending(false);
+        return;
+      }
+      
+      // Check if amount is greater than balance
+      if (parsedAmount > selectedTokenInfo.balance) {
+        setSendError("Amount exceeds balance");
+        setIsSending(false);
+        return;
+      }
+      
+      // Execute transaction based on token type
+      if (selectedToken.toLowerCase() === celoSwapper.CELO_ADDRESS.toLowerCase()) {
+        // Native CELO transfer
+        const tx = await celoSwapper.walletClient.sendTransaction({
+          to: sendAddressInput as `0x${string}`,
+          value: parsedAmount,
+        });
+        
+        // Wait for transaction
+        const receipt = await celoSwapper.publicClient.waitForTransactionReceipt({ 
+          hash: tx 
+        });
+        
+        if (receipt.status === 'success') {
+          setSendSuccess(`Successfully sent ${sendAmountInput} ${selectedTokenInfo.symbol} to ${abbreviateAddress(sendAddressInput)}`);
+          // Reset form
+          setSendAmountInput('');
+          // Refresh balances
+          fetchTokenBalances();
+        } else {
+          setSendError("Transaction failed");
+        }
+      } else {
+        // ERC20 token transfer
+        const tx = await celoSwapper.walletClient.writeContract({
+          address: selectedToken as `0x${string}`,
+          abi: [{
+            name: 'transfer',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'to', type: 'address' },
+              { name: 'amount', type: 'uint256' }
+            ],
+            outputs: [{ name: '', type: 'bool' }]
+          }],
+          functionName: 'transfer',
+          args: [sendAddressInput as `0x${string}`, parsedAmount]
+        });
+        
+        // Wait for transaction
+        const receipt = await celoSwapper.publicClient.waitForTransactionReceipt({ 
+          hash: tx 
+        });
+        
+        if (receipt.status === 'success') {
+          setSendSuccess(`Successfully sent ${sendAmountInput} ${selectedTokenInfo.symbol} to ${abbreviateAddress(sendAddressInput)}`);
+          // Reset form
+          setSendAmountInput('');
+          // Refresh balances
+          fetchTokenBalances();
+        } else {
+          setSendError("Transaction failed");
+        }
+      }
+    } catch (error: any) {
+      console.error("Error sending tokens:", error);
+      setSendError(error.message || "Failed to send tokens");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -471,6 +586,21 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">Send Tokens</h4>
                     
+                    {/* Status messages */}
+                    {sendError && (
+                      <div className="bg-red-50 p-3 rounded-lg border border-red-100 flex items-start mb-4">
+                        <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-700">{sendError}</p>
+                      </div>
+                    )}
+                    
+                    {sendSuccess && (
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-100 flex items-start mb-4">
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-green-700">{sendSuccess}</p>
+                      </div>
+                    )}
+                    
                     {/* Token selection */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -556,16 +686,29 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                     
                     {/* Send button */}
                     <button
-                      className="w-full py-2.5 mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors flex items-center justify-center"
-                      onClick={() => {
-                        alert("This is a demo - send functionality would be implemented here.");
-                        // Here you would implement the actual send logic
-                      }}
-                      disabled={!selectedToken || !sendAddressInput || !sendAmountInput}
+                      className={`w-full py-2.5 mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors flex items-center justify-center ${isSending ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      onClick={handleSendTokens}
+                      disabled={!selectedToken || !sendAddressInput || !sendAmountInput || isSending}
                     >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Tokens
+                      {isSending ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Tokens
+                        </>
+                      )}
                     </button>
+                    
+                    {/* Transaction tips */}
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-4">
+                      <p className="text-xs text-blue-700">
+                        <strong>Tip:</strong> Double-check the recipient address before sending. Blockchain transactions cannot be reversed.
+                      </p>
+                    </div>
                   </div>
                 )}
 
