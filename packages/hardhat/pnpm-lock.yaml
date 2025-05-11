@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@openzeppelin/contracts':
+        specifier: ^5.3.0
+        version: 5.3.0
       dotenv:
         specifier: ^16.4.5
         version: 16.4.7
@@ -712,6 +715,9 @@ packages:
     peerDependencies:
       ethers: ^5.0.0
       hardhat: ^2.0.0
+
+  '@openzeppelin/contracts@5.3.0':
+    resolution: {integrity: sha512-zj/KGoW7zxWUE8qOI++rUM18v+VeLTTzKs/DJFkSzHpQFPD/jKKF0TrMxBfGLl3kpdELCNccvB3zmofSzm4nlA==}
 
   '@pedrouid/environment@1.0.1':
     resolution: {integrity: sha512-HaW78NszGzRZd9SeoI3JD11JqY+lubnaOx7Pewj5pfjqWXOEATpeKIFb9Z4t2WBUK2iryiXX3lzWwmYWgUL0Ug==}
@@ -4052,6 +4058,8 @@ snapshots:
     dependencies:
       ethers: 5.8.0
       hardhat: 2.22.19(ts-node@10.9.2(@types/node@22.13.10)(typescript@5.8.2))(typescript@5.8.2)
+
+  '@openzeppelin/contracts@5.3.0': {}
 
   '@pedrouid/environment@1.0.1': {}
 
