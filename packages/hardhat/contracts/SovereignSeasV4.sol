@@ -50,9 +50,19 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
 
     // Platform fee (15%)
     uint256 public constant PLATFORM_FEE = 15;
+    // Campaign creation fee (2 CELO)
+    uint256 public campaignCreationFee = 2 * 1e18; // 2 CELO 
+
+    // Project addition fee (1 CELO)
+    uint256 public projectAdditionFee = 1 * 1e18; // 1 CELO 
+
 
     // Super admins mapping
     mapping(address => bool) public superAdmins;
+
+    // Total collected fees
+    mapping(address => uint256) public collectedFees; // token => amount
+
     
     // Bypass secret code (set by super admin)
     bytes32 private bypassSecretCode;
@@ -241,6 +251,12 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         bool tokensNeededForActiveCampaigns
     );
 
+        // Events for fee collection
+    event FeeCollected(address indexed token, uint256 amount, string feeType);
+    event FeeWithdrawn(address indexed token, address indexed recipient, uint256 amount);
+    event FeeAmountUpdated(string feeType, uint256 previousAmount, uint256 newAmount);
+
+
     /**
      * @dev Constructor sets the CELO token address and adds deployer as super admin
      * @param _celoToken Address of the CELO token
@@ -359,6 +375,65 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         
         emit TokenExchangeProviderSet(_token, _provider, _exchangeId);
     }
+        // 2. Add function to update fee amounts (only for owner)
+    /**
+    * @dev Update fee amounts
+    * @param _campaignFee New campaign creation fee in CELO
+    * @param _projectFee New project addition fee in CELO
+    */
+    function updateFeeAmounts(uint256 _campaignFee, uint256 _projectFee) external onlyOwner {
+        uint256 oldCampaignFee = campaignCreationFee;
+        uint256 oldProjectFee = projectAdditionFee;
+        
+        campaignCreationFee = _campaignFee * 1e18; // Convert to 18 decimals
+        projectAdditionFee = _projectFee * 1e18;
+        
+        emit FeeAmountUpdated("campaignCreation", oldCampaignFee, campaignCreationFee);
+        emit FeeAmountUpdated("projectAddition", oldProjectFee, projectAdditionFee);
+    }
+
+    // 3. Add function to withdraw collected fees
+    /**
+    * @dev Withdraw collected fees
+    * @param _token Token address to withdraw
+    * @param _recipient Recipient address
+    * @param _amount Amount to withdraw (0 for all)
+    */
+    function withdrawFees(address _token, address _recipient, uint256 _amount) external onlyOwner {
+        require(_recipient != address(0), "Invalid recipient");
+        
+        uint256 feeBalance = collectedFees[_token];
+        require(feeBalance > 0, "No fees collected for this token");
+        
+        uint256 amountToWithdraw = _amount == 0 ? feeBalance : _amount;
+        require(amountToWithdraw <= feeBalance, "Insufficient fee balance");
+        
+        collectedFees[_token] -= amountToWithdraw;
+        
+        IERC20(_token).safeTransfer(_recipient, amountToWithdraw);
+        
+        emit FeeWithdrawn(_token, _recipient, amountToWithdraw);
+    }
+
+    // 4. Add helper function to collect fees
+    /**
+    * @dev Collect fees in any supported token
+    * @param _token Token address
+    * @param _amount Fee amount in the specified token
+    * @param _feeType Type of fee being collected
+    */
+    function collectFee(address _token, uint256 _amount, string memory _feeType) internal {
+        require(supportedTokens[_token], "Token not supported");
+        
+        // Transfer tokens from sender to contract
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        
+        // Update collected fees
+        collectedFees[_token] += _amount;
+        
+        emit FeeCollected(_token, _amount, _feeType);
+    }
+
 
     /**
      * @dev Deactivate exchange provider for a token
@@ -696,6 +771,73 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         emit ProjectUpdated(_projectId, msg.sender);
     }
 
+        
+    /**
+    * @dev Add a project to a campaign (with fee)
+    * @param _campaignId Campaign ID
+    * @param _projectId Project ID
+    * @param _feeToken Token used to pay the addition fee
+    */
+    function addProjectToCampaign(
+        uint256 _campaignId, 
+        uint256 _projectId, 
+        address _feeToken
+    ) external {
+        require(campaigns[_campaignId].active, "Campaign is not active");
+        require(projects[_projectId].active, "Project is not active");
+        require(block.timestamp < campaigns[_campaignId].endTime, "Campaign has ended");
+        require(supportedTokens[_feeToken], "Fee token not supported");
+        
+        // Check if caller is either project owner or campaign admin
+        require(
+            msg.sender == projects[_projectId].owner || 
+            campaigns[_campaignId].campaignAdmins[msg.sender] || 
+            superAdmins[msg.sender],
+            "Only project owner or campaign admin can add project to campaign"
+        );
+        
+        // Check if project is already in campaign
+        require(!projects[_projectId].campaignParticipation[_campaignId], "Project already in campaign");
+        
+        // Calculate fee amount in the specified token
+        uint256 feeAmount;
+        if (_feeToken == address(celoToken)) {
+            // If paying in CELO, use the exact fee amount
+            feeAmount = projectAdditionFee;
+        } else {
+            // If paying in another token, convert the fee to an equivalent amount
+            feeAmount = IBroker(mentoTokenBroker).getAmountOut(
+                tokenExchangeProviders[address(celoToken)].provider,
+                tokenExchangeProviders[address(celoToken)].exchangeId,
+                address(celoToken),
+                _feeToken,
+                projectAdditionFee
+            );
+            
+            // Add 1% buffer to account for potential price fluctuations
+            feeAmount = (feeAmount * 101) / 100;
+        }
+        if (!canBypassFees(_campaignId, msg.sender)) {
+
+        // Collect the fee
+        collectFee(_feeToken, feeAmount, "projectAddition");
+        }
+        
+        // Add campaign to project
+        projects[_projectId].campaignIds.push(_campaignId);
+        projects[_projectId].campaignParticipation[_campaignId] = true;
+        
+        // Initialize project participation
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        participation.projectId = _projectId;
+        participation.campaignId = _campaignId;
+        participation.approved = false;
+        participation.voteCount = 0;
+        participation.fundsReceived = 0;
+        
+        emit ProjectAddedToCampaign(_campaignId, _projectId);
+    }
+
     /**
      * @dev Update project metadata separately
      * @param _projectId Project ID
@@ -742,7 +884,7 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
     // ======== Campaign Management Functions ========
 
     /**
-     * @dev Create a new campaign
+     * @dev Create a new campaign (with fee)
      * @param _name Campaign name
      * @param _description Campaign description
      * @param _mainInfo Main campaign metadata
@@ -755,6 +897,7 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
      * @param _useCustomDistribution Whether to use custom distribution
      * @param _customDistributionData Custom distribution data (JSON-encoded)
      * @param _payoutToken Token address to use for payouts
+     * @param _feeToken Token used to pay the creation fee
      */
     function createCampaign(
         string memory _name,
@@ -768,12 +911,37 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         bool _useQuadraticDistribution,
         bool _useCustomDistribution,
         string memory _customDistributionData,
-        address _payoutToken
+        address _payoutToken,
+        address _feeToken
     ) external {
         require(_startTime > block.timestamp, "Start time must be in the future");
         require(_endTime > _startTime, "End time must be after start time");
         require(_adminFeePercentage <= 30, "Admin fee too high");
         require(supportedTokens[_payoutToken], "Payout token not supported");
+        require(supportedTokens[_feeToken], "Fee token not supported");
+
+        // Calculate fee amount in the specified token
+        uint256 feeAmount;
+        if (_feeToken == address(celoToken)) {
+            // If paying in CELO, use the exact fee amount
+            feeAmount = campaignCreationFee;
+        } else {
+            // If paying in another token, convert the fee to an equivalent amount
+            feeAmount = IBroker(mentoTokenBroker).getAmountOut(
+                tokenExchangeProviders[address(celoToken)].provider,
+                tokenExchangeProviders[address(celoToken)].exchangeId,
+                address(celoToken),
+                _feeToken,
+                campaignCreationFee
+            );
+            
+            // Add 1% buffer to account for potential price fluctuations
+            feeAmount = (feeAmount * 101) / 100;
+        }
+        if (!canBypassFees(0, msg.sender)) {
+            // Collect the fee
+            collectFee(_feeToken, feeAmount, "campaignCreation");
+        }
 
         uint256 campaignId = nextCampaignId++;
         Campaign storage newCampaign = campaigns[campaignId];
@@ -892,42 +1060,6 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
    }
 
    // ======== Project-Campaign Relationship Functions ========
-
-   /**
-    * @dev Add a project to a campaign
-    * @param _campaignId Campaign ID
-    * @param _projectId Project ID
-    */
-   function addProjectToCampaign(uint256 _campaignId, uint256 _projectId) external {
-       require(campaigns[_campaignId].active, "Campaign is not active");
-       require(projects[_projectId].active, "Project is not active");
-       require(block.timestamp < campaigns[_campaignId].endTime, "Campaign has ended");
-       
-       // Check if caller is either project owner or campaign admin
-       require(
-           msg.sender == projects[_projectId].owner || 
-           campaigns[_campaignId].campaignAdmins[msg.sender] || 
-           superAdmins[msg.sender],
-           "Only project owner or campaign admin can add project to campaign"
-       );
-       
-       // Check if project is already in campaign
-       require(!projects[_projectId].campaignParticipation[_campaignId], "Project already in campaign");
-       
-       // Add campaign to project
-       projects[_projectId].campaignIds.push(_campaignId);
-       projects[_projectId].campaignParticipation[_campaignId] = true;
-       
-       // Initialize project participation
-       ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
-       participation.projectId = _projectId;
-       participation.campaignId = _campaignId;
-       participation.approved = false;
-       participation.voteCount = 0;
-       participation.fundsReceived = 0;
-       
-       emit ProjectAddedToCampaign(_campaignId, _projectId);
-   }
 
    /**
     * @dev Remove a project from a campaign (if no votes received)
@@ -1059,6 +1191,26 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
        );
 
        emit VoteCast(msg.sender, _campaignId, _projectId, _token, _amount, celoEquivalent);
+   }
+
+   /**
+    * @dev Check if a user can bypass fees
+    * @param _campaignId Campaign ID (0 for campaign creation)
+    * @param _user User address to check
+    * @return Boolean indicating if user can bypass fees
+    */
+   function canBypassFees(uint256 _campaignId, address _user) internal view returns (bool) {
+       // Super admins can always bypass fees
+       if (superAdmins[_user]) {
+           return true;
+       }
+       
+       // For campaign-specific operations, campaign admins can bypass fees
+       if (_campaignId > 0) {
+           return campaigns[_campaignId].campaignAdmins[_user];
+       }
+       
+       return false;
    }
 
    /**

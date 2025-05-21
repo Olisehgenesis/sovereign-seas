@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@divvi/referral-sdk": "^1.0.0",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "@privy-io/react-auth": "^2.10.0",

@@ -47,8 +47,7 @@ try {
 } catch (error) {
   console.error('Error reading contract bytecode file:', error);
   console.error('Please make sure your contract is compiled and the bytecode file exists');
-  // For testing, you can uncomment this line and add your bytecode directly
-  // contractBytecode = '0x608060405234801561001057600080fd5b50...';
+  
   process.exit(1);
 }
 

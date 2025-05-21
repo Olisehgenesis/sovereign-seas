@@ -10,6 +10,7 @@ import {
 } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { getContract } from 'viem';
+import { getDataSuffix, submitReferral } from '@divvi/referral-sdk';
 
 // Import ABI
 import sovereignSeasAbi from '../abis/SovereignSeasV2.json';
@@ -18,6 +19,9 @@ import { formatIpfsUrl } from '@/app/utils/imageUtils';
 // get chain id and contract address from .env
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ? Number(process.env.NEXT_PUBLIC_CHAIN_ID) : undefined;
 const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
+const DIVVI_IDENTIFIER = '0x53D2fEB0DD37CF6f9B06580FC86921f47685972B';
+const DIVVI_PROVIDERS = ['0x5f0a55FaD9424ac99429f635dfb9bF20c3360Ab8', '0x6226ddE08402642964f9A6de844ea3116F0dFc7e'];
+
 
 // Updated Types
 export type Campaign = {
@@ -174,6 +178,24 @@ export const useSovereignSeas = (config?: SovereignSeasConfig) => {
 
     checkSuperAdmin();
   }, [isInitialized, walletAddress, actualContractAddress, publicClient]);
+  const addDivviReferral = async (txHash: `0x${string}`, chainId: number) => {
+    try {
+      // Submit the referral to Divvi
+      await submitReferral({
+        txHash,
+        chainId,
+      });
+      console.log('Divvi referral submitted successfully');
+    } catch (error) {
+      console.error('Error submitting Divvi referral:', error);
+    }
+  };
+  const getDivviDataSuffix = () => {
+    return getDataSuffix({
+      consumer: DIVVI_IDENTIFIER,
+      providers: DIVVI_PROVIDERS as `0x${string}`[],
+    });
+  };
 
   // Load available creation fees
   const loadCreationFees = async () => {
@@ -408,27 +430,127 @@ const loadProjects = async (campaignId: bigint | number) => {
     }
   };
 
-  // Vote for a project (updated for native token)
-  const vote = async (campaignId: bigint | number, projectId: bigint | number, amount: string) => {
-    if (!walletClient || !publicClient) return;
+// Modified vote function to include Divvi referral
+const vote = async (campaignId: bigint | number, projectId: bigint | number, amount: string) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    const amountInWei = parseEther(amount);
     
-    try {
-      const amountInWei = parseEther(amount);
-      
-      // Direct vote with native token (no approval needed)
-      writeContract({
-        address: actualContractAddress,
-        abi: sovereignSeasAbi,
-        functionName: 'vote',
-        args: [BigInt(campaignId), BigInt(projectId)],
-        value: amountInWei
-      });
-      
-      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
-    } catch (error) {
-      console.error('Error voting for project:', error);
-    }
-  };
+    // Get the Divvi data suffix
+    const dataSuffix = getDivviDataSuffix();
+    
+    // Prepare the function data without the suffix first
+    const { data: functionData } = await publicClient.simulateContract({
+      address: actualContractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'vote',
+      args: [BigInt(campaignId), BigInt(projectId)],
+      value: amountInWei
+    });
+    
+    // Combine function data with Divvi suffix
+    const dataWithSuffix = functionData + dataSuffix;
+    
+    // Send transaction with the modified data
+    const hash = await walletClient.writeContract({
+      address: actualContractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'vote',
+      args: [BigInt(campaignId), BigInt(projectId)],
+      value: amountInWei,
+      // Override data field with our suffixed data
+      data: dataWithSuffix
+    });
+    
+    // Wait for transaction confirmation
+    await publicClient.waitForTransactionReceipt({ hash });
+    
+    // Submit the referral to Divvi
+    const currentChainId = await walletClient.getChainId();
+    await addDivviReferral(hash, currentChainId);
+  } catch (error) {
+    console.error('Error voting for project:', error);
+  }
+};
+
+// Similarly modify createCampaign function
+const createCampaign = async (
+  name: string,
+  description: string,
+  logo: string,
+  demoVideo: string,
+  startTime: number,
+  endTime: number,
+  adminFeePercentage: number,
+  voteMultiplier: number,
+  maxWinners: number,
+  useQuadraticDistribution: boolean
+) => {
+  if (!walletClient || !publicClient) return;
+  
+  try {
+    // Create the campaign with native token fee
+    const campaignFee = parseEther(CAMPAIGN_CREATION_FEE);
+    
+    // Get the Divvi data suffix
+    const dataSuffix = getDivviDataSuffix();
+    
+    // Prepare the function data without the suffix first
+    const { data: functionData } = await publicClient.simulateContract({
+      address: actualContractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'createCampaign',
+      args: [
+        name, 
+        description,
+        logo,
+        demoVideo,
+        BigInt(startTime), 
+        BigInt(endTime), 
+        BigInt(adminFeePercentage), 
+        BigInt(voteMultiplier),
+        BigInt(maxWinners),
+        useQuadraticDistribution
+      ],
+      value: campaignFee
+    });
+    
+    // Combine function data with Divvi suffix
+    const dataWithSuffix = functionData + dataSuffix;
+    
+    // Send transaction with the modified data
+    const hash = await walletClient.writeContract({
+      address: actualContractAddress,
+      abi: sovereignSeasAbi,
+      functionName: 'createCampaign',
+      args: [
+        name, 
+        description,
+        logo,
+        demoVideo,
+        BigInt(startTime), 
+        BigInt(endTime), 
+        BigInt(adminFeePercentage), 
+        BigInt(voteMultiplier),
+        BigInt(maxWinners),
+        useQuadraticDistribution
+      ],
+      value: campaignFee,
+      data: dataWithSuffix
+    });
+    
+    // Wait for transaction confirmation
+    await publicClient.waitForTransactionReceipt({ hash });
+    
+    // Submit the referral to Divvi
+    const currentChainId = await walletClient.getChainId();
+    await addDivviReferral(hash, currentChainId);
+  } catch (error) {
+    console.error('Error creating campaign:', error);
+  }
+};
+
 
   // Add a new super admin
   const addSuperAdmin = async (newAdminAddress: string) => {
@@ -576,8 +698,6 @@ const loadProjects = async (campaignId: bigint | number) => {
       console.error('Error updating campaign:', error);
     }
   };
-
-  // Submit a project to a campaign (updated for native token)
   const submitProject = async (
     campaignId: bigint | number,
     name: string,
