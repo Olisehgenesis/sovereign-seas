@@ -41,7 +41,11 @@
     "verify": "hardhat verify",
     "verify:contract": "hardhat run scripts/verify.ts --network alfajores",
     "vote": "hardhat run scripts/swapVote.ts ",
+
+
     "viewProjects": "hardhat run scripts/viewProjects.ts",
+    "viewCampaign": "hardhat run scripts/viewCampaign.ts",
+    "createCampaign": "hardhat run scripts/createCampaign.ts",
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",
