@@ -2,7 +2,6 @@
   "name": "@sovereign-seas/hardhat",
   "license": "MIT",
   "version": "1.0.0",
- 
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
@@ -27,8 +26,9 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.2.0",
-    "dotenv": "^16.4.5"
+    "@openzeppelin/contracts": "^5.3.0",
+    "dotenv": "^16.4.5",
+    "viem": "^2.30.0"
   },
   "scripts": {
     "postinstall": "chmod +x sync-abis.js",
@@ -36,8 +36,12 @@
     "tsc": "npx tsc -p . && cp typechain/*.d.ts dist/typechain/",
     "build": "yarn compile && yarn tsc",
     "mint": "pnpm hardhat run scripts/mint.ts --network alfajores",
-    "deploy": "hardhat run scripts/deploy.ts  --network celo",
-
+    "deploy": "hardhat run scripts/deploy.ts ",
+    "withdraw": "pnpm hardhat run scripts/withdraw.ts --network celo",
+    "verify": "hardhat verify",
+    "verify:contract": "hardhat run scripts/verify.ts --network alfajores",
+    "vote": "hardhat run scripts/swapVote.ts ",
+    "viewProjects": "hardhat run scripts/viewProjects.ts",
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",

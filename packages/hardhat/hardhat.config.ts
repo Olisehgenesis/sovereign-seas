@@ -11,6 +11,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 200,
       },
+      viaIR: true,
     },
   },
   networks: {
@@ -56,6 +57,9 @@ const config: HardhatUserConfig = {
     cache: "./cache",
     artifacts: "./artifacts",
   },
+  sourcify: {
+    enabled: true
+  }
 };
 
 export default config;

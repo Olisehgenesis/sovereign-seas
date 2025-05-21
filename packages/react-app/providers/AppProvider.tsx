@@ -5,7 +5,7 @@ import {WagmiProvider} from '@privy-io/wagmi';
 import { PrivyProvider } from '@privy-io/react-auth';
 import Layout from '../components/Layout';
 import { config } from './config';
-import { celo, celoAlfajores } from 'viem/chains';
+import { celo, celoAlfajores } from 'wagmi/chains';
 
 const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID as string;
 const clientId = process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID as string;
@@ -31,7 +31,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               "walletChainType": "ethereum-only",
             },
           
-            defaultChain: celoAlfajores,
+            defaultChain: celo,
             supportedChains: [celo, celoAlfajores]
            
            

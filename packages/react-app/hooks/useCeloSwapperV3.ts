@@ -22,14 +22,14 @@ const celoSwapperV3Abi = celoSwapperV3ABI;
 
 // CELO and cUSD addresses from .env or defaults
 const CELO_ADDRESS = (process.env.NEXT_PUBLIC_CELO_ADDRESS || '0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9') as `0x${string}`;
-const CUSD_ADDRESS = (process.env.NEXT_PUBLIC_CUSD_ADDRESS || '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1') as `0x${string}`;
+const CUSD_ADDRESS = (process.env.NEXT_PUBLIC_CUSD_ADDRESS || '0x765de816845861e75a25fca122bb6898b8b1282a') as `0x${string}`;
 
 // Export contract addresses for use in other components
 export const SWAPPER_V3_ADDRESS = contractAddress;
 
 const tokenNameFallback = (address: string) => {
   // Fallback function to get token name if not available
-  if (address.toLowerCase() === '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1') {
+  if (address.toLowerCase() === '0x765de816845861e75a25fca122bb6898b8b1282a') {
     return { name: 'cUSD', symbol: 'cUSD' };
   }
   if (address.toLowerCase() === '0xD046F2C4E5A3B8F7D1C6E9A0B2D4F5F7D1C6E9A0') {
