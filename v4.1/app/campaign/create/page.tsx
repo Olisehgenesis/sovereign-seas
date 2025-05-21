@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { useSupportedTokens } from '@/hooks/useSupportedTokens';
+import { supportedTokens } from '@/hooks/useSupportedTokens';
 import { 
   ArrowLeft, 
   ArrowRight,
@@ -59,7 +59,7 @@ import { Address } from 'viem';
 export default function CreateCampaign() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { supportedTokens, isLoading: isLoadingTokens } = useSupportedTokens();
+ 
   const [isMounted, setIsMounted] = useState(false);
   
   // Form stages: 1: Basic Info, 2: Timeline & Funding, 3: Rules & Criteria, 4: Review & Submit
@@ -85,6 +85,7 @@ export default function CreateCampaign() {
     logo: '',
     bannerImage: '',
     website: '',
+    videoLink: '',
     
     // Timeline & Funding
     startDate: '',
@@ -124,11 +125,15 @@ export default function CreateCampaign() {
     }],
     
     // Technical Settings
-    payoutToken: '' as Address,
-    feeToken: '' as Address
+    payoutToken: supportedTokens[0].address as Address,
+    feeToken: supportedTokens[0].address as Address
   });
 
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;
+  //bring error if address is not defined
+  if (!contractAddress) {
+    throw new Error('CONTRACT_ADDRESS is not defined');
+  }
   
   // Hook integration
   const {
@@ -581,7 +586,7 @@ export default function CreateCampaign() {
         useCustomDistribution: campaignData.useCustomDistribution,
         customDistributionData,
         payoutToken: campaignData.payoutToken as Address,
-        feeToken: campaignData.feeToken as Address
+        feeToken: campaignData.payoutToken as Address
       };
       
       logDebug('Contract Call Parameters', {
@@ -602,6 +607,12 @@ export default function CreateCampaign() {
       }
       if (startTimeUnix >= endTimeUnix) {
         throw new Error('End time must be after start time');
+      }
+      if (!contractParams.payoutToken || contractParams.payoutToken === '') {
+        throw new Error('Payout token address is required');
+      }
+      if (!contractParams.feeToken || contractParams.feeToken === '') {
+        throw new Error('Fee token address is required');
       }
       if (startTimeUnix <= BigInt(Math.floor(Date.now() / 1000))) {
         logDebug('Start Time Warning', {
@@ -701,44 +712,7 @@ export default function CreateCampaign() {
     return 0;
   };
   
-  // Update the token selection UI
-  const renderTokenSelection = () => {
-    if (isLoadingTokens) {
-      return (
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading supported tokens...</span>
-        </div>
-      );
-    }
-
-    if (!supportedTokens?.length) {
-      return (
-        <div className="text-red-500">
-          No supported tokens found. Please contact support.
-        </div>
-      );
-    }
-
-    return (
-      <select
-        value={campaign.payoutToken}
-        onChange={(e) => setCampaign({
-          ...campaign,
-          payoutToken: e.target.value as Address,
-          feeToken: e.target.value as Address
-        })}
-        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
-      >
-        <option value="">Select a token</option>
-        {supportedTokens.map((tokenAddress) => (
-          <option key={tokenAddress} value={tokenAddress}>
-            {tokenAddress}
-          </option>
-        ))}
-      </select>
-    );
-  };
+  
   
   if (!isMounted) {
     return null;
@@ -1024,6 +998,24 @@ export default function CreateCampaign() {
                        placeholder="https://yourcampaign.com"
                      />
                    </div>
+
+                   {/* Video Link */}
+                   <div>
+                     <label className="block text-purple-700 font-medium mb-3 flex items-center">
+                       <Video className="h-4 w-4 mr-2" />
+                       Campaign Video Link
+                     </label>
+                     <input
+                       type="url"
+                       value={campaign.videoLink}
+                       onChange={(e) => setCampaign({...campaign, videoLink: e.target.value})}
+                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       placeholder="https://youtube.com/watch?v=..."
+                     />
+                     <p className="mt-2 text-sm text-gray-500">
+                       Add a YouTube, Vimeo, or other video platform link to showcase your campaign
+                     </p>
+                   </div>
                  </div>
                )}
 
@@ -1110,11 +1102,37 @@ export default function CreateCampaign() {
                      {/* Add Payout Token Selection */}
                      <div className="mb-6">
                        <label className="block text-purple-700 font-medium mb-3">Payout Token *</label>
-                       {renderTokenSelection()}
-                       <p className="mt-2 text-sm text-gray-500">
-                         Select the token that will be used for campaign payouts
-                       </p>
+                       <select
+                         value={campaign.payoutToken}
+                         onChange={(e) => setCampaign({...campaign, payoutToken: e.target.value as Address})}
+                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       >
+                         {supportedTokens.map((token) => (
+                           <option key={token.address} value={token.address}>
+                             {token.name} ({token.symbol})
+                           </option>
+                         ))}
+                       </select>
                      </div>
+
+                     {/* Add Fee Token Selection */}
+                     <div className="mb-6">
+                       <label className="block text-purple-700 font-medium mb-3">Fee Token *</label>
+                       <select
+                         value={campaign.feeToken}
+                         onChange={(e) => setCampaign({...campaign, feeToken: e.target.value as Address})}
+                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       >
+                         {supportedTokens.map((token) => (
+                           <option key={token.address} value={token.address}>
+                             {token.name} ({token.symbol})
+                           </option>
+                         ))}
+                       </select>
+                     </div>
+
+                      
+                    
 
                      {/* Prize Pool */}
                      <div className="mb-6">

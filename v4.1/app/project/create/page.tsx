@@ -791,44 +791,31 @@ export default function CreateProject() {
                       </div>
                     </div>
 
-                    {/* Demo Video Upload */}
+                    {/* Demo Video */}
                     <div>
                       <label className="block text-blue-700 font-medium mb-3 flex items-center">
                         <Video className="h-4 w-4 mr-2" />
-                        Demo Video (Optional)
+                        Demo Video Link
                       </label>
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-gray-300 transition-colors">
-                        <input
-                          type="file"
-                          ref={videoFileInputRef}
-                          accept="video/*"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              setDemoVideoFile(e.target.files[0]);
-                              setProject({...project, demoVideo: `File selected: ${e.target.files[0].name}`});
-                            }
-                          }}
-                          className="hidden"
-                        />
+                      <div className="border-2 border-dashed border-blue-200 rounded-xl p-6 text-center hover:border-blue-300 transition-colors">
                         <div className="space-y-4">
                           <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                             <Video className="h-8 w-8 text-gray-500" />
                           </div>
                           <div>
-                            <button
-                              type="button"
-                              onClick={() => videoFileInputRef.current?.click()}
-                              className="px-6 py-3 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center mx-auto"
-                            >
-                              <Upload className="h-4 w-4 mr-2" />
-                              Choose Video File
-                            </button>
-                            <p className="text-sm text-gray-500 mt-2">MP4, WebM up to 100MB</p>
+                            <input
+                              type="url"
+                              value={project.demoVideo}
+                              onChange={(e) => setProject({...project, demoVideo: e.target.value})}
+                              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-800 transition-all"
+                              placeholder="https://youtube.com/watch?v=..."
+                            />
+                            <p className="text-sm text-gray-500 mt-2">Enter a YouTube, Vimeo, or other video platform link</p>
                           </div>
                         </div>
                         {project.demoVideo && (
                           <div className="mt-4 text-sm text-blue-600">
-                            ✓ {project.demoVideo.replace('File selected: ', '')}
+                            ✓ Video link added
                           </div>
                         )}
                       </div>

@@ -95,6 +95,9 @@ const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 
   }
 };
 
+
+const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;
+
 // Hook for creating a new campaign
 export function useCreateCampaign(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract();
