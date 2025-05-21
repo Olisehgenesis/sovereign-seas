@@ -94,6 +94,27 @@ interface Campaign {
 
 type ExplorerItem = (Project | Campaign) & { itemType: 'project' | 'campaign' };
 
+// Add debug logging utility
+const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 'info') => {
+  const timestamp = new Date().toISOString();
+  const logData = {
+    timestamp,
+    section,
+    data
+  };
+
+  switch (type) {
+    case 'error':
+      console.error('🔴', logData);
+      break;
+    case 'warn':
+      console.warn('🟡', logData);
+      break;
+    default:
+      console.log('🟢', logData);
+  }
+};
+
 export default function UnifiedExplorer() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
@@ -114,21 +135,39 @@ export default function UnifiedExplorer() {
 
   // Add debug logging for raw data
   useEffect(() => {
-    console.log('Raw Projects Data:', {
+    logDebug('Raw Projects Data', {
       projects,
       isLoading: projectsLoading,
       error: projectsError,
-      contractAddress: CONTRACT_ADDRESS
+      contractAddress: CONTRACT_ADDRESS,
+      timestamp: new Date().toISOString()
     });
+
+    if (projectsError) {
+      logDebug('Projects Error', {
+        error: projectsError,
+        message: projectsError.message,
+        stack: projectsError.stack
+      }, 'error');
+    }
   }, [projects, projectsLoading, projectsError]);
 
   useEffect(() => {
-    console.log('Raw Campaigns Data:', {
+    logDebug('Raw Campaigns Data', {
       campaigns,
       isLoading: campaignsLoading,
       error: campaignsError,
-      contractAddress: CONTRACT_ADDRESS
+      contractAddress: CONTRACT_ADDRESS,
+      timestamp: new Date().toISOString()
     });
+
+    if (campaignsError) {
+      logDebug('Campaigns Error', {
+        error: campaignsError,
+        message: campaignsError.message,
+        stack: campaignsError.stack
+      }, 'error');
+    }
   }, [campaigns, campaignsLoading, campaignsError]);
 
   // Combined categories for both projects and campaigns
@@ -154,8 +193,13 @@ export default function UnifiedExplorer() {
     setIsMounted(true);
   }, []);
 
-  // Helper function to safely parse JSON metadata
+  // Enhanced metadata parsing with logging
   const parseProjectMetadata = (projectDetails: any): ProjectMetadata => {
+    logDebug('Parsing Project Metadata', {
+      input: projectDetails,
+      hasMetadata: !!projectDetails.metadata
+    });
+
     let parsedMetadata: ProjectMetadata = {};
     
     try {
@@ -167,7 +211,9 @@ export default function UnifiedExplorer() {
         try {
           const contractInfo = JSON.parse(projectDetails.metadata.contractInfo);
           parsedMetadata = { ...parsedMetadata, ...contractInfo };
-        } catch {
+          logDebug('Parsed Contract Info', { contractInfo });
+        } catch (e) {
+          logDebug('Contract Info Parse Error', { error: e }, 'warn');
           parsedMetadata.contractInfo = projectDetails.metadata.contractInfo;
         }
       }
@@ -176,18 +222,26 @@ export default function UnifiedExplorer() {
         try {
           const additionalData = JSON.parse(projectDetails.metadata.additionalData);
           parsedMetadata = { ...parsedMetadata, ...additionalData };
-        } catch {
+          logDebug('Parsed Additional Data', { additionalData });
+        } catch (e) {
+          logDebug('Additional Data Parse Error', { error: e }, 'warn');
           parsedMetadata.additionalData = projectDetails.metadata.additionalData;
         }
       }
     } catch (e) {
-      console.warn('Error parsing project metadata:', e);
+      logDebug('Project Metadata Parse Error', { error: e }, 'error');
     }
 
+    logDebug('Final Parsed Project Metadata', { parsedMetadata });
     return parsedMetadata;
   };
 
   const parseCampaignMetadata = (campaignDetails: any): CampaignMetadata => {
+    logDebug('Parsing Campaign Metadata', {
+      input: campaignDetails,
+      hasMetadata: !!campaignDetails.metadata
+    });
+
     let parsedMetadata: CampaignMetadata = {};
     
     try {
@@ -195,7 +249,9 @@ export default function UnifiedExplorer() {
         try {
           const mainInfo = JSON.parse(campaignDetails.metadata.mainInfo);
           parsedMetadata = { ...parsedMetadata, ...mainInfo };
-        } catch {
+          logDebug('Parsed Main Info', { mainInfo });
+        } catch (e) {
+          logDebug('Main Info Parse Error', { error: e }, 'warn');
           parsedMetadata.mainInfo = campaignDetails.metadata.mainInfo;
         }
       }
@@ -204,14 +260,17 @@ export default function UnifiedExplorer() {
         try {
           const additionalInfo = JSON.parse(campaignDetails.metadata.additionalInfo);
           parsedMetadata = { ...parsedMetadata, ...additionalInfo };
-        } catch {
+          logDebug('Parsed Additional Info', { additionalInfo });
+        } catch (e) {
+          logDebug('Additional Info Parse Error', { error: e }, 'warn');
           parsedMetadata.additionalInfo = campaignDetails.metadata.additionalInfo;
         }
       }
     } catch (e) {
-      console.warn('Error parsing campaign metadata:', e);
+      logDebug('Campaign Metadata Parse Error', { error: e }, 'error');
     }
 
+    logDebug('Final Parsed Campaign Metadata', { parsedMetadata });
     return parsedMetadata;
   };
 
@@ -233,7 +292,11 @@ export default function UnifiedExplorer() {
 
   useEffect(() => {
     if (!projects && !campaigns) {
-      console.log('No projects or campaigns data available yet');
+      logDebug('No Data Available', {
+        hasProjects: !!projects,
+        hasCampaigns: !!campaigns,
+        timestamp: new Date().toISOString()
+      }, 'warn');
       return;
     }
 
@@ -241,20 +304,15 @@ export default function UnifiedExplorer() {
 
     // Transform projects
     if (projects) {
-      console.log('Transforming projects:', projects);
+      logDebug('Starting Project Transformations', {
+        projectCount: projects.length,
+        timestamp: new Date().toISOString()
+      });
+
       const transformedProjects = projects.map(projectDetails => {
         const parsedMetadata = parseProjectMetadata(projectDetails);
-        console.log('Project transformation:', {
-          original: projectDetails,
-          parsedMetadata,
-          transformed: {
-            id: projectDetails.project.id,
-            name: projectDetails.project.name,
-            active: projectDetails.project.active
-          }
-        });
         
-        return {
+        const transformed = {
           id: projectDetails.project.id,
           owner: projectDetails.project.owner,
           name: projectDetails.project.name,
@@ -267,29 +325,41 @@ export default function UnifiedExplorer() {
           contracts: projectDetails.contracts,
           itemType: 'project' as const
         };
+
+        logDebug('Project Transformation', {
+          original: {
+            id: projectDetails.project.id.toString(),
+            name: projectDetails.project.name
+          },
+          transformed: {
+            id: transformed.id.toString(),
+            name: transformed.name,
+            active: transformed.active
+          }
+        });
+
+        return transformed;
       });
+
       allItems = [...allItems, ...transformedProjects];
-      console.log('Transformed projects count:', transformedProjects.length);
+      logDebug('Project Transformations Complete', {
+        transformedCount: transformedProjects.length,
+        totalItems: allItems.length
+      });
     }
 
     // Transform campaigns
     if (campaigns) {
-      console.log('Transforming campaigns:', campaigns);
+      logDebug('Starting Campaign Transformations', {
+        campaignCount: campaigns.length,
+        timestamp: new Date().toISOString()
+      });
+
       const transformedCampaigns = campaigns.map(campaignDetails => {
         const parsedMetadata = parseCampaignMetadata(campaignDetails);
         const status = getCampaignStatus(campaignDetails.campaign);
-        console.log('Campaign transformation:', {
-          original: campaignDetails,
-          parsedMetadata,
-          status,
-          transformed: {
-            id: campaignDetails.campaign.id,
-            name: campaignDetails.campaign.name,
-            status
-          }
-        });
         
-        return {
+        const transformed = {
           id: campaignDetails.campaign.id,
           admin: campaignDetails.campaign.admin,
           name: campaignDetails.campaign.name,
@@ -307,21 +377,49 @@ export default function UnifiedExplorer() {
           status,
           itemType: 'campaign' as const
         };
+
+        logDebug('Campaign Transformation', {
+          original: {
+            id: campaignDetails.campaign.id.toString(),
+            name: campaignDetails.campaign.name
+          },
+          transformed: {
+            id: transformed.id.toString(),
+            name: transformed.name,
+            status: transformed.status
+          }
+        });
+
+        return transformed;
       });
+
       allItems = [...allItems, ...transformedCampaigns];
-      console.log('Transformed campaigns count:', transformedCampaigns.length);
+      logDebug('Campaign Transformations Complete', {
+        transformedCount: transformedCampaigns.length,
+        totalItems: allItems.length
+      });
     }
 
     // Apply filters
     let filtered = [...allItems];
-    console.log('Initial items count before filtering:', filtered.length);
+    logDebug('Starting Filtering', {
+      initialCount: filtered.length,
+      activeTab,
+      searchQuery,
+      selectedCategories,
+      selectedTags,
+      selectedStatus
+    });
 
     // Apply tab filter
     if (activeTab !== 'all') {
       filtered = filtered.filter(item => 
         activeTab === 'projects' ? item.itemType === 'project' : item.itemType === 'campaign'
       );
-      console.log(`Items count after tab filter (${activeTab}):`, filtered.length);
+      logDebug('Items count after tab filter', {
+        count: filtered.length,
+        activeTab
+      });
     }
 
     // Apply search filter
@@ -332,7 +430,10 @@ export default function UnifiedExplorer() {
         item.description.toLowerCase().includes(query) ||
         (item.metadata?.bio && item.metadata.bio.toLowerCase().includes(query))
       );
-      console.log('Items count after search filter:', filtered.length);
+      logDebug('Items count after search filter', {
+        count: filtered.length,
+        searchQuery
+      });
     }
 
     // Apply category filter
@@ -341,7 +442,10 @@ export default function UnifiedExplorer() {
         const category = item.metadata?.category;
         return category && selectedCategories.includes(category);
       });
-      console.log('Items count after category filter:', filtered.length);
+      logDebug('Items count after category filter', {
+        count: filtered.length,
+        selectedCategories
+      });
     }
 
     // Apply tag filter
@@ -350,7 +454,10 @@ export default function UnifiedExplorer() {
         const tags = item.metadata?.tags;
         return tags && Array.isArray(tags) && tags.some(tag => selectedTags.includes(tag));
       });
-      console.log('Items count after tag filter:', filtered.length);
+      logDebug('Items count after tag filter', {
+        count: filtered.length,
+        selectedTags
+      });
     }
 
     // Apply status filter
@@ -364,7 +471,10 @@ export default function UnifiedExplorer() {
           return selectedStatus.includes(status?.charAt(0).toUpperCase() + status?.slice(1) || '');
         }
       });
-      console.log('Items count after status filter:', filtered.length);
+      logDebug('Items count after status filter', {
+        count: filtered.length,
+        selectedStatus
+      });
     }
 
     // Apply sorting
@@ -390,8 +500,8 @@ export default function UnifiedExplorer() {
       }
     });
 
-    console.log('Final filtered items:', {
-      count: filtered.length,
+    logDebug('Filtering Complete', {
+      finalCount: filtered.length,
       items: filtered.map(item => ({
         type: item.itemType,
         id: item.id.toString(),

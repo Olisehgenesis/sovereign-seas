@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
+import { useSupportedTokens } from '@/hooks/useSupportedTokens';
 import { 
   ArrowLeft, 
   ArrowRight,
@@ -58,6 +59,7 @@ import { Address } from 'viem';
 export default function CreateCampaign() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
+  const { supportedTokens, isLoading: isLoadingTokens } = useSupportedTokens();
   const [isMounted, setIsMounted] = useState(false);
   
   // Form stages: 1: Basic Info, 2: Timeline & Funding, 3: Rules & Criteria, 4: Review & Submit
@@ -122,8 +124,8 @@ export default function CreateCampaign() {
     }],
     
     // Technical Settings
-    payoutToken: process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS || '',
-    feeToken: process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS || ''
+    payoutToken: '' as Address,
+    feeToken: '' as Address
   });
 
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;
@@ -364,6 +366,27 @@ export default function CreateCampaign() {
     });
   };
   
+  // Add debug logging utility
+  const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 'info') => {
+    const timestamp = new Date().toISOString();
+    const logData = {
+      timestamp,
+      section,
+      data
+    };
+
+    switch (type) {
+      case 'error':
+        console.error('🔴', logData);
+        break;
+      case 'warn':
+        console.warn('🟡', logData);
+        break;
+      default:
+        console.log('🟢', logData);
+    }
+  };
+
   // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -376,16 +399,30 @@ export default function CreateCampaign() {
     setErrorMessage('');
     
     if (!isConnected) {
+      logDebug('Wallet Not Connected', {
+        isConnected,
+        address
+      }, 'error');
       setErrorMessage('Please connect your wallet to create a campaign');
       return;
     }
     
     if (!validateAllSteps()) {
+      logDebug('Validation Failed', {
+        formErrors,
+        campaign
+      }, 'error');
       setErrorMessage('Please fix the validation errors before submitting');
       return;
     }
     
     try {
+      logDebug('Starting Campaign Creation Process', {
+        campaign,
+        address,
+        contractAddress
+      });
+      
       setLoading(true);
       setIsUploading(true);
       
@@ -393,16 +430,57 @@ export default function CreateCampaign() {
       const campaignData = { ...campaign };
       
       if (logoFile) {
-        const logoIpfsUrl = await uploadToIPFS(logoFile);
-        campaignData.logo = logoIpfsUrl;
+        logDebug('Uploading Logo', {
+          fileName: logoFile.name,
+          fileSize: logoFile.size,
+          fileType: logoFile.type
+        });
+        
+        try {
+          const logoIpfsUrl = await uploadToIPFS(logoFile);
+          logDebug('Logo Upload Success', { logoIpfsUrl });
+          campaignData.logo = logoIpfsUrl;
+        } catch (uploadError) {
+          logDebug('Logo Upload Failed', {
+            error: uploadError,
+            message: uploadError.message
+          }, 'error');
+          throw new Error(`Failed to upload logo: ${uploadError.message}`);
+        }
       }
       
       if (bannerFile) {
-        const bannerIpfsUrl = await uploadToIPFS(bannerFile);
-        campaignData.bannerImage = bannerIpfsUrl;
+        logDebug('Uploading Banner', {
+          fileName: bannerFile.name,
+          fileSize: bannerFile.size,
+          fileType: bannerFile.type
+        });
+        
+        try {
+          const bannerIpfsUrl = await uploadToIPFS(bannerFile);
+          logDebug('Banner Upload Success', { bannerIpfsUrl });
+          campaignData.bannerImage = bannerIpfsUrl;
+        } catch (uploadError) {
+          logDebug('Banner Upload Failed', {
+            error: uploadError,
+            message: uploadError.message
+          }, 'error');
+          throw new Error(`Failed to upload banner: ${uploadError.message}`);
+        }
       }
       
       // Filter out empty values
+      logDebug('Cleaning Campaign Data', {
+        before: {
+          tags: campaignData.tags,
+          eligibilityCriteria: campaignData.eligibilityCriteria,
+          requirements: campaignData.requirements,
+          judgesCriteria: campaignData.judgesCriteria,
+          rewardsDistribution: campaignData.rewards.distribution,
+          faqCount: campaignData.faq.length
+        }
+      });
+      
       campaignData.tags = campaignData.tags.filter(tag => tag.trim() !== '');
       campaignData.eligibilityCriteria = campaignData.eligibilityCriteria.filter(criteria => criteria.trim() !== '');
       campaignData.requirements = campaignData.requirements.filter(req => req.trim() !== '');
@@ -410,8 +488,19 @@ export default function CreateCampaign() {
       campaignData.rewards.distribution = campaignData.rewards.distribution.filter(dist => dist.trim() !== '');
       campaignData.faq = campaignData.faq.filter(item => item.question.trim() !== '' && item.answer.trim() !== '');
       
+      logDebug('Cleaned Campaign Data', {
+        after: {
+          tags: campaignData.tags,
+          eligibilityCriteria: campaignData.eligibilityCriteria,
+          requirements: campaignData.requirements,
+          judgesCriteria: campaignData.judgesCriteria,
+          rewardsDistribution: campaignData.rewards.distribution,
+          faqCount: campaignData.faq.length
+        }
+      });
+      
       // Create main info metadata
-      const mainInfo = JSON.stringify({
+      const mainInfoData = {
         type: campaignData.campaignType,
         category: campaignData.category,
         maxParticipants: campaignData.maxParticipants ? parseInt(campaignData.maxParticipants) : 0,
@@ -420,10 +509,16 @@ export default function CreateCampaign() {
         judgesCriteria: campaignData.judgesCriteria,
         rewards: campaignData.rewards,
         submissionGuidelines: campaignData.submissionGuidelines
+      };
+      
+      const mainInfo = JSON.stringify(mainInfoData);
+      logDebug('Main Info Metadata', {
+        size: mainInfo.length,
+        data: mainInfoData
       });
       
       // Create additional info metadata
-      const additionalInfo = JSON.stringify({
+      const additionalInfoData = {
         version: '1.0.0',
         timestamp: Date.now(),
         creator: address,
@@ -439,6 +534,12 @@ export default function CreateCampaign() {
           contactEmail: campaignData.contactEmail,
           faq: campaignData.faq
         }
+      };
+      
+      const additionalInfo = JSON.stringify(additionalInfoData);
+      logDebug('Additional Info Metadata', {
+        size: additionalInfo.length,
+        data: additionalInfoData
       });
       
       // Create custom distribution data
@@ -449,14 +550,25 @@ export default function CreateCampaign() {
           })
         : '';
       
+      logDebug('Custom Distribution Data', {
+        size: customDistributionData.length,
+        data: customDistributionData
+      });
+      
       // Convert dates to Unix timestamps
       const startTimeUnix = BigInt(Math.floor(new Date(campaignData.startDate).getTime() / 1000));
       const endTimeUnix = BigInt(Math.floor(new Date(campaignData.endDate).getTime() / 1000));
       
-      setIsUploading(false);
+      logDebug('Time Conversion', {
+        startDate: campaignData.startDate,
+        endDate: campaignData.endDate,
+        startTimeUnix: startTimeUnix.toString(),
+        endTimeUnix: endTimeUnix.toString(),
+        duration: (endTimeUnix - startTimeUnix).toString() + ' seconds'
+      });
       
-      // Call the hook function
-      await createCampaignHook({
+      // Prepare contract call parameters
+      const contractParams = {
         name: campaignData.name,
         description: campaignData.description,
         mainInfo,
@@ -470,11 +582,88 @@ export default function CreateCampaign() {
         customDistributionData,
         payoutToken: campaignData.payoutToken as Address,
         feeToken: campaignData.feeToken as Address
+      };
+      
+      logDebug('Contract Call Parameters', {
+        ...contractParams,
+        mainInfoSize: mainInfo.length,
+        additionalInfoSize: additionalInfo.length,
+        customDistributionDataSize: customDistributionData.length
+      });
+
+      
+      
+      // Validate parameters before calling
+      if (!contractParams.name.trim()) {
+        throw new Error('Campaign name is required');
+      }
+      if (!contractParams.description.trim()) {
+        throw new Error('Campaign description is required');
+      }
+      if (startTimeUnix >= endTimeUnix) {
+        throw new Error('End time must be after start time');
+      }
+      if (startTimeUnix <= BigInt(Math.floor(Date.now() / 1000))) {
+        logDebug('Start Time Warning', {
+          startTimeUnix: startTimeUnix.toString(),
+          currentTime: BigInt(Math.floor(Date.now() / 1000)).toString()
+        }, 'warn');
+      }
+      
+      logDebug('Parameter Validation Passed', {
+        name: contractParams.name,
+        descriptionLength: contractParams.description.length,
+        startTime: startTimeUnix.toString(),
+        endTime: endTimeUnix.toString()
+      });
+      
+      setIsUploading(false);
+      
+      logDebug('Calling Create Campaign Contract Method', {
+        contractAddress,
+        params: contractParams
+      });
+      
+      // Call the hook function with detailed logging
+      const result = await createCampaignHook(contractParams);
+      
+      logDebug('Campaign Creation Result', {
+        transactionHash: result,
+        timestamp: new Date().toISOString()
       });
       
     } catch (error) {
-      console.error('Error creating campaign:', error);
-      setErrorMessage('Failed to create campaign. Please try again.');
+      logDebug('Campaign Creation Failed', {
+        error,
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        cause: error.cause
+      }, 'error');
+      
+      // Enhanced error messages
+      let userFriendlyMessage = 'Failed to create campaign. ';
+      
+      if (error.message?.includes('user rejected')) {
+        userFriendlyMessage += 'Transaction was rejected by user.';
+      } else if (error.message?.includes('insufficient funds')) {
+        userFriendlyMessage += 'Insufficient funds for transaction fees.';
+      } else if (error.message?.includes('gas')) {
+        userFriendlyMessage += 'Gas estimation failed. The transaction might be too complex or invalid.';
+      } else if (error.message?.includes('nonce')) {
+        userFriendlyMessage += 'Nonce error. Please try again.';
+      } else if (error.message?.includes('network')) {
+        userFriendlyMessage += 'Network error. Please check your connection and try again.';
+      } else if (error.message?.includes('deadline')) {
+        userFriendlyMessage += 'Transaction deadline exceeded. Please try again.';
+      } else if (error.message?.includes('revert')) {
+        userFriendlyMessage += 'Contract execution reverted. Please check your parameters.';
+      } else {
+        userFriendlyMessage += `${error.message || 'Unknown error occurred.'}`;
+      }
+      
+      setErrorMessage(userFriendlyMessage);
       setLoading(false);
       setIsUploading(false);
     }
@@ -510,6 +699,45 @@ export default function CreateCampaign() {
       return diffDays;
     }
     return 0;
+  };
+  
+  // Update the token selection UI
+  const renderTokenSelection = () => {
+    if (isLoadingTokens) {
+      return (
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading supported tokens...</span>
+        </div>
+      );
+    }
+
+    if (!supportedTokens?.length) {
+      return (
+        <div className="text-red-500">
+          No supported tokens found. Please contact support.
+        </div>
+      );
+    }
+
+    return (
+      <select
+        value={campaign.payoutToken}
+        onChange={(e) => setCampaign({
+          ...campaign,
+          payoutToken: e.target.value as Address,
+          feeToken: e.target.value as Address
+        })}
+        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+      >
+        <option value="">Select a token</option>
+        {supportedTokens.map((tokenAddress) => (
+          <option key={tokenAddress} value={tokenAddress}>
+            {tokenAddress}
+          </option>
+        ))}
+      </select>
+    );
   };
   
   if (!isMounted) {
@@ -877,6 +1105,15 @@ export default function CreateCampaign() {
                            <option value="10">10% - Premium fee</option>
                          </select>
                        </div>
+                     </div>
+
+                     {/* Add Payout Token Selection */}
+                     <div className="mb-6">
+                       <label className="block text-purple-700 font-medium mb-3">Payout Token *</label>
+                       {renderTokenSelection()}
+                       <p className="mt-2 text-sm text-gray-500">
+                         Select the token that will be used for campaign payouts
+                       </p>
                      </div>
 
                      {/* Prize Pool */}
@@ -1418,8 +1655,7 @@ export default function CreateCampaign() {
                          <div>
                            <span className="font-medium text-gray-600">Distribution Method:</span>
                            <p className="text-gray-800">
-                             {campaign.useQuadraticDistribution ? 'Quadratic' : 
-                              campaign.useCustomDistribution ? 'Custom' : 'Linear'}
+                             {campaign.useQuadraticDistribution ? 'Quadratic' : campaign.useCustomDistribution ? 'Custom' : 'Linear'}
                            </p>
                          </div>
                          <div>

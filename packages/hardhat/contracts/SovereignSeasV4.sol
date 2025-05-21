@@ -72,6 +72,10 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
     
     // Broker address
     address public mentoTokenBroker;
+    // Add these to your contract
+    address[] public supportedTokensList;
+
+
 
     // Project struct with modular metadata
     struct ProjectMetadata {
@@ -314,6 +318,8 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         require(_token != address(0), "Invalid token address");
         require(!supportedTokens[_token], "Token already supported");
         
+        supportedTokensList.push(_token); // Add this line
+        
         supportedTokens[_token] = true;
         emit TokenAdded(_token);
     }
@@ -325,9 +331,22 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
     function removeSupportedToken(address _token) external onlySuperAdmin {
         require(supportedTokens[_token], "Token not supported");
         require(_token != address(celoToken), "Cannot remove base CELO token");
-        
+
         supportedTokens[_token] = false;
+        
+        for (uint256 i = 0; i < supportedTokensList.length; i++) {
+            if (supportedTokensList[i] == _token) {
+                supportedTokensList[i] = supportedTokensList[supportedTokensList.length - 1];
+                supportedTokensList.pop();
+                break;
+            }
+        }
+        
         emit TokenRemoved(_token);
+    }
+
+    function getSupportedTokens() external view returns (address[] memory) {
+        return supportedTokensList;
     }
 
     /**

@@ -74,9 +74,30 @@ export interface Vote {
   celoEquivalent: bigint
 }
 
+// Add debug logging utility
+const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 'info') => {
+  const timestamp = new Date().toISOString();
+  const logData = {
+    timestamp,
+    section,
+    data
+  };
+
+  switch (type) {
+    case 'error':
+      console.error('🔴', logData);
+      break;
+    case 'warn':
+      console.warn('🟡', logData);
+      break;
+    default:
+      console.log('🟢', logData);
+  }
+};
+
 // Hook for creating a new campaign
 export function useCreateCampaign(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract();
 
   const createCampaign = async ({
     name,
@@ -93,22 +114,41 @@ export function useCreateCampaign(contractAddress: Address) {
     payoutToken,
     feeToken
   }: {
-    name: string
-    description: string
-    mainInfo: string
-    additionalInfo: string
-    startTime: bigint
-    endTime: bigint
-    adminFeePercentage: bigint
-    maxWinners: bigint
-    useQuadraticDistribution: boolean
-    useCustomDistribution: boolean
-    customDistributionData: string
-    payoutToken: Address
-    feeToken: Address
+    name: string;
+    description: string;
+    mainInfo: string;
+    additionalInfo: string;
+    startTime: bigint;
+    endTime: bigint;
+    adminFeePercentage: bigint;
+    maxWinners: bigint;
+    useQuadraticDistribution: boolean;
+    useCustomDistribution: boolean;
+    customDistributionData: string;
+    payoutToken: Address;
+    feeToken: Address;
   }) => {
     try {
-      await writeContract({
+      logDebug('Starting Campaign Creation', {
+        contractAddress,
+        params: {
+          name,
+          descriptionLength: description.length,
+          mainInfoLength: mainInfo.length,
+          additionalInfoLength: additionalInfo.length,
+          startTime: startTime.toString(),
+          endTime: endTime.toString(),
+          adminFeePercentage: adminFeePercentage.toString(),
+          maxWinners: maxWinners.toString(),
+          useQuadraticDistribution,
+          useCustomDistribution,
+          customDistributionDataLength: customDistributionData.length,
+          payoutToken,
+          feeToken
+        }
+      });
+
+      const result = await writeContract({
         address: contractAddress,
         abi,
         functionName: 'createCampaign',
@@ -127,20 +167,45 @@ export function useCreateCampaign(contractAddress: Address) {
           payoutToken,
           feeToken
         ]
-      })
+      });
+
+      logDebug('Campaign Creation Success', {
+        transactionHash: result,
+        timestamp: new Date().toISOString()
+      });
+
+      return result;
     } catch (err) {
-      console.error('Error creating campaign:', err)
-      throw err
+      logDebug('Campaign Creation Error', {
+        error: err,
+        message: err.message,
+        code: err.code,
+        stack: err.stack,
+        cause: err.cause
+      }, 'error');
+      throw err;
     }
-  }
+  };
+
+  // Log state changes
+  useEffect(() => {
+    logDebug('Contract Write State Changed', {
+      isPending,
+      isError,
+      isSuccess,
+      error: error?.message,
+      data
+    });
+  }, [isPending, isError, isSuccess, error, data]);
 
   return {
     createCampaign,
     isPending,
     isError,
     error,
-    isSuccess
-  }
+    isSuccess,
+    data
+  };
 }
 
 // Hook for updating campaign

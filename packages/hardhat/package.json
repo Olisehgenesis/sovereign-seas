@@ -46,6 +46,9 @@
     "viewProjects": "hardhat run scripts/viewProjects.ts",
     "viewCampaign": "hardhat run scripts/viewCampaign.ts",
     "createCampaign": "hardhat run scripts/createCampaign.ts",
+
+    "addSupportedToken": "hardhat run scripts/addSupportedToken.ts",
+    "add-tokens": "npx ts-node scripts/addSupportedToken.ts",
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",
