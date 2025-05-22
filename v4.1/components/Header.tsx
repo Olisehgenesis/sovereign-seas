@@ -1,14 +1,16 @@
+'use client';
 import { Disclosure, Transition } from '@headlessui/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount, injected } from 'wagmi';
 import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, AlertTriangle, FileCode, Anchor, Wallet } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { useSovereignSeas } from '../hooks/useSovereignSeas';
 import { celo, celoAlfajores } from 'viem/chains';
 import { usePrivy, useLogin, useWallets } from '@privy-io/react-auth';
 import WalletModal from '@/components/walletModal';
 import { useWallet } from '@/hooks/useWallet';
+import { createPublicClient } from 'viem';
+import { publicClient, walletClient } from '@/app/utils/clients';
 
 // Get chain values from environment variables
 const CELO_CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID as string);
@@ -48,15 +50,16 @@ export default function Header() {
   const { handleSwitchToNetwork } = useWallet();
   
   // Use the sovereign seas hook to get the clients
-  const { publicClient, walletClient } = useSovereignSeas();
+ 
+  
 
   // Check if user is on the correct chain
   useEffect(() => {
     const checkChain = async () => {
-      if (isConnected && publicClient) {
+      if (isConnected && publicClient && walletClient) {
         try {
-          // Get the current chain from the public client
-          const chainId = await publicClient.getChainId();
+          // Get the current chain from the wallet client
+          const chainId = await walletClient.getChainId();
           setCurrentChainId(chainId);
           
           if (chainId !== CELO_CHAIN_ID) {
@@ -129,7 +132,7 @@ export default function Header() {
           <span className="font-medium">This app only supports the {CHAIN_NAME} network{IS_TESTNET ? ' (Testnet)' : ''}.</span>
           <button 
             onClick={handleSwitchToNetwork}
-            className="ml-3 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors"
+            className="ml-3 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 premium-button"
           >
             Switch to {CHAIN_NAME}
           </button>
@@ -283,7 +286,6 @@ export default function Header() {
                             href="#"
                             className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
                             onClick={(e) => {
-                              // e.preventDefault();
                               logout();
                               setShowDropdown(false);
                             }}

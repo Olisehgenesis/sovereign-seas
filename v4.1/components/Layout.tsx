@@ -1,8 +1,9 @@
 // app/layout.tsx
+'use client';
 import { ReactNode } from 'react';
 import { Metadata } from 'next';
-// import Footer from '../components/Footer';
-// import Header from '../components/Header';
+import Footer from '../components/Footer';
+import Header from '../components/Header';
 
 // Define the static metadata for the entire site
 export const metadata: Metadata = {
@@ -46,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps) {
   return (
     <>
       <div className="bg-gradient-to-b from-blue-50 to-sky-100 overflow-hidden flex flex-col min-h-screen">
-        {/* <Header /> */}
+       <Header />
         {/* Adjusted padding for mobile responsiveness */}
         <div className="py-4 sm:py-6 w-full max-w-7xl mx-auto space-y-3 sm:space-y-4 px-3 sm:px-6 lg:px-8 flex-grow">
           {/* Decorative elements with responsive positioning */}

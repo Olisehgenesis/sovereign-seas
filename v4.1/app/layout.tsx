@@ -1,6 +1,7 @@
 import '@/styles/globals.css';
 
 import { AppProvider } from '@/providers/AppProvider';
+import Layout from '@/components/Layout';
 
 export default function RootLayout({
   children,
@@ -10,7 +11,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-ss-sky-light text-ss-text font-inter">
-        <AppProvider>{children}</AppProvider>
+        
+        <AppProvider>
+        <Layout>
+          {children}
+        </Layout>
+
+        </AppProvider>
+        
       </body>
     </html>
   );

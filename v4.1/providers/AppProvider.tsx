@@ -42,7 +42,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }}
       >
         <WagmiProvider config={config}>
-          <Layout>{children}</Layout>
+          {children}
         </WagmiProvider>
       </PrivyProvider>
     </QueryClientProvider>
