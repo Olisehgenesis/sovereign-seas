@@ -49,6 +49,9 @@
 
     "addSupportedToken": "hardhat run scripts/addSupportedToken.ts",
     "add-tokens": "npx ts-node scripts/addSupportedToken.ts",
+
+    "add-providers": "npx ts-node scripts/addExchangeProviders.ts",
+
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",

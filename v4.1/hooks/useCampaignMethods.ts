@@ -132,9 +132,7 @@ export function useCreateCampaign(contractAddress: Address) {
     feeToken: Address;
   }) => {
     try {
-      logDebug('Starting Campaign Creation', {
-        contractAddress,
-        params: {
+      const params = {
           name,
           descriptionLength: description.length,
           mainInfoLength: mainInfo.length,
@@ -149,7 +147,9 @@ export function useCreateCampaign(contractAddress: Address) {
           payoutToken,
           feeToken
         }
-      });
+      
+
+      console.log("craeting data: ", params);
 
       const result = await writeContract({
         address: contractAddress,

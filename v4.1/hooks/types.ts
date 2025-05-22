@@ -331,3 +331,189 @@ export interface TeamMember {
   export const isValidProjectType = (type: string): type is ProjectType => {
     return PROJECT_TYPES.includes(type as ProjectType);
   };
+
+export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
+
+export type CampaignType = 
+  | 'fundraising' 
+  | 'community' 
+  | 'marketing' 
+  | 'development' 
+  | 'research' 
+  | 'partnership' 
+  | 'event' 
+  | 'other';
+
+export type CampaignVisibility = 'public' | 'private' | 'restricted';
+
+export interface CampaignMedia {
+  banner: string;
+  thumbnail: string;
+  gallery: string[];
+  video: string;
+}
+
+export interface CampaignLinks {
+  website: string;
+  socialMedia: {
+    twitter: string;
+    discord: string;
+    telegram: string;
+    linkedin: string;
+  };
+  documentation: string;
+  resources: string[];
+}
+
+export interface CampaignMilestone {
+  title: string;
+  description: string;
+  dueDate: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'delayed';
+  deliverables: string[];
+}
+
+export interface Campaign {
+  // Basic Information
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  type: CampaignType;
+  status: CampaignStatus;
+  visibility: CampaignVisibility;
+  startDate: string;
+  endDate: string;
+  
+  // Media & Links
+  media: CampaignMedia;
+  links: CampaignLinks;
+  
+  // Campaign Details
+  goals: string[];
+  targetAmount: number;
+  raisedAmount: number;
+  currency: string;
+  milestones: CampaignMilestone[];
+  
+  // Project Association
+  projectId: string;
+  projectName: string;
+  
+  // Team & Contact
+  teamMembers: TeamMember[];
+  contactEmail: string;
+  
+  // Additional Information
+  tags: string[];
+  location: string;
+  requirements: string[];
+  benefits: string[];
+  risks: string[];
+  
+  // Metrics & Analytics
+  metrics: {
+    views: number;
+    contributors: number;
+    engagement: number;
+    conversionRate: number;
+  };
+}
+
+export interface CampaignFormData {
+  // Basic Information
+  name: string;
+  tagline: string;
+  description: string;
+  type: string;
+  status: string;
+  visibility: string;
+  startDate: string;
+  endDate: string;
+  
+  // Media & Links
+  banner: string;
+  thumbnail: string;
+  gallery: string[];
+  video: string;
+  website: string;
+  socialMedia: {
+    twitter: string;
+    discord: string;
+    telegram: string;
+    linkedin: string;
+  };
+  documentation: string;
+  resources: string[];
+  
+  // Campaign Details
+  goals: string[];
+  targetAmount: number;
+  currency: string;
+  milestones: CampaignMilestone[];
+  
+  // Project Association
+  projectId: string;
+  
+  // Team & Contact
+  teamMembers: TeamMember[];
+  contactEmail: string;
+  
+  // Additional Information
+  tags: string[];
+  location: string;
+  requirements: string[];
+  benefits: string[];
+  risks: string[];
+}
+
+export interface CampaignFormErrors {
+  name: string;
+  tagline: string;
+  description: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  targetAmount: string;
+  goals: string[];
+  milestones: string[];
+}
+
+// Constants for campaign options
+export const CAMPAIGN_TYPES: CampaignType[] = [
+  'fundraising',
+  'community',
+  'marketing',
+  'development',
+  'research',
+  'partnership',
+  'event',
+  'other'
+];
+
+export const CAMPAIGN_STATUSES: CampaignStatus[] = [
+  'draft',
+  'active',
+  'paused',
+  'completed',
+  'cancelled'
+];
+
+export const CAMPAIGN_VISIBILITY: CampaignVisibility[] = [
+  'public',
+  'private',
+  'restricted'
+];
+
+// Helper functions for type guards
+export const isValidCampaignType = (type: string): type is CampaignType => {
+  return CAMPAIGN_TYPES.includes(type as CampaignType);
+};
+
+export const isValidCampaignStatus = (status: string): status is CampaignStatus => {
+  return CAMPAIGN_STATUSES.includes(status as CampaignStatus);
+};
+
+export const isValidCampaignVisibility = (visibility: string): visibility is CampaignVisibility => {
+  return CAMPAIGN_VISIBILITY.includes(visibility as CampaignVisibility);
+};
