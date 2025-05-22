@@ -1070,7 +1070,7 @@ export default function CreateCampaign() {
                      
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                        <div>
-                         <label className="block text-purple-700 font-medium mb-3">Funding Goal (CELO) *</label>
+                         <label className="block text-purple-700 font-medium mb-3">Funding  ({supportedTokens.find(t => t.address === campaign.payoutToken)?.symbol || 'CELO'}) *</label>
                          <input
                            type="number"
                            step="0.01"
@@ -1104,7 +1104,14 @@ export default function CreateCampaign() {
                        <label className="block text-purple-700 font-medium mb-3">Payout Token *</label>
                        <select
                          value={campaign.payoutToken}
-                         onChange={(e) => setCampaign({...campaign, payoutToken: e.target.value as Address})}
+                         onChange={(e) => {
+                           const newToken = e.target.value as Address;
+                           setCampaign({
+                             ...campaign, 
+                             payoutToken: newToken,
+                             feeToken: newToken // Set fee token to match payout token
+                           });
+                         }}
                          className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        >
                          {supportedTokens.map((token) => (
@@ -1136,7 +1143,7 @@ export default function CreateCampaign() {
 
                      {/* Prize Pool */}
                      <div className="mb-6">
-                       <label className="block text-purple-700 font-medium mb-3">Total Prize Pool (CELO)</label>
+                       <label className="block text-purple-700 font-medium mb-3">Total Prize Pool ({supportedTokens.find(t => t.address === campaign.payoutToken)?.symbol || 'CELO'})</label>
                        <input
                          type="number"
                          step="0.01"
@@ -1153,7 +1160,7 @@ export default function CreateCampaign() {
 
                      {/* Prize Distribution */}
                      <div>
-                       <label className="block text-purple-700 font-medium mb-3">Prize Distribution</label>
+                       <label className="block text-purple-700 font-medium mb-3">Prize Distribution ({supportedTokens.find(t => t.address === campaign.payoutToken)?.symbol || 'CELO'})</label>
                        {campaign.rewards.distribution.map((prize, index) => (
                          <div key={index} className="flex mb-3">
                            <input
@@ -1168,7 +1175,7 @@ export default function CreateCampaign() {
                                });
                              }}
                              className="flex-1 px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
-                             placeholder="1st Place: 20,000 CELO"
+                             placeholder={`1st Place: 20,000 ${supportedTokens.find(t => t.address === campaign.payoutToken)?.symbol || 'CELO'}`}
                            />
                            {campaign.rewards.distribution.length > 1 && (
                              <button
