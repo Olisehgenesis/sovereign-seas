@@ -158,12 +158,17 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         emit TokenAdded(_celoToken);
     }
 
+    // Updated fee validation function to handle native CELO
     function _validateAndCollectFee(address _feeToken, uint256 _baseFee, string memory _feeType, uint256 _campaignId) internal {
         require(supportedTokens[_feeToken], "Fee token not supported");
         if (canBypassFees(_campaignId, msg.sender)) return;
         
-        uint256 feeAmount = _feeToken == address(celoToken) ? _baseFee : 
-            (IBroker(mentoTokenBroker).getAmountOut(tokenExchangeProviders[address(celoToken)].provider, tokenExchangeProviders[address(celoToken)].exchangeId, address(celoToken), _feeToken, _baseFee) * 101) / 100;
+        uint256 feeAmount;
+        if (_feeToken == address(celoToken)) {
+            feeAmount = _baseFee;
+        } else {
+            feeAmount = (IBroker(mentoTokenBroker).getAmountOut(tokenExchangeProviders[address(celoToken)].provider, tokenExchangeProviders[address(celoToken)].exchangeId, address(celoToken), _feeToken, _baseFee) * 101) / 100;
+        }
         
         collectFee(_feeToken, feeAmount, _feeType);
     }
@@ -273,8 +278,29 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         campaigns[_campaignId].userMaxVoteAmount[_user] = _maxAmount;
     }
 
-    // Fee Management
+    // Fee Management - Updated to handle native CELO
     function collectFee(address _token, uint256 _amount, string memory _feeType) internal {
+        require(supportedTokens[_token], "Token not supported");
+        
+        if (_token == address(celoToken)) {
+            collectFeeNative(_amount, _feeType);
+        } else {
+            collectFeeERC20(_token, _amount, _feeType);
+        }
+    }
+
+    function collectFeeNative(uint256 _amount, string memory _feeType) internal {
+        require(msg.value >= _amount, "Insufficient CELO sent");
+        collectedFees[address(celoToken)] += _amount;
+        emit FeeCollected(address(celoToken), _amount, _feeType);
+        
+        // Refund excess CELO
+        if (msg.value > _amount) {
+            payable(msg.sender).transfer(msg.value - _amount);
+        }
+    }
+
+    function collectFeeERC20(address _token, uint256 _amount, string memory _feeType) internal {
         require(supportedTokens[_token], "Token not supported");
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
         collectedFees[_token] += _amount;
@@ -286,8 +312,15 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         require(feeBalance > 0, "No fees collected for this token");
         uint256 amountToWithdraw = _amount == 0 ? feeBalance : _amount;
         require(amountToWithdraw <= feeBalance, "Insufficient fee balance");
+        
         collectedFees[_token] -= amountToWithdraw;
-        IERC20(_token).safeTransfer(_recipient, amountToWithdraw);
+        
+        if (_token == address(celoToken)) {
+            payable(_recipient).transfer(amountToWithdraw);
+        } else {
+            IERC20(_token).safeTransfer(_recipient, amountToWithdraw);
+        }
+        
         emit FeeWithdrawn(_token, _recipient, amountToWithdraw);
     }
 
@@ -351,11 +384,21 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         bool tokensNeeded = areTokensNeededForActiveCampaigns(_token);
         require(!tokensNeeded || _forceRecovery, "Tokens are needed for active campaigns");
         
-        uint256 balance = IERC20(_token).balanceOf(address(this));
-        uint256 amountToRecover = _amount == 0 ? balance : _amount;
-        require(amountToRecover <= balance, "Insufficient token balance");
+        uint256 balance;
+        uint256 amountToRecover;
         
-        IERC20(_token).safeTransfer(_recipient, amountToRecover);
+        if (_token == address(celoToken)) {
+            balance = address(this).balance;
+            amountToRecover = _amount == 0 ? balance : _amount;
+            require(amountToRecover <= balance, "Insufficient CELO balance");
+            payable(_recipient).transfer(amountToRecover);
+        } else {
+            balance = IERC20(_token).balanceOf(address(this));
+            amountToRecover = _amount == 0 ? balance : _amount;
+            require(amountToRecover <= balance, "Insufficient token balance");
+            IERC20(_token).safeTransfer(_recipient, amountToRecover);
+        }
+        
         emit EmergencyTokenRecovery(_token, _recipient, amountToRecover, tokensNeeded);
     }
 
@@ -401,7 +444,7 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         emit ProjectOwnershipTransferred(_projectId, previousOwner, _newOwner);
     }
 
-    function addProjectToCampaign(uint256 _campaignId, uint256 _projectId, address _feeToken) external {
+    function addProjectToCampaign(uint256 _campaignId, uint256 _projectId, address _feeToken) external payable {
         require(campaigns[_campaignId].active && projects[_projectId].active, "Campaign or project not active");
         require(block.timestamp < campaigns[_campaignId].endTime, "Campaign has ended");
         require(msg.sender == projects[_projectId].owner || campaigns[_campaignId].campaignAdmins[msg.sender] || superAdmins[msg.sender], "Only project owner or campaign admin can add project to campaign");
@@ -443,8 +486,8 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         emit ProjectApproved(_campaignId, _projectId);
     }
 
-    // Campaign Management
-    function createCampaign(string memory _name, string memory _description, string memory _mainInfo, string memory _additionalInfo, uint256 _startTime, uint256 _endTime, uint256 _adminFeePercentage, uint256 _maxWinners, bool _useQuadraticDistribution, bool _useCustomDistribution, string memory _customDistributionData, address _payoutToken, address _feeToken) external {
+    // Campaign Management - Updated with payable modifier
+    function createCampaign(string memory _name, string memory _description, string memory _mainInfo, string memory _additionalInfo, uint256 _startTime, uint256 _endTime, uint256 _adminFeePercentage, uint256 _maxWinners, bool _useQuadraticDistribution, bool _useCustomDistribution, string memory _customDistributionData, address _payoutToken, address _feeToken) external payable {
         require(_startTime > block.timestamp && _endTime > _startTime && _adminFeePercentage <= 30, "Invalid campaign parameters");
         require(supportedTokens[_payoutToken], "Payout token not supported");
         
@@ -487,318 +530,404 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         campaign.payoutToken = _payoutToken;
         
         emit CampaignUpdated(_campaignId, msg.sender);
-    }
+}
 
-    function updateCampaignMetadata(uint256 _campaignId, string memory _mainInfo, string memory _additionalInfo) external onlyCampaignAdmin(_campaignId) activeCampaign(_campaignId) {
-        Campaign storage campaign = campaigns[_campaignId];
-        campaign.metadata.mainInfo = _mainInfo;
-        campaign.metadata.additionalInfo = _additionalInfo;
-        emit CampaignMetadataUpdated(_campaignId, msg.sender);
-    }
+function updateCampaignMetadata(uint256 _campaignId, string memory _mainInfo, string memory _additionalInfo) external onlyCampaignAdmin(_campaignId) activeCampaign(_campaignId) {
+   Campaign storage campaign = campaigns[_campaignId];
+   campaign.metadata.mainInfo = _mainInfo;
+   campaign.metadata.additionalInfo = _additionalInfo;
+   emit CampaignMetadataUpdated(_campaignId, msg.sender);
+}
 
-    function updateCustomDistributionData(uint256 _campaignId, string memory _customDistributionData) external onlyCampaignAdmin(_campaignId) activeCampaign(_campaignId) {
-        campaigns[_campaignId].customDistributionData = _customDistributionData;
-        emit CampaignUpdated(_campaignId, msg.sender);
-    }
+function updateCustomDistributionData(uint256 _campaignId, string memory _customDistributionData) external onlyCampaignAdmin(_campaignId) activeCampaign(_campaignId) {
+   campaigns[_campaignId].customDistributionData = _customDistributionData;
+   emit CampaignUpdated(_campaignId, msg.sender);
+}
 
-    // Voting
-    function vote(uint256 _campaignId, uint256 _projectId, address _token, uint256 _amount, bytes32 _bypassCode) external nonReentrant {
-        Campaign storage campaign = campaigns[_campaignId];
-        require(campaign.active && block.timestamp >= campaign.startTime && block.timestamp <= campaign.endTime, "Campaign not active or ended");
-        require(projects[_projectId].campaignParticipation[_campaignId], "Project not in campaign");
-        
-        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
-        require(participation.approved && supportedTokens[_token] && _amount > 0, "Project not approved, token not supported, or invalid amount");
-        
-        uint256 celoEquivalent = getTokenToCeloEquivalent(_token, _amount);
-        
-        if (!isTokenUsedInCampaign[_campaignId][_token]) {
-            campaignUsedTokens[_campaignId].push(_token);
-            isTokenUsedInCampaign[_campaignId][_token] = true;
-        }
-        
-        if (_bypassCode != bypassSecretCode) {
-            uint256 maxVoteAmount = campaign.userMaxVoteAmount[msg.sender];
-            if (maxVoteAmount > 0) {
-                require(totalUserVotesInCampaign[_campaignId][msg.sender] + celoEquivalent <= maxVoteAmount, "Exceeds max vote amount");
-            }
-        }
-        
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+// Voting - FIXED to handle native CELO separately
+function vote(uint256 _campaignId, uint256 _projectId, address _token, uint256 _amount, bytes32 _bypassCode) external nonReentrant {
+   require(_token != address(celoToken), "Use voteWithCelo for CELO voting");
+   _voteWithToken(_campaignId, _projectId, _token, _amount, _bypassCode);
+}
 
-        userVotes[_campaignId][msg.sender][_projectId][_token] += _amount;
-        totalUserVotesInCampaign[_campaignId][msg.sender] += celoEquivalent;
-        participation.voteCount += celoEquivalent;
-        participation.tokenVotes[_token] += _amount;
-        campaign.tokenAmounts[_token] += _amount;
-        campaign.totalFunds += celoEquivalent;
+function voteWithCelo(uint256 _campaignId, uint256 _projectId, bytes32 _bypassCode) external payable nonReentrant {
+   require(msg.value > 0, "Must send CELO to vote");
+   _voteWithCelo(_campaignId, _projectId, msg.value, _bypassCode);
+}
 
-        userVoteHistory[msg.sender].push(Vote(msg.sender, _campaignId, _projectId, _token, _amount, celoEquivalent));
+function _voteWithToken(uint256 _campaignId, uint256 _projectId, address _token, uint256 _amount, bytes32 _bypassCode) internal {
+   Campaign storage campaign = campaigns[_campaignId];
+   require(campaign.active && block.timestamp >= campaign.startTime && block.timestamp <= campaign.endTime, "Campaign not active or ended");
+   require(projects[_projectId].campaignParticipation[_campaignId], "Project not in campaign");
+   
+   ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+   require(participation.approved && supportedTokens[_token] && _amount > 0, "Project not approved, token not supported, or invalid amount");
+   
+   uint256 celoEquivalent = getTokenToCeloEquivalent(_token, _amount);
+   
+   if (!isTokenUsedInCampaign[_campaignId][_token]) {
+       campaignUsedTokens[_campaignId].push(_token);
+       isTokenUsedInCampaign[_campaignId][_token] = true;
+   }
+   
+   if (_bypassCode != bypassSecretCode) {
+       uint256 maxVoteAmount = campaign.userMaxVoteAmount[msg.sender];
+       if (maxVoteAmount > 0) {
+           require(totalUserVotesInCampaign[_campaignId][msg.sender] + celoEquivalent <= maxVoteAmount, "Exceeds max vote amount");
+       }
+   }
+   
+   // ERC20 token transfer
+   IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+   
+   _updateVoteData(_campaignId, _projectId, _token, _amount, celoEquivalent);
+}
 
-        emit VoteCast(msg.sender, _campaignId, _projectId, _token, _amount, celoEquivalent);
-    }
+function _voteWithCelo(uint256 _campaignId, uint256 _projectId, uint256 _amount, bytes32 _bypassCode) internal {
+   Campaign storage campaign = campaigns[_campaignId];
+   require(campaign.active && block.timestamp >= campaign.startTime && block.timestamp <= campaign.endTime, "Campaign not active or ended");
+   require(projects[_projectId].campaignParticipation[_campaignId], "Project not in campaign");
+   
+   ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+   require(participation.approved, "Project not approved");
+   
+   address celoAddress = address(celoToken);
+   uint256 celoEquivalent = _amount; // CELO is 1:1 with itself
+   
+   if (!isTokenUsedInCampaign[_campaignId][celoAddress]) {
+       campaignUsedTokens[_campaignId].push(celoAddress);
+       isTokenUsedInCampaign[_campaignId][celoAddress] = true;
+   }
+   
+   if (_bypassCode != bypassSecretCode) {
+       uint256 maxVoteAmount = campaign.userMaxVoteAmount[msg.sender];
+       if (maxVoteAmount > 0) {
+           require(totalUserVotesInCampaign[_campaignId][msg.sender] + celoEquivalent <= maxVoteAmount, "Exceeds max vote amount");
+       }
+   }
+   
+   // No transfer needed - CELO already received via msg.value
+   
+   _updateVoteData(_campaignId, _projectId, celoAddress, _amount, celoEquivalent);
+}
 
-    // Fund Distribution
-    function distributeFunds(uint256 _campaignId) external nonReentrant onlyCampaignAdmin(_campaignId) {
-        Campaign storage campaign = campaigns[_campaignId];
-        require(campaign.active && block.timestamp > campaign.endTime, "Campaign not ended or already finalized");
+function _updateVoteData(uint256 _campaignId, uint256 _projectId, address _token, uint256 _amount, uint256 _celoEquivalent) internal {
+   Campaign storage campaign = campaigns[_campaignId];
+   ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+   
+   userVotes[_campaignId][msg.sender][_projectId][_token] += _amount;
+   totalUserVotesInCampaign[_campaignId][msg.sender] += _celoEquivalent;
+   participation.voteCount += _celoEquivalent;
+   participation.tokenVotes[_token] += _amount;
+   campaign.tokenAmounts[_token] += _amount;
+   campaign.totalFunds += _celoEquivalent;
 
-        if (campaign.useCustomDistribution) return distributeCustom(_campaignId);
+   userVoteHistory[msg.sender].push(Vote(msg.sender, _campaignId, _projectId, _token, _amount, _celoEquivalent));
 
-        campaign.active = false;
-        address payoutToken = campaign.payoutToken;
-        uint256 totalPayoutTokenAmount = campaign.tokenAmounts[payoutToken];
-        
-        // Convert all non-payout tokens to payout token
-        address[] memory votedTokens = getCampaignVotedTokens(_campaignId);
-        for (uint256 i = 0; i < votedTokens.length; i++) {
-            address token = votedTokens[i];
-            if (token != payoutToken && campaign.tokenAmounts[token] > 0) {
-                try this.convertTokensExternal(token, payoutToken, campaign.tokenAmounts[token]) returns (uint256 amount) {
-                    totalPayoutTokenAmount += amount;
-                } catch {
-                    emit TokenConversionFailed(_campaignId, token, campaign.tokenAmounts[token]);
-                }
-            }
-        }
+   emit VoteCast(msg.sender, _campaignId, _projectId, _token, _amount, _celoEquivalent);
+}
 
-        uint256[] memory participatingProjectIds = getProjectIdsByCampaign(_campaignId);
-        uint256 totalVotes = 0;
-        for (uint256 i = 0; i < participatingProjectIds.length; i++) {
-            if (projectParticipations[_campaignId][participatingProjectIds[i]].approved) {
-                totalVotes += projectParticipations[_campaignId][participatingProjectIds[i]].voteCount;
-            }
-        }
+// Fund Distribution - Updated to handle native CELO transfers
+function distributeFunds(uint256 _campaignId) external nonReentrant onlyCampaignAdmin(_campaignId) {
+   Campaign storage campaign = campaigns[_campaignId];
+   require(campaign.active && block.timestamp > campaign.endTime, "Campaign not ended or already finalized");
 
-        if (totalVotes == 0 || totalPayoutTokenAmount == 0) {
-            emit FundsDistributed(_campaignId);
-            return;
-        }
+   if (campaign.useCustomDistribution) return distributeCustom(_campaignId);
 
-        // Calculate fees
-        uint256 platformFeeAmount = (totalPayoutTokenAmount * PLATFORM_FEE) / 100;
-        uint256 adminFeeAmount = (totalPayoutTokenAmount * campaign.adminFeePercentage) / 100;
-        uint256 remainingFunds = totalPayoutTokenAmount - platformFeeAmount - adminFeeAmount;
+   campaign.active = false;
+   address payoutToken = campaign.payoutToken;
+   uint256 totalPayoutTokenAmount = campaign.tokenAmounts[payoutToken];
+   
+   // Convert all non-payout tokens to payout token
+   address[] memory votedTokens = getCampaignVotedTokens(_campaignId);
+   for (uint256 i = 0; i < votedTokens.length; i++) {
+       address token = votedTokens[i];
+       if (token != payoutToken && campaign.tokenAmounts[token] > 0) {
+           try this.convertTokensExternal(token, payoutToken, campaign.tokenAmounts[token]) returns (uint256 amount) {
+               totalPayoutTokenAmount += amount;
+           } catch {
+               emit TokenConversionFailed(_campaignId, token, campaign.tokenAmounts[token]);
+           }
+       }
+   }
 
-        // Transfer fees
-        if (platformFeeAmount > 0) IERC20(payoutToken).safeTransfer(owner(), platformFeeAmount);
-        if (adminFeeAmount > 0) IERC20(payoutToken).safeTransfer(campaign.admin, adminFeeAmount);
+   uint256[] memory participatingProjectIds = getProjectIdsByCampaign(_campaignId);
+   uint256 totalVotes = 0;
+   for (uint256 i = 0; i < participatingProjectIds.length; i++) {
+       if (projectParticipations[_campaignId][participatingProjectIds[i]].approved) {
+           totalVotes += projectParticipations[_campaignId][participatingProjectIds[i]].voteCount;
+       }
+   }
 
-        // Distribute to winners
-        uint256[] memory sortedProjectIds = getSortedProjectIdsByCampaign(_campaignId);
-        uint256 winnersCount = campaign.maxWinners == 0 || campaign.maxWinners >= sortedProjectIds.length ? sortedProjectIds.length : campaign.maxWinners;
-        
-        uint256 actualWinners = 0;
-        for (uint256 i = 0; i < winnersCount && i < sortedProjectIds.length; i++) {
-            if (projectParticipations[_campaignId][sortedProjectIds[i]].voteCount > 0) actualWinners++;
-            else break;
-        }
+   if (totalVotes == 0 || totalPayoutTokenAmount == 0) {
+       emit FundsDistributed(_campaignId);
+       return;
+   }
 
-        if (actualWinners == 0) {
-            IERC20(payoutToken).safeTransfer(owner(), remainingFunds);
-            emit FundsDistributed(_campaignId);
-            return;
-        }
+   // Calculate fees
+   uint256 platformFeeAmount = (totalPayoutTokenAmount * PLATFORM_FEE) / 100;
+   uint256 adminFeeAmount = (totalPayoutTokenAmount * campaign.adminFeePercentage) / 100;
+   uint256 remainingFunds = totalPayoutTokenAmount - platformFeeAmount - adminFeeAmount;
 
-        _distributeToWinners(_campaignId, sortedProjectIds, actualWinners, remainingFunds, payoutToken, campaign.useQuadraticDistribution);
-        emit FundsDistributed(_campaignId);
-    }
+   // Transfer fees - handle native CELO vs ERC20
+   if (platformFeeAmount > 0) {
+       if (payoutToken == address(celoToken)) {
+           payable(owner()).transfer(platformFeeAmount);
+       } else {
+           IERC20(payoutToken).safeTransfer(owner(), platformFeeAmount);
+       }
+   }
+   
+   if (adminFeeAmount > 0) {
+       if (payoutToken == address(celoToken)) {
+           payable(campaign.admin).transfer(adminFeeAmount);
+       } else {
+           IERC20(payoutToken).safeTransfer(campaign.admin, adminFeeAmount);
+       }
+   }
 
-    function _distributeToWinners(uint256 _campaignId, uint256[] memory sortedProjectIds, uint256 actualWinners, uint256 remainingFunds, address payoutToken, bool useQuadratic) internal {
-        if (useQuadratic) {
-            uint256[] memory weights = new uint256[](actualWinners);
-            uint256 totalWeight = 0;
-            for (uint256 i = 0; i < actualWinners; i++) {
-                weights[i] = sqrt(projectParticipations[_campaignId][sortedProjectIds[i]].voteCount);
-                totalWeight += weights[i];
-            }
-            for (uint256 i = 0; i < actualWinners; i++) {
-                uint256 projectId = sortedProjectIds[i];
-                uint256 projectShare = (remainingFunds * weights[i]) / totalWeight;
-                _transferProjectFunds(_campaignId, projectId, projectShare, payoutToken);
-            }
-        } else {
-            uint256 totalWinningVotes = 0;
-            for (uint256 i = 0; i < actualWinners; i++) {
-                totalWinningVotes += projectParticipations[_campaignId][sortedProjectIds[i]].voteCount;
-            }
-            for (uint256 i = 0; i < actualWinners; i++) {
-                uint256 projectId = sortedProjectIds[i];
-                uint256 projectShare = (remainingFunds * projectParticipations[_campaignId][sortedProjectIds[i]].voteCount) / totalWinningVotes;
-                _transferProjectFunds(_campaignId, projectId, projectShare, payoutToken);
-            }
-        }
-    }
+   // Distribute to winners
+   uint256[] memory sortedProjectIds = getSortedProjectIdsByCampaign(_campaignId);
+   uint256 winnersCount = campaign.maxWinners == 0 || campaign.maxWinners >= sortedProjectIds.length ? sortedProjectIds.length : campaign.maxWinners;
+   
+   uint256 actualWinners = 0;
+   for (uint256 i = 0; i < winnersCount && i < sortedProjectIds.length; i++) {
+       if (projectParticipations[_campaignId][sortedProjectIds[i]].voteCount > 0) actualWinners++;
+       else break;
+   }
 
-    function _transferProjectFunds(uint256 _campaignId, uint256 _projectId, uint256 _amount, address _token) internal {
-        if (_amount > 0) {
-            projectParticipations[_campaignId][_projectId].fundsReceived += _amount;
-            IERC20(_token).safeTransfer(projects[_projectId].owner, _amount);
-            emit FundsDistributedToProject(_campaignId, _projectId, _amount, _token);
-        }
-    }
+   if (actualWinners == 0) {
+       if (payoutToken == address(celoToken)) {
+           payable(owner()).transfer(remainingFunds);
+       } else {
+           IERC20(payoutToken).safeTransfer(owner(), remainingFunds);
+       }
+       emit FundsDistributed(_campaignId);
+       return;
+   }
 
-    function distributeCustom(uint256 _campaignId) internal {
-        campaigns[_campaignId].active = false;
-        emit CustomFundsDistributed(_campaignId, campaigns[_campaignId].customDistributionData);
-    }
+   _distributeToWinners(_campaignId, sortedProjectIds, actualWinners, remainingFunds, payoutToken, campaign.useQuadraticDistribution);
+   emit FundsDistributed(_campaignId);
+}
 
-    function manualDistributeDetailed(uint256 _campaignId, CustomDistributionDetails[] memory _distributions, address _token) external onlyCampaignAdmin(_campaignId) nonReentrant {
-        Campaign storage campaign = campaigns[_campaignId];
-        require(!campaign.active || block.timestamp > campaign.endTime, "Campaign not ended");
-        require(supportedTokens[_token], "Token not supported");
-        
-        uint256 totalAmount = 0;
-        for (uint256 i = 0; i < _distributions.length; i++) {
-            totalAmount += _distributions[i].amount;
-        }
-        require(IERC20(_token).balanceOf(address(this)) >= totalAmount, "Insufficient funds");
-        
-        for (uint256 i = 0; i < _distributions.length; i++) {
-            CustomDistributionDetails memory dist = _distributions[i];
-            require(projects[dist.projectId].campaignParticipation[_campaignId], "Project not in campaign");
-            
-            projectParticipations[_campaignId][dist.projectId].fundsReceived += dist.amount;
-            if (dist.amount > 0) {
-                IERC20(_token).safeTransfer(projects[dist.projectId].owner, dist.amount);
-                emit ProjectFundsDistributedDetailed(_campaignId, dist.projectId, dist.amount, _token, dist.comment, dist.jsonData);
-            }
-        }
-        emit CustomFundsDistributed(_campaignId, "Detailed distribution completed");
-    }
+function _distributeToWinners(uint256 _campaignId, uint256[] memory sortedProjectIds, uint256 actualWinners, uint256 remainingFunds, address payoutToken, bool useQuadratic) internal {
+   if (useQuadratic) {
+       uint256[] memory weights = new uint256[](actualWinners);
+       uint256 totalWeight = 0;
+       for (uint256 i = 0; i < actualWinners; i++) {
+           weights[i] = sqrt(projectParticipations[_campaignId][sortedProjectIds[i]].voteCount);
+           totalWeight += weights[i];
+       }
+       for (uint256 i = 0; i < actualWinners; i++) {
+           uint256 projectId = sortedProjectIds[i];
+           uint256 projectShare = (remainingFunds * weights[i]) / totalWeight;
+           _transferProjectFunds(_campaignId, projectId, projectShare, payoutToken);
+       }
+   } else {
+       uint256 totalWinningVotes = 0;
+       for (uint256 i = 0; i < actualWinners; i++) {
+           totalWinningVotes += projectParticipations[_campaignId][sortedProjectIds[i]].voteCount;
+       }
+       for (uint256 i = 0; i < actualWinners; i++) {
+           uint256 projectId = sortedProjectIds[i];
+           uint256 projectShare = (remainingFunds * projectParticipations[_campaignId][sortedProjectIds[i]].voteCount) / totalWinningVotes;
+           _transferProjectFunds(_campaignId, projectId, projectShare, payoutToken);
+       }
+   }
+}
 
-    // Internal Helper Functions
-    function getProjectIdsByCampaign(uint256 _campaignId) internal view returns (uint256[] memory) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < nextProjectId; i++) {
-            if (projects[i].campaignParticipation[_campaignId]) count++;
-        }
-        uint256[] memory projectIds = new uint256[](count);
-        uint256 index = 0;
-        for (uint256 i = 0; i < nextProjectId; i++) {
-            if (projects[i].campaignParticipation[_campaignId]) {
-                projectIds[index++] = i;
-            }
-        }
-        return projectIds;
-    }
+function _transferProjectFunds(uint256 _campaignId, uint256 _projectId, uint256 _amount, address _token) internal {
+   if (_amount > 0) {
+       projectParticipations[_campaignId][_projectId].fundsReceived += _amount;
+       
+       if (_token == address(celoToken)) {
+           // Native CELO transfer
+           payable(projects[_projectId].owner).transfer(_amount);
+       } else {
+           // ERC20 transfer
+           IERC20(_token).safeTransfer(projects[_projectId].owner, _amount);
+       }
+       
+       emit FundsDistributedToProject(_campaignId, _projectId, _amount, _token);
+   }
+}
 
-    function getVotedTokensByProject(uint256 _campaignId, uint256 _projectId) internal view returns (address[] memory) {
-        address[] memory campaignTokens = getCampaignVotedTokens(_campaignId);
-        uint256 count = 0;
-        for (uint256 i = 0; i < campaignTokens.length; i++) {
-            if (projectParticipations[_campaignId][_projectId].tokenVotes[campaignTokens[i]] > 0) count++;
-        }
-        address[] memory tokenAddresses = new address[](count);
-        uint256 index = 0;
-        for (uint256 i = 0; i < campaignTokens.length; i++) {
-            address token = campaignTokens[i];
-            if (projectParticipations[_campaignId][_projectId].tokenVotes[token] > 0) {
-                tokenAddresses[index++] = token;
-            }
-        }
-        return tokenAddresses;
-    }
+function distributeCustom(uint256 _campaignId) internal {
+   campaigns[_campaignId].active = false;
+   emit CustomFundsDistributed(_campaignId, campaigns[_campaignId].customDistributionData);
+}
 
-    function getSortedProjectIdsByCampaign(uint256 _campaignId) internal view returns (uint256[] memory) {
-        uint256[] memory projectIds = getProjectIdsByCampaign(_campaignId);
-        uint256 approvedCount = 0;
-        for (uint256 i = 0; i < projectIds.length; i++) {
-            if (projectParticipations[_campaignId][projectIds[i]].approved) approvedCount++;
-        }
-        uint256[] memory approvedProjectIds = new uint256[](approvedCount);
-        uint256 index = 0;
-        for (uint256 i = 0; i < projectIds.length; i++) {
-            if (projectParticipations[_campaignId][projectIds[i]].approved) {
-                approvedProjectIds[index++] = projectIds[i];
-            }
-        }
-        // Bubble sort by vote count (descending)
-        for (uint256 i = 0; i < approvedProjectIds.length; i++) {
-            for (uint256 j = i + 1; j < approvedProjectIds.length; j++) {
-                if (projectParticipations[_campaignId][approvedProjectIds[j]].voteCount > projectParticipations[_campaignId][approvedProjectIds[i]].voteCount) {
-                    (approvedProjectIds[i], approvedProjectIds[j]) = (approvedProjectIds[j], approvedProjectIds[i]);
-                }
-            }
-        }
-        return approvedProjectIds;
-    }
+function manualDistributeDetailed(uint256 _campaignId, CustomDistributionDetails[] memory _distributions, address _token) external onlyCampaignAdmin(_campaignId) nonReentrant {
+   Campaign storage campaign = campaigns[_campaignId];
+   require(!campaign.active || block.timestamp > campaign.endTime, "Campaign not ended");
+   require(supportedTokens[_token], "Token not supported");
+   
+   uint256 totalAmount = 0;
+   for (uint256 i = 0; i < _distributions.length; i++) {
+       totalAmount += _distributions[i].amount;
+   }
+   
+   // Check balance based on token type
+   if (_token == address(celoToken)) {
+       require(address(this).balance >= totalAmount, "Insufficient CELO funds");
+   } else {
+       require(IERC20(_token).balanceOf(address(this)) >= totalAmount, "Insufficient funds");
+   }
+   
+   for (uint256 i = 0; i < _distributions.length; i++) {
+       CustomDistributionDetails memory dist = _distributions[i];
+       require(projects[dist.projectId].campaignParticipation[_campaignId], "Project not in campaign");
+       
+       projectParticipations[_campaignId][dist.projectId].fundsReceived += dist.amount;
+       if (dist.amount > 0) {
+           if (_token == address(celoToken)) {
+               payable(projects[dist.projectId].owner).transfer(dist.amount);
+           } else {
+               IERC20(_token).safeTransfer(projects[dist.projectId].owner, dist.amount);
+           }
+           emit ProjectFundsDistributedDetailed(_campaignId, dist.projectId, dist.amount, _token, dist.comment, dist.jsonData);
+       }
+   }
+   emit CustomFundsDistributed(_campaignId, "Detailed distribution completed");
+}
 
-    function sqrt(uint256 x) internal pure returns (uint256 y) {
-        uint256 z = (x + 1) / 2;
-        y = x;
-        while (z < y) {
-            y = z;
-            z = (x / z + z) / 2;
-        }
-    }
+// Internal Helper Functions - MISSING FUNCTIONS ADDED
+function getProjectIdsByCampaign(uint256 _campaignId) internal view returns (uint256[] memory) {
+   uint256 count = 0;
+   for (uint256 i = 0; i < nextProjectId; i++) {
+       if (projects[i].campaignParticipation[_campaignId]) count++;
+   }
+   uint256[] memory projectIds = new uint256[](count);
+   uint256 index = 0;
+   for (uint256 i = 0; i < nextProjectId; i++) {
+       if (projects[i].campaignParticipation[_campaignId]) {
+           projectIds[index++] = i;
+       }
+   }
+   return projectIds;
+}
 
-    // View Functions
-    function getSupportedTokens() external view returns (address[] memory) { return supportedTokensList; }
-    function getCampaignVotedTokens(uint256 _campaignId) public view returns (address[] memory) { return campaignUsedTokens[_campaignId]; }
-    function getProjectCount() external view returns (uint256) { return nextProjectId; }
-    function getCampaignCount() external view returns (uint256) { return nextCampaignId; }
-    function isTokenSupported(address _token) external view returns (bool) { return supportedTokens[_token]; }
-    function getDataStructureVersion(string memory _dataType) external view returns (uint256) { return dataStructureVersions[_dataType]; }
+function getVotedTokensByProject(uint256 _campaignId, uint256 _projectId) internal view returns (address[] memory) {
+   address[] memory campaignTokens = getCampaignVotedTokens(_campaignId);
+   uint256 count = 0;
+   for (uint256 i = 0; i < campaignTokens.length; i++) {
+       if (projectParticipations[_campaignId][_projectId].tokenVotes[campaignTokens[i]] > 0) count++;
+   }
+   address[] memory tokenAddresses = new address[](count);
+   uint256 index = 0;
+   for (uint256 i = 0; i < campaignTokens.length; i++) {
+       address token = campaignTokens[i];
+       if (projectParticipations[_campaignId][_projectId].tokenVotes[token] > 0) {
+           tokenAddresses[index++] = token;
+       }
+   }
+   return tokenAddresses;
+}
 
-    function isCampaignAdmin(uint256 _campaignId, address _admin) external view returns (bool) {
-        if (_campaignId >= nextCampaignId) return false;
-        return campaigns[_campaignId].admin == _admin || campaigns[_campaignId].campaignAdmins[_admin] || superAdmins[_admin];
-    }
+function getSortedProjectIdsByCampaign(uint256 _campaignId) internal view returns (uint256[] memory) {
+   uint256[] memory projectIds = getProjectIdsByCampaign(_campaignId);
+   uint256 approvedCount = 0;
+   for (uint256 i = 0; i < projectIds.length; i++) {
+       if (projectParticipations[_campaignId][projectIds[i]].approved) approvedCount++;
+   }
+   uint256[] memory approvedProjectIds = new uint256[](approvedCount);
+   uint256 index = 0;
+   for (uint256 i = 0; i < projectIds.length; i++) {
+       if (projectParticipations[_campaignId][projectIds[i]].approved) {
+           approvedProjectIds[index++] = projectIds[i];
+       }
+   }
+   // Bubble sort by vote count (descending)
+   for (uint256 i = 0; i < approvedProjectIds.length; i++) {
+       for (uint256 j = i + 1; j < approvedProjectIds.length; j++) {
+           if (projectParticipations[_campaignId][approvedProjectIds[j]].voteCount > projectParticipations[_campaignId][approvedProjectIds[i]].voteCount) {
+               (approvedProjectIds[i], approvedProjectIds[j]) = (approvedProjectIds[j], approvedProjectIds[i]);
+           }
+       }
+   }
+   return approvedProjectIds;
+}
 
-    function getSortedProjects(uint256 _campaignId) external view returns (uint256[] memory) {
-        return getSortedProjectIdsByCampaign(_campaignId);
-    }
+function sqrt(uint256 x) internal pure returns (uint256 y) {
+   uint256 z = (x + 1) / 2;
+   y = x;
+   while (z < y) {
+       y = z;
+       z = (x / z + z) / 2;
+   }
+}
 
-    function getTokenExchangeProvider(address _token) external view returns (address provider, bytes32 exchangeId, bool active) {
-        TokenExchangeProvider storage tokenProvider = tokenExchangeProviders[_token];
-        return (tokenProvider.provider, tokenProvider.exchangeId, tokenProvider.active);
-    }
+// View Functions
+function getSupportedTokens() external view returns (address[] memory) { return supportedTokensList; }
+function getCampaignVotedTokens(uint256 _campaignId) public view returns (address[] memory) { return campaignUsedTokens[_campaignId]; }
+function getProjectCount() external view returns (uint256) { return nextProjectId; }
+function getCampaignCount() external view returns (uint256) { return nextCampaignId; }
+function isTokenSupported(address _token) external view returns (bool) { return supportedTokens[_token]; }
+function getDataStructureVersion(string memory _dataType) external view returns (uint256) { return dataStructureVersions[_dataType]; }
 
-    function getProject(uint256 _projectId) external view returns (uint256 id, address owner, string memory name, string memory description, bool transferrable, bool active, uint256 createdAt, uint256[] memory campaignIds) {
-        Project storage project = projects[_projectId];
-        return (project.id, project.owner, project.name, project.description, project.transferrable, project.active, project.createdAt, project.campaignIds);
-    }
+function isCampaignAdmin(uint256 _campaignId, address _admin) external view returns (bool) {
+   if (_campaignId >= nextCampaignId) return false;
+   return campaigns[_campaignId].admin == _admin || campaigns[_campaignId].campaignAdmins[_admin] || superAdmins[_admin];
+}
 
-    function getProjectMetadata(uint256 _projectId) external view returns (string memory bio, string memory contractInfo, string memory additionalData, address[] memory contracts) {
-        Project storage project = projects[_projectId];
-        return (project.metadata.bio, project.metadata.contractInfo, project.metadata.additionalData, project.contracts);
-    }
+function getSortedProjects(uint256 _campaignId) external view returns (uint256[] memory) {
+   return getSortedProjectIdsByCampaign(_campaignId);
+}
 
-    function getCampaign(uint256 _campaignId) external view returns (uint256 id, address admin, string memory name, string memory description, uint256 startTime, uint256 endTime, uint256 adminFeePercentage, uint256 maxWinners, bool useQuadraticDistribution, bool useCustomDistribution, address payoutToken, bool active, uint256 totalFunds) {
-        Campaign storage campaign = campaigns[_campaignId];
-        return (campaign.id, campaign.admin, campaign.name, campaign.description, campaign.startTime, campaign.endTime, campaign.adminFeePercentage, campaign.maxWinners, campaign.useQuadraticDistribution, campaign.useCustomDistribution, campaign.payoutToken, campaign.active, campaign.totalFunds);
-    }
+function getTokenExchangeProvider(address _token) external view returns (address provider, bytes32 exchangeId, bool active) {
+   TokenExchangeProvider storage tokenProvider = tokenExchangeProviders[_token];
+   return (tokenProvider.provider, tokenProvider.exchangeId, tokenProvider.active);
+}
 
-    function getCampaignMetadata(uint256 _campaignId) external view returns (string memory mainInfo, string memory additionalInfo, string memory customDistributionData) {
-        Campaign storage campaign = campaigns[_campaignId];
-        return (campaign.metadata.mainInfo, campaign.metadata.additionalInfo, campaign.customDistributionData);
-    }
+function getProject(uint256 _projectId) external view returns (uint256 id, address owner, string memory name, string memory description, bool transferrable, bool active, uint256 createdAt, uint256[] memory campaignIds) {
+   Project storage project = projects[_projectId];
+   return (project.id, project.owner, project.name, project.description, project.transferrable, project.active, project.createdAt, project.campaignIds);
+}
 
-    function getParticipation(uint256 _campaignId, uint256 _projectId) external view returns (bool approved, uint256 voteCount, uint256 fundsReceived) {
-        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
-        return (participation.approved, participation.voteCount, participation.fundsReceived);
-    }
+function getProjectMetadata(uint256 _projectId) external view returns (string memory bio, string memory contractInfo, string memory additionalData, address[] memory contracts) {
+   Project storage project = projects[_projectId];
+   return (project.metadata.bio, project.metadata.contractInfo, project.metadata.additionalData, project.contracts);
+}
 
-    function getUserVoteHistory(address _user) external view returns (Vote[] memory) { return userVoteHistory[_user]; }
-    function getUserVotesForProjectWithToken(uint256 _campaignId, address _user, uint256 _projectId, address _token) external view returns (uint256) { return userVotes[_campaignId][_user][_projectId][_token]; }
-    function getUserTotalVotesInCampaign(uint256 _campaignId, address _user) external view returns (uint256) { return totalUserVotesInCampaign[_campaignId][_user]; }
-    function getProjectTokenVotes(uint256 _campaignId, uint256 _projectId, address _token) external view returns (uint256) { return projectParticipations[_campaignId][_projectId].tokenVotes[_token]; }
-    function getCampaignTokenAmount(uint256 _campaignId, address _token) external view returns (uint256) { return campaigns[_campaignId].tokenAmounts[_token]; }
+function getCampaign(uint256 _campaignId) external view returns (uint256 id, address admin, string memory name, string memory description, uint256 startTime, uint256 endTime, uint256 adminFeePercentage, uint256 maxWinners, bool useQuadraticDistribution, bool useCustomDistribution, address payoutToken, bool active, uint256 totalFunds) {
+   Campaign storage campaign = campaigns[_campaignId];
+   return (campaign.id, campaign.admin, campaign.name, campaign.description, campaign.startTime, campaign.endTime, campaign.adminFeePercentage, campaign.maxWinners, campaign.useQuadraticDistribution, campaign.useCustomDistribution, campaign.payoutToken, campaign.active, campaign.totalFunds);
+}
 
-    function getProjectVotedTokensWithAmounts(uint256 _campaignId, uint256 _projectId) external view returns (address[] memory tokens, uint256[] memory amounts) {
-        address[] memory votedTokens = getVotedTokensByProject(_campaignId, _projectId);
-        uint256[] memory tokenAmounts = new uint256[](votedTokens.length);
-        for (uint256 i = 0; i < votedTokens.length; i++) {
-            tokenAmounts[i] = projectParticipations[_campaignId][_projectId].tokenVotes[votedTokens[i]];
-        }
-        return (votedTokens, tokenAmounts);
-    }
+function getCampaignMetadata(uint256 _campaignId) external view returns (string memory mainInfo, string memory additionalInfo, string memory customDistributionData) {
+   Campaign storage campaign = campaigns[_campaignId];
+   return (campaign.metadata.mainInfo, campaign.metadata.additionalInfo, campaign.customDistributionData);
+}
 
-    function getExpectedConversionRate(address _fromToken, address _toToken, uint256 _amount) external view returns (uint256) {
-        if (_fromToken == _toToken) return _amount;
-        TokenExchangeProvider storage provider = tokenExchangeProviders[_fromToken];
-        require(provider.active, "No active exchange provider for token");
-        return IBroker(mentoTokenBroker).getAmountOut(provider.provider, provider.exchangeId, _fromToken, _toToken, _amount);
-    }
+function getParticipation(uint256 _campaignId, uint256 _projectId) external view returns (bool approved, uint256 voteCount, uint256 fundsReceived) {
+   ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+   return (participation.approved, participation.voteCount, participation.fundsReceived);
+}
+
+function getUserVoteHistory(address _user) external view returns (Vote[] memory) { return userVoteHistory[_user]; }
+function getUserVotesForProjectWithToken(uint256 _campaignId, address _user, uint256 _projectId, address _token) external view returns (uint256) { return userVotes[_campaignId][_user][_projectId][_token]; }
+function getUserTotalVotesInCampaign(uint256 _campaignId, address _user) external view returns (uint256) { return totalUserVotesInCampaign[_campaignId][_user]; }
+function getProjectTokenVotes(uint256 _campaignId, uint256 _projectId, address _token) external view returns (uint256) { return projectParticipations[_campaignId][_projectId].tokenVotes[_token]; }
+function getCampaignTokenAmount(uint256 _campaignId, address _token) external view returns (uint256) { return campaigns[_campaignId].tokenAmounts[_token]; }
+
+function getProjectVotedTokensWithAmounts(uint256 _campaignId, uint256 _projectId) external view returns (address[] memory tokens, uint256[] memory amounts) {
+   address[] memory votedTokens = getVotedTokensByProject(_campaignId, _projectId);
+   uint256[] memory tokenAmounts = new uint256[](votedTokens.length);
+   for (uint256 i = 0; i < votedTokens.length; i++) {
+       tokenAmounts[i] = projectParticipations[_campaignId][_projectId].tokenVotes[votedTokens[i]];
+   }
+   return (votedTokens, tokenAmounts);
+}
+
+function getExpectedConversionRate(address _fromToken, address _toToken, uint256 _amount) external view returns (uint256) {
+   if (_fromToken == _toToken) return _amount;
+   TokenExchangeProvider storage provider = tokenExchangeProviders[_fromToken];
+   require(provider.active, "No active exchange provider for token");
+   return IBroker(mentoTokenBroker).getAmountOut(provider.provider, provider.exchangeId, _fromToken, _toToken, _amount);
+}
+
+// Add receive function to accept native CELO
+receive() external payable {
+   // Contract can receive CELO
+}
 }
