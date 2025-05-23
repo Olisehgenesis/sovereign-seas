@@ -315,6 +315,8 @@ export function useRemoveProjectFromCampaign(contractAddress: Address) {
   }
 }
 
+//hook for getting project campaigns
+
 // Hook for reading project count
 export function useProjectCount(contractAddress: Address) {
   const { data, isLoading, error, refetch } = useReadContract({
@@ -331,6 +333,110 @@ export function useProjectCount(contractAddress: Address) {
     isLoading,
     error,
     refetch
+  }
+}
+
+// Hook for getting project campaigns and their status
+export function useProjectCampaigns(contractAddress: Address, projectId: bigint) {
+  const { data: projectData, isLoading: projectLoading, error: projectError } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProject',
+    args: [projectId],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined
+    }
+  })
+
+  const campaignIds = projectData ? projectData[7] as bigint[] : []
+
+  // Get campaign details for each campaign ID
+  const campaignContracts = campaignIds.map(campaignId => ({
+    address: contractAddress,
+    abi,
+    functionName: 'getCampaign',
+    args: [campaignId]
+  }))
+
+  // Get participation status for each campaign
+  const participationContracts = campaignIds.map(campaignId => ({
+    address: contractAddress,
+    abi,
+    functionName: 'getParticipation',
+    args: [campaignId, projectId]
+  }))
+
+  const { data: campaignsData, isLoading: campaignsLoading, error: campaignsError } = useReadContracts({
+    contracts: [...campaignContracts, ...participationContracts] as readonly {
+      address: Address
+      abi: Abi
+      functionName: string
+      args: readonly [bigint] | readonly [bigint, bigint]
+    }[],
+    query: {
+      enabled: !!contractAddress && campaignIds.length > 0
+    }
+  })
+
+  const projectCampaigns = campaignIds.map((campaignId, index) => {
+    const campaignResult = campaignsData?.[index]?.result
+    const participationResult = campaignsData?.[index + campaignIds.length]?.result
+
+    if (!campaignResult || !participationResult) return null
+
+    const campaign = {
+      id: campaignResult[0],
+      admin: campaignResult[1],
+      name: campaignResult[2],
+      description: campaignResult[3],
+      startTime: campaignResult[4],
+      endTime: campaignResult[5],
+      adminFeePercentage: campaignResult[6],
+      maxWinners: campaignResult[7],
+      useQuadraticDistribution: campaignResult[8],
+      useCustomDistribution: campaignResult[9],
+      payoutToken: campaignResult[10],
+      active: campaignResult[11],
+      totalFunds: campaignResult[12]
+    }
+
+    const participation = {
+      approved: participationResult[0],
+      voteCount: participationResult[1],
+      fundsReceived: participationResult[2]
+    }
+
+    // Determine campaign status
+    const now = Math.floor(Date.now() / 1000)
+    const startTime = Number(campaign.startTime)
+    const endTime = Number(campaign.endTime)
+    
+    let status: 'upcoming' | 'active' | 'ended' | 'inactive'
+    if (!campaign.active) {
+      status = 'inactive'
+    } else if (now < startTime) {
+      status = 'upcoming'
+    } else if (now >= startTime && now <= endTime) {
+      status = 'active'
+    } else {
+      status = 'ended'
+    }
+
+    return {
+      ...campaign,
+      participation,
+      status,
+      isApproved: participation.approved,
+      hasVotes: participation.voteCount > 0n,
+      hasFundsReceived: participation.fundsReceived > 0n
+    }
+  }).filter(Boolean)
+
+  return {
+    projectCampaigns,
+    isLoading: projectLoading || campaignsLoading,
+    error: projectError || campaignsError,
+    campaignCount: campaignIds.length
   }
 }
 

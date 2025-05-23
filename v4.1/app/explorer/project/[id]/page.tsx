@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { useProjectDetails } from '@/hooks/useProjectMethods';
 import { Address } from 'viem';
+import ProjectCampaignsModal from '@/components/ProjectCampaignsModal';
 
 export default function ProjectView() {
   const router = useRouter();
@@ -71,6 +72,7 @@ export default function ProjectView() {
     features: false,
     technical: false
   });
+  const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;
   
@@ -762,11 +764,11 @@ export default function ProjectView() {
                     </button>
                     
                     <button
-                      onClick={() => {/* Add to campaign logic */}}
+                      onClick={() => setShowCampaignsModal(true)}
                       className="w-full flex items-center justify-center space-x-2 p-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl transition-colors"
                     >
                       <Trophy className="h-4 w-4" />
-                      <span className="font-medium">Submit to Campaign</span>
+                      <span className="font-medium">Manage Campaigns</span>
                     </button>
                   </div>
                 </div>
@@ -844,6 +846,13 @@ export default function ProjectView() {
           </div>
         )}
       </div>
+
+      {/* Campaigns Modal */}
+      <ProjectCampaignsModal
+        isOpen={showCampaignsModal}
+        onClose={() => setShowCampaignsModal(false)}
+        projectId={project.id.toString()}
+      />
     </div>
   );
 }

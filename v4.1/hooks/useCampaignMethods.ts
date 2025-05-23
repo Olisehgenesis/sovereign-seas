@@ -24,6 +24,7 @@ export interface Campaign {
   useQuadraticDistribution: boolean
   useCustomDistribution: boolean
   payoutToken: Address
+  feeToken: Address
   active: boolean
   totalFunds: bigint
 }

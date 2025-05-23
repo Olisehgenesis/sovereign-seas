@@ -154,10 +154,10 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
         mentoTokenBroker = _broker;
         superAdmins[msg.sender] = true;
         supportedTokens[_celoToken] = true;
+        supportedTokensList.push(_celoToken);
         emit TokenAdded(_celoToken);
     }
 
-    // Internal helper functions (reduces redundancy)
     function _validateAndCollectFee(address _feeToken, uint256 _baseFee, string memory _feeType, uint256 _campaignId) internal {
         require(supportedTokens[_feeToken], "Fee token not supported");
         if (canBypassFees(_campaignId, msg.sender)) return;

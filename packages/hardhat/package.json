@@ -16,6 +16,7 @@
     "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.16",
     "@types/mocha": "^10.0.7",
+    "@types/node": "^22.15.21",
     "chai": "^4.2.0",
     "chain": "^0.4.0",
     "hardhat": "^2.22.15",
@@ -41,20 +42,18 @@
     "verify": "hardhat verify",
     "verify:contract": "hardhat run scripts/verify.ts --network alfajores",
     "vote": "hardhat run scripts/swapVote.ts ",
-
-
     "viewProjects": "hardhat run scripts/viewProjects.ts",
     "viewCampaign": "hardhat run scripts/viewCampaign.ts",
     "createCampaign": "hardhat run scripts/createCampaign.ts",
-
     "addSupportedToken": "hardhat run scripts/addSupportedToken.ts",
     "add-tokens": "npx ts-node scripts/addSupportedToken.ts",
-
     "add-providers": "npx ts-node scripts/addExchangeProviders.ts",
-
+    "add-sample": "npx ts-node scripts/generateSampleData.ts",
+    "add-custom-sample": "npx ts-node scripts/generateCustomSampleData.ts",
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",
+
     "prettier": "prettier --write 'contracts/**/*.sol' '**/*.ts'",
     "sync:abis": "node sync-abis.js"
   },
