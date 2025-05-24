@@ -12,7 +12,8 @@ import CreateCampaign from '@/pages/app/campaign/start'
 
 
 import './index.css'
-import { AppProvider } from '@/providers/AppProvider.tsx'
+import { AppProvider } from '@/providers/AppProvider'
+import CreateProject from '@/pages/app/project/start'
 
 globalThis.Buffer = Buffer
 
@@ -27,6 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/" element={<HomePage />} />
             <Route path="/explorer" element={<ExplorersPage />} />
             <Route path="/app/campaign/start" element={<CreateCampaign />} />
+            <Route path="/app/project/start" element={<CreateProject />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

@@ -51,8 +51,47 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import { uploadToIPFS } from '@/utils/imageUtils';
+import { useAccount } from 'wagmi';
+import { useCreateCampaignWithFees } from '@/hooks/useCampaignMethods';
+import { Address } from 'viem';
 
-// Move Section component outside of CreateCampaign
+interface Campaign {
+  name: string;
+  description: string;
+  campaignType: string;
+  category: string;
+  tags: string[];
+  logo: string;
+  website: string;
+  videoLink: string;
+  startDate: string;
+  endDate: string;
+  prizePool: string;
+  maxParticipants: string;
+  maxWinners: string;
+  adminFeePercentage: string;
+  useQuadraticDistribution: boolean;
+  useCustomDistribution: boolean;
+  customDistributionNotes?: string;
+  eligibilityCriteria: string[];
+  requirements: string[];
+  judgesCriteria: string[];
+  rewards: {
+    distribution: string[];
+    [key: string]: any;
+  };
+  submissionGuidelines: string;
+  twitter: string;
+  discord: string;
+  telegram: string;
+  contactEmail: string;
+  payoutToken: Address;
+  feeToken: Address;
+}
+
+type CampaignField = keyof Campaign;
+
 const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection }) => {
   const isExpanded = expandedSection === id;
   
@@ -93,14 +132,28 @@ export default function CreateCampaign() {
   
   // Collapsible sections state
   const [expandedSection, setExpandedSection] = useState('basic');
+  const celoToken = import.meta.env.VITE_CELO_TOKEN;
+  const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
+  
+  // Wallet and contract hooks
+  const { address, isConnected } = useAccount();
+  const {
+    createCampaignWithFees,
+    isPending,
+    isError,
+    error: contractError,
+    isSuccess,
+    campaignCreationFee,
+    canBypass
+  } = useCreateCampaignWithFees(contractAddress, address || '0x0');
   
   // File handling
-  const [logoFile, setLogoFile] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null);
-  const logoFileInputRef = useRef(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   
   // Main campaign state
-  const [campaign, setCampaign] = useState({
+  const [campaign, setCampaign] = useState<Campaign>({
     // Basic Information (Required fields marked)
     name: '', // Required
     description: '', // Required
@@ -147,8 +200,8 @@ export default function CreateCampaign() {
     submissionGuidelines: '',
     
     // Technical Settings - CELO only for now
-    payoutToken: '0x471ece3750da237f93b8e339c536989b8978a438', // CELO
-    feeToken: '0x471ece3750da237f93b8e339c536989b8978a438' // CELO
+    payoutToken: celoToken, // CELO
+    feeToken: celoToken // CELO
   });
   
   // UI State
@@ -192,7 +245,34 @@ export default function CreateCampaign() {
       }
     };
   }, [logoPreview]);
-  
+
+  // Handle contract success state
+  useEffect(() => {
+    if (isSuccess) {
+      setLoading(false);
+      setSuccessMessage('Campaign created successfully! Redirecting...');
+      
+      setTimeout(() => {
+        window.location.href = '/explorer';
+      }, 5000);
+    }
+  }, [isSuccess]);
+
+  // Handle contract error state
+  useEffect(() => {
+    if (contractError) {
+      setLoading(false);
+      setErrorMessage(`Transaction failed: ${contractError.message || 'Unknown error'}`);
+    }
+  }, [contractError]);
+
+  // Update loading state based on contract pending state
+  useEffect(() => {
+    if (isPending && !isUploading) {
+      setLoading(true);
+    }
+  }, [isPending, isUploading]);
+
   // Campaign types and options
   const campaignTypes = [
     { value: 'grants_round', label: 'Grants Round', icon: DollarSign, desc: 'Fund innovative projects with grants' },
@@ -204,16 +284,12 @@ export default function CreateCampaign() {
   ];
   
   const categories = [
-    'DeFi', 'NFT', 'Gaming', 'Infrastructure', 'DAO', 'Social', 'Identity', 
-    'Privacy', 'Analytics', 'Developer Tools', 'Wallet', 'Exchange', 'Lending',
-    'Insurance', 'Real Estate', 'Supply Chain', 'Healthcare', 'Education', 
+    'DeFi', 'NFT', 'Gaming', 'Infrastructure', 'Healthcare', 'Education', 
     'Climate', 'Social Impact', 'Research', 'Other'
   ];
 
   // Available tokens - CELO only for now
-  const supportedTokens = [
-    { address: '0x471ece3750da237f93b8e339c536989b8978a438', symbol: 'CELO', name: 'Celo' }
-  ];
+
 
   // Handle logo file selection and preview
   const handleLogoFileChange = (e) => {
@@ -340,12 +416,24 @@ export default function CreateCampaign() {
     });
   };
 
+  const handleFieldChange = (field: CampaignField, value: Campaign[CampaignField]) => {
+    setCampaign(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Submit handler
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     setErrorMessage('');
     
+    if (!isConnected) {
+      setErrorMessage('Please connect your wallet to create a campaign');
+      return;
+    }
+
     if (!validateForm()) {
       setErrorMessage('Please fix the validation errors before submitting');
       return;
@@ -355,21 +443,130 @@ export default function CreateCampaign() {
       setLoading(true);
       setIsUploading(true);
       
-      // Here you would implement the actual submission logic
-      // For now, just simulate the process
+      // Upload logo to IPFS if file is selected
+      let logoIpfsUrl = '';
+      if (logoFile) {
+        try {
+          console.log('Uploading logo to IPFS...');
+          logoIpfsUrl = await uploadToIPFS(logoFile);
+          console.log('Logo uploaded to IPFS:', logoIpfsUrl);
+        } catch (uploadError) {
+          console.error('Logo upload failed:', uploadError);
+          throw new Error(`Failed to upload logo: ${uploadError.message}`);
+        }
+      }
       
-      setTimeout(() => {
-        setIsUploading(false);
-        setSuccessMessage('Campaign created successfully! Redirecting...');
-        
-        setTimeout(() => {
-          // navigate('/explorer');
-          console.log('Would redirect to explorer');
-        }, 3000);
-      }, 2000);
+      // Prepare campaign data with cleaned arrays
+      const cleanedCampaign: Campaign = {
+        ...campaign,
+        logo: logoIpfsUrl || campaign.logo,
+        tags: campaign.tags.filter(tag => tag.trim() !== ''),
+        eligibilityCriteria: campaign.eligibilityCriteria.filter(c => c.trim() !== ''),
+        requirements: campaign.requirements.filter(r => r.trim() !== ''),
+        judgesCriteria: campaign.judgesCriteria.filter(c => c.trim() !== ''),
+        rewards: {
+          ...campaign.rewards,
+          distribution: campaign.rewards.distribution.filter(d => d.trim() !== '')
+        }
+      } as const;
+
+      // Create main info metadata (for contract)
+      const mainInfoData = {
+        type: cleanedCampaign.campaignType,
+        category: cleanedCampaign.category,
+        maxParticipants: cleanedCampaign.maxParticipants ? parseInt(cleanedCampaign.maxParticipants) : 0,
+        eligibilityCriteria: cleanedCampaign.eligibilityCriteria,
+        requirements: cleanedCampaign.requirements,
+        judgesCriteria: cleanedCampaign.judgesCriteria,
+        rewards: cleanedCampaign.rewards,
+        submissionGuidelines: cleanedCampaign.submissionGuidelines
+      };
+
+      // Create additional info metadata (for contract)
+      const additionalInfoData = {
+        version: '1.0.0',
+        timestamp: Date.now(),
+        creator: address,
+        tags: cleanedCampaign.tags,
+        logo: cleanedCampaign.logo,
+        prizePool: cleanedCampaign.prizePool,
+        media: {
+          website: cleanedCampaign.website,
+          videoLink: cleanedCampaign.videoLink
+        },
+        social: {
+          twitter: cleanedCampaign.twitter,
+          discord: cleanedCampaign.discord,
+          telegram: cleanedCampaign.telegram,
+          contactEmail: cleanedCampaign.contactEmail
+        }
+      };
+
+      // Convert dates to Unix timestamps (BigInt)
+      const startTimeUnix = BigInt(Math.floor(new Date(cleanedCampaign.startDate).getTime() / 1000));
+      const endTimeUnix = BigInt(Math.floor(new Date(cleanedCampaign.endDate).getTime() / 1000));
+
+      // Validate timestamps
+      const nowUnix = BigInt(Math.floor(Date.now() / 1000));
+      if (startTimeUnix <= nowUnix) {
+        throw new Error('Start date must be in the future');
+      }
+      if (endTimeUnix <= startTimeUnix) {
+        throw new Error('End date must be after start date');
+      }
+
+      // Create custom distribution data
+      const customDistributionData = cleanedCampaign.useCustomDistribution 
+        ? JSON.stringify({
+            distributionType: 'custom',
+            notes: cleanedCampaign.customDistributionNotes || 'Manual distribution will be implemented by campaign admin'
+          })
+        : '';
+
+      setIsUploading(false);
+      
+      console.log('Creating campaign with contract...');
+      console.log('Campaign creation fee:', campaignCreationFee?.toString());
+      console.log('Can bypass fees:', canBypass);
+
+      // Call the contract method
+      await createCampaignWithFees({
+        name: cleanedCampaign.name,
+        description: cleanedCampaign.description,
+        mainInfo: JSON.stringify(mainInfoData),
+        additionalInfo: JSON.stringify(additionalInfoData),
+        startTime: startTimeUnix,
+        endTime: endTimeUnix,
+        adminFeePercentage: BigInt(parseInt(cleanedCampaign.adminFeePercentage)),
+        maxWinners: BigInt(cleanedCampaign.maxWinners ? parseInt(cleanedCampaign.maxWinners) : 0),
+        useQuadraticDistribution: cleanedCampaign.useQuadraticDistribution,
+        useCustomDistribution: cleanedCampaign.useCustomDistribution,
+        customDistributionData,
+        payoutToken: cleanedCampaign.payoutToken as Address,
+        feeToken: cleanedCampaign.feeToken as Address
+      });
       
     } catch (error) {
-      setErrorMessage(`Failed to create campaign: ${error.message}`);
+      console.error('Campaign creation error:', error);
+      
+      // Enhanced error messages
+      let userFriendlyMessage = 'Failed to create campaign. ';
+      
+      if (error.message?.includes('user rejected')) {
+        userFriendlyMessage += 'Transaction was rejected by user.';
+      } else if (error.message?.includes('insufficient funds')) {
+        userFriendlyMessage += 'Insufficient funds for transaction fees.';
+      } else if (error.message?.includes('gas')) {
+        userFriendlyMessage += 'Gas estimation failed. Please check your parameters.';
+      } else if (error.message?.includes('network')) {
+        userFriendlyMessage += 'Network error. Please check your connection and try again.';
+      } else if (error.message?.includes('revert')) {
+        userFriendlyMessage += 'Contract execution reverted. Please check your parameters.';
+      } else {
+        userFriendlyMessage += `${error.message || 'Unknown error occurred.'}`;
+      }
+      
+      setErrorMessage(userFriendlyMessage);
       setLoading(false);
       setIsUploading(false);
     }
@@ -461,7 +658,7 @@ export default function CreateCampaign() {
                       ref={nameInputRef}
                       type="text"
                       value={campaign.name}
-                      onChange={handleNameChange}
+                      onChange={(e) => handleFieldChange('name', e.target.value)}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                       placeholder="Enter your campaign name"
                     />
@@ -474,7 +671,7 @@ export default function CreateCampaign() {
                     </label>
                     <select
                       value={campaign.category}
-                      onChange={(e) => setCampaign({...campaign, category: e.target.value})}
+                      onChange={(e) => handleFieldChange('category', e.target.value)}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                     >
                       <option value="">Select category</option>
@@ -496,7 +693,7 @@ export default function CreateCampaign() {
                       return (
                         <div
                           key={type.value}
-                          onClick={() => setCampaign({...campaign, campaignType: type.value})}
+                          onClick={() => handleFieldChange('campaignType', type.value)}
                           className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${
                             campaign.campaignType === type.value
                               ? 'border-purple-500 bg-purple-50'
@@ -528,7 +725,7 @@ export default function CreateCampaign() {
                   </label>
                   <textarea
                     value={campaign.description}
-                    onChange={(e) => setCampaign({...campaign, description: e.target.value})}
+                    onChange={(e) => handleFieldChange('description', e.target.value)}
                     rows={6}
                     className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                     placeholder="Provide a comprehensive description of your campaign, its goals, and what participants can expect..."
@@ -601,7 +798,7 @@ export default function CreateCampaign() {
                           onClick={() => {
                             setLogoFile(null);
                             setLogoPreview(null);
-                            setCampaign({...campaign, logo: ''});
+                            handleFieldChange('logo', '');
                             if (logoFileInputRef.current) {
                               logoFileInputRef.current.value = '';
                             }
@@ -651,7 +848,7 @@ export default function CreateCampaign() {
                     <input
                       type="url"
                       value={campaign.website}
-                      onChange={(e) => setCampaign({...campaign, website: e.target.value})}
+                      onChange={(e) => handleFieldChange('website', e.target.value)}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                       placeholder="https://yourcampaign.com"
                     />
@@ -664,7 +861,7 @@ export default function CreateCampaign() {
                     <input
                       type="url"
                       value={campaign.videoLink}
-                      onChange={(e) => setCampaign({...campaign, videoLink: e.target.value})}
+                      onChange={(e) => handleFieldChange('videoLink', e.target.value)}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                       placeholder="https://youtube.com/watch?v=..."
                     />
@@ -693,7 +890,7 @@ export default function CreateCampaign() {
                       <input
                         type="datetime-local"
                         value={campaign.startDate}
-                        onChange={(e) => setCampaign({...campaign, startDate: e.target.value})}
+                        onChange={(e) => handleFieldChange('startDate', e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                       />
                       {formErrors.startDate && <p className="mt-2 text-red-500 text-sm">{formErrors.startDate}</p>}
@@ -706,7 +903,7 @@ export default function CreateCampaign() {
                       <input
                         type="datetime-local"
                         value={campaign.endDate}
-                        onChange={(e) => setCampaign({...campaign, endDate: e.target.value})}
+                        onChange={(e) => handleFieldChange('endDate', e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                       />
                       {formErrors.endDate && <p className="mt-2 text-red-500 text-sm">{formErrors.endDate}</p>}
@@ -736,7 +933,7 @@ export default function CreateCampaign() {
                         step="0.01"
                         min="0"
                         value={campaign.prizePool}
-                        onChange={(e) => setCampaign({...campaign, prizePool: e.target.value})}
+                        onChange={(e) => handleFieldChange('prizePool', e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                         placeholder="50000"
                       />
@@ -747,7 +944,7 @@ export default function CreateCampaign() {
                       <label className="block text-purple-700 font-medium mb-3">Admin Fee (%)</label>
                       <select
                        value={campaign.adminFeePercentage}
-                       onChange={(e) => setCampaign({...campaign, adminFeePercentage: e.target.value})}
+                       onChange={(e) => handleFieldChange('adminFeePercentage', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                      >
                        <option value="0">0% - No admin fee</option>
@@ -791,9 +988,9 @@ export default function CreateCampaign() {
                          onChange={(e) => {
                            const updated = [...campaign.rewards.distribution];
                            updated[index] = e.target.value;
-                           setCampaign({
-                             ...campaign,
-                             rewards: {...campaign.rewards, distribution: updated}
+                           handleFieldChange('rewards', {
+                             ...campaign.rewards,
+                             distribution: updated
                            });
                          }}
                          className="flex-1 px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
@@ -805,9 +1002,9 @@ export default function CreateCampaign() {
                            onClick={() => {
                              const updated = [...campaign.rewards.distribution];
                              updated.splice(index, 1);
-                             setCampaign({
-                               ...campaign,
-                               rewards: {...campaign.rewards, distribution: updated}
+                             handleFieldChange('rewards', {
+                               ...campaign.rewards,
+                               distribution: updated
                              });
                            }}
                            className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-r-xl hover:bg-gray-200 transition-colors border-y border-r border-gray-200"
@@ -819,12 +1016,9 @@ export default function CreateCampaign() {
                    ))}
                    <button
                      type="button"
-                     onClick={() => setCampaign({
-                       ...campaign,
-                       rewards: {
-                         ...campaign.rewards,
-                         distribution: [...campaign.rewards.distribution, '']
-                       }
+                     onClick={() => handleFieldChange('rewards', {
+                       ...campaign.rewards,
+                       distribution: [...campaign.rewards.distribution, '']
                      })}
                      className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors border border-purple-200"
                    >
@@ -845,7 +1039,7 @@ export default function CreateCampaign() {
                        type="number"
                        min="0"
                        value={campaign.maxParticipants}
-                       onChange={(e) => setCampaign({...campaign, maxParticipants: e.target.value})}
+                       onChange={(e) => handleFieldChange('maxParticipants', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        placeholder="Leave empty for unlimited"
                      />
@@ -857,7 +1051,7 @@ export default function CreateCampaign() {
                        type="number"
                        min="0"
                        value={campaign.maxWinners}
-                       onChange={(e) => setCampaign({...campaign, maxWinners: e.target.value})}
+                       onChange={(e) => handleFieldChange('maxWinners', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        placeholder="Leave empty for unlimited"
                      />
@@ -886,11 +1080,7 @@ export default function CreateCampaign() {
                          type="radio"
                          name="distributionMethod"
                          checked={campaign.useQuadraticDistribution && !campaign.useCustomDistribution}
-                         onChange={() => setCampaign({
-                           ...campaign, 
-                           useQuadraticDistribution: true,
-                           useCustomDistribution: false
-                         })}
+                         onChange={() => handleFieldChange('useQuadraticDistribution', true)}
                          className="mr-3 text-purple-500"
                        />
                        <span className="font-medium text-purple-800">Quadratic Distribution (Recommended)</span>
@@ -906,11 +1096,7 @@ export default function CreateCampaign() {
                          type="radio"
                          name="distributionMethod"
                          checked={!campaign.useQuadraticDistribution && !campaign.useCustomDistribution}
-                         onChange={() => setCampaign({
-                           ...campaign, 
-                           useQuadraticDistribution: false,
-                           useCustomDistribution: false
-                         })}
+                         onChange={() => handleFieldChange('useQuadraticDistribution', false)}
                          className="mr-3 text-purple-500"
                        />
                        <span className="font-medium">Linear Distribution</span>
@@ -926,11 +1112,7 @@ export default function CreateCampaign() {
                          type="radio"
                          name="distributionMethod"
                          checked={campaign.useCustomDistribution}
-                         onChange={() => setCampaign({
-                           ...campaign, 
-                           useQuadraticDistribution: false,
-                           useCustomDistribution: true
-                         })}
+                         onChange={() => handleFieldChange('useCustomDistribution', true)}
                          className="mr-3 text-purple-500"
                        />
                        <span className="font-medium">Custom Distribution</span>
@@ -945,7 +1127,7 @@ export default function CreateCampaign() {
                        <label className="block text-purple-700 font-medium mb-3">Custom Distribution Notes</label>
                        <textarea
                          value={campaign.customDistributionNotes}
-                         onChange={(e) => setCampaign({...campaign, customDistributionNotes: e.target.value})}
+                         onChange={(e) => handleFieldChange('customDistributionNotes', e.target.value)}
                          rows={3}
                          className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                          placeholder="Describe your custom distribution logic..."
@@ -977,7 +1159,7 @@ export default function CreateCampaign() {
                      <input
                        type="email"
                        value={campaign.contactEmail}
-                       onChange={(e) => setCampaign({...campaign, contactEmail: e.target.value})}
+                       onChange={(e) => handleFieldChange('contactEmail', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        placeholder="contact@yourcampaign.com"
                      />
@@ -989,7 +1171,7 @@ export default function CreateCampaign() {
                      <input
                        type="url"
                        value={campaign.website}
-                       onChange={(e) => setCampaign({...campaign, website: e.target.value})}
+                       onChange={(e) => handleFieldChange('website', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        placeholder="https://yourcampaign.com"
                      />
@@ -1009,7 +1191,7 @@ export default function CreateCampaign() {
                      <input
                        type="url"
                        value={campaign.twitter}
-                       onChange={(e) => setCampaign({...campaign, twitter: e.target.value})}
+                       onChange={(e) => handleFieldChange('twitter', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        placeholder="https://twitter.com/yourcampaign"
                      />
@@ -1023,7 +1205,7 @@ export default function CreateCampaign() {
                      <input
                        type="url"
                        value={campaign.discord}
-                       onChange={(e) => setCampaign({...campaign, discord: e.target.value})}
+                       onChange={(e) => handleFieldChange('discord', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        placeholder="https://discord.gg/yourcampaign"
                      />
@@ -1037,7 +1219,7 @@ export default function CreateCampaign() {
                      <input
                        type="url"
                        value={campaign.telegram}
-                       onChange={(e) => setCampaign({...campaign, telegram: e.target.value})}
+                       onChange={(e) => handleFieldChange('telegram', e.target.value)}
                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                        placeholder="https://t.me/yourcampaign"
                      />
@@ -1149,7 +1331,7 @@ export default function CreateCampaign() {
                  <label className="block text-purple-700 font-medium mb-3">Submission Guidelines</label>
                  <textarea
                    value={campaign.submissionGuidelines}
-                   onChange={(e) => setCampaign({...campaign, submissionGuidelines: e.target.value})}
+                   onChange={(e) => handleFieldChange('submissionGuidelines', e.target.value)}
                    rows={4}
                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
                    placeholder="Detailed guidelines for project submissions, including required documents, formats, and deadlines..."
