@@ -37,7 +37,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             logo: "https://auth.privy.io/logos/privy-logo.png",
             walletChainType: "ethereum-only",
           },
-          defaultChain: celo,
+          defaultChain: celoAlfajores,
           supportedChains: [celo, celoAlfajores]
         }}
       >

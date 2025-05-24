@@ -129,8 +129,8 @@ const generateTwoSampleProjects = (): Project[] => [
 
 const getCampaignTiming = () => {
   const now = new Date();
-  const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 50, 0);
-  const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 10, 0);
+  const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 40, 0);
+  const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 8, 0, 0);
   return {
     startTime: Math.floor(startTime.getTime() / 1000),
     endTime: Math.floor(endTime.getTime() / 1000),
@@ -141,8 +141,8 @@ const getCampaignTiming = () => {
 
 const getCampaignTimingAt1125 = () => {
   const now = new Date();
-  const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 50, 0);
-  const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 10, 0);
+  const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 40, 0);
+  const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 8, 0, 0);
   return {
     startTime: Math.floor(startTime.getTime() / 1000),
     endTime: Math.floor(endTime.getTime() / 1000),
@@ -435,7 +435,6 @@ async function main() {
     });
     console.log('🚀 Generating custom sample data for SovereignSeas...');
     const projects = generateTwoSampleProjects();
-    // const campaigns = generateCustomCampaigns(projects);
     console.log(`\n📊 Generated ${projects.length} projects`);
     // Create projects on chain
     console.log('\n🏗️  Creating projects on chain...');
@@ -448,9 +447,9 @@ async function main() {
     }
     console.log(`\n✅ Successfully created ${successfulProjects}/${projects.length} projects`);
     
-    // Commenting out campaign creation for debugging
-    /*
+    // Create campaigns
     console.log('\n🎯 Creating campaigns on chain...');
+    const campaigns = generateCustomCampaigns(projects);
     let successfulCampaigns = 0;
     for (let i = 0; i < campaigns.length; i++) {
       const success = await createCampaignOnChain(campaigns[i], walletClient, publicClient);
@@ -458,20 +457,19 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
     console.log(`\n✅ Successfully created ${successfulCampaigns}/${campaigns.length} campaigns`);
+    
     // Add both projects to the first campaign (campaign index 0)
     console.log('\n🔗 Adding both projects to the first campaign...');
     for (let i = 0; i < projects.length; i++) {
       await addProjectToCampaign(i, 0, walletClient, publicClient);
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
-    */
     
     console.log('\n🎉 Custom sample data generation completed successfully!');
     console.log('\n📈 Summary:');
     console.log(`   • ${successfulProjects} projects created`);
-    // console.log(`   • ${successfulCampaigns} campaigns created`);
-    // console.log(`   • First campaign starts at midday, second at 11:25`);
-    // console.log(`   • Both projects are added and approved in the first campaign`);
+    console.log(`   • ${successfulCampaigns} campaigns created`);
+    console.log(`   • Both projects are added and approved in the first campaign`);
   } catch (error) {
     console.error('❌ Error in main function:', error);
     process.exit(1);

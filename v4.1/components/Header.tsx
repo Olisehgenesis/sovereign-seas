@@ -37,8 +37,6 @@ export default function Header() {
   const { connect } = useConnect();
   const { isConnected, address } = useAccount();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showChainAlert, setShowChainAlert] = useState(false);
-  const [currentChainId, setCurrentChainId] = useState<number | null>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const pathname = usePathname();
   
@@ -48,38 +46,29 @@ export default function Header() {
   
   // Use the wallet hook to get the switch network function
   const { handleSwitchToNetwork } = useWallet();
-  
-  // Use the sovereign seas hook to get the clients
- 
-  
 
   // Check if user is on the correct chain
-  useEffect(() => {
-    const checkChain = async () => {
-      if (isConnected && publicClient && walletClient) {
-        try {
-          // Get the current chain from the wallet client
-          const chainId = await walletClient.getChainId();
-          setCurrentChainId(chainId);
-          
-          if (chainId !== CELO_CHAIN_ID) {
-            setShowChainAlert(true);
-          } else {
-            setShowChainAlert(false);
-          }
-          console.log("Current chain ID:", chainId);
-        } catch (error) {
-          console.error("Error getting chain ID:", error);
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const checkChain = async () => {
+  //     if (isConnected && publicClient && walletClient) {
+  //       try {
+  //         await walletClient.switchChain({
+  //           id: getChainConfig().id
+  //         });
+  //         const chainId = await walletClient.getChainId();
+  //         console.log("Current chain ID:", chainId);
+  //       } catch (error) {
+  //         console.error("Error getting chain ID:", error);
+  //       }
+  //     }
+  //   };
     
-    checkChain();
+  //   checkChain();
     
-    // Set up interval to periodically check chain
-    const interval = setInterval(checkChain, 5000);
-    return () => clearInterval(interval);
-  }, [isConnected, publicClient]);
+  //   // Set up interval to periodically check chain
+  //   const interval = setInterval(checkChain, 5000);
+  //   return () => clearInterval(interval);
+  // }, [isConnected, publicClient]);
 
   // Handle MiniPay connection
   useEffect(() => {
@@ -125,20 +114,6 @@ export default function Header() {
 
   return (
     <div className="relative z-50">
-      {/* Chain Warning Alert */}
-      {showChainAlert && isConnected && authenticated && (
-        <div className="bg-amber-500 text-slate-900 py-2 px-4 flex items-center justify-center">
-          <AlertTriangle className="h-5 w-5 mr-2" />
-          <span className="font-medium">This app only supports the {CHAIN_NAME} network{IS_TESTNET ? ' (Testnet)' : ''}.</span>
-          <button 
-            onClick={handleSwitchToNetwork}
-            className="ml-3 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 premium-button"
-          >
-            Switch to {CHAIN_NAME}
-          </button>
-        </div>
-      )}
-
       {/* Shadow element for raised effect - Blue version */}
       <div className="absolute inset-x-0 h-3 bottom-0 translate-y-full bg-gradient-to-b from-blue-800/30 to-transparent pointer-events-none"></div>
       
@@ -216,12 +191,6 @@ export default function Header() {
                 
                 {/* Right side - Connect Wallet & User Menu */}
                 <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-                  {/* Network Badge */}
-                  <div className="mr-2 hidden sm:flex items-center rounded-full bg-white/20 text-white px-3 py-1 text-xs border border-white/10 shadow-inner animate-float-delay-4">
-                    <span className="h-2 w-2 rounded-full bg-blue-200 mr-1.5 animate-pulse"></span>
-                    {CHAIN_NAME} {IS_TESTNET ? 'Testnet' : ''}
-                  </div>
-                  
                   {authenticated && (
                     <div className="relative mr-2">
                       <button
@@ -310,23 +279,13 @@ export default function Header() {
                         </button>
                       ) : (
                         <>
-                          {currentChainId !== CELO_CHAIN_ID ? (
-                            <button
-                              onClick={handleSwitchToNetwork}
-                              className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-amber-400 hover:-translate-y-1 premium-button"
-                            >
-                              <AlertTriangle size={16} />
-                              Switch to {CHAIN_NAME}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={openWalletModal}
-                              className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 premium-button"
-                            >
-                              <Wallet className="h-4 w-4 mr-2" />
-                              {address ? abbreviateAddress(address) : 'My Wallet'}
-                            </button>
-                          )}
+                          <button
+                            onClick={openWalletModal}
+                            className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 premium-button"
+                          >
+                            <Wallet className="h-4 w-4 mr-2" />
+                            {address ? abbreviateAddress(address) : 'My Wallet'}
+                          </button>
                         </>
                       )}
                     </div>
@@ -338,12 +297,6 @@ export default function Header() {
             {/* Mobile menu with enhanced animations */}
             <Disclosure.Panel className="sm:hidden">
               <div className="space-y-1 px-3 pt-2 pb-3">
-                {/* Mobile Network Badge */}
-                <div className="mb-3 flex items-center justify-center rounded-full bg-white/20 text-white px-3 py-1.5 text-sm border border-white/10 shadow-inner">
-                  <span className="h-2 w-2 rounded-full bg-blue-200 mr-1.5 animate-pulse"></span>
-                  {CHAIN_NAME} {IS_TESTNET ? 'Testnet' : ''} Only
-                </div>
-                
                 {navigation.map((item, index) => {
                   const NavIcon = item.icon;
                   const isActive = pathname === item.href || 
