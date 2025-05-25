@@ -57,6 +57,8 @@ import {
   Trophy,
   TrendingUp
 } from 'lucide-react';
+import { useCreateProject } from '@/hooks/useProjectMethods';
+import { uploadToIPFS } from '@/utils/imageUtils';
 
 const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection }) => {
   const isExpanded = expandedSection === id;
@@ -93,10 +95,13 @@ const Section = ({ id, title, icon: Icon, children, required = false, expandedSe
   );
 };
 
+const contractAddress = import.meta.env.VITE_CONTRACT_V4;
+
 export default function CreateProject() {
   const navigate = useNavigate();
   const { address, isConnected } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
+  const { createProject, isSuccess, isPending, error: contractError } = useCreateProject(contractAddress);
   
   // Collapsible sections state
   const [expandedSection, setExpandedSection] = useState('basic');
@@ -193,9 +198,9 @@ export default function CreateProject() {
   
   // UI State
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
   // Form validation
@@ -428,47 +433,179 @@ export default function CreateProject() {
     
     try {
       setLoading(true);
+      setIsUploading(true);
       setUploadProgress(10);
       
-      // Upload files to IPFS
-      const projectData = { ...project };
-      
+      // Upload logo to IPFS if file is selected
+      let logoIpfsUrl = '';
       if (logoFile) {
-        setUploadProgress(20);
-        projectData.logo = await handleFileUpload(logoFile);
+        try {
+          console.log('Uploading logo to IPFS...');
+          setUploadProgress(30);
+          logoIpfsUrl = await uploadToIPFS(logoFile);
+          console.log('Logo uploaded to IPFS:', logoIpfsUrl);
+        } catch (uploadError) {
+          console.error('Logo upload failed:', uploadError);
+          throw new Error(`Failed to upload logo: ${uploadError.message}`);
+        }
       }
       
       setUploadProgress(80);
+      setIsUploading(false);
       
-      // Create metadata JSON
-      const metadata = {
+      // Prepare project data with cleaned arrays
+      const cleanedProject = {
+        ...project,
+        logo: logoIpfsUrl || project.logo || '',
+        tags: project.tags.filter(tag => tag.trim() !== ''),
+        keyFeatures: project.keyFeatures.filter(f => f.trim() !== ''),
+        useCases: project.useCases.filter(u => u.trim() !== ''),
+        techStack: project.techStack.filter(t => t.trim() !== ''),
+        smartContracts: project.smartContracts.filter(c => c.trim() !== ''),
+        teamMembers: project.teamMembers.filter(m => m.name.trim() !== ''),
+        milestones: project.milestones.filter(m => m.title.trim() !== '')
+      };
+      
+      // Create bio metadata (basic project info)
+      const bioData = {
+        tagline: cleanedProject.tagline,
+        category: cleanedProject.category,
+        tags: cleanedProject.tags,
+        location: cleanedProject.location,
+        establishedDate: cleanedProject.establishedDate,
+        website: cleanedProject.website,
+        projectType: cleanedProject.projectType,
+        maturityLevel: cleanedProject.maturityLevel,
+        status: cleanedProject.status,
+        openSource: cleanedProject.openSource,
+        transferrable: cleanedProject.transferrable
+      };
+      
+      // Create contract info metadata (technical details)
+      const contractInfoData = {
+        blockchain: cleanedProject.blockchain,
+        smartContracts: cleanedProject.smartContracts,
+        techStack: cleanedProject.techStack,
+        license: cleanedProject.license,
+        developmentStage: cleanedProject.developmentStage,
+        auditReports: cleanedProject.auditReports,
+        kycCompliant: cleanedProject.kycCompliant,
+        regulatoryCompliance: cleanedProject.regulatoryCompliance
+      };
+      
+      // Create additional data metadata (everything else)
+      const additionalData = {
         version: '1.0.0',
         timestamp: Date.now(),
         creator: address,
-        ...projectData
+        
+        // Media & Links
+        logo: cleanedProject.logo,
+        demoVideo: cleanedProject.demoVideo,
+        demoUrl: cleanedProject.demoUrl,
+        documentation: cleanedProject.documentation,
+        karmaGapProfile: cleanedProject.karmaGapProfile,
+        
+        // Social Media
+        social: {
+          twitter: cleanedProject.twitter,
+          linkedin: cleanedProject.linkedin,
+          discord: cleanedProject.discord,
+          telegram: cleanedProject.telegram,
+          youtube: cleanedProject.youtube,
+          instagram: cleanedProject.instagram
+        },
+        
+        // Team & Contact
+        teamMembers: cleanedProject.teamMembers,
+        contactEmail: cleanedProject.contactEmail,
+        businessEmail: cleanedProject.businessEmail,
+        phone: cleanedProject.phone,
+        
+        // Features & Innovation
+        keyFeatures: cleanedProject.keyFeatures,
+        innovation: cleanedProject.innovation,
+        useCases: cleanedProject.useCases,
+        targetAudience: cleanedProject.targetAudience,
+        
+        // Milestones & Metrics
+        milestones: cleanedProject.milestones,
+        launchDate: cleanedProject.launchDate,
+        userCount: cleanedProject.userCount,
+        transactionVolume: cleanedProject.transactionVolume,
+        tvl: cleanedProject.tvl
       };
       
       setUploadProgress(90);
       
-      // Here you would call your smart contract function
-      console.log('Project metadata:', metadata);
+      console.log('Creating project with contract...');
+      
+      // Call the contract method
+      await createProject({
+        name: cleanedProject.name,
+        description: cleanedProject.description,
+        bio: JSON.stringify(bioData),
+        contractInfo: JSON.stringify(contractInfoData),
+        additionalData: JSON.stringify(additionalData),
+        contracts: cleanedProject.smartContracts.filter(c => c.trim() !== ''),
+        transferrable: cleanedProject.transferrable
+      });
       
       setUploadProgress(100);
-      setSuccessMessage('Project created successfully!');
-      
-      // Reset form after delay
-      setTimeout(() => {
-        navigate('/explorer');
-      }, 2000);
       
     } catch (error) {
-      console.error('Error creating project:', error);
-      setErrorMessage('Failed to create project. Please try again.');
-    } finally {
+      console.error('Project creation error:', error);
+      
+      // Enhanced error messages
+      let userFriendlyMessage = 'Failed to create project. ';
+      
+      if (error.message?.includes('user rejected')) {
+        userFriendlyMessage += 'Transaction was rejected by user.';
+      } else if (error.message?.includes('insufficient funds')) {
+        userFriendlyMessage += 'Insufficient funds for transaction fees.';
+      } else if (error.message?.includes('gas')) {
+        userFriendlyMessage += 'Gas estimation failed. Please check your parameters.';
+      } else if (error.message?.includes('network')) {
+        userFriendlyMessage += 'Network error. Please check your connection and try again.';
+      } else if (error.message?.includes('revert')) {
+        userFriendlyMessage += 'Contract execution reverted. Please check your parameters.';
+      } else {
+        userFriendlyMessage += `${error.message || 'Unknown error occurred.'}`;
+      }
+      
+      setErrorMessage(userFriendlyMessage);
       setLoading(false);
+      setIsUploading(false);
       setUploadProgress(0);
     }
   };
+
+  // Handle contract success state
+  useEffect(() => {
+    if (isSuccess) {
+      setLoading(false);
+      setSuccessMessage('Project created successfully! Redirecting...');
+      
+      setTimeout(() => {
+        navigate('/explorer');
+      }, 3000);
+    }
+  }, [isSuccess, navigate]);
+
+  // Handle contract error state
+  useEffect(() => {
+    if (contractError) {
+      setLoading(false);
+      setErrorMessage(`Transaction failed: ${contractError.message || 'Unknown error'}`);
+    }
+  }, [contractError]);
+
+  // Update loading state based on contract pending state
+  useEffect(() => {
+    if (isPending && !isUploading) {
+      setLoading(true);
+    }
+  }, [isPending, isUploading]);
   
   // Section toggle handler
   const toggleSection = (section) => {

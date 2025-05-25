@@ -33,6 +33,7 @@ import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
 import { formatEther } from 'viem';
+import { formatIpfsUrl } from '@/utils/imageUtils';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -142,6 +143,8 @@ export default function UnifiedExplorer() {
       contractAddress: CONTRACT_ADDRESS,
       timestamp: new Date().toISOString()
     });
+
+    console.log('projects', projects);
 
     if (projectsError) {
       logDebug('Projects Error', {
@@ -917,7 +920,7 @@ function ItemCard({
       <div className={`relative ${viewMode === 'list' ? 'w-48' : 'aspect-video'}`}>
        {item.metadata?.logo || item.metadata?.bannerImage || item.metadata?.coverImage ? (
          <img
-           src={item.metadata.logo || item.metadata.bannerImage || item.metadata.coverImage}
+           src={formatIpfsUrl(item.metadata.logo || item.metadata.bannerImage || item.metadata.coverImage)}
            alt={item.name}
            className="w-full h-full object-cover"
          />

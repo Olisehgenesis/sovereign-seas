@@ -52,9 +52,10 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { uploadToIPFS } from '@/utils/imageUtils';
-import { useAccount } from 'wagmi';
 import { useCreateCampaignWithFees } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
+import { usePrivy } from '@privy-io/react-auth';
+import { useAccount } from 'wagmi';
 
 interface Campaign {
   name: string;
@@ -137,6 +138,7 @@ export default function CreateCampaign() {
   
   // Wallet and contract hooks
   const { address, isConnected } = useAccount();
+  const { authenticated, ready } = usePrivy();
   const {
     createCampaignWithFees,
     isPending,
@@ -429,7 +431,13 @@ export default function CreateCampaign() {
     
     setErrorMessage('');
     
-    if (!isConnected) {
+    if (!ready) {
+      setErrorMessage('Wallet connection is initializing...');
+      return;
+    }
+
+    if (!authenticated || !isConnected || !address) {
+      console.log('not authenticated', authenticated, isConnected, address);
       setErrorMessage('Please connect your wallet to create a campaign');
       return;
     }

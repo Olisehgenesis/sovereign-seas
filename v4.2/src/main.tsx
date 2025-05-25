@@ -14,6 +14,8 @@ import CreateCampaign from '@/pages/app/campaign/start'
 import './index.css'
 import { AppProvider } from '@/providers/AppProvider'
 import CreateProject from '@/pages/app/project/start'
+import CampaignView from '@/pages/explorers/campaign/<id>'
+import ProjectView from '@/pages/explorers/project/<id>'
 
 globalThis.Buffer = Buffer
 
@@ -27,6 +29,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route element={<Layout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/explorer" element={<ExplorersPage />} />
+
+            <Route path="/explorer/project/:id" element={<ProjectView />} />
+            <Route path="/explorer/campaign/:id" element={<CampaignView />} />
             <Route path="/app/campaign/start" element={<CreateCampaign />} />
             <Route path="/app/project/start" element={<CreateProject />} />
             <Route path="*" element={<NotFound />} />

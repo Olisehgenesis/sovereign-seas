@@ -13,7 +13,7 @@ interface ProjectCampaignsModalProps {
   projectId: string;
 }
 
-const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;
+const contractAddress = import.meta.env.VITE_CONTRACT_V4;
 
 const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsModalProps) => {
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,7 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
       // Use the campaign's payout token as the fee token (common practice)
       // If that's not available, use CELO token address from environment
       const feeTokenAddress = campaign?.campaign.payoutToken || 
-                             process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS || 
+                             import.meta.env.VITE_CELO_TOKEN || 
                              contractAddress;
       
       // Log the parameters being passed to addProjectToCampaign

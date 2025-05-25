@@ -24,36 +24,36 @@ export async function uploadToIPFS(file: File) {
     throw error;
   }
 }
-
-// Improved formatIpfsUrl function
-export const formatIpfsUrl = (url: string, gateway?: string) => {
+/**
+ * Dynamically normalizes any IPFS-related URL to use the public Pinata IPFS gateway.
+ *
+ * @param url - Any string potentially containing an IPFS CID (with or without a gateway)
+ * @returns Formatted URL using https://gateway.pinata.cloud/ipfs/<cid>, or original if CID not found
+ */
+export const formatIpfsUrl = (url: string): string => {
   if (!url || url.startsWith("File selected:")) return "";
-  
-  // If it's already a proper HTTP URL, return as-is
-  if (url.startsWith("http")) return url;
-  
+
+  const parts = url.trim().split("/");
+
+  // Look for 'ipfs' in the URL segments
+  const ipfsIndex = parts.findIndex(part => part === "ipfs");
+
   let cid: string | undefined;
-  
-  // Strip 'undefined/' prefix if present
-  if (url.startsWith("undefined/")) {
-    url = url.replace("undefined/", "");
+
+  // Case 1: /ipfs/<cid>
+  if (ipfsIndex !== -1 && parts[ipfsIndex + 1]) {
+    cid = parts[ipfsIndex + 1];
   }
-  
-  // Handle different IPFS URL formats
-  if (url.startsWith("ipfs://")) {
+  // Case 2: ipfs://<cid>...
+  else if (url.startsWith("ipfs://")) {
     cid = url.replace("ipfs://", "").split("/")[0];
-  } else if (url.includes("ipfs/")) {
-    cid = url.split("ipfs/")[1].split(/[/?]/)[0];
-  } else if (/^[a-zA-Z0-9]{46,}$/.test(url)) {
-    // Raw CID
+  }
+  // Case 3: Raw CID
+  else if (/^[a-zA-Z0-9]{46,}$/.test(url)) {
     cid = url;
   }
-  
+
   if (!cid) return url;
-  
-  // Use provided gateway or default to your Pinata gateway
-  const defaultGateway = `https://${import.meta.env.VITE_PINATA_GATEWAY}`;
-  const finalGateway = gateway || defaultGateway;
-  
-  return `${finalGateway}/ipfs/${cid}`;
+
+  return `https://gateway.pinata.cloud/ipfs/${cid}`;
 };

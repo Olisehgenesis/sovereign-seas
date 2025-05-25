@@ -47,8 +47,8 @@ export default function VoteModal({
   const [error, setError] = useState('');
 
   // Get token addresses from environment
-  const celoTokenAddress = process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_CELO_TOKEN;
-  const cUSDTokenAddress = process.env.NEXT_PUBLIC_CUSD_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_CUSD_TOKEN;
+  const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN_ADDRESS;
+  const cUSDTokenAddress = import.meta.env.VITE_CUSD_TOKEN_ADDRESS;
 
   // Reset form when modal opens/closes
   useEffect(() => {

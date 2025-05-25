@@ -9,10 +9,10 @@ import { celo, celoAlfajores } from 'wagmi/chains';
 
 export const config = createConfig({
   
-  chains: [celo, celoAlfajores],
+  chains: [celoAlfajores, celo],
   
   transports: {
-    [celo.id]: http(),
-    [celoAlfajores.id]: http(),
+    [celoAlfajores.id]: http("https://celo-alfajores.drpc.org"),
+    [celo.id]: http("https://celo.drpc.org"),
   },
 });

@@ -31,8 +31,8 @@ export interface VotingStats {
 }
 
 // Get token addresses from environment
-const celoToken = process.env.NEXT_PUBLIC_CELO_TOKEN || process.env.NEXT_PUBLIC_CELO_TOKEN_ADDRESS;
-const cUSDToken = process.env.NEXT_PUBLIC_CUSD_TOKEN || process.env.NEXT_PUBLIC_CUSD_TOKEN_ADDRESS;
+const celoToken = import.meta.env.VITE_CELO_TOKEN;
+const cUSDToken = import.meta.env.VITE_CUSD_TOKEN;
 
 // Custom hook for token approval
 export function useApproveToken() {
