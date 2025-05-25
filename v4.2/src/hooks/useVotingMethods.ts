@@ -57,45 +57,32 @@ export function useApproveToken() {
   }
 }
 
-// Hook for voting functionality
+
+// Hook for voting functionality - FIXED to include voteWithCelo
 export function useVote(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess, reset } = useWriteContract()
   const { approveToken } = useApproveToken()
   const [votingStats, setVotingStats] = useState<VotingStats | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
 
-  // FIXED version
-const vote = async ({
-  campaignId,
-  projectId,
-  token,
-  amount,
-  bypassCode = '0x0000000000000000000000000000000000000000000000000000000000000000'
-}: {
-  campaignId: bigint
-  projectId: bigint
-  token: Address
-  amount: bigint
-  bypassCode?: string
-}) => {
-  try {
-    const isNativeCelo = token.toLowerCase() === celoToken?.toLowerCase();
-    
-    if (isNativeCelo) {
-      // For native CELO - call voteWithCelo function
-      console.log('Voting with native CELO:', amount.toString());
+  // FIXED version for ERC20 tokens
+  const vote = async ({
+    campaignId,
+    projectId,
+    token,
+    amount,
+    bypassCode = '0x0000000000000000000000000000000000000000000000000000000000000000'
+  }: {
+    campaignId: bigint
+    projectId: bigint
+    token: Address
+    amount: bigint
+    bypassCode?: string
+  }) => {
+    try {
+      console.log('Voting with ERC20 token:', token, 'for amount:', amount);
       
-      await writeContract({
-        address: contractAddress,
-        abi,
-        functionName: 'voteWithCelo', // ✅ Use the CELO-specific function
-        args: [campaignId, projectId, bypassCode as `0x${string}`],
-        value: amount // Send CELO as msg.value
-      })
-    } else {
       // For ERC20 tokens - approve first, then call vote function
-      console.log('Approving and voting with ERC20 token:', token, 'for amount:', amount);
-      
       await approveToken(token, amount, contractAddress);
       // Wait for approval confirmation
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -106,12 +93,39 @@ const vote = async ({
         functionName: 'vote', // ✅ Use the ERC20 vote function
         args: [campaignId, projectId, token, amount, bypassCode as `0x${string}`]
       })
+    } catch (err) {
+      console.error('Error voting with ERC20:', err)
+      throw err
     }
-  } catch (err) {
-    console.error('Error voting:', err)
-    throw err
   }
-}
+
+  // NEW: Separate function for CELO voting
+  const voteWithCelo = async ({
+    campaignId,
+    projectId,
+    amount,
+    bypassCode = '0x0000000000000000000000000000000000000000000000000000000000000000'
+  }: {
+    campaignId: bigint
+    projectId: bigint
+    amount: bigint
+    bypassCode?: string
+  }) => {
+    try {
+      console.log('Voting with native CELO:', amount.toString());
+      
+      await writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'voteWithCelo', // ✅ Use the CELO-specific function
+        args: [campaignId, projectId, bypassCode as `0x${string}`],
+        value: amount // Send CELO as msg.value
+      })
+    } catch (err) {
+      console.error('Error voting with CELO:', err)
+      throw err
+    }
+  }
 
   const batchVote = async ({
     campaignId,
@@ -125,13 +139,24 @@ const vote = async ({
     try {
       // Execute votes sequentially to avoid nonce issues
       for (const voteAllocation of votes) {
-        await vote({
-          campaignId,
-          projectId: voteAllocation.projectId,
-          token: voteAllocation.token,
-          amount: voteAllocation.amount,
-          bypassCode
-        })
+        const isNativeCelo = voteAllocation.token.toLowerCase() === celoToken?.toLowerCase();
+        
+        if (isNativeCelo) {
+          await voteWithCelo({
+            campaignId,
+            projectId: voteAllocation.projectId,
+            amount: voteAllocation.amount,
+            bypassCode
+          })
+        } else {
+          await vote({
+            campaignId,
+            projectId: voteAllocation.projectId,
+            token: voteAllocation.token,
+            amount: voteAllocation.amount,
+            bypassCode
+          })
+        }
         
         // Small delay between votes to ensure proper transaction ordering
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -144,6 +169,7 @@ const vote = async ({
 
   return {
     vote,
+    voteWithCelo, // ✅ Export the new function
     batchVote,
     isPending,
     isError,

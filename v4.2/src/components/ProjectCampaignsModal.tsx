@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { X, Plus, CheckCircle, AlertCircle } from 'lucide-react';
-import { useProjectCampaigns, useAddProjectToCampaign } from '@/hooks/useProjectMethods';
-import { useAllCampaigns } from '@/hooks/useCampaignMethods';    
+import { X, Plus, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useProjectCampaigns, useAddProjectToCampaign, useCanBypassFees, useProjectAdditionFee } from '@/hooks/useProjectMethods';
+import { useAllCampaigns } from '@/hooks/useCampaignMethods';
+import { useAccount } from 'wagmi';
+import { Address } from 'viem';
 
 interface ProjectCampaignsModalProps {
   isOpen: boolean;
@@ -14,95 +16,132 @@ interface ProjectCampaignsModalProps {
 }
 
 const contractAddress = import.meta.env.VITE_CONTRACT_V4;
+const CELO_TOKEN_ADDRESS = import.meta.env.VITE_CELO_TOKEN || contractAddress; // Fallback to contract address if not set
 
 const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsModalProps) => {
   const [error, setError] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<bigint | null>(null);
+  
+  const { address: userAddress, isConnected } = useAccount();
 
   // Get project's current campaigns
   const { projectCampaigns, isLoading: isLoadingProjectCampaigns, error: hookError } = useProjectCampaigns(
-    contractAddress as `0x${string}`,
+    contractAddress as Address,
     BigInt(projectId)
   );
 
-  // Get all campaigns directly - no async loading needed
-  const { campaigns: allCampaigns, isLoading: isLoadingCampaigns } = useAllCampaigns(contractAddress as `0x${string}`);
+  // Get all campaigns
+  const { campaigns: allCampaigns, isLoading: isLoadingCampaigns } = useAllCampaigns(contractAddress as Address);
   
   // Get the add to campaign hook
-  const { addProjectToCampaign, isPending: isAddingProject } = useAddProjectToCampaign(contractAddress as `0x${string}`);
- 
+  const { addProjectToCampaign, isPending: isAddingProject, isSuccess, isError: addError, error: addErrorDetails } = useAddProjectToCampaign(contractAddress as Address);
+  
+  // Get project addition fee
+  const { projectAdditionFee, isLoading: feeLoading } = useProjectAdditionFee(contractAddress as Address);
+  
+  // Check if user can bypass fees for the selected campaign
+  const { isAdmin, isLoading: adminLoading } = useCanBypassFees(
+    contractAddress as Address, 
+    selectedCampaignId || 0n
+  );
+
   useEffect(() => {
     if (hookError) {
       setError('Failed to load campaigns');
     }
   }, [hookError]);
 
-  const handleAddToCampaign = async (campaignId: string) => {
-    try {
+  // Handle success
+  useEffect(() => {
+    if (isSuccess) {
       setError(null);
-      
-      // Find the campaign to get any additional info if needed
-      const campaign = allCampaigns?.find((c) => Number(c.campaign.id) === Number(campaignId));
-      
-      // Convert BigInt values to strings before logging
-      const campaignForLogging = campaign ? {
-        ...campaign,
-        campaign: {
-          ...campaign.campaign,
-          id: campaign.campaign.id.toString(),
-          startTime: campaign.campaign.startTime.toString(),
-          endTime: campaign.campaign.endTime.toString(),
-          totalFunds: campaign.campaign.totalFunds.toString(),
-          maxWinners: campaign.campaign.maxWinners?.toString()
-        }
-      } : null;
-      console.log('Campaign details:', campaignForLogging);
-      
-      // Use the campaign's payout token as the fee token (common practice)
-      // If that's not available, use CELO token address from environment
-      const feeTokenAddress = campaign?.campaign.payoutToken || 
-                             import.meta.env.VITE_CELO_TOKEN || 
-                             contractAddress;
-      
-      // Log the parameters being passed to addProjectToCampaign
-      const params = {
-        campaignId: campaignId,
-        projectId: projectId,
-        feeToken: feeTokenAddress
-      };
-      console.log('Adding project to campaign with params:', params);
+      setSelectedCampaignId(null);
+      // Optionally close modal or show success message
+      // onClose(); // Uncomment if you want to close on success
+    }
+  }, [isSuccess]);
 
-      await addProjectToCampaign({
-        campaignId: BigInt(campaignId),
-        projectId: BigInt(projectId),
-        feeToken: feeTokenAddress as `0x${string}`
-      });
-      
-      // The hook will automatically refetch data after successful transaction
-    } catch (err: any) {
-      console.error('Error adding project to campaign:', err);
-      // Extract meaningful error message
+  // Handle add project error
+  useEffect(() => {
+    if (addError && addErrorDetails) {
       let errorMessage = 'Unknown error occurred';
       
-      if (err?.message) {
-        errorMessage = err.message;
-      } else if (err?.reason) {
-        errorMessage = err.reason;
-      } else if (err?.data?.message) {
-        errorMessage = err.data.message;
+      if (addErrorDetails?.message) {
+        errorMessage = addErrorDetails.message;
+      } else if ((addErrorDetails as any)?.reason) {
+        errorMessage = (addErrorDetails as any).reason;
       }
       
       // Handle common error cases
-      if (errorMessage.includes('Fee token not supported')) {
+      if (errorMessage.includes('Insufficient CELO sent')) {
+        errorMessage = 'Insufficient CELO sent for the project addition fee.';
+      } else if (errorMessage.includes('Fee token not supported')) {
         errorMessage = 'The fee token is not supported. Please contact support.';
       } else if (errorMessage.includes('Campaign has ended')) {
         errorMessage = 'This campaign has already ended.';
       } else if (errorMessage.includes('Project already in campaign')) {
         errorMessage = 'This project is already in the campaign.';
-      } else if (errorMessage.includes('insufficient funds')) {
-        errorMessage = 'Insufficient funds to pay the project addition fee.';
       }
       
       setError(`Failed to add project to campaign: ${errorMessage}`);
+      setSelectedCampaignId(null);
+    }
+  }, [addError, addErrorDetails]);
+
+  const handleAddToCampaign = async (campaignId: string) => {
+    if (!isConnected || !userAddress) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      setError(null);
+      const campaignIdBigInt = BigInt(campaignId);
+      setSelectedCampaignId(campaignIdBigInt);
+      
+      // Find the campaign to get any additional info if needed
+      const campaign = allCampaigns?.find((c) => Number(c.campaign.id) === Number(campaignId));
+      
+      console.log('Campaign details:', campaign);
+      
+      // Use CELO as the fee token (most common case)
+      const feeTokenAddress = CELO_TOKEN_ADDRESS as Address;
+      
+      // Wait a bit for admin check to complete if it's loading
+      if (adminLoading) {
+        // Wait for admin check to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      // Determine if user should pay fee and fee amount
+      const shouldPayFee = !isAdmin;
+      let feeAmount = 0n;
+      
+      if (shouldPayFee && projectAdditionFee) {
+        feeAmount = projectAdditionFee;
+      }
+      
+      console.log('Adding project with params:', {
+        campaignId: campaignId,
+        projectId: projectId,
+        feeToken: feeTokenAddress,
+        shouldPayFee,
+        feeAmount: feeAmount.toString(),
+        isAdmin
+      });
+
+      await addProjectToCampaign({
+        campaignId: campaignIdBigInt,
+        projectId: BigInt(projectId),
+        feeToken: feeTokenAddress,
+        feeAmount,
+        shouldPayFee
+      });
+      
+    } catch (err: any) {
+      console.error('Error adding project to campaign:', err);
+      setError(`Failed to add project to campaign: ${err.message || 'Unknown error'}`);
+      setSelectedCampaignId(null);
     }
   };
 
@@ -154,8 +193,21 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
                   as="h3"
                   className="text-lg font-medium leading-6 text-gray-900 mb-4"
                 >
-                  Available Campaigns
+                  Campaign Management
                 </Dialog.Title>
+
+                {/* Fee Information Display */}
+                {!feeLoading && projectAdditionFee && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-800 mb-1">Fee Information</h4>
+                    <div className="text-sm text-blue-700">
+                      <p>Project Addition Fee: {Number(projectAdditionFee) / 1e18} CELO</p>
+                      {selectedCampaignId && !adminLoading && (
+                        <p>Your Status: {isAdmin ? 'Admin (No fee required)' : 'Regular User (Fee required)'}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Current Campaigns Section */}
                 {projectCampaigns && projectCampaigns.length > 0 && (
@@ -167,6 +219,11 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
                           <div>
                             <h5 className="font-medium text-green-800">{campaign.name}</h5>
                             <p className="text-sm text-green-600">Status: {campaign.status}</p>
+                            {campaign.participation && (
+                              <p className="text-sm text-green-600">
+                                Approved: {campaign.participation.approved ? 'Yes' : 'Pending'}
+                              </p>
+                            )}
                           </div>
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         </div>
@@ -175,11 +232,27 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
                   </div>
                 )}
 
+                {/* Success message */}
+                {isSuccess && (
+                  <div className="bg-green-50 p-3 rounded-lg border border-green-100 flex items-start mb-4">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-green-700">Project successfully added to campaign!</p>
+                  </div>
+                )}
+
                 {/* Error message */}
                 {error && (
                   <div className="bg-red-50 p-3 rounded-lg border border-red-100 flex items-start mb-4">
                     <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                {/* Connection warning */}
+                {!isConnected && (
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 flex items-start mb-4">
+                    <AlertCircle className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-yellow-700">Please connect your wallet to add projects to campaigns.</p>
                   </div>
                 )}
 
@@ -205,6 +278,7 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
                     <h4 className="text-md font-semibold text-gray-800 mb-2">Available Campaigns</h4>
                     {availableCampaigns.map((campaignDetails) => {
                       const campaign = campaignDetails.campaign;
+                      const campaignIdStr = campaign.id.toString();
                       
                       // Determine campaign status
                       const now = Math.floor(Date.now() / 1000);
@@ -212,15 +286,21 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
                       const endTime = Number(campaign.endTime);
                       
                       let status: string;
+                      let canAdd = true;
+                      
                       if (!campaign.active) {
                         status = 'inactive';
+                        canAdd = false;
                       } else if (now < startTime) {
                         status = 'upcoming';
                       } else if (now >= startTime && now <= endTime) {
                         status = 'active';
                       } else {
                         status = 'ended';
+                        canAdd = false;
                       }
+                      
+                      const isCurrentlyAdding = isAddingProject && selectedCampaignId === campaign.id;
                       
                       return (
                         <div 
@@ -256,14 +336,19 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
                                 <p>Max Winners: {Number(campaign.maxWinners) || 'Unlimited'}</p>
                               </div>
                               <button
-                                onClick={() => handleAddToCampaign(campaign.id.toString())}
-                                disabled={isAddingProject || status === 'ended' || status === 'inactive'}
+                                onClick={() => handleAddToCampaign(campaignIdStr)}
+                                disabled={!canAdd || !isConnected || isCurrentlyAdding || (adminLoading && selectedCampaignId === campaign.id)}
                                 className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full text-sm font-medium transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                {isAddingProject ? (
+                                {isCurrentlyAdding ? (
                                   <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-600 mr-1"></div>
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                                     Adding...
+                                  </>
+                                ) : adminLoading && selectedCampaignId === campaign.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                    Checking...
                                   </>
                                 ) : (
                                   <>

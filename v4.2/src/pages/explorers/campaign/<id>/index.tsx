@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAccount, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract, useReadContracts } from 'wagmi';
+import { formatEther } from 'viem';
+import { contractABI as abi } from '@/abi/seas4ABI';
 import { 
   ArrowLeft, 
   Trophy, 
@@ -10,105 +12,77 @@ import {
   Zap, 
   Target,
   Star,
-  Gift,
   Crown,
   Flame,
   Rocket,
   Diamond,
   Medal,
   Heart,
-  ThumbsUp,
-  TrendingUp,
   Users,
-  Calendar,
   Clock,
   Eye,
   Vote,
   Coins,
-  Wallet,
-  ChevronRight,
-  Plus,
-  Minus,
-  X,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Volume2,
-  VolumeX,
-  Settings,
-  Info,
   BarChart3,
-  PieChart,
-  Activity,
-  FileText,
-  Globe,
-  ExternalLink,
-  Share2,
-  Bookmark,
-  Shield,
-  Copy,
-  Maximize,
-  Twitter,
-  Linkedin,
-  Mail,
-  MessageCircle,
-  Link as LinkIcon,
-  Award,
-  Lightbulb,
-  Building,
-  ChevronDown,
+  TrendingUp,
   ChevronUp,
-  Globe2,
-  Send,
-  BadgeCheck,
-  User,
-  Terminal,
-  Code,
-  Video,
+  ChevronDown,
   Play,
-  Edit,
-  DollarSign
+  Award,
+  Building,
+  Gamepad2,
+  Calendar,
+  DollarSign,
+  Percent,
+  Activity,
+  Menu,
+  X,
+  Timer,
+  Waves
 } from 'lucide-react';
 
-import { 
-  useCampaignDetails 
-} from '@/hooks/useCampaignMethods';
-
+import { useCampaignDetails } from '@/hooks/useCampaignMethods';
 import VoteModal from '@/components/voteModal';
-
-import { 
-  useAllProjects, 
-  formatProjectForDisplay 
-} from '@/hooks/useProjectMethods';
-
+import { useAllProjects, formatProjectForDisplay } from '@/hooks/useProjectMethods';
 import {
   useVote,
   useVotingManager,
   useSupportedTokens,
   useUserTotalVotesInCampaign,
+  useProjectVotedTokensWithAmounts,
+  useCampaignVotedTokens,
+  useCampaignTokenAmount,
   VoteAllocation
 } from '@/hooks/useVotingMethods';
-import { parseEther } from 'viem';
-import { erc20ABI } from '@/abi/erc20ABI';
+import { formatIpfsUrl } from '@/utils/imageUtils';
 
-// Gamification constants
-const VOTE_REACTIONS = ['🚀', '⭐', '💎', '🔥', '💪', '🎯', '⚡', '🏆'];
-const POWER_UP_EFFECTS = ['✨', '💫', '🌟', '⚡', '🔥', '💥'];
-const ACHIEVEMENT_SOUNDS = {
-  vote: '🎵',
-  combo: '🎶',
-  powerUp: '🎸',
-  achievement: '🎺'
-};
 
-interface GameState {
-  score: number;
-  combo: number;
-  powerUps: string[];
-  achievements: string[];
-  votingPower: number;
-  isOnFire: boolean;
-  soundEnabled: boolean;
+
+// Countdown Timer Hook
+function useCountdown(endTime: number) {
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      const difference = endTime - now;
+
+      if (difference > 0) {
+        setTimeLeft({
+          hours: Math.floor(difference / 3600),
+          minutes: Math.floor((difference % 3600) / 60),
+          seconds: difference % 60
+        });
+      } else {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [endTime]);
+
+  return timeLeft;
 }
 
 export default function CampaignView() {
@@ -116,62 +90,56 @@ export default function CampaignView() {
   const { id } = useParams();
   const { address, isConnected } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
-  
-  // Game state
-  const [gameState, setGameState] = useState<GameState>({
-    score: 0,
-    combo: 0,
-    powerUps: [],
-    achievements: [],
-    votingPower: 100,
-    isOnFire: false,
-    soundEnabled: true
-  });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // UI state
   const [showVoteModal, setShowVoteModal] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [voteAmount, setVoteAmount] = useState('');
-  const [selectedToken, setSelectedToken] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [floatingEmojis, setFloatingEmojis] = useState<string[]>([]);
-  const [shakeEffect, setShakeEffect] = useState(false);
-  const [glowEffect, setGlowEffect] = useState('');
-  const [statusMessage, setStatusMessage] = useState({ text: '', type: '', emoji: '' });
+  const [selectedProject, setSelectedProject] = useState(null);
   const [showStats, setShowStats] = useState(false);
-  const [votingAllocations, setVotingAllocations] = useState<VoteAllocation[]>([]);
-  const [expandedSections, setExpandedSections] = useState({
-    description: false,
-    goals: false,
-    technical: false
-  });
   
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
-  const campaignId = id ? BigInt(id as string) : BigInt(0);
+  const campaignId = id ? BigInt(id) : BigInt(0);
   
-  // Hooks
+  // All hooks remain the same...
   const { campaignDetails, isLoading: campaignLoading } = useCampaignDetails(
-    contractAddress as `0x${string}`, 
+    contractAddress,
     campaignId
   );
   
-  const { projects: allProjects, isLoading: projectsLoading } = useAllProjects(contractAddress as `0x${string}`);
+  const { projects: allProjects, isLoading: projectsLoading } = useAllProjects(contractAddress);
+  const { supportedTokens } = useSupportedTokens(contractAddress);
+  const { votedTokens } = useCampaignVotedTokens(contractAddress, campaignId);
   
-  const { supportedTokens } = useSupportedTokens(contractAddress as `0x${string}`);
+  // Get token amounts for CELO and cUSD
+  const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN;
+  const cusdTokenAddress = import.meta.env.VITE_CUSD_TOKEN;
+  
+  const { tokenAmount: celoAmount } = useCampaignTokenAmount(
+    contractAddress,
+    campaignId,
+    celoTokenAddress
+  );
+  
+  const { tokenAmount: cusdAmount } = useCampaignTokenAmount(
+    contractAddress,
+    campaignId,
+    cusdTokenAddress
+  );
   
   const { totalVotes } = useUserTotalVotesInCampaign(
-    contractAddress as `0x${string}`,
+    contractAddress,
     campaignId,
-    address as `0x${string}`
+    address
   );
   
   const { 
     vote, 
+    voteWithCelo,
     batchVote, 
     isPending: isVoting, 
     isSuccess: voteSuccess,
     error: voteError 
-  } = useVote(contractAddress as `0x${string}`);
+  } = useVote(contractAddress);
   
   const {
     votingState,
@@ -180,175 +148,203 @@ export default function CampaignView() {
     getProjectVoteAllocation,
     setProjectVoteAllocation,
     clearAllAllocations
-  } = useVotingManager(contractAddress as `0x${string}`, campaignId, address);
+  } = useVotingManager(contractAddress, campaignId, address);
 
-  const { writeContract: writeERC20 } = useWriteContract();
+  // Data processing logic remains the same...
+  const campaignProjectsBasic = useMemo(() => {
+    return allProjects?.filter(projectDetails => {
+      const formatted = formatProjectForDisplay(projectDetails);
+      return formatted && projectDetails.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
+    }).map(formatProjectForDisplay).filter(Boolean) || [];
+  }, [allProjects, campaignId]);
+
+  const projectIds = useMemo(() => 
+    campaignProjectsBasic.map(project => BigInt(project.id)), 
+    [campaignProjectsBasic]
+  );
+
+  const participationContracts = useMemo(() => 
+    projectIds.map(projectId => ({
+      address: contractAddress,
+      abi,
+      functionName: 'getParticipation',
+      args: [campaignId, projectId]
+    })), 
+    [contractAddress, campaignId, projectIds]
+  );
+
+  const { data: participationData, isLoading: participationLoading } = useReadContracts({
+    contracts: participationContracts,
+    query: {
+      enabled: !!contractAddress && !!campaignId && projectIds.length > 0
+    }
+  });
+
+  const campaignProjects = useMemo(() => {
+    if (!campaignProjectsBasic.length || !participationData) return [];
+
+    return campaignProjectsBasic.map((project, index) => {
+      const participation = participationData[index]?.result;
+      const voteCount = participation ? participation[1] : 0n;
+      
+      return {
+        ...project,
+        voteCount,
+        voteCountFormatted: formatEther(voteCount),
+        participation: participation ? {
+          approved: participation[0],
+          voteCount: participation[1],
+          fundsReceived: participation[2]
+        } : null
+      };
+    });
+  }, [campaignProjectsBasic, participationData]);
+
+  const sortedProjects = useMemo(() => {
+    return [...campaignProjects].sort((a, b) => {
+      const aVotes = Number(a.voteCount || 0n);
+      const bVotes = Number(b.voteCount || 0n);
+      return bVotes - aVotes;
+    });
+  }, [campaignProjects]);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    console.log('Supported Tokens:', supportedTokens);
-  }, [supportedTokens]);
+  // Campaign status and countdown
+  const now = Math.floor(Date.now() / 1000);
+  const startTime = Number(campaignDetails?.campaign?.startTime || 0);
+  const endTime = Number(campaignDetails?.campaign?.endTime || 0);
+  const hasStarted = now >= startTime;
+  const hasEnded = now >= endTime;
+  const isActive = hasStarted && !hasEnded && campaignDetails?.campaign?.active;
+  
+  // Use countdown hook
+  const countdown = useCountdown(endTime);
 
-  const isTokenSupported = (token: string) => {
-    return supportedTokens?.includes(token as `0x${string}`);
-  };
-
-  // Filter projects for this campaign
-  const campaignProjects = allProjects?.filter(projectDetails => {
-    const formatted = formatProjectForDisplay(projectDetails);
-    return formatted && projectDetails.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-  }).map(formatProjectForDisplay).filter(Boolean) || [];
-
-  // Game effects
-  const triggerFloatingEmoji = useCallback((emoji: string) => {
-    setFloatingEmojis(prev => [...prev, emoji]);
-    setTimeout(() => {
-      setFloatingEmojis(prev => prev.slice(1));
-    }, 2000);
-  }, []);
-
-  const triggerShakeEffect = useCallback(() => {
-    setShakeEffect(true);
-    setTimeout(() => setShakeEffect(false), 500);
-  }, []);
-
-  const triggerGlowEffect = useCallback((color: string) => {
-    setGlowEffect(color);
-    setTimeout(() => setGlowEffect(''), 1000);
-  }, []);
-
-  const playSound = useCallback((type: keyof typeof ACHIEVEMENT_SOUNDS) => {
-    if (gameState.soundEnabled) {
-      triggerFloatingEmoji(ACHIEVEMENT_SOUNDS[type]);
-    }
-  }, [gameState.soundEnabled, triggerFloatingEmoji]);
-
-  // Handle vote success
-  useEffect(() => {
-    if (voteSuccess) {
-      setGameState(prev => ({
-        ...prev,
-        score: prev.score + 100,
-        combo: prev.combo + 1,
-        isOnFire: prev.combo > 3
-      }));
-      
-      triggerFloatingEmoji(VOTE_REACTIONS[Math.floor(Math.random() * VOTE_REACTIONS.length)]);
-      triggerGlowEffect('green');
-      setShowConfetti(true);
-      playSound('vote');
-      
-      setTimeout(() => setShowConfetti(false), 3000);
-      
-      setStatusMessage({
-        text: 'Vote cast successfully! 🎉',
-        type: 'success',
-        emoji: '🚀'
-      });
-      
-      setShowVoteModal(false);
-      setVoteAmount('');
-    }
-  }, [voteSuccess, triggerFloatingEmoji, triggerGlowEffect, playSound]);
-
-  // Handle vote error
-  useEffect(() => {
-    if (voteError) {
-      triggerShakeEffect();
-      triggerFloatingEmoji('💥');
-      setStatusMessage({
-        text: 'Vote failed! Try again 😤',
-        type: 'error',
-        emoji: '⚠️'
-      });
-    }
-  }, [voteError, triggerShakeEffect, triggerFloatingEmoji]);
-
-  // Clear status message
-  useEffect(() => {
-    if (statusMessage.text) {
-      const timer = setTimeout(() => {
-        setStatusMessage({ text: '', type: '', emoji: '' });
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [statusMessage]);
-
-  const approveToken = async (token: `0x${string}`, amount: bigint) => {
-    try {
-      await writeERC20({
-        address: token,
-        abi: erc20ABI,
-        functionName: 'approve',
-        args: [contractAddress as `0x${string}`, amount]
-      });
-      return true;
-    } catch (error) {
-      console.error('Error approving token:', error);
-      return false;
-    }
-  };
-
-  const handleVote = async (projectId: bigint, token: string, amount: bigint) => {
-    try {
-      // Then proceed with voting
-      await vote({
-        campaignId,
-        projectId,
-        token: token as `0x${string}`,
-        amount
-      });
-    } catch (error) {
-      console.error('Voting error:', error);
-      setStatusMessage({
-        text: 'Voting failed! Please try again.',
-        type: 'error',
-        emoji: '⚠️'
-      });
-    }
-  };
-
-  const openVoteModal = (project: any) => {
+  const openVoteModal = (project) => {
     setSelectedProject(project);
     setShowVoteModal(true);
-    triggerFloatingEmoji('🎯');
-    playSound('powerUp');
   };
 
   const closeVoteModal = () => {
     setShowVoteModal(false);
     setSelectedProject(null);
-    setVoteAmount('');
-    setSelectedToken('');
-  };
-
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
   };
 
   const handleBackToArena = () => {
     navigate('/explore');
   };
 
+  const getPositionStyling = (index) => {
+    switch (index) {
+      case 0:
+        return {
+          bgGradient: 'from-yellow-400 via-yellow-500 to-amber-500',
+          borderColor: 'border-yellow-400',
+          shadowColor: 'shadow-yellow-500/30',
+          iconColor: 'text-yellow-600',
+          icon: Crown,
+          badge: '👑',
+          rank: '1st',
+          glowColor: 'shadow-yellow-400/50'
+        };
+      case 1:
+        return {
+          bgGradient: 'from-gray-300 via-gray-400 to-slate-500',
+          borderColor: 'border-gray-400',
+          shadowColor: 'shadow-gray-500/30',
+          iconColor: 'text-gray-600',
+          icon: Medal,
+          badge: '🥈',
+          rank: '2nd',
+          glowColor: 'shadow-gray-400/50'
+        };
+      case 2:
+        return {
+          bgGradient: 'from-orange-400 via-orange-500 to-amber-600',
+          borderColor: 'border-orange-400',
+          shadowColor: 'shadow-orange-500/30',
+          iconColor: 'text-orange-600',
+          icon: Award,
+          badge: '🥉',
+          rank: '3rd',
+          glowColor: 'shadow-orange-400/50'
+        };
+      default:
+        return {
+          bgGradient: 'from-blue-50 to-indigo-50',
+          borderColor: 'border-blue-200',
+          shadowColor: 'shadow-blue-300/20',
+          iconColor: 'text-blue-600',
+          icon: Target,
+          badge: `#${index + 1}`,
+          rank: `${index + 1}th`,
+          glowColor: 'shadow-blue-400/30'
+        };
+    }
+  };
+
+  const getCampaignLogo = () => {
+    try {
+      if (campaignDetails?.metadata?.mainInfo) {
+        const mainInfo = JSON.parse(campaignDetails.metadata.mainInfo);
+        if (mainInfo.logo) return mainInfo.logo;
+      }
+      
+      if (campaignDetails?.metadata?.additionalInfo) {
+        const additionalInfo = JSON.parse(campaignDetails.metadata.additionalInfo);
+        if (additionalInfo.logo) return additionalInfo.logo;
+      }
+    } catch (e) {
+      // If JSON parsing fails, return null
+    }
+    return null;
+  };
+
+  const getProjectLogo = (project) => {
+    try {
+
+      if (project.additionalDataParsed?.logo) return project.additionalDataParsed.logo;
+      
+      if (project.additionalData) {
+        const additionalData = JSON.parse(project.additionalData);
+        if (additionalData.logo) return additionalData.logo;
+      }
+    } catch (e) {
+      console.log('error', e);
+      // If JSON parsing fails, return null
+    }
+    //log teh logo
+    console.log('project.additionalDataParsed', project.additionalDataParsed);
+    console.log('project.additionalData', project.metadata);
+
+    console.log('project', project);
+    return null;
+  };
+
   if (!isMounted) return null;
 
-  if (campaignLoading || projectsLoading) {
+  if (campaignLoading || projectsLoading || participationLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4 relative">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-blue-200 rounded-full animate-spin border-t-blue-500"></div>
-            <Sparkles className="h-8 w-8 text-blue-500 absolute inset-0 m-auto animate-pulse" />
-          </div>
-          <div className="text-center">
-            <p className="text-xl text-blue-600 font-medium mb-2">🎮 Loading Campaign Arena...</p>
-            <p className="text-sm text-gray-500">Preparing your voting experience</p>
+      <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 flex items-center justify-center relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-gradient-to-r from-blue-400/20 to-indigo-400/20 animate-float blur-2xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full bg-gradient-to-r from-cyan-400/20 to-blue-400/20 animate-float-delay-1 blur-2xl"></div>
+        </div>
+        
+        <div className="glass-morphism rounded-2xl p-8 shadow-xl relative">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="relative">
+              <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <Waves className="h-6 w-6 text-blue-500 absolute inset-0 m-auto animate-wave" />
+            </div>
+            <div className="text-center">
+              <p className="text-lg text-blue-600 font-semibold">Loading Sovereign Seas...</p>
+              <p className="text-sm text-gray-600 animate-pulse">Preparing the campaign arena</p>
+            </div>
           </div>
         </div>
       </div>
@@ -357,16 +353,25 @@ export default function CampaignView() {
 
   if (!campaignDetails) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="text-6xl mb-4">😞</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Campaign Not Found</h1>
-          <p className="text-gray-600 mb-6">This campaign doesn't exist or has been removed from the arena.</p>
+      <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Animated background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/3 left-1/5 w-40 h-40 rounded-full bg-gradient-to-r from-blue-400/10 to-indigo-400/10 animate-float blur-3xl"></div>
+        </div>
+        
+        <div className="glass-morphism rounded-2xl p-8 shadow-xl max-w-md mx-auto text-center relative">
+          <div className="text-6xl mb-6 animate-wave">🌊</div>
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-4">
+            Campaign Not Found
+          </h1>
+          <p className="text-gray-600 text-sm mb-6">This campaign doesn't exist in the Sovereign Seas.</p>
           <button
             onClick={handleBackToArena}
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center mx-auto group relative overflow-hidden"
           >
-            🏠 Back to Arena
+            <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
+            Return to Arena
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
           </button>
         </div>
       </div>
@@ -374,416 +379,511 @@ export default function CampaignView() {
   }
 
   const campaign = campaignDetails.campaign;
-  
-  // Campaign status
-  const now = Math.floor(Date.now() / 1000);
-  const startTime = Number(campaign.startTime);
-  const endTime = Number(campaign.endTime);
-  const hasStarted = now >= startTime;
-  const hasEnded = now >= endTime;
-  const isActive = hasStarted && !hasEnded && campaign.active;
+  const campaignLogo = getCampaignLogo();
 
-  return (
-    <div className={`min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 relative overflow-hidden ${shakeEffect ? 'animate-pulse' : ''}`}>
-      {/* Floating background elements with extra game effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-gradient-to-r from-blue-400/20 to-indigo-400/20 animate-float blur-2xl"></div>
-        <div className="absolute top-1/2 right-1/5 w-48 h-48 rounded-full bg-gradient-to-r from-cyan-400/20 to-blue-400/20 animate-float-slow blur-2xl"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-40 h-40 rounded-full bg-gradient-to-r from-indigo-400/20 to-purple-400/20 animate-float-slower blur-2xl"></div>
-        
-        {/* Floating emojis */}
-        {floatingEmojis.map((emoji, index) => (
-          <div
-            key={index}
-            className="absolute text-4xl animate-bounce pointer-events-none"
-            style={{
-              left: `${Math.random() * 80 + 10}%`,
-              top: `${Math.random() * 80 + 10}%`,
-              animationDuration: '2s',
-              animationTimingFunction: 'ease-out'
-            }}
-          >
-            {emoji}
-          </div>
-        ))}
-      </div>
+  // Calculate total campaign votes (rounded to 1 decimal place)
+  const totalCampaignVotes = sortedProjects.reduce((sum, project) => 
+    sum + Number(formatEther(project.voteCount || 0n)), 0
+  );
 
-      {/* Confetti effect */}
-      {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-50">
-          {Array.from({ length: 50 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute animate-ping"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-                animationDuration: '1s'
-              }}
-            >
-              {POWER_UP_EFFECTS[Math.floor(Math.random() * POWER_UP_EFFECTS.length)]}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="relative z-10 container mx-auto px-4 py-6">
-        {/* Header with game elements */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={handleBackToArena}
-              className="inline-flex items-center px-4 py-2 bg-white/90 backdrop-blur-sm text-gray-700 hover:text-blue-600 rounded-full transition-all hover:bg-white shadow-lg border border-blue-100 hover:scale-105"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              🏠 Back to Arena
-            </button>
-          </div>
+  // Sovereign Seas Themed Sidebar Component
+  const Sidebar = ({ className = "" }) => (
+    <div className={`glass-morphism ${className} relative overflow-hidden`}>
+      {/* Decorative wave pattern */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+      
+      <div className="p-6 sticky top-4 space-y-6">
+        {/* Campaign Stats */}
+        <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-xl p-4 border border-blue-200/50 shadow-sm animate-float">
+          <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
+            <BarChart3 className="h-4 w-4 text-blue-500 mr-2" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+              Campaign Analytics
+            </span>
+          </h3>
           
-          {/* Game stats bar */}
-          <div className="flex items-center space-x-4">
-            <div className="bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-blue-100">
-              <div className="flex items-center space-x-2">
-                <Trophy className="h-4 w-4 text-yellow-500" />
-                <span className="font-medium text-gray-800">{gameState.score}</span>
-              </div>
-            </div>
-            
-            {gameState.combo > 0 && (
-              <div className="bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-full px-4 py-2 shadow-lg animate-pulse">
-                <div className="flex items-center space-x-2">
-                  <Flame className="h-4 w-4" />
-                  <span className="font-bold">{gameState.combo}x</span>
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between items-center group">
+              <span className="text-gray-600 flex items-center">
+                <DollarSign className="h-3 w-3 text-blue-500 mr-1" />
+                Total Treasury
+              </span>
+              <div className="flex items-center space-x-1">
+                <span className="font-bold text-gray-800">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
+                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">$</span>
                 </div>
               </div>
-            )}
+            </div>
             
-            <button
-              onClick={() => setGameState(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }))}
-              className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-blue-100 hover:scale-105 transition-all"
-            >
-              {gameState.soundEnabled ? <Volume2 className="h-4 w-4 text-blue-500" /> : <VolumeX className="h-4 w-4 text-gray-400" />}
-            </button>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 flex items-center">
+                <Vote className="h-3 w-3 text-indigo-500 mr-1" />
+                Total Votes
+              </span>
+              <span className="font-bold text-indigo-600">{totalCampaignVotes.toFixed(1)}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 flex items-center">
+                <Users className="h-3 w-3 text-cyan-500 mr-1" />
+                Active Projects
+              </span>
+              <span className="font-bold text-cyan-600">{sortedProjects.length}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 flex items-center">
+                <Percent className="h-3 w-3 text-amber-500 mr-1" />
+                Platform Fee
+              </span>
+              <span className="font-bold text-amber-600">{Number(campaign.adminFeePercentage)}%</span>
+            </div>
           </div>
         </div>
 
-        {/* Status message with game styling */}
-        {statusMessage.text && (
-          <div className={`mb-6 p-4 rounded-2xl shadow-xl backdrop-blur-sm border-2 ${
-            statusMessage.type === 'success' 
-              ? 'bg-green-50/90 border-green-300 text-green-800' 
-              : 'bg-red-50/90 border-red-300 text-red-800'
-          } ${glowEffect === 'green' ? 'ring-4 ring-green-300 animate-pulse' : ''}`}>
-            <div className="flex items-center">
-              <span className="text-2xl mr-3">{statusMessage.emoji}</span>
-              <p className="font-medium">{statusMessage.text}</p>
+        {/* Token Ocean */}
+        <div className="bg-gradient-to-br from-emerald-50/80 to-cyan-50/80 rounded-xl p-4 border border-cyan-200/50 shadow-sm animate-float-delay-1">
+          <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
+            <Waves className="h-4 w-4 text-cyan-500 mr-2" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-blue-600">
+              Token Ocean
+            </span>
+          </h3>
+          
+          <div className="space-y-3 text-xs">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 flex items-center justify-center animate-shimmer">
+                  <img 
+                    src="/images/celo.png" 
+                    alt="CELO"
+                    className="w-4 h-4"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const nextElement = target.nextElementSibling as HTMLDivElement;
+                      if (nextElement) {
+                        nextElement.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <div className="text-white text-xs font-bold hidden">🪙</div>
+                </div>
+                <span className="text-gray-700 font-medium">CELO</span>
+              </div>
+              <span className="font-bold text-amber-600">{parseFloat(formatEther(celoAmount || 0n)).toFixed(1)}</span>
             </div>
+            
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 flex items-center justify-center">
+                  <img 
+                    src="/images/cusd.png" 
+                    alt="cUSD"
+                    className="w-4 h-4"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const nextElement = target.nextElementSibling as HTMLDivElement;
+                      if (nextElement) {
+                        nextElement.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <div className="text-white text-xs font-bold hidden">$</div>
+                </div>
+                <span className="text-gray-700 font-medium">cUSD</span>
+              </div>
+              <span className="font-bold text-emerald-600">{parseFloat(formatEther(cusdAmount || 0n)).toFixed(1)}</span>
+            </div>
+            
+            {/* Animated progress wave */}
+            <div className="pt-2">
+              <div className="text-xs text-gray-500 mb-2">Token Distribution</div>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-yellow-400 via-emerald-400 to-cyan-400 w-full relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Your Sovereign Power */}
+        {isConnected && (
+          <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-xl p-4 border border-indigo-200/50 shadow-sm animate-float-delay-2 relative overflow-hidden">
+            <div className="absolute -top-1 -right-1 w-8 h-8 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-md"></div>
+            
+            <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
+              <Zap className="h-4 w-4 text-indigo-500 mr-2" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                Your Sovereign Power
+              </span>
+            </h3>
+            
+            <div className="space-y-3 text-xs relative z-10">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Votes Cast</span>
+                <span className="font-bold text-indigo-600">{parseFloat(formatEther(totalVotes || 0n)).toFixed(1)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Influence</span>
+                <span className={`font-bold ${Number(totalVotes || 0n) > 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
+                  {Number(totalVotes || 0n) > 0 ? 'Active Sovereign' : 'Observer'}
+                </span>
+              </div>
+            </div>
+            
+            {isActive && (
+              <button
+                onClick={() => {
+                  if (sortedProjects.length > 0) {
+                    openVoteModal(sortedProjects[0]);
+                  }
+                }}
+                className="w-full mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+              >
+                <span className="relative z-10 flex items-center justify-center">
+                  <Sparkles className="h-3 w-3 mr-1 group-hover:rotate-12 transition-transform duration-300" />
+                  Cast Your Vote
+                </span>
+                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Enhanced animated background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-gradient-to-r from-blue-400/10 to-indigo-400/10 animate-float blur-3xl"></div>
+        <div className="absolute top-1/2 right-1/5 w-80 h-80 rounded-full bg-gradient-to-r from-cyan-400/10 to-blue-400/10 animate-float-delay-1 blur-3xl"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-48 h-48 rounded-full bg-gradient-to-r from-indigo-400/10 to-purple-400/10 animate-float-delay-2 blur-3xl"></div>
+      </div>
+
+      <div className="relative z-10 flex min-h-screen">
+        {/* Desktop Sidebar */}
+        <Sidebar className="hidden lg:block w-80" />
+
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex">
+            <div className="fixed inset-0 bg-blue-900/20 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+            <Sidebar className="relative w-80 h-full overflow-y-auto" />
           </div>
         )}
 
-        {/* Campaign header with game elements */}
-        <div className={`bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-blue-100 mb-8 relative overflow-hidden ${glowEffect ? `ring-4 ring-${glowEffect}-300` : ''}`}>
-          <div className="absolute top-0 right-0 h-32 w-32 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-bl-full"></div>
-          
-          <div className="relative z-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-              <div className="flex-1">
-                <div className="flex items-center space-x-4 mb-3">
-                  <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                    🏆 {campaign.name}
-                  </h1>
-                  <span className={`px-4 py-2 rounded-full text-sm font-bold flex items-center space-x-2 ${
-                    isActive ? 'bg-green-100 text-green-700 animate-pulse' : 
-                    hasEnded ? 'bg-gray-100 text-gray-700' : 
-                    'bg-amber-100 text-amber-700'
-                  }`}>
-                    <Clock className="h-4 w-4" />
-                    <span>{hasEnded ? '🏁 Ended' : isActive ? '🔥 LIVE' : '⏳ Coming Soon'}</span>
-                  </span>
-                </div>
-                
-                <p className="text-gray-600 mb-4 text-lg">{campaign.description}</p>
-                
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex items-center space-x-2 bg-blue-100 text-blue-800 px-3 py-2 rounded-full">
-                    <Coins className="h-4 w-4" />
-                    <span className="font-medium">{Number(campaign.totalFunds) / 1e18} CELO Pool</span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 bg-purple-100 text-purple-800 px-3 py-2 rounded-full">
-                    <Users className="h-4 w-4" />
-                    <span className="font-medium">{campaignProjects.length} Projects</span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 bg-emerald-100 text-emerald-800 px-3 py-2 rounded-full">
-                    <Trophy className="h-4 w-4" />
-                    <span className="font-medium">Max {Number(campaign.maxWinners) || 'All'} Winners</span>
-                  </div>
-                </div>
-              </div>
-              
-              {isActive && (
-                <div className="mt-6 md:mt-0">
-                  <button
-                    onClick={() => setShowStats(true)}
-                    className="px-6 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 hover:scale-105"
-                  >
-                    <BarChart3 className="h-5 w-5" />
-                    <span>📊 Battle Stats</span>
-                  </button>
-                </div>
-              )}
+        {/* Main Content */}
+        <div className="flex-1 p-4 lg:p-6">
+          {/* Enhanced Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleBackToArena}
+                className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
+                <span className="hidden sm:inline">Return to Arena</span>
+                <span className="sm:hidden">Back</span>
+                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+              </button>
+
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200 hover:shadow-lg transition-all gradient-border"
+              >
+                <Menu className="h-4 w-4 text-blue-600" />
+              </button>
             </div>
             
-            {/* Progress bar with game styling */}
-            <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-1000 relative"
-                style={{ 
-                  width: hasEnded ? '100%' : isActive ? `${Math.min(100, ((now - startTime) / (endTime - startTime)) * 100)}%` : '0%'
-                }}
-              >
-                <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
+            <div className="flex items-center space-x-2 text-xs">
+              <div className="flex items-center space-x-2 glass-morphism px-3 py-2 rounded-full shadow-sm animate-float">
+                <Users className="h-3 w-3 text-blue-500" />
+                <span className="font-bold text-blue-600">{sortedProjects.length}</span>
+                <span className="text-gray-600 hidden sm:inline">Projects</span>
+              </div>
+              
+              <div className="flex items-center space-x-2 glass-morphism px-3 py-2 rounded-full shadow-sm animate-float-delay-1">
+                <Coins className="h-3 w-3 text-emerald-500" />
+                <span className="font-bold text-emerald-600">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
+                <span className="text-gray-600 hidden sm:inline">CELO</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Projects grid with game cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {campaignProjects.map((project, index) => (
-            <div
-              key={project.id}
-              className="group bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-blue-100 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 relative overflow-hidden"
-            >
-              {/* Card glow effect */}
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
-              
-              {/* Ranking badge */}
-              <div className="absolute top-4 right-4 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                #{index + 1}
+          {/* Redesigned Compact Campaign Header */}
+          {/* Redesigned Compact Campaign Header */}
+          <div className="glass-morphism rounded-xl p-4 shadow-xl mb-6 relative overflow-hidden group hover:shadow-2xl transition-all hover:-translate-y-1 duration-500">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
+            
+            <div className="relative z-10">
+              {/* Top Row - Campaign Title and Status */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  {/* Compact Campaign Logo */}
+                  <div className="animate-float">
+                    {campaignLogo ? (
+                      <img 
+                        src={formatIpfsUrl(campaignLogo)} 
+                        alt={`${campaign.name} logo`}
+                        className="w-12 h-12 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 transition-colors duration-300"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
+                      {campaign.name.charAt(0)}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
+                      {campaign.name}
+                    </h1>
+                    <p className="text-sm text-gray-600 line-clamp-1">{campaign.description}</p>
+                  </div>
+                </div>
+
+                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${
+                  isActive ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
+                  hasEnded ? 'bg-gray-100 text-gray-700' : 
+                  'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700'
+                }`}>
+                  <Clock className="h-3 w-3" />
+                  <span>{hasEnded ? 'Voyage Complete' : isActive ? 'LIVE VOYAGE' : 'Preparing'}</span>
+                </span>
               </div>
-              
-              <div className="relative z-10">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-bold">
-                    {project.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
-                      {project.name}
-                    </h3>
-                    <p className="text-sm text-gray-500">🚀 Project #{project.id}</p>
-                  </div>
+
+              {/* Middle Row - Compact Stats */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-200/50 shadow-sm">
+                  <Trophy className="h-3 w-3" />
+                  <span>Max {Number(campaign.maxWinners) || 'All'} Winners</span>
                 </div>
                 
-                <p className="text-gray-600 mb-4 line-clamp-3">{project.description}</p>
-                
-                {/* Project stats */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                      <Heart className="h-3 w-3" />
-                      <span>{formatTokenAmount(project.voteCount || 0n)} votes</span>
+                <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium border border-purple-200/50 shadow-sm">
+                  <Target className="h-3 w-3" />
+                  <span>{campaign.useQuadraticDistribution ? 'Quadratic Flow' : 'Linear Tide'}</span>
+                </div>
+              </div>
+
+              {/* Bottom Row - Countdown Timer (Only when active) */}
+              {isActive && !hasEnded && (
+                <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm rounded-lg p-3 border border-blue-200/50">
+                  <div className="flex items-center justify-center space-x-3">
+                    <Timer className="h-4 w-4 text-blue-500 animate-wave" />
+                    <div className="flex items-center space-x-1">
+                      <div className="text-center">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
+                          {countdown.hours.toString().padStart(2, '0')}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">H</div>
+                      </div>
+                      <div className="text-blue-500 font-bold">:</div>
+                      <div className="text-center">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
+                          {countdown.minutes.toString().padStart(2, '0')}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">M</div>
+                      </div>
+                      <div className="text-blue-500 font-bold">:</div>
+                      <div className="text-center">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md animate-pulse">
+                          {countdown.seconds.toString().padStart(2, '0')}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">S</div>
+                      </div>
                     </div>
+                    <span className="text-xs font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                      Until Voyage Ends
+                    </span>
                   </div>
-                  
-                  <button
-                    onClick={() => navigate(`/explore/project/${project.id}`)}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
-                  >
-                    <Eye className="h-4 w-4 text-gray-600" />
-                  </button>
                 </div>
-                
-                {/* Action buttons */}
-                <div className="flex space-x-2">
-                  {isActive && (
-                    <button
-                      onClick={() => openVoteModal(project)}
-                      className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center space-x-2 group"
-                    >
-                      <Vote className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                      <span>🗳️ Vote</span>
-                      <Sparkles className="h-4 w-4 group-hover:animate-spin" />
-                    </button>
-                  )}
-                  
-                  {!isActive && (
-                    <div className="flex-1 px-4 py-3 rounded-xl bg-gray-100 text-gray-500 font-medium flex items-center justify-center space-x-2">
-                      <Clock className="h-4 w-4" />
-                      <span>{hasEnded ? '🏁 Voting Ended' : '⏳ Voting Soon'}</span>
-                    </div>
-                  )}
-                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Enhanced Projects Leaderboard */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                  <Rocket className="h-5 w-5 text-blue-500 mr-2 inline animate-wave" />
+                  Sovereign Leaderboard
+                </span>
+              </h2>
+              <div className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                {totalCampaignVotes.toFixed(1)} total votes cast
               </div>
             </div>
-          ))}
+
+            {sortedProjects.map((project, index) => {
+              const styling = getPositionStyling(index);
+              const voteCount = Number(formatEther(project.voteCount || 0n));
+              const percentage = totalCampaignVotes > 0 ? ((voteCount / totalCampaignVotes) * 100).toFixed(1) : '0.0';
+              const projectLogo = getProjectLogo(project);
+
+              return (
+                <div
+                  key={project.id}
+                  className={`
+                    group glass-morphism rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-4 relative overflow-hidden
+                    hover:-translate-y-2 gradient-border animate-float
+                  `}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  {/* Enhanced Position Badge */}
+                  <div className={`absolute -top-2 -left-2 w-10 h-10 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-lg ${styling.glowColor} flex items-center justify-center text-white font-bold text-sm border-2 border-white transform group-hover:scale-110 transition-transform duration-300`}>
+                    {index < 3 ? styling.badge.split('')[0] : index + 1}
+                  </div>
+
+                  {/* Animated background glow for top 3 */}
+                  {index < 3 && (
+                    <div className={`absolute inset-0 bg-gradient-to-r ${styling.bgGradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500 rounded-xl`}></div>
+                  )}
+
+                  <div className="relative z-10 flex items-center space-x-4 pl-6">
+                    {/* Enhanced Project Logo with Fallback */}
+                    <div className="animate-float-delay-1 relative">
+                      {projectLogo ? (
+                        <img 
+                          src={formatIpfsUrl(projectLogo)} 
+                          alt={`${project.name} logo`}
+                          className="w-12 h-12 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
+                        {project.name.charAt(0)}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-bold text-gray-800 text-lg truncate group-hover:text-blue-600 transition-colors duration-300">
+                          {project.name}
+                        </h3>
+                        <div className="text-right ml-4">
+                          <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                            {voteCount.toFixed(1)}
+                          </div>
+                          <div className="text-xs text-gray-500 flex items-center justify-end">
+                            <Heart className="h-3 w-3 mr-1 text-red-400" />
+                            {percentage}%
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-1">{project.description}</p>
+                      
+                      {/* Enhanced Progress Bar */}
+                      <div className="mb-3">
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className={`h-full bg-gradient-to-r ${styling.bgGradient} transition-all duration-1000 rounded-full relative`}
+                            style={{ width: `${Math.min(100, parseFloat(percentage))}%` }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Enhanced Action Buttons */}
+                      <div className="flex space-x-2">
+                        {isActive && (
+                          project.participation?.approved ? (
+                            <button
+                              onClick={() => openVoteModal(project)}
+                              className={`
+                                px-4 py-2 rounded-full text-white font-medium shadow-md transition-all duration-300 
+                                hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-sm group/btn relative overflow-hidden
+                                bg-gradient-to-r ${styling.bgGradient}
+                              `}
+                            >
+                              <Vote className="h-3 w-3 group-hover/btn:rotate-12 transition-transform duration-300" />
+                              <span>Cast Vote</span>
+                              <Sparkles className="h-3 w-3 group-hover/btn:rotate-180 transition-transform duration-500" />
+                              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></span>
+                            </button>
+                          ) : (
+                            <div className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 font-medium flex items-center space-x-2 text-sm">
+                              <Clock className="h-3 w-3" />
+                              <span>Not Yet Approved</span>
+                            </div>
+                          )
+                        )}
+                        
+                        <button
+                          onClick={() => navigate(`/explore/project/${project.id}`)}
+                          className="px-4 py-2 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 text-sm group/btn relative overflow-hidden"
+                        >
+                          <Eye className="h-3 w-3 group-hover/btn:scale-110 transition-transform duration-300" />
+                          <span>Explore</span>
+                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Enhanced Winner Badge */}
+                    {index < Number(campaign.maxWinners) && hasEnded && voteCount > 0 && (
+                      <div className="absolute top-3 right-3 bg-gradient-to-r from-emerald-400 to-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse border border-emerald-300">
+                        🏆 Sovereign Winner
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Enhanced Empty State */}
+          {sortedProjects.length === 0 && (
+            <div className="text-center py-16 glass-morphism rounded-2xl shadow-xl">
+              <div className="text-6xl mb-6 animate-wave">🌊</div>
+              <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-3">
+                The Seas Await
+              </h3>
+              <p className="text-gray-600">No projects have joined this sovereign voyage yet.</p>
+              <div className="mt-6">
+                <button
+                  onClick={handleBackToArena}
+                  className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center">
+                    <Rocket className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                    Explore Other Campaigns
+                  </span>
+                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Vote Modal */}
+      {/* Enhanced Vote Modal */}
       <VoteModal
         isOpen={showVoteModal}
         onClose={closeVoteModal}
         selectedProject={selectedProject}
-        onVote={handleVote}
+        campaignId={campaignId}
         isVoting={isVoting}
-        gameState={gameState}
       />
 
-      {/* Stats Modal */}
-      {showStats && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl border-4 border-purple-200 relative overflow-hidden max-h-[90vh] overflow-y-auto">
-            {/* Stats header */}
-            <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-6 text-white relative">
-              <div className="absolute top-0 right-0 text-6xl opacity-10">📊</div>
-              <button
-                onClick={() => setShowStats(false)}
-                className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-              
-              <h3 className="text-2xl font-bold mb-2 flex items-center">
-                📊 Battle Arena Stats
-              </h3>
-              <p className="text-purple-100">Real-time campaign analytics</p>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              {/* Personal stats */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-                <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <Users className="h-5 w-5 mr-2 text-blue-500" />
-                  🎮 Your Game Stats
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{gameState.score}</div>
-                    <div className="text-sm text-gray-600">🏆 Score</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{gameState.combo}</div>
-                    <div className="text-sm text-gray-600">🔥 Combo</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{formatTokenAmount(totalVotes)}</div>
-                    <div className="text-sm text-gray-600">💰 Total Votes</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{gameState.achievements.length}</div>
-                    <div className="text-sm text-gray-600">🏅 Achievements</div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Campaign leaderboard */}
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 border border-yellow-200">
-                <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <Trophy className="h-5 w-5 mr-2 text-yellow-500" />
-                  🏆 Project Leaderboard
-                </h4>
-                <div className="space-y-3">
-                  {campaignProjects
-                    .sort((a, b) => Number(b.voteCount || 0n) - Number(a.voteCount || 0n))
-                    .slice(0, 5)
-                    .map((project, index) => (
-                      <div key={project.id} className="flex items-center space-x-4 p-3 bg-white rounded-xl border border-gray-200">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
-                          index === 0 ? 'bg-yellow-500' : 
-                          index === 1 ? 'bg-gray-400' : 
-                          index === 2 ? 'bg-orange-600' : 'bg-blue-500'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-800">{project.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {formatTokenAmount(project.voteCount || 0n)} votes
-                          </div>
-                        </div>
-                        <div className="text-2xl">
-                          {index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-              
-              {/* Achievement showcase */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
-                <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <Medal className="h-5 w-5 mr-2 text-green-500" />
-                  🏅 Available Achievements
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl border border-gray-200">
-                    <div className="text-2xl">🚀</div>
-                    <div>
-                      <div className="font-medium text-gray-800">First Vote</div>
-                      <div className="text-sm text-gray-500">Cast your first vote</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl border border-gray-200">
-                    <div className="text-2xl">🔥</div>
-                    <div>
-                      <div className="font-medium text-gray-800">On Fire</div>
-                      <div className="text-sm text-gray-500">5 votes in a row</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl border border-gray-200">
-                    <div className="text-2xl">💎</div>
-                    <div>
-                      <div className="font-medium text-gray-800">Diamond Hands</div>
-                      <div className="text-sm text-gray-500">Vote 100+ CELO/cUSD</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 bg-white rounded-xl border border-gray-200">
-                    <div className="text-2xl">👑</div>
-                    <div>
-                      <div className="font-medium text-gray-800">Kingmaker</div>
-                      <div className="text-sm text-gray-500">Vote for winning project</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Game achievement notifications */}
-      {gameState.achievements.length > 0 && (
-        <div className="fixed bottom-4 right-4 z-40">
-          {gameState.achievements.slice(-3).map((achievement, index) => (
-            <div
-              key={index}
-              className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-4 rounded-2xl shadow-2xl mb-2 animate-bounce"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl">🏆</div>
-                <div>
-                  <div className="font-bold">Achievement Unlocked!</div>
-                  <div className="text-sm opacity-90">{achievement}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Power-up effects overlay */}
-      {gameState.isOnFire && (
-        <div className="fixed inset-0 pointer-events-none z-30">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-red-500/10 animate-pulse"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-6xl animate-bounce">
-            🔥
-          </div>
-        </div>
-      )}
+      
+     
     </div>
   );
 }
+          

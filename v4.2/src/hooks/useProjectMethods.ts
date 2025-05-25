@@ -1,4 +1,4 @@
-import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
+import { useWriteContract, useReadContract, useReadContracts, useAccount } from 'wagmi'
 import { parseEther, formatEther, Address, type Abi, type AbiFunction } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback } from 'react'
@@ -247,25 +247,36 @@ export function useTransferProjectOwnership(contractAddress: Address) {
   }
 }
 
-// Hook for adding project to campaign
+
+// FIXED: Hook for adding project to campaign
 export function useAddProjectToCampaign(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
 
   const addProjectToCampaign = async ({
     campaignId,
     projectId,
-    feeToken
+    feeToken,
+    feeAmount = 0n, // Pass the calculated fee amount from component
+    shouldPayFee = true // Pass whether fee should be paid from component
   }: {
     campaignId: bigint
     projectId: bigint
     feeToken: Address
+    feeAmount?: bigint
+    shouldPayFee?: boolean
   }) => {
     try {
+      // Only send CELO value if fee should be paid and paying with CELO
+      // Assuming CELO token address - you should define this constant
+      const CELO_TOKEN_ADDRESS = import.meta.env.VITE_CELO_TOKEN // Replace with actual CELO token address
+      const value = (shouldPayFee && feeToken === CELO_TOKEN_ADDRESS) ? feeAmount : 0n
+
       await writeContract({
         address: contractAddress,
         abi,
         functionName: 'addProjectToCampaign',
-        args: [campaignId, projectId, feeToken]
+        args: [campaignId, projectId, feeToken],
+        value
       })
     } catch (err) {
       console.error('Error adding project to campaign:', err)
@@ -281,6 +292,48 @@ export function useAddProjectToCampaign(contractAddress: Address) {
     isSuccess
   }
 }
+
+// Hook to check if user can bypass fees
+export function useCanBypassFees(contractAddress: Address, campaignId: bigint) {
+  const { address: userAddress } = useAccount()
+
+  const { data: isAdmin, isLoading, error } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'isCampaignAdmin',
+    args: [campaignId, userAddress as Address],
+    query: {
+      enabled: !!userAddress && !!contractAddress && campaignId > 0n
+    }
+  })
+
+  return {
+    isAdmin: isAdmin as boolean,
+    isLoading,
+    error,
+    userAddress
+  }
+}
+
+// Hook to get project addition fee
+export function useProjectAdditionFee(contractAddress: Address) {
+  const { data, isLoading, error } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'projectAdditionFee',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    projectAdditionFee: data as bigint,
+    projectAdditionFeeFormatted: data ? formatEther(data as bigint) : '0',
+    isLoading,
+    error
+  }
+}
+
 
 // Hook for removing project from campaign
 export function useRemoveProjectFromCampaign(contractAddress: Address) {
@@ -335,6 +388,38 @@ export function useProjectCount(contractAddress: Address) {
     refetch
   }
 }
+
+const useProjectParticipations = (contractAddress, campaignId, projectIds) => {
+  const participationContracts = projectIds.map(projectId => ({
+    address: contractAddress,
+    abi,
+    functionName: 'getParticipation',
+    args: [campaignId, BigInt(projectId)]
+  }));
+
+  const { data, isLoading, error } = useReadContracts({
+    contracts: participationContracts,
+    query: {
+      enabled: !!contractAddress && !!campaignId && projectIds.length > 0
+    }
+  });
+
+  const participations = {};
+  if (data) {
+    projectIds.forEach((projectId, index) => {
+      if (data[index]?.result) {
+        participations[projectId] = {
+          approved: data[index].result[0],
+          voteCount: data[index].result[1],
+          fundsReceived: data[index].result[2]
+        };
+      }
+    });
+  }
+
+  return { participations, isLoading, error };
+};
+
 
 // Hook for getting project campaigns and their status
 export function useProjectCampaigns(contractAddress: Address, projectId: bigint) {
@@ -700,30 +785,27 @@ export function useProject(contractAddress: Address, projectId?: string | number
 }
 
 // Hook for reading project participation in a campaign
-export function useProjectParticipation(
-  contractAddress: Address, 
-  campaignId: bigint, 
-  projectId: bigint
-) {
+export function useProjectParticipation(contractAddress, campaignId, projectId) {
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
-    abi,
+    abi: abi, // Make sure you import the abi
     functionName: 'getParticipation',
-    args: [campaignId, projectId]
-  })
-
-  const participation = data ? {
-    approved: data[0],
-    voteCount: data[1],
-    fundsReceived: data[2]
-  } : null
+    args: [campaignId, projectId],
+    query: {
+      enabled: !!contractAddress && campaignId !== undefined && projectId !== undefined
+    }
+  });
 
   return {
-    participation,
+    participation: data ? {
+      approved: data[0],
+      voteCount: data[1],
+      fundsReceived: data[2]
+    } : null,
     isLoading,
     error,
     refetch
-  }
+  };
 }
 
 // Hook for reading project token votes
@@ -828,10 +910,12 @@ export default {
   useUpdateProjectMetadata,
   useTransferProjectOwnership,
   useAddProjectToCampaign,
+  useCanBypassFees,
   useRemoveProjectFromCampaign,
   useProject,
   useProjectMetadata,
   useProjectDetails,
+  useProjectParticipations,
   useProjectCount,
   useProjects,
   useAllProjects,

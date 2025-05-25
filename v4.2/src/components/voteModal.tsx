@@ -1,73 +1,73 @@
-// components/VoteModal.tsx
+// components/VoteModal.tsx - Clean Sovereign Seas Version
 'use client';
 
 import { useState, useEffect } from 'react';
-import { parseEther } from 'viem';
+import { parseEther, formatEther } from 'viem';
+import { useAccount, useBalance } from 'wagmi';
 import { 
   X,
   AlertCircle,
   Loader2,
-  Coins,
+  Wallet,
   Zap,
-  Rocket,
-  Sparkles,
-  Star,
-  Trophy,
-  Flame,
-  Crown
+  Check,
+  Vote,
+  Crown,
+  Ship
 } from 'lucide-react';
+
+import {useVote} from '@/hooks/useVotingMethods'
 
 interface VoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedProject: any;
+  campaignId: bigint;
   onVote: (projectId: bigint, token: string, amount: bigint) => Promise<void>;
   isVoting: boolean;
-  gameState: {
-    score: number;
-    combo: number;
-    powerUps: string[];
-    achievements: string[];
-    votingPower: number;
-    isOnFire: boolean;
-    soundEnabled: boolean;
-  };
 }
 
 export default function VoteModal({
   isOpen,
   onClose,
   selectedProject,
-  onVote,
-  isVoting,
-  gameState
+  campaignId,
+  isVoting
 }: VoteModalProps) {
   const [voteAmount, setVoteAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
   const [error, setError] = useState('');
+  const [voteSuccess, setVoteSuccess] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const { vote, voteWithCelo } = useVote(import.meta.env.VITE_CONTRACT_V4);
+  const { address } = useAccount();
 
   // Get token addresses from environment
-  const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN_ADDRESS;
-  const cUSDTokenAddress = import.meta.env.VITE_CUSD_TOKEN_ADDRESS;
+  const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN;
+  const cUSDTokenAddress = import.meta.env.VITE_CUSD_TOKEN;
+
+  // Get wallet balances
+  const { data: celoBalance } = useBalance({
+    address: address,
+    token: celoTokenAddress as `0x${string}`,
+  });
+
+  const { data: cusdBalance } = useBalance({
+    address: address,
+    token: cUSDTokenAddress as `0x${string}`,
+  });
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setVoteAmount('');
-      setSelectedToken(celoTokenAddress || ''); // Default to CELO
+      setSelectedToken(celoTokenAddress || '');
       setError('');
+      setVoteSuccess(false);
+      setIsProcessing(false);
     }
   }, [isOpen, celoTokenAddress]);
-
-  // Calculate vote power (1 CELO = 1 vote, cUSD shows actual amount)
-  const calculateVotePower = () => {
-    if (!voteAmount) return '0';
-    if (selectedToken === celoTokenAddress) {
-      return voteAmount; // 1 CELO = 1 vote
-    } else {
-      return voteAmount; // cUSD shows actual amount
-    }
-  };
 
   const handleVote = async () => {
     if (!selectedProject || !voteAmount || !selectedToken) {
@@ -77,84 +77,188 @@ export default function VoteModal({
 
     try {
       setError('');
+      setIsProcessing(true);
       const amount = parseEther(voteAmount);
-      await onVote(BigInt(selectedProject.id), selectedToken, amount);
-      onClose();
+      
+      // Check if voting with CELO or ERC20 token
+      const isNativeCelo = selectedToken.toLowerCase() === celoTokenAddress?.toLowerCase();
+      
+      if (isNativeCelo) {
+        await voteWithCelo({
+          campaignId: campaignId,
+          projectId: BigInt(selectedProject.id),
+          amount: amount
+        });
+      } else {
+        await vote({
+          campaignId: campaignId,
+          projectId: BigInt(selectedProject.id),
+          token: selectedToken as `0x${string}`,
+          amount: amount
+        });
+      }
+      
+      setVoteSuccess(true);
+      setIsProcessing(false);
+      
+      // Auto-close after 2 seconds on success
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+      
     } catch (error: any) {
       console.error('Voting error:', error);
       setError(error.message || 'Voting failed! Please try again.');
+      setIsProcessing(false);
     }
+  };
+
+  const handleClose = () => {
+    // Don't allow closing while processing or voting
+    if (isProcessing || isVoting) return;
+    onClose();
+  };
+
+  const getSelectedBalance = () => {
+    if (selectedToken === celoTokenAddress) {
+      return celoBalance ? parseFloat(formatEther(celoBalance.value)).toFixed(2) : '0.00';
+    } else if (selectedToken === cUSDTokenAddress) {
+      return cusdBalance ? parseFloat(formatEther(cusdBalance.value)).toFixed(2) : '0.00';
+    }
+    return '0.00';
+  };
+
+  const getSelectedSymbol = () => {
+    if (selectedToken === celoTokenAddress) return 'CELO';
+    if (selectedToken === cUSDTokenAddress) return 'cUSD';
+    return '';
   };
 
   if (!isOpen || !selectedProject) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border-4 border-blue-200 relative overflow-hidden">
-        {/* Modal header */}
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white relative">
-          <div className="absolute top-0 right-0 text-6xl opacity-10">🎮</div>
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-blue-200 relative overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4 text-white relative">
           <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+            onClick={handleClose}
+            disabled={isProcessing || isVoting}
+            className={`absolute top-3 right-3 text-white hover:text-blue-200 transition-colors p-1 rounded-full hover:bg-white/10 ${
+              (isProcessing || isVoting) ? 'cursor-not-allowed opacity-50' : ''
+            }`}
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5" />
           </button>
           
-          <h3 className="text-2xl font-bold mb-2 flex items-center">
-            🚀 Power Up Your Vote!
-          </h3>
-          <p className="text-blue-100">Supporting: <span className="font-bold">{selectedProject.name}</span></p>
+          <div className="pr-8">
+            <h3 className="text-lg font-bold mb-1 flex items-center">
+              <Crown className="h-5 w-5 mr-2 text-yellow-300" />
+              Cast Your Vote
+            </h3>
+            <p className="text-blue-100 text-sm flex items-center">
+              <Ship className="h-3 w-3 mr-2" />
+              Supporting: <span className="font-semibold ml-1">{selectedProject.name}</span>
+            </p>
+          </div>
         </div>
         
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-5">
+          {/* Success State */}
+          {voteSuccess && (
+            <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-b-2xl">
+              <div className="text-center p-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-lg font-bold text-emerald-600 mb-2">
+                  Vote Cast Successfully! 🎉
+                </h4>
+                <p className="text-gray-600 text-sm">
+                  Your vote has been registered
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Error message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start">
-              <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start">
+              <AlertCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
             </div>
           )}
 
           {/* Token selection */}
           <div>
-            <label className="block text-sm font-bold text-gray-800 mb-3 flex items-center">
-              <Coins className="h-4 w-4 mr-2" />
-              💰 Choose Your Currency
+            <label className="block text-sm font-semibold text-gray-800 mb-3">
+              Select Token
             </label>
             
             <div className="grid grid-cols-2 gap-3">
-              {/* CELO Token Button */}
+              {/* CELO Token */}
               <button
                 onClick={() => setSelectedToken(celoTokenAddress || '')}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                disabled={isProcessing || isVoting}
+                className={`p-3 rounded-lg border-2 transition-all ${
                   selectedToken === celoTokenAddress
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 ring-4 ring-blue-200'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                }`}
+                } ${(isProcessing || isVoting) ? 'cursor-not-allowed opacity-60' : ''}`}
               >
                 <div className="text-center">
-                  <div className="text-2xl mb-2">🪙</div>
-                  <div className="font-bold text-sm">CELO</div>
-                  <div className="text-xs text-gray-500">Native Token</div>
-                  <div className="text-xs text-blue-600 font-medium mt-1">1 CELO = 1 Vote</div>
+                  <img 
+                    src="/images/celo.png" 
+                    alt="CELO"
+                    className="w-8 h-8 mx-auto mb-2"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const nextElement = target.nextElementSibling as HTMLDivElement;
+                      if (nextElement) {
+                        nextElement.style.display = 'block';
+                      }
+                    }}
+                  />
+                  <div className="text-2xl mb-2 hidden">🪙</div>
+                  <div className="font-semibold text-sm">CELO</div>
+                  <div className="text-xs text-gray-500">
+                    Balance: {celoBalance ? parseFloat(formatEther(celoBalance.value)).toFixed(2) : '0.00'}
+                  </div>
                 </div>
               </button>
               
-              {/* cUSD Token Button */}
+              {/* cUSD Token */}
               <button
                 onClick={() => setSelectedToken(cUSDTokenAddress || '')}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                disabled={isProcessing || isVoting}
+                className={`p-3 rounded-lg border-2 transition-all ${
                   selectedToken === cUSDTokenAddress
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 ring-4 ring-blue-200'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                }`}
+                } ${(isProcessing || isVoting) ? 'cursor-not-allowed opacity-60' : ''}`}
               >
                 <div className="text-center">
-                  <div className="text-2xl mb-2">💵</div>
-                  <div className="font-bold text-sm">cUSD</div>
-                  <div className="text-xs text-gray-500">Stable Coin</div>
-                  <div className="text-xs text-green-600 font-medium mt-1">USD Value</div>
+                  <img 
+                    src="/images/cusd.png" 
+                    alt="cUSD"
+                    className="w-8 h-8 mx-auto mb-2"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const nextElement = target.nextElementSibling as HTMLDivElement;
+                      if (nextElement) {
+                        nextElement.style.display = 'block';
+                      }
+                    }}
+                  />
+                  <div className="text-2xl mb-2 hidden">💵</div>
+                  <div className="font-semibold text-sm">cUSD</div>
+                  <div className="text-xs text-gray-500">
+                    Balance: {cusdBalance ? parseFloat(formatEther(cusdBalance.value)).toFixed(2) : '0.00'}
+                  </div>
                 </div>
               </button>
             </div>
@@ -162,36 +266,40 @@ export default function VoteModal({
           
           {/* Amount input */}
           <div>
-            <label className="block text-sm font-bold text-gray-800 mb-3 flex items-center">
-              <Zap className="h-4 w-4 mr-2" />
-              ⚡ Vote Power Amount
-            </label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-gray-800">
+                Vote Amount
+              </label>
+              {selectedToken && (
+                <div className="text-xs text-gray-600 flex items-center">
+                  <Wallet className="h-3 w-3 mr-1" />
+                  Available: {getSelectedBalance()} {getSelectedSymbol()}
+                </div>
+              )}
+            </div>
+            
             <div className="relative">
               <input
                 type="number"
                 value={voteAmount}
                 onChange={(e) => setVoteAmount(e.target.value)}
-                placeholder="Enter amount..."
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 transition-all text-lg font-medium"
+                placeholder="0.00"
+                disabled={isProcessing || isVoting}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                  (isProcessing || isVoting) ? 'cursor-not-allowed opacity-60' : ''
+                }`}
                 step="0.01"
                 min="0"
+                max={getSelectedBalance()}
               />
-              <div className="absolute right-3 top-3 text-2xl">💎</div>
+              <button
+                onClick={() => setVoteAmount(getSelectedBalance())}
+                disabled={isProcessing || isVoting}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600 hover:text-blue-700 px-2 py-1 hover:bg-blue-50 rounded transition-colors"
+              >
+                MAX
+              </button>
             </div>
-            
-            {/* Vote power display */}
-            {voteAmount && (
-              <div className="mt-2 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-purple-700">
-                    {calculateVotePower()} {selectedToken === celoTokenAddress ? 'Votes' : 'cUSD'}
-                  </div>
-                  <div className="text-sm text-purple-600">
-                    {selectedToken === celoTokenAddress ? 'Voting Power' : 'Vote Value'}
-                  </div>
-                </div>
-              </div>
-            )}
             
             {/* Quick amount buttons */}
             <div className="flex space-x-2 mt-3">
@@ -199,7 +307,8 @@ export default function VoteModal({
                 <button
                   key={amount}
                   onClick={() => setVoteAmount(amount)}
-                  className="flex-1 px-3 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition-colors text-sm font-medium"
+                  disabled={isProcessing || isVoting || parseFloat(amount) > parseFloat(getSelectedBalance())}
+                  className={`flex-1 px-3 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {amount}
                 </button>
@@ -210,48 +319,35 @@ export default function VoteModal({
           {/* Vote button */}
           <button
             onClick={handleVote}
-            disabled={isVoting || !voteAmount || !selectedToken}
-            className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold text-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 group"
+            disabled={isProcessing || isVoting || !voteAmount || !selectedToken || voteSuccess || parseFloat(voteAmount) > parseFloat(getSelectedBalance())}
+            className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
           >
-            {isVoting ? (
+            {isProcessing || isVoting ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>🚀 Launching Vote...</span>
+                <span>Casting Vote...</span>
+              </>
+            ) : voteSuccess ? (
+              <>
+                <Check className="h-5 w-5" />
+                <span>Vote Cast!</span>
               </>
             ) : (
               <>
-                <Rocket className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-                <span>🎯 FIRE VOTE!</span>
-                <Sparkles className="h-5 w-5 group-hover:animate-spin" />
+                <Vote className="h-5 w-5" />
+                <span>Cast Vote</span>
               </>
             )}
           </button>
-          
-          {/* Game stats info */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
-            <div className="flex items-center space-x-2 mb-2">
-              <Star className="h-4 w-4 text-purple-500" />
-              <span className="font-bold text-purple-800">🎮 Vote Power-Ups Active!</span>
+
+          {/* Processing status */}
+          {(isProcessing || isVoting) && (
+            <div className="text-center">
+              <p className="text-xs text-blue-600">
+                Processing transaction on blockchain...
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="flex items-center space-x-1">
-                <Trophy className="h-3 w-3 text-yellow-500" />
-                <span className="text-gray-600">Score: +100 pts</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Flame className="h-3 w-3 text-orange-500" />
-                <span className="text-gray-600">Combo: {gameState.combo}x</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Crown className="h-3 w-3 text-purple-500" />
-                <span className="text-gray-600">Rank: Voter</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Sparkles className="h-3 w-3 text-blue-500" />
-                <span className="text-gray-600">Power: {gameState.votingPower}</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
