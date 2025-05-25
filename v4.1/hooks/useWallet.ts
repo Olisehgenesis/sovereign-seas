@@ -1,6 +1,6 @@
 import { useLogin, useWallets } from "@privy-io/react-auth";
 
-const CELO_CHAIN_ID = parseInt(import.meta.env.VITE_CHAIN_ID as string);
+const CELO_CHAIN_ID = parseInt(process.env.V as string);
 
 // Create a custom hook that returns the switchNetwork function
 export const useWallet = () => {

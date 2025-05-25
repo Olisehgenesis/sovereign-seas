@@ -1,13 +1,28 @@
+// components/ProjectCampaignsModal.tsx - Sovereign Seas Themed Version
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { X, Plus, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { useProjectCampaigns, useAddProjectToCampaign, useCanBypassFees, useProjectAdditionFee } from '@/hooks/useProjectMethods';
+import { 
+  X, 
+  Plus, 
+  CheckCircle, 
+  AlertCircle, 
+  Crown, 
+  Ship, 
+  Waves, 
+  Trophy, 
+  Coins,
+  Users,
+  Timer,
+  Sparkles,
+  Anchor
+} from 'lucide-react';
+import { useProjectCampaigns, useAddProjectToCampaign } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
-import { useAccount } from 'wagmi';
-import { Address } from 'viem';
+import { formatEther } from 'viem';
+import { formatIpfsUrl } from '@/utils/imageUtils';
 
 interface ProjectCampaignsModalProps {
   isOpen: boolean;
@@ -16,133 +31,85 @@ interface ProjectCampaignsModalProps {
 }
 
 const contractAddress = import.meta.env.VITE_CONTRACT_V4;
-const CELO_TOKEN_ADDRESS = import.meta.env.VITE_CELO_TOKEN || contractAddress; // Fallback to contract address if not set
 
 const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsModalProps) => {
   const [error, setError] = useState<string | null>(null);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<bigint | null>(null);
-  
-  const { address: userAddress, isConnected } = useAccount();
 
   // Get project's current campaigns
   const { projectCampaigns, isLoading: isLoadingProjectCampaigns, error: hookError } = useProjectCampaigns(
-    contractAddress as Address,
+    contractAddress as `0x${string}`,
     BigInt(projectId)
   );
 
   // Get all campaigns
-  const { campaigns: allCampaigns, isLoading: isLoadingCampaigns } = useAllCampaigns(contractAddress as Address);
+  const { campaigns: allCampaigns, isLoading: isLoadingCampaigns } = useAllCampaigns(contractAddress as `0x${string}`);
   
   // Get the add to campaign hook
-  const { addProjectToCampaign, isPending: isAddingProject, isSuccess, isError: addError, error: addErrorDetails } = useAddProjectToCampaign(contractAddress as Address);
-  
-  // Get project addition fee
-  const { projectAdditionFee, isLoading: feeLoading } = useProjectAdditionFee(contractAddress as Address);
-  
-  // Check if user can bypass fees for the selected campaign
-  const { isAdmin, isLoading: adminLoading } = useCanBypassFees(
-    contractAddress as Address, 
-    selectedCampaignId || 0n
-  );
-
+  const { addProjectToCampaign, isPending: isAddingProject } = useAddProjectToCampaign(contractAddress as `0x${string}`);
+ 
   useEffect(() => {
     if (hookError) {
-      setError('Failed to load campaigns');
+      setError('Failed to load campaigns from the sovereign waters');
     }
   }, [hookError]);
 
-  // Handle success
-  useEffect(() => {
-    if (isSuccess) {
-      setError(null);
-      setSelectedCampaignId(null);
-      // Optionally close modal or show success message
-      // onClose(); // Uncomment if you want to close on success
-    }
-  }, [isSuccess]);
-
-  // Handle add project error
-  useEffect(() => {
-    if (addError && addErrorDetails) {
-      let errorMessage = 'Unknown error occurred';
-      
-      if (addErrorDetails?.message) {
-        errorMessage = addErrorDetails.message;
-      } else if ((addErrorDetails as any)?.reason) {
-        errorMessage = (addErrorDetails as any).reason;
-      }
-      
-      // Handle common error cases
-      if (errorMessage.includes('Insufficient CELO sent')) {
-        errorMessage = 'Insufficient CELO sent for the project addition fee.';
-      } else if (errorMessage.includes('Fee token not supported')) {
-        errorMessage = 'The fee token is not supported. Please contact support.';
-      } else if (errorMessage.includes('Campaign has ended')) {
-        errorMessage = 'This campaign has already ended.';
-      } else if (errorMessage.includes('Project already in campaign')) {
-        errorMessage = 'This project is already in the campaign.';
-      }
-      
-      setError(`Failed to add project to campaign: ${errorMessage}`);
-      setSelectedCampaignId(null);
-    }
-  }, [addError, addErrorDetails]);
-
   const handleAddToCampaign = async (campaignId: string) => {
-    if (!isConnected || !userAddress) {
-      setError('Please connect your wallet first');
-      return;
-    }
-
     try {
       setError(null);
-      const campaignIdBigInt = BigInt(campaignId);
-      setSelectedCampaignId(campaignIdBigInt);
       
-      // Find the campaign to get any additional info if needed
       const campaign = allCampaigns?.find((c) => Number(c.campaign.id) === Number(campaignId));
       
-      console.log('Campaign details:', campaign);
+      const feeTokenAddress = campaign?.campaign.payoutToken || 
+                             import.meta.env.VITE_CELO_TOKEN_ADDRESS || 
+                             contractAddress;
       
-      // Use CELO as the fee token (most common case)
-      const feeTokenAddress = CELO_TOKEN_ADDRESS as Address;
-      
-      // Wait a bit for admin check to complete if it's loading
-      if (adminLoading) {
-        // Wait for admin check to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      
-      // Determine if user should pay fee and fee amount
-      const shouldPayFee = !isAdmin;
-      let feeAmount = 0n;
-      
-      if (shouldPayFee && projectAdditionFee) {
-        feeAmount = projectAdditionFee;
-      }
-      
-      console.log('Adding project with params:', {
-        campaignId: campaignId,
-        projectId: projectId,
-        feeToken: feeTokenAddress,
-        shouldPayFee,
-        feeAmount: feeAmount.toString(),
-        isAdmin
-      });
-
       await addProjectToCampaign({
-        campaignId: campaignIdBigInt,
+        campaignId: BigInt(campaignId),
         projectId: BigInt(projectId),
-        feeToken: feeTokenAddress,
-        feeAmount,
-        shouldPayFee
+        feeToken: feeTokenAddress as `0x${string}`
       });
       
     } catch (err: any) {
       console.error('Error adding project to campaign:', err);
-      setError(`Failed to add project to campaign: ${err.message || 'Unknown error'}`);
-      setSelectedCampaignId(null);
+      
+      let errorMessage = 'Unknown error in the sovereign waters';
+      
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.reason) {
+        errorMessage = err.reason;
+      }
+      
+      // Handle common error cases with nautical theme
+      if (errorMessage.includes('Fee token not supported')) {
+        errorMessage = 'The tribute token is not accepted in these waters.';
+      } else if (errorMessage.includes('Campaign has ended')) {
+        errorMessage = 'This voyage has already reached its destination.';
+      } else if (errorMessage.includes('Project already in campaign')) {
+        errorMessage = 'Your ship is already part of this expedition.';
+      } else if (errorMessage.includes('insufficient funds')) {
+        errorMessage = 'Insufficient treasure to pay the expedition fee.';
+      }
+      
+      setError(`Failed to join voyage: ${errorMessage}`);
     }
+  };
+
+  const getCampaignLogo = (campaign) => {
+    try {
+      if (campaign.metadata?.mainInfo) {
+        const mainInfo = JSON.parse(campaign.metadata.mainInfo);
+        if (mainInfo.logo) return mainInfo.logo;
+      }
+      
+      if (campaign.metadata?.additionalInfo) {
+        const additionalInfo = JSON.parse(campaign.metadata.additionalInfo);
+        if (additionalInfo.logo) return additionalInfo.logo;
+      }
+    } catch (e) {
+      // If JSON parsing fails, return null
+    }
+    return null;
   };
 
   const isLoading = isLoadingProjectCampaigns || isLoadingCampaigns;
@@ -165,8 +132,14 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="fixed inset-0 bg-gradient-to-br from-blue-900/50 via-indigo-900/50 to-purple-900/50 backdrop-blur-sm" />
         </Transition.Child>
+
+        {/* Animated background waves */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-gradient-to-r from-blue-400/10 to-cyan-400/10 animate-pulse blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-indigo-400/10 to-blue-400/10 animate-pulse blur-3xl"></div>
+        </div>
 
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
@@ -179,189 +152,237 @@ const ProjectCampaignsModal = ({ isOpen, onClose, projectId }: ProjectCampaignsM
               leaveFrom="opacity-100 scale-100 translate-y-0"
               leaveTo="opacity-0 scale-95 -translate-y-10"
             >
-              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all border border-blue-100 relative">
+              <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-white/95 backdrop-blur-xl p-6 text-left align-middle shadow-2xl transition-all border border-blue-200/50 relative">
+                {/* Decorative top border */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500"></div>
+                
                 {/* Close button */}
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:rotate-90 transition-all duration-300"
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:rotate-90 transition-all duration-300 p-1 rounded-full hover:bg-gray-100"
                 >
                   <X className="h-5 w-5" />
                 </button>
 
                 {/* Header */}
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 mb-4"
-                >
-                  Campaign Management
-                </Dialog.Title>
-
-                {/* Fee Information Display */}
-                {!feeLoading && projectAdditionFee && (
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-800 mb-1">Fee Information</h4>
-                    <div className="text-sm text-blue-700">
-                      <p>Project Addition Fee: {Number(projectAdditionFee) / 1e18} CELO</p>
-                      {selectedCampaignId && !adminLoading && (
-                        <p>Your Status: {isAdmin ? 'Admin (No fee required)' : 'Regular User (Fee required)'}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div className="mb-6">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-2 flex items-center"
+                  >
+                    <Crown className="h-6 w-6 text-blue-500 mr-3" />
+                    Sovereign Voyages
+                  </Dialog.Title>
+                  <p className="text-gray-600">Manage your project's expedition participation</p>
+                </div>
 
                 {/* Current Campaigns Section */}
                 {projectCampaigns && projectCampaigns.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-md font-semibold text-gray-800 mb-3">Current Campaigns</h4>
-                    <div className="space-y-2">
-                      {projectCampaigns.map((campaign) => (
-                        <div key={Number(campaign.id)} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div>
-                            <h5 className="font-medium text-green-800">{campaign.name}</h5>
-                            <p className="text-sm text-green-600">Status: {campaign.status}</p>
-                            {campaign.participation && (
-                              <p className="text-sm text-green-600">
-                                Approved: {campaign.participation.approved ? 'Yes' : 'Pending'}
-                              </p>
-                            )}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                      <Ship className="h-5 w-5 text-emerald-500 mr-2" />
+                      Active Expeditions
+                    </h4>
+                    <div className="space-y-3">
+                      {projectCampaigns.map((campaign) => {
+                        const campaignLogo = getCampaignLogo(campaign);
+                        
+                        return (
+                          <div key={Number(campaign.id)} className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200 shadow-sm group hover:shadow-md transition-all duration-300">
+                            <div className="flex items-center space-x-3">
+                              {/* Campaign Logo */}
+                              <div className="animate-float">
+                                {campaignLogo ? (
+                                  <img 
+                                    src={formatIpfsUrl(campaignLogo)} 
+                                    alt={`${campaign.name} logo`}
+                                    className="w-10 h-10 rounded-lg object-cover border-2 border-emerald-200"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <div className={`w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center text-white text-sm font-bold ${campaignLogo ? 'hidden' : 'flex'}`}>
+                                  {campaign.name.charAt(0)}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <h5 className="font-bold text-emerald-800 group-hover:text-emerald-900 transition-colors duration-300">{campaign.name}</h5>
+                                <p className="text-sm text-emerald-600">Status: {campaign.status}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <CheckCircle className="h-5 w-5 text-emerald-500" />
+                              <span className="text-sm font-medium text-emerald-700">Aboard</span>
+                            </div>
                           </div>
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-                  </div>
-                )}
-
-                {/* Success message */}
-                {isSuccess && (
-                  <div className="bg-green-50 p-3 rounded-lg border border-green-100 flex items-start mb-4">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-green-700">Project successfully added to campaign!</p>
                   </div>
                 )}
 
                 {/* Error message */}
                 {error && (
-                  <div className="bg-red-50 p-3 rounded-lg border border-red-100 flex items-start mb-4">
-                    <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                )}
-
-                {/* Connection warning */}
-                {!isConnected && (
-                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 flex items-start mb-4">
-                    <AlertCircle className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-yellow-700">Please connect your wallet to add projects to campaigns.</p>
+                  <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-xl border border-red-200 flex items-start mb-6 shadow-sm">
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-800 mb-1">Navigation Error</p>
+                      <p className="text-sm text-red-600">{error}</p>
+                    </div>
                   </div>
                 )}
 
                 {/* Loading state */}
                 {isLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  <div className="flex justify-center py-12">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="relative">
+                        <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <Waves className="h-6 w-6 text-blue-500 absolute inset-0 m-auto animate-wave" />
+                      </div>
+                      <p className="text-blue-600 font-medium">Charting the sovereign waters...</p>
+                    </div>
                   </div>
                 ) : availableCampaigns.length === 0 ? (
-                  <div className="bg-gray-50 rounded-xl p-6 text-center">
-                    <p className="text-gray-600 mb-3">
-                      {allCampaigns?.length === 0 ? 'No campaigns available' : 'Project is already in all available campaigns'}
+                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-8 text-center border border-gray-200">
+                    <div className="text-6xl mb-4 animate-wave">🌊</div>
+                    <h4 className="text-lg font-bold text-gray-800 mb-3">
+                      {allCampaigns?.length === 0 ? 'No Voyages Available' : 'All Expeditions Joined'}
+                    </h4>
+                    <p className="text-gray-600 mb-6">
+                      {allCampaigns?.length === 0 
+                        ? 'No sovereign voyages are currently available in these waters.' 
+                        : 'Your ship is already part of all available expeditions.'}
                     </p>
                     <button
                       onClick={() => {/* TODO: Add navigation to create campaign */}}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-medium transition-colors"
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex items-center mx-auto group relative overflow-hidden"
                     >
-                      Create Campaign
+                      <Sparkles className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                      Launch New Voyage
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    <h4 className="text-md font-semibold text-gray-800 mb-2">Available Campaigns</h4>
-                    {availableCampaigns.map((campaignDetails) => {
-                      const campaign = campaignDetails.campaign;
-                      const campaignIdStr = campaign.id.toString();
-                      
-                      // Determine campaign status
-                      const now = Math.floor(Date.now() / 1000);
-                      const startTime = Number(campaign.startTime);
-                      const endTime = Number(campaign.endTime);
-                      
-                      let status: string;
-                      let canAdd = true;
-                      
-                      if (!campaign.active) {
-                        status = 'inactive';
-                        canAdd = false;
-                      } else if (now < startTime) {
-                        status = 'upcoming';
-                      } else if (now >= startTime && now <= endTime) {
-                        status = 'active';
-                      } else {
-                        status = 'ended';
-                        canAdd = false;
-                      }
-                      
-                      const isCurrentlyAdding = isAddingProject && selectedCampaignId === campaign.id;
-                      
-                      return (
-                        <div 
-                          key={Number(campaign.id)}
-                          className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 duration-300 overflow-hidden"
-                        >
-                          <div className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <div>
-                                  <h3 className="font-semibold text-gray-800">{campaign.name}</h3>
-                                  <p className="text-sm text-gray-500">{campaign.description}</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-bold text-gray-800 flex items-center">
+                        <Anchor className="h-5 w-5 text-blue-500 mr-2" />
+                        Available Expeditions
+                      </h4>
+                      <span className="text-sm text-gray-600">{availableCampaigns.length} voyage{availableCampaigns.length !== 1 ? 's' : ''} available</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-4 max-h-96 overflow-y-auto">
+                      {availableCampaigns.map((campaignDetails) => {
+                        const campaign = campaignDetails.campaign;
+                        const campaignLogo = getCampaignLogo(campaignDetails);
+                        
+                        // Determine campaign status
+                        const now = Math.floor(Date.now() / 1000);
+                        const startTime = Number(campaign.startTime);
+                        const endTime = Number(campaign.endTime);
+                        
+                        let status: string;
+                        let statusStyling: { bgClass: string; textClass: string; icon: any; label: string };
+                        
+                        if (!campaign.active) {
+                          status = 'inactive';
+                          statusStyling = { bgClass: 'bg-gray-100', textClass: 'text-gray-700', icon: Anchor, label: 'Anchored' };
+                        } else if (now < startTime) {
+                          status = 'upcoming';
+                          statusStyling = { bgClass: 'bg-gradient-to-r from-amber-100 to-yellow-100', textClass: 'text-amber-700', icon: Timer, label: 'Preparing' };
+                        } else if (now >= startTime && now <= endTime) {
+                          status = 'active';
+                          statusStyling = { bgClass: 'bg-gradient-to-r from-emerald-100 to-green-100', textClass: 'text-emerald-700', icon: Waves, label: 'Live Voyage' };
+                        } else {
+                          status = 'ended';
+                          statusStyling = { bgClass: 'bg-gradient-to-r from-blue-100 to-indigo-100', textClass: 'text-blue-700', icon: Trophy, label: 'Complete' };
+                        }
+                        
+                        return (
+                          <div 
+                            key={Number(campaign.id)}
+                            className="bg-white/90 backdrop-blur-sm rounded-xl border border-blue-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 duration-300 overflow-hidden relative group"
+                          >
+                            {/* Status Badge */}
+                            <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${statusStyling.bgClass} ${statusStyling.textClass}`}>
+                              <statusStyling.icon className="h-3 w-3" />
+                              <span>{statusStyling.label}</span>
+                            </div>
+
+                            <div className="p-5">
+                              <div className="flex items-start space-x-4 pr-16">
+                                {/* Campaign Logo */}
+                                <div className="animate-float">
+                                  {campaignLogo ? (
+                                    <img 
+                                      src={formatIpfsUrl(campaignLogo)} 
+                                      alt={`${campaign.name} logo`}
+                                      className="w-12 h-12 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 transition-colors duration-300"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
+                                    {campaign.name.charAt(0)}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-bold text-gray-800 text-lg mb-2 group-hover:text-blue-600 transition-colors duration-300">{campaign.name}</h3>
+                                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{campaign.description}</p>
+                                  
+                                  {/* Campaign Stats */}
+                                  <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div className="flex items-center space-x-2">
+                                      <Coins className="h-4 w-4 text-emerald-500" />
+                                      <div>
+                                        <p className="text-xs text-gray-600">Treasury</p>
+                                        <p className="font-bold text-emerald-600">{Number(campaign.totalFunds) / 1e18} CELO</p>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-2">
+                                      <Trophy className="h-4 w-4 text-amber-500" />
+                                      <div>
+                                        <p className="text-xs text-gray-600">Max Winners</p>
+                                        <p className="font-bold text-amber-600">{Number(campaign.maxWinners) || 'All'}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <button
+                                    onClick={() => handleAddToCampaign(campaign.id.toString())}
+                                    disabled={isAddingProject || status === 'ended' || status === 'inactive'}
+                                    className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 group/btn relative overflow-hidden"
+                                  >
+                                    {isAddingProject ? (
+                                      <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Boarding Ship...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Plus className="h-4 w-4 group-hover/btn:rotate-90 transition-transform duration-300" />
+                                        <span>Join Expedition</span>
+                                        <Sparkles className="h-4 w-4 group-hover/btn:rotate-12 transition-transform duration-300" />
+                                      </>
+                                    )}
+                                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></span>
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  status === 'active' 
-                                    ? 'bg-green-100 text-green-700'
-                                    : status === 'ended'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : status === 'upcoming'
-                                    ? 'bg-yellow-100 text-yellow-700'
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {status}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="mt-3 flex items-center justify-between">
-                              <div className="text-sm text-gray-600">
-                                <p>Total Funds: {Number(campaign.totalFunds) / 1e18} CELO</p>
-                                <p>Max Winners: {Number(campaign.maxWinners) || 'Unlimited'}</p>
-                              </div>
-                              <button
-                                onClick={() => handleAddToCampaign(campaignIdStr)}
-                                disabled={!canAdd || !isConnected || isCurrentlyAdding || (adminLoading && selectedCampaignId === campaign.id)}
-                                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full text-sm font-medium transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {isCurrentlyAdding ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                    Adding...
-                                  </>
-                                ) : adminLoading && selectedCampaignId === campaign.id ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                    Checking...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Add Project
-                                  </>
-                                )}
-                              </button>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </Dialog.Panel>
