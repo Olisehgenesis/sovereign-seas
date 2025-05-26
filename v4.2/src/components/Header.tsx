@@ -1,36 +1,19 @@
-'use client';
+
 import { Disclosure, Transition } from '@headlessui/react';
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount, injected } from 'wagmi';
-import { Menu, X, ChevronDown, Globe, Award, Settings, Home, PlusCircle, Info, Waves, FileCode, Anchor, Wallet, Compass, Ship, BookOpen, Zap } from 'lucide-react';
-import { celo, celoAlfajores } from 'viem/chains';
-import { usePrivy, useLogin, useWallets } from '@privy-io/react-auth';
+import { Menu, X, ChevronDown, Globe, Award, Settings,  PlusCircle,  FileCode, Anchor, Wallet, Compass, Ship, BookOpen,User, Bell } from 'lucide-react';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
 import WalletModal from '@/components/walletModal';
-import { useWallet } from '@/hooks/useWallet';
-import { Link, useNavigate } from 'react-router-dom';
-
-// Get chain values from environment variables
-const CELO_CHAIN_ID = parseInt(import.meta.env.VITE_CHAIN_ID as string);
-const CHAIN_NAME = import.meta.env.VITE_CHAIN_NAME || 'Celo';
-const IS_TESTNET = import.meta.env.VITE_IS_TESTNET === 'true';
-
-// Determine which chain to use based on environment variables
-const getChainConfig = () => {
-  if (IS_TESTNET) {
-    return celoAlfajores;
-  }
-  return celo;
-};
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const navigation = [
-  { name: 'Home', href: '/explorer', icon: Home },
+  { name: 'Explorer', href: '/explorer', icon: Compass },
   { name: 'Campaigns', href: '/campaigns', icon: Globe },
-  { name: 'Create', href: '#', icon: PlusCircle, hasDropdown: true },
+  { name: 'Projects', href: '/projects', icon: Ship },
   { name: 'Docs', href: '/docs', icon: BookOpen },
-  { name: 'About', href: '/about', icon: Info },
 ];
 
-// Create dropdown options
 const createOptions = [
   {
     name: 'Launch Campaign',
@@ -53,14 +36,24 @@ export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Use Privy hooks for authentication
-  const { authenticated, user, logout, ready } = usePrivy();
+  const { authenticated, logout, ready } = usePrivy();
   const { login } = useLogin();
   
-  // Use the wallet hook to get the switch network function
-  const { handleSwitchToNetwork } = useWallet();
+
+
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Handle MiniPay connection
   useEffect(() => {
@@ -72,10 +65,10 @@ export default function Header() {
   
   // Handle wallet connection with Privy login
   const handleLogin = () => {
+    console.log(isConnected)
     if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isMiniPay) {
       connect({ connector: injected({ target: 'metaMask' }) });
     } else {
-      // Use Privy login
       login({
         loginMethods: ['email', 'wallet', 'google'],
         walletChainType: 'ethereum-only'
@@ -96,380 +89,359 @@ export default function Header() {
 
   // Function to abbreviate address
   const abbreviateAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
   
   // Close mobile menu when route changes
   useEffect(() => {
     setShowDropdown(false);
     setShowCreateDropdown(false);
-  }, [navigate]);
+  }, [location.pathname]);
 
   return (
     <div className="relative z-50">
-      {/* Shadow element for raised effect */}
-      <div className="absolute inset-x-0 h-3 bottom-0 translate-y-full bg-gradient-to-b from-blue-800/30 to-transparent pointer-events-none"></div>
-      
-      {/* Animated wave decoration */}
-      <div className="absolute left-0 right-0 bottom-0 translate-y-full h-4 wave-border opacity-30 pointer-events-none"></div>
-      
-      <Disclosure as="nav" className="bg-gradient-to-r from-blue-600 to-blue-500 border-b border-blue-700/30 shadow-xl sticky top-0 z-50">
+      <Disclosure as="nav" className={`fixed w-full top-0 z-50 transition-all duration-500 ${
+        isScrolled 
+          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100' 
+          : 'bg-transparent'
+      }`}>
         {({ open, close }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="relative flex h-16 items-center justify-between">
-                <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
-                  {/* Mobile menu button */}
-                  <Disclosure.Button className="inline-flex items-center justify-center rounded-full p-2 text-white hover:bg-blue-600/30 transition-all duration-300 transform active:scale-95 relative overflow-hidden premium-button">
-                    <span className="sr-only">Open main menu</span>
-                    {open ? (
-                      <X className="block h-5 w-5" aria-hidden="true" />
-                    ) : (
-                      <Menu className="block h-5 w-5" aria-hidden="true" />
-                    )}
-                  </Disclosure.Button>
-                </div>
+              <div className="flex h-16 items-center justify-between">
                 
-                {/* Logo and desktop navigation */}
-                <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
-                  <Link to="/" className="flex items-center group">
-                    <div className="relative h-10 w-10 mr-2 animate-float-slow">
-                      <div className="absolute inset-0 rounded-full bg-white/30 animate-pulse-blue"></div>
-                      <div className="absolute inset-0.5 rounded-full bg-white flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
-                        <Anchor className="h-5 w-5 text-blue-500" />
-                      </div>
+                {/* Logo */}
+                <Link to="/" className="flex items-center group">
+                  <div className="relative h-8 w-8 mr-3">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg group-hover:shadow-blue-500/25 transition-all duration-300"></div>
+                    <div className="absolute inset-0.5 rounded-full bg-white flex items-center justify-center">
+                      <Anchor className="h-4 w-4 text-blue-500 group-hover:rotate-12 transition-transform duration-300" />
                     </div>
-                    <span className="text-xl font-bold text-white tilt-neon relative">
-                      <span className="hidden sm:inline opacity-90 group-hover:opacity-100 transition-opacity">Sovereign</span> 
-                      <span className="text-white group-hover:text-sky-100 transition-colors">Seas</span>
-                      <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white/30 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
-                    </span>
-                  </Link>
+                  </div>
+                  <span className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    Sovereign<span className="text-blue-500">Seas</span>
+                  </span>
+                </Link>
+
+                {/* Desktop Navigation */}
+                <div className="hidden md:flex items-center space-x-1">
+                  {navigation.map((item) => {
+                    const NavIcon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
+                          isActive 
+                            ? 'bg-blue-50 text-blue-600' 
+                            : isScrolled 
+                              ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' 
+                              : 'text-white/90 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <NavIcon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
                   
-                  {/* Desktop Navigation Links */}
-                  <div className="hidden sm:ml-8 sm:flex sm:space-x-2">
-                    {navigation.map((item, index) => {
-                      const NavIcon = item.icon;
-                      const isActive = window.location.pathname === item.href || 
-                                      (item.href !== '/' && item.href !== '#' && window.location.pathname?.startsWith(item.href));
-                      const animationDelay = `${index * 0.1}s`;
-                      
-                      if (item.hasDropdown) {
-                        return (
-                          <div key={item.name} className="relative">
+                  {/* Create Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowCreateDropdown(!showCreateDropdown)}
+                      className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
+                        showCreateDropdown 
+                          ? 'bg-blue-50 text-blue-600' 
+                          : isScrolled 
+                            ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' 
+                            : 'text-white/90 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                      Create
+                      <ChevronDown className={`ml-1 h-3 w-3 transition-transform duration-200 ${showCreateDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    <Transition
+                      show={showCreateDropdown}
+                      enter="transition ease-out duration-200"
+                      enterFrom="transform opacity-0 scale-95 translate-y-1"
+                      enterTo="transform opacity-100 scale-100 translate-y-0"
+                      leave="transition ease-in duration-150"
+                      leaveFrom="transform opacity-100 scale-100 translate-y-0"
+                      leaveTo="transform opacity-0 scale-95 translate-y-1"
+                    >
+                      <div 
+                        className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                        onMouseLeave={() => setShowCreateDropdown(false)}
+                      >
+                        {createOptions.map((option) => {
+                          const OptionIcon = option.icon;
+                          return (
                             <button
-                              onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                              style={{ animationDelay }}
-                              className={`
-                                px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center relative
-                                ${showCreateDropdown 
-                                  ? 'bg-white text-blue-700 shadow-md transform hover:-translate-y-1' 
-                                  : 'text-white hover:bg-blue-600/20 hover:-translate-y-1'}
-                                animate-float-delay-${index+1}
-                              `}
+                              key={option.name}
+                              onClick={() => {
+                                navigate(option.href);
+                                setShowCreateDropdown(false);
+                              }}
+                              className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors duration-200 group"
                             >
-                              <NavIcon className={`h-4 w-4 mr-1.5 ${showCreateDropdown ? 'text-blue-500' : ''} transition-transform group-hover:rotate-3`} />
-                              <span className={showCreateDropdown ? 'font-semibold' : ''}>
-                                {item.name}
-                              </span>
-                              <ChevronDown className={`ml-1 h-3 w-3 transform transition-transform duration-300 ${showCreateDropdown ? 'rotate-180' : ''}`} />
-                              
-                              {/* Active indicator */}
-                              {showCreateDropdown && (
-                                <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-glow-blue"></span>
-                              )}
-                            </button>
-                            
-                            {/* Create Dropdown */}
-                            <Transition
-                              show={showCreateDropdown}
-                              enter="transition ease-out duration-200"
-                              enterFrom="transform opacity-0 scale-95 translate-y-2"
-                              enterTo="transform opacity-100 scale-100 translate-y-0"
-                              leave="transition ease-in duration-150"
-                              leaveFrom="transform opacity-100 scale-100 translate-y-0"
-                              leaveTo="transform opacity-0 scale-95 translate-y-2"
-                            >
-                              <div 
-                                className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-2xl py-2 z-50 border border-blue-100"
-                                onMouseLeave={() => setShowCreateDropdown(false)}
-                              >
-                                <div className="px-3 py-2 border-b border-gray-100">
-                                  <h3 className="text-sm font-semibold text-gray-800 flex items-center">
-                                    <Zap className="h-4 w-4 mr-1 text-blue-500" />
-                                    Create New
-                                  </h3>
-                                </div>
-                                {createOptions.map((option) => {
-                                  const OptionIcon = option.icon;
-                                  return (
-                                    <Link
-                                      key={option.name}
-                                      to={option.href}
-                                      className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
-                                      onClick={() => setShowCreateDropdown(false)}
-                                    >
-                                      <div className="bg-blue-100 p-2 rounded-lg mr-3 group-hover:bg-blue-200 transition-colors">
-                                        <OptionIcon className="h-4 w-4 text-blue-600" />
-                                      </div>
-                                      <div>
-                                        <div className="font-medium">{option.name}</div>
-                                        <div className="text-xs text-gray-500">{option.description}</div>
-                                      </div>
-                                    </Link>
-                                  );
-                                })}
+                              <div className="bg-blue-100 p-2 rounded-lg mr-3 group-hover:bg-blue-200 transition-colors">
+                                <OptionIcon className="h-4 w-4 text-blue-600" />
                               </div>
-                            </Transition>
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <Link
-                          key={item.name}
-                          to={item.href}
-                          style={{ animationDelay }}
-                          className={`
-                            px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center relative
-                            ${isActive 
-                              ? 'bg-white text-blue-700 shadow-md transform hover:-translate-y-1' 
-                              : 'text-white hover:bg-blue-600/20 hover:-translate-y-1'}
-                            animate-float-delay-${index+1}
-                          `}
-                        >
-                          <NavIcon className={`h-4 w-4 mr-1.5 ${isActive ? 'text-blue-500' : ''} transition-transform group-hover:rotate-3`} />
-                          <span className={isActive ? 'font-semibold' : ''}>
-                            {item.name}
-                          </span>
-                          
-                          {/* Active indicator */}
-                          {isActive && (
-                            <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-glow-blue"></span>
-                          )}
-                        </Link>
-                      );
-                    })}
+                              <div>
+                                <div className="font-medium text-sm">{option.name}</div>
+                                <div className="text-xs text-gray-500">{option.description}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Transition>
                   </div>
                 </div>
-                
-                {/* Right side - Connect Wallet & User Menu */}
-                <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-                  {authenticated && (
-                    <div className="relative mr-2">
-                      <button
-                        onClick={() => setShowDropdown(!showDropdown)}
-                        className="flex items-center bg-white/20 hover:bg-white/30 text-white rounded-full py-1.5 px-3 text-sm transition-all duration-300 border border-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 premium-button"
-                      >
-                        <Waves className="h-4 w-4 mr-1.5 animate-float-slow" />
-                        Dashboard
-                        <ChevronDown className={`ml-1 h-3 w-3 transform transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
-                      </button>
-                      
-                      {/* Dashboard Dropdown Menu */}
-                      <Transition
-                        show={showDropdown}
-                        enter="transition ease-out duration-200"
-                        enterFrom="transform opacity-0 scale-95 translate-y-2"
-                        enterTo="transform opacity-100 scale-100 translate-y-0"
-                        leave="transition ease-in duration-150"
-                        leaveFrom="transform opacity-100 scale-100 translate-y-0"
-                        leaveTo="transform opacity-0 scale-95 translate-y-2"
-                      >
-                        <div 
-                          className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-2xl py-1 z-50 border border-blue-100 water-card"
-                          onMouseLeave={() => setShowDropdown(false)}
-                        >
-                          <Link
-                            to="/campaign/mycampaigns"
-                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
-                            onClick={() => setShowDropdown(false)}
-                          >
-                            <Globe className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
-                            My Campaigns
-                          </Link>
-                          <Link
-                            to="/votes"
-                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
-                            onClick={() => setShowDropdown(false)}
-                          >
-                            <Award className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
-                            My Votes
-                          </Link>
-                          <Link
-                            to="/myprojects"
-                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
-                            onClick={() => setShowDropdown(false)}
-                          >
-                            <FileCode className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
-                            My Projects
-                          </Link>
-                          <Link
-                            to="#"
-                            className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openWalletModal();
-                            }}
-                          >
-                            <Wallet className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
-                            My Wallet
-                          </Link>
-                          <Link
-                            to="#"
-                            className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 transition-colors duration-200 hover:text-blue-700 group"
-                            onClick={(e) => {
-                              logout();
-                              setShowDropdown(false);
-                            }}
-                          >
-                            <Settings className="mr-1.5 h-4 w-4 text-blue-500 transition-transform duration-300 group-hover:rotate-12" />
-                            Logout
-                          </Link>
-                        </div>
-                      </Transition>
-                    </div>
-                  )}
+
+                {/* Right Side Actions */}
+                <div className="flex items-center space-x-3">
                   
-                  {!hideConnectBtn && (
-                    <div>
-                      {!authenticated ? (
-                        <button 
-                          onClick={handleLogin}
-                          disabled={!ready} 
-                          className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-xl border border-blue-100 hover:-translate-y-1 animate-float premium-button disabled:opacity-50 disabled:cursor-not-allowed"
+                  {/* Authenticated User Actions */}
+                  {authenticated && (
+                    <>
+                      {/* Notifications */}
+                      <button className={`p-2 rounded-lg transition-all duration-200 ${
+                        isScrolled 
+                          ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' 
+                          : 'text-white/90 hover:text-white hover:bg-white/10'
+                      }`}>
+                        <Bell className="h-5 w-5" />
+                      </button>
+
+                      {/* Wallet Button */}
+                      <button
+                        onClick={openWalletModal}
+                        className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          isScrolled 
+                            ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' 
+                            : 'text-white/90 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <Wallet className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">
+                          {address ? abbreviateAddress(address) : 'Wallet'}
+                        </span>
+                      </button>
+
+                      {/* Profile Button */}
+                      <Link
+                        to="/app/me"
+                        className={`p-2 rounded-lg transition-all duration-200 ${
+                          isScrolled 
+                            ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' 
+                            : 'text-white/90 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <User className="h-5 w-5" />
+                      </Link>
+
+                      {/* Dashboard Dropdown */}
+                      <div className="relative hidden sm:block">
+                        <button
+                          onClick={() => setShowDropdown(!showDropdown)}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            showDropdown 
+                              ? 'bg-blue-50 text-blue-600' 
+                              : isScrolled 
+                                ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' 
+                                : 'text-white/90 hover:text-white hover:bg-white/10'
+                          }`}
                         >
-                          Connect Wallet
+                          <Settings className="h-5 w-5" />
                         </button>
-                      ) : (
-                        <>
-                          <button
-                            onClick={openWalletModal}
-                            className="flex items-center bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 premium-button"
+                        
+                        <Transition
+                          show={showDropdown}
+                          enter="transition ease-out duration-200"
+                          enterFrom="transform opacity-0 scale-95 translate-y-1"
+                          enterTo="transform opacity-100 scale-100 translate-y-0"
+                          leave="transition ease-in duration-150"
+                          leaveFrom="transform opacity-100 scale-100 translate-y-0"
+                          leaveTo="transform opacity-0 scale-95 translate-y-1"
+                        >
+                          <div 
+                            className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                            onMouseLeave={() => setShowDropdown(false)}
                           >
-                            <Wallet className="h-4 w-4 mr-2" />
-                            {address ? abbreviateAddress(address) : 'My Wallet'}
-                          </button>
-                        </>
-                      )}
-                    </div>
+                            <Link
+                              to="/campaign/mycampaigns"
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                              onClick={() => setShowDropdown(false)}
+                            >
+                              <Globe className="mr-3 h-4 w-4 text-gray-400" />
+                              My Campaigns
+                            </Link>
+                            <Link
+                              to="/votes"
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                              onClick={() => setShowDropdown(false)}
+                            >
+                              <Award className="mr-3 h-4 w-4 text-gray-400" />
+                              My Votes
+                            </Link>
+                            <Link
+                              to="/myprojects"
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                              onClick={() => setShowDropdown(false)}
+                            >
+                              <FileCode className="mr-3 h-4 w-4 text-gray-400" />
+                              My Projects
+                            </Link>
+                            <hr className="my-2 border-gray-100" />
+                            <button
+                              onClick={() => {
+                                logout();
+                                setShowDropdown(false);
+                              }}
+                              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
+                            >
+                              <Settings className="mr-3 h-4 w-4" />
+                              Logout
+                            </button>
+                          </div>
+                        </Transition>
+                      </div>
+                    </>
                   )}
+
+                  {/* Connect Wallet Button */}
+                  {!hideConnectBtn && !authenticated && (
+                    <button 
+                      onClick={handleLogin}
+                      disabled={!ready} 
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Connect Wallet
+                    </button>
+                  )}
+
+                  {/* Mobile Menu Button */}
+                  <Disclosure.Button className="md:hidden p-2 rounded-lg transition-all duration-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50">
+                    <span className="sr-only">Open main menu</span>
+                    {open ? (
+                      <X className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <Menu className="h-5 w-5" aria-hidden="true" />
+                    )}
+                  </Disclosure.Button>
                 </div>
               </div>
             </div>
 
-            {/* Mobile menu */}
-            <Disclosure.Panel className="sm:hidden">
-              <div className="space-y-1 px-3 pt-2 pb-3">
-                {navigation.map((item, index) => {
+            {/* Mobile Menu */}
+            <Disclosure.Panel className="md:hidden bg-white border-t border-gray-100">
+              <div className="px-4 py-3 space-y-1">
+                {navigation.map((item) => {
                   const NavIcon = item.icon;
-                  const isActive = location.pathname === item.href || 
-                                 (item.href !== '/' && item.href !== '#' && location.pathname?.startsWith(item.href));
-                  
-                  if (item.hasDropdown) {
-                    return (
-                      <div key={item.name}>
-                        <div className="px-2 text-xs uppercase text-white/70 font-semibold mb-2">
-                          Create New
-                        </div>
-                        {createOptions.map((option) => {
-                          const OptionIcon = option.icon;
-                          return (
-                            <Link
-                              key={option.name}
-                              to={option.href}
-                              onClick={() => close()}
-                              className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
-                            >
-                              <OptionIcon className="h-4 w-4 mr-2 text-blue-300" />
-                              {option.name}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
+                  const isActive = location.pathname === item.href;
                   
                   return (
                     <Link
                       key={item.name}
                       to={item.href}
                       onClick={() => close()}
-                      className={`
-                        flex items-center px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 relative
-                        ${isActive 
-                          ? 'bg-white text-blue-700 shadow-lg' 
-                          : 'text-white hover:bg-blue-600/20'
-                        }
-                      `}
+                      className={`flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        isActive 
+                          ? 'bg-blue-50 text-blue-600' 
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
                     >
-                      <NavIcon className={`h-4 w-4 mr-2 ${isActive ? 'text-blue-500' : ''}`} />
+                      <NavIcon className="h-4 w-4 mr-3" />
                       {item.name}
-                      
-                      {/* Active indicator */}
-                      {isActive && (
-                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-glow-blue"></span>
-                      )}
                     </Link>
                   );
                 })}
                 
+                {/* Create Options in Mobile */}
+                <div className="pt-3 border-t border-gray-100">
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Create New
+                  </div>
+                  {createOptions.map((option) => {
+                    const OptionIcon = option.icon;
+                    return (
+                      <Link
+                        key={option.name}
+                        to={option.href}
+                        onClick={() => close()}
+                        className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <OptionIcon className="h-4 w-4 mr-3 text-gray-400" />
+                        {option.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+                
+                {/* Mobile User Menu */}
                 {authenticated && (
-                  <>
-                    <div className="mt-3 pt-3 border-t border-white/20">
-                      <div className="px-2 text-xs uppercase text-white/70 font-semibold">
-                        My Account
-                      </div>
-                      <Link
-                        to="/campaign/mycampaigns"
-                        onClick={() => close()}
-                        className="flex items-center mt-1.5 px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
-                      >
-                        <Globe className="mr-2 h-4 w-4 text-blue-300" />
-                        My Campaigns
-                      </Link>
-                      <Link
-                        to="/votes"
-                        onClick={() => close()}
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
-                      >
-                        <Award className="mr-2 h-4 w-4 text-blue-300" />
-                        My Votes
-                      </Link>
-                      <Link
-                        to="/myprojects"
-                        onClick={() => close()}
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
-                      >
-                        <FileCode className="mr-2 h-4 w-4 text-blue-300" />
-                        My Projects
-                      </Link>
-                      <Link
-                        to="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openWalletModal();
-                          close();
-                        }}
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
-                      >
-                        <Wallet className="mr-2 h-4 w-4 text-blue-300" />
-                        My Wallet
-                      </Link>
-                      <Link
-                        to="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          logout();
-                          close();
-                        }}
-                        className="flex items-center px-3 py-2 rounded-full text-sm font-medium text-white hover:bg-blue-600/20 transition-all duration-300"
-                      >
-                        <Settings className="mr-2 h-4 w-4 text-blue-300" />
-                        Logout
-                      </Link>
+                  <div className="pt-3 border-t border-gray-100">
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Account
                     </div>
-                  </>
+                    <Link
+                      to="/app/me"
+                      onClick={() => close()}
+                      className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <User className="h-4 w-4 mr-3 text-gray-400" />
+                      Profile
+                    </Link>
+                    <Link
+                      to="/campaign/mycampaigns"
+                      onClick={() => close()}
+                      className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <Globe className="h-4 w-4 mr-3 text-gray-400" />
+                      My Campaigns
+                    </Link>
+                    <Link
+                      to="/votes"
+                      onClick={() => close()}
+                      className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <Award className="h-4 w-4 mr-3 text-gray-400" />
+                      My Votes
+                    </Link>
+                    <Link
+                      to="/myprojects"
+                      onClick={() => close()}
+                      className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <FileCode className="h-4 w-4 mr-3 text-gray-400" />
+                      My Projects
+                    </Link>
+                    <button
+                      onClick={() => {
+                        openWalletModal();
+                        close();
+                      }}
+                      className="flex items-center w-full px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <Wallet className="h-4 w-4 mr-3 text-gray-400" />
+                      My Wallet
+                    </button>
+                    <button
+                      onClick={() => {
+                        logout();
+                        close();
+                      }}
+                      className="flex items-center w-full px-3 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200"
+                    >
+                      <Settings className="h-4 w-4 mr-3" />
+                      Logout
+                    </button>
+                  </div>
                 )}
               </div>
             </Disclosure.Panel>

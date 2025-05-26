@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { 
   ArrowLeft, 
-  ArrowRight,
-  Waves, 
+  
   Github,
   Globe,
   FileText,
   Calendar,
-  Clock,
   Loader2,
   CheckCircle,
   XCircle,
@@ -21,26 +19,20 @@ import {
   X,
   Trash2,
   AlertTriangle,
-  HelpCircle,
-  Eye,
+
   Shield,
   Hash,
-  CheckIcon,
   MapPin,
   Users,
   Star,
   Award,
-  ExternalLink,
   Upload,
   Link as LinkIcon,
   Sparkles,
-  Building,
   Mail,
-  Phone,
   Twitter,
   Linkedin,
-  Youtube,
-  Instagram,
+ 
   Globe2,
   Bookmark,
   Tag,
@@ -48,19 +40,25 @@ import {
   Target,
   Zap,
   Heart,
-  DollarSign,
-  Calendar as CalendarIcon,
-  User,
   Briefcase,
   ChevronDown,
   ChevronUp,
-  Trophy,
-  TrendingUp
 } from 'lucide-react';
 import { useCreateProject } from '@/hooks/useProjectMethods';
 import { uploadToIPFS } from '@/utils/imageUtils';
+import { LucideIcon } from 'lucide-react';
 
-const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection }) => {
+interface SectionProps {
+  id: string;
+  title: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+  required?: boolean;
+  expandedSection: string;
+  toggleSection: (section: string) => void;
+}
+
+const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection }: SectionProps) => {
   const isExpanded = expandedSection === id;
   
   return (
@@ -97,6 +95,69 @@ const Section = ({ id, title, icon: Icon, children, required = false, expandedSe
 
 const contractAddress = import.meta.env.VITE_CONTRACT_V4;
 
+type Project = {
+  name: string;
+  tagline: string;
+  description: string;
+  category: string;
+  tags: string[];
+  location: string;
+  establishedDate: string;
+  website: string;
+  logo: string;
+  demoVideo: string;
+  demoUrl: string;
+  githubRepo: string;
+  karmaGapProfile: string;
+  documentation: string;
+  twitter: string;
+  linkedin: string;
+  discord: string;
+  telegram: string;
+  youtube: string;
+  instagram: string;
+  teamMembers: Array<{
+    name: string;
+    role: string;
+    email: string;
+    linkedin: string;
+    twitter: string;
+    avatar: string;
+  }>;
+  contactEmail: string;
+  businessEmail: string;
+  phone: string;
+  techStack: string[];
+  blockchain: string;
+  smartContracts: string[];
+  license: string;
+  developmentStage: string;
+  keyFeatures: string[];
+  innovation: string;
+  useCases: string[];
+  targetAudience: string;
+  milestones: Array<{
+    title: string;
+    description: string;
+    targetDate: string;
+    status: 'planned' | 'in-progress' | 'completed';
+  }>;
+  status: 'active' | 'paused' | 'completed' | 'deprecated';
+  launchDate: string;
+  userCount: string;
+  transactionVolume: string;
+  tvl: string;
+  auditReports: string[];
+  kycCompliant: boolean;
+  regulatoryCompliance: string[];
+  projectType: 'dapp' | 'protocol' | 'infrastructure' | 'tooling' | 'defi' | 'nft' | 'gaming' | 'dao';
+  maturityLevel: 'concept' | 'early' | 'mvp' | 'production' | 'mature';
+  openSource: boolean;
+  transferrable: boolean;
+};
+
+type ArrayFields = 'tags' | 'techStack' | 'smartContracts' | 'keyFeatures' | 'useCases' | 'teamMembers' | 'milestones';
+
 export default function CreateProject() {
   const navigate = useNavigate();
   const { address, isConnected } = useAccount();
@@ -107,12 +168,12 @@ export default function CreateProject() {
   const [expandedSection, setExpandedSection] = useState('basic');
   
   // File handling
-  const [logoFile, setLogoFile] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null);
-  const logoFileInputRef = useRef(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   
   // Main project state
-  const [project, setProject] = useState({
+  const [project, setProject] = useState<Project>({
     // Basic Information
     name: '',
     tagline: '',
@@ -257,7 +318,7 @@ export default function CreateProject() {
   ];
   
   // Handle logo file selection and preview
-  const handleLogoFileChange = (e) => {
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
@@ -273,9 +334,8 @@ export default function CreateProject() {
       
       setLogoFile(file);
       setProject({...project, logo: `File selected: ${file.name}`});
-      
       const previewUrl = URL.createObjectURL(file);
-      setLogoPreview(previewUrl);
+      setLogoPreview(previewUrl as string);
     }
   };
   
@@ -378,14 +438,14 @@ export default function CreateProject() {
   };
   
   // Helper functions for dynamic arrays
-  const addArrayItem = (field, defaultValue = '') => {
+  const addArrayItem = (field: ArrayFields, defaultValue = '') => {
     setProject({
       ...project,
       [field]: [...project[field], defaultValue]
     });
   };
   
-  const removeArrayItem = (field, index) => {
+  const removeArrayItem = (field: ArrayFields, index: number) => {
     const array = project[field];
     if (array.length <= 1) return;
     
@@ -397,8 +457,8 @@ export default function CreateProject() {
     });
   };
   
-  const updateArrayItem = (field, index, value) => {
-    const array = project[field];
+  const updateArrayItem = (field: ArrayFields, index: number, value: string) => {
+    const array = project[field] as string[];
     const updated = [...array];
     updated[index] = value;
     setProject({
@@ -407,17 +467,10 @@ export default function CreateProject() {
     });
   };
   
-  // File upload handler (mock - replace with actual IPFS upload)
-  const handleFileUpload = async (file) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(`ipfs://mock-hash-${file.name}`);
-      }, 1000);
-    });
-  };
-  
+ 
+
   // Submit handler
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     setErrorMessage('');
     
@@ -446,7 +499,7 @@ export default function CreateProject() {
           console.log('Logo uploaded to IPFS:', logoIpfsUrl);
         } catch (uploadError) {
           console.error('Logo upload failed:', uploadError);
-          throw new Error(`Failed to upload logo: ${uploadError.message}`);
+          throw new Error(`Failed to upload logo: ${uploadError}`);
         }
       }
       
@@ -547,30 +600,31 @@ export default function CreateProject() {
         bio: JSON.stringify(bioData),
         contractInfo: JSON.stringify(contractInfoData),
         additionalData: JSON.stringify(additionalData),
-        contracts: cleanedProject.smartContracts.filter(c => c.trim() !== ''),
+        contracts: cleanedProject.smartContracts
+          .filter(c => c.trim() !== '')
+          .map(c => c.startsWith('0x') ? c : `0x${c}`) as `0x${string}`[],
         transferrable: cleanedProject.transferrable
       });
       
       setUploadProgress(100);
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Project creation error:', error);
       
-      // Enhanced error messages
       let userFriendlyMessage = 'Failed to create project. ';
       
-      if (error.message?.includes('user rejected')) {
+      if (error instanceof Error && error.message?.includes('user rejected')) {
         userFriendlyMessage += 'Transaction was rejected by user.';
-      } else if (error.message?.includes('insufficient funds')) {
+      } else if (error instanceof Error && error.message?.includes('insufficient funds')) {
         userFriendlyMessage += 'Insufficient funds for transaction fees.';
-      } else if (error.message?.includes('gas')) {
+      } else if (error instanceof Error && error.message?.includes('gas')) {
         userFriendlyMessage += 'Gas estimation failed. Please check your parameters.';
-      } else if (error.message?.includes('network')) {
+      } else if (error instanceof Error && error.message?.includes('network')) {
         userFriendlyMessage += 'Network error. Please check your connection and try again.';
-      } else if (error.message?.includes('revert')) {
+      } else if (error instanceof Error && error.message?.includes('revert')) {
         userFriendlyMessage += 'Contract execution reverted. Please check your parameters.';
       } else {
-        userFriendlyMessage += `${error.message || 'Unknown error occurred.'}`;
+        userFriendlyMessage += error instanceof Error ? error.message : 'Unknown error occurred.';
       }
       
       setErrorMessage(userFriendlyMessage);
@@ -608,7 +662,7 @@ export default function CreateProject() {
   }, [isPending, isUploading]);
   
   // Section toggle handler
-  const toggleSection = (section) => {
+  const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? '' : section);
   };
   
@@ -755,7 +809,7 @@ export default function CreateProject() {
                     </label>
                     <select
                       value={project.projectType}
-                      onChange={(e) => setProject({...project, projectType: e.target.value})}
+                      onChange={(e) => setProject({...project, projectType: e.target.value as Project['projectType']})}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-800 transition-all"
                     >
                       <option value="dapp">DApp</option>
@@ -962,7 +1016,7 @@ export default function CreateProject() {
                       Demo URL
                     </label>
                     <input
-                      type="url"
+                      type="url"  
                       value={project.demoUrl}
                       onChange={(e) => setProject({...project, demoUrl: e.target.value})}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-800 transition-all"

@@ -1,4 +1,4 @@
-// components/VoteModal.tsx - Clean Sovereign Seas Version
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Loader2,
   Wallet,
-  Zap,
   Check,
   Vote,
   Crown,

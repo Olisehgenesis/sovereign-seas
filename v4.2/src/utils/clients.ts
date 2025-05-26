@@ -1,7 +1,7 @@
 //make public and wallet clients
 
 import { createPublicClient, createWalletClient, http } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { celoAlfajores } from 'viem/chains';
 
 
 // const celoAlfajoresRpcUrl = process.env.NEXT_PUBLIC_CELO_ALFAJORES_RPC_URL;

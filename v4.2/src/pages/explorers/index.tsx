@@ -4,54 +4,35 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search,
-  Filter,
   Grid,
   List,
-  ChevronDown,
+ 
   X,
-  Loader2,
-  Sparkles,
+  
   Calendar,
   MapPin,
   Users,
   Trophy,
-  Target,
   Code,
   DollarSign,
   Clock,
-  TrendingUp,
-  Heart,
-  Globe,
   Tag,
-  Briefcase,
   Award,
   CheckCircle,
   PlayCircle,
   Menu,
-  Settings,
-  Zap,
   Rocket,
   Activity,
-  Star,
   Eye,
   Plus,
   ArrowRight,
-  BarChart3,
-  Building2,
-  Layers,
+
   Filter as FilterIcon,
   SortAsc,
   Hash,
-  MessageSquare,
-  Share2,
-  BookOpen,
   Compass,
-  Database,
-  Network,
   Shield,
-  Flame,
-  Crown,
-  Diamond
+ 
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -967,7 +948,7 @@ function ProjectCard({
  viewMode: 'grid' | 'list'; 
  onClick: () => void;
 }) {
- const totalFunds = project.campaignIds ? project.campaignIds.length * 1000 : 0; // Mock calculation
+ 
  
  return (
    <div

@@ -4,21 +4,18 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance } from 'wagmi';
 import { 
-  User,
+ 
   FileCode,
   Vote,
   Coins,
   Trophy,
   Plus,
-  ArrowRight,
   Filter,
   SortAsc,
   ExternalLink,
   Wallet,
   Loader2,
-  Activity,
   TrendingUp,
-  Star,
   Users,
   Zap,
   DollarSign,
@@ -28,10 +25,11 @@ import {
   CheckCircle,
   AlertCircle,
   Shield,
-  QrCode,
+
   UserCheck,
-  Clock,
-  X
+
+  X,
+  Star
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -253,6 +251,8 @@ const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
   const parsedMetadata = vote.metadata?.mainInfo 
     ? JSON.parse(vote.metadata.mainInfo) 
     : {};
+
+  console.log(parsedMetadata)
 
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all">

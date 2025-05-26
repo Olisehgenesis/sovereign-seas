@@ -13,27 +13,21 @@ import {
   Eye, 
   Github, 
   Globe, 
-  FileText, 
+
   AlertTriangle,
   Loader2,
   Award,
   BarChart3,
   Users,
-  Info,
-  Image,
-  Video,
-  Code,
+
   UserPlus,
   Settings,
-  History,
-  Layers,
-  CircleDollarSign,
+
   ListChecks,
   User,
   Sparkles,
   TrendingUp,
-  Filter,
-  Plus
+
 } from 'lucide-react';
 
 import { 
@@ -42,7 +36,6 @@ import {
   useAddCampaignAdmin, 
   useDistributeFunds,
   useIsCampaignAdmin,
-  useSortedProjects
 } from '@/hooks/useCampaignMethods';
 
 import { 
@@ -51,9 +44,14 @@ import {
 } from '@/hooks/useProjectMethods';
 
 import { contractABI as abi } from '@/abi/seas4ABI';
+import { Abi } from 'viem';
 
 // Custom hook for project participations
-const useProjectParticipations = (contractAddress, campaignId, projectIds) => {
+const useProjectParticipations = (
+  contractAddress: `0x${string}`,
+  campaignId: bigint,
+  projectIds: number[]
+) => {
   const participationContracts = projectIds.map(projectId => ({
     address: contractAddress,
     abi,
@@ -62,20 +60,29 @@ const useProjectParticipations = (contractAddress, campaignId, projectIds) => {
   }));
 
   const { data, isLoading, error } = useReadContracts({
-    contracts: participationContracts,
+    contracts: participationContracts as unknown as readonly {
+      address: `0x${string}`
+      abi: Abi
+      functionName: string
+      args: readonly [bigint, bigint]
+    }[],
     query: {
       enabled: !!contractAddress && !!campaignId && projectIds.length > 0
     }
   });
 
-  const participations = {};
+  const participations: Record<number, {
+    approved: boolean;
+    voteCount: bigint;
+    fundsReceived: bigint;
+  }> = {};
   if (data) {
     projectIds.forEach((projectId, index) => {
       if (data[index]?.result) {
         participations[projectId] = {
-          approved: data[index].result[0],
-          voteCount: data[index].result[1],
-          fundsReceived: data[index].result[2]
+          approved: (data[index].result as any[])[0],
+          voteCount: (data[index].result as any[])[1],
+          fundsReceived: (data[index].result as any[])[2]
         };
       }
     });
@@ -97,7 +104,7 @@ export default function CampaignManagePage() {
   const [showDistributeModal, setShowDistributeModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [newAdminAddress, setNewAdminAddress] = useState('');
-  const [confirmApproval, setConfirmApproval] = useState({ show: false, projectId: null });
+  const [confirmApproval, setConfirmApproval] = useState<{ show: boolean; projectId: bigint | null }>({ show: false, projectId: null });
   
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
   const campaignId = id ? BigInt(id as string) : BigInt(0);
@@ -116,7 +123,7 @@ export default function CampaignManagePage() {
     address as `0x${string}`
   );
   
-  const { sortedProjectIds } = useSortedProjects(contractAddress as `0x${string}`, campaignId);
+  
   
   const { 
     approveProject, 
@@ -283,7 +290,6 @@ export default function CampaignManagePage() {
   }
 
   const campaign = campaignDetails.campaign;
-  const metadata = campaignDetails.metadata;
   
   // Campaign status
   const now = Math.floor(Date.now() / 1000);

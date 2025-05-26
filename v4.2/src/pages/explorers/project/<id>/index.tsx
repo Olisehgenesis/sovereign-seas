@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState,  useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { Address, formatEther } from 'viem';
@@ -11,15 +11,15 @@ import {
   FileText,
   Calendar,
   MapPin,
-  Loader2,
+ 
   CheckCircle,
-  XCircle,
+ 
   ExternalLink,
   Share2,
   Bookmark,
   Users,
   Trophy,
-  Zap,
+ 
   Shield,
   Copy,
   Twitter,
@@ -27,13 +27,11 @@ import {
   Mail,
   MessageCircle,
   Link as LinkIcon,
-  Sparkles,
+ 
   Award,
   Target,
   Lightbulb,
-  Building2,
-  ChevronDown,
-  ChevronUp,
+
   Globe2,
   Send,
   BadgeCheck,
@@ -45,7 +43,7 @@ import {
   Video,
   Play,
   TrendingUp,
-  Settings,
+ 
   Edit,
   Crown,
   Timer,
@@ -54,47 +52,18 @@ import {
   Coins,
   Heart,
   Activity,
-  Plus,
+ 
   BarChart3,
   Gauge,
   Clock,
-  Users2,
   Rocket,
   Search,
-  Filter,
-  SortDesc,
-  Grid3X3,
-  List,
-  DollarSign,
-  PieChart,
-  LineChart,
   Camera,
-  Upload,
-  Download,
-  AlertCircle,
-  Info,
-  Verified,
   Lock,
   Unlock,
   Network,
   Database,
-  Server,
-  Cloud,
-  Tag,
-  Hash,
-  ArrowRight,
-  ArrowUpRight,
-  Check,
-  Minus,
-  Wallet,
   ChevronRight,
-  Layers,
-  Box,
-  Package,
-  Binary,
-  Cpu,
-  HardDrive,
-  Flame,
   Bookmark as BookmarkFilled
 } from 'lucide-react';
 
@@ -516,7 +485,7 @@ export default function ProjectView() {
   // Data
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
   const projectId = id ? BigInt(id) : BigInt(0);
-  const { project, projectCampaigns, isLoading, error, refetch } = useProjectData(projectId, contractAddress);
+  const { project, projectCampaigns, isLoading, error } = useProjectData(projectId, contractAddress);
   
   // Constants
   const tabs: Tab[] = [
@@ -939,7 +908,7 @@ export default function ProjectView() {
                     />
                     
                     <div className="space-y-6">
-                      {projectCampaigns?.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null).map((campaign, idx) => {
+                      {projectCampaigns?.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null).map((campaign) => {
                         const styling = getCampaignStatusStyling(campaign.status);
                         
                         return (

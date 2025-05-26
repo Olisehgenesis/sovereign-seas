@@ -3,50 +3,28 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
-  ArrowRight,
   Globe,
-  FileText,
   Loader2,
   CheckCircle,
   XCircle,
   Info,
   Image as ImageIcon,
-  Video,
   Code,
   Plus,
   X,
   Trash2,
-  AlertTriangle,
   HelpCircle,
   Shield,
   Hash,
-  CheckIcon,
-  MapPin,
   Users,
-  Star,
-  ExternalLink,
   Upload,
   Link as LinkIcon,
   Sparkles,
-  Mail,
   Twitter,
-  Linkedin,
-  Youtube,
-  Instagram,
-  Globe2,
-  Bookmark,
-  Tag,
   Target,
-  Zap,
-  Heart,
   Calendar,
-  User,
-  Briefcase,
   DollarSign,
-  Clock,
   Trophy,
-  Settings,
-  Award,
   TrendingUp,
   ChevronDown,
   ChevronUp
@@ -93,7 +71,17 @@ interface Campaign {
 
 type CampaignField = keyof Campaign;
 
-const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection }) => {
+interface SectionProps {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+  required?: boolean;
+  expandedSection: string;
+  toggleSection: (id: string) => void;
+}
+
+const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection }: SectionProps) => {
   const isExpanded = expandedSection === id;
   
   return (
@@ -148,6 +136,8 @@ export default function CreateCampaign() {
     campaignCreationFee,
     canBypass
   } = useCreateCampaignWithFees(contractAddress, address || '0x0');
+
+  console.log(isError)
   
   // File handling
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -227,13 +217,7 @@ export default function CreateCampaign() {
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Handle name change
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setCampaign(prev => ({
-      ...prev,
-      name: newName
-    }));
-  };
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -294,7 +278,7 @@ export default function CreateCampaign() {
 
 
   // Handle logo file selection and preview
-  const handleLogoFileChange = (e) => {
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
@@ -389,18 +373,21 @@ export default function CreateCampaign() {
   };
   
   // Helper functions for dynamic arrays
-  const addArrayItem = (field, defaultValue = '') => {
-    setCampaign({
-      ...campaign,
-      [field]: [...campaign[field], defaultValue]
-    });
+  const addArrayItem = (field: CampaignField, defaultValue = '') => {
+    const currentValue = campaign[field];
+    if (Array.isArray(currentValue)) {
+      setCampaign({
+        ...campaign,
+        [field]: [...currentValue, defaultValue]
+      });
+    }
   };
   
-  const removeArrayItem = (field, index) => {
-    const array = campaign[field];
-    if (array.length <= 1) return;
+  const removeArrayItem = (field: CampaignField, index: number) => {
+    const currentValue = campaign[field];
+    if (!Array.isArray(currentValue) || currentValue.length <= 1) return;
     
-    const updated = [...array];
+    const updated = [...currentValue];
     updated.splice(index, 1);
     setCampaign({
       ...campaign,
@@ -408,14 +395,16 @@ export default function CreateCampaign() {
     });
   };
   
-  const updateArrayItem = (field, index, value) => {
-    const array = campaign[field];
-    const updated = [...array];
-    updated[index] = value;
-    setCampaign({
-      ...campaign,
-      [field]: updated
-    });
+  const updateArrayItem = (field: CampaignField, index: number, value: string) => {
+    const currentValue = campaign[field];
+    if (Array.isArray(currentValue) && currentValue.every(item => typeof item === 'string')) {
+      const updated = [...currentValue];
+      updated[index] = value;
+      setCampaign({
+        ...campaign,
+        [field]: updated
+      });
+    }
   };
 
   const handleFieldChange = (field: CampaignField, value: Campaign[CampaignField]) => {
@@ -460,7 +449,7 @@ export default function CreateCampaign() {
           console.log('Logo uploaded to IPFS:', logoIpfsUrl);
         } catch (uploadError) {
           console.error('Logo upload failed:', uploadError);
-          throw new Error(`Failed to upload logo: ${uploadError.message}`);
+          throw new Error(`Failed to upload logo: ${uploadError as string || 'Unknown error'}`);
         }
       }
       
@@ -557,21 +546,21 @@ export default function CreateCampaign() {
     } catch (error) {
       console.error('Campaign creation error:', error);
       
-      // Enhanced error messages
       let userFriendlyMessage = 'Failed to create campaign. ';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      if (error.message?.includes('user rejected')) {
+      if (errorMessage.includes('user rejected')) {
         userFriendlyMessage += 'Transaction was rejected by user.';
-      } else if (error.message?.includes('insufficient funds')) {
+      } else if (errorMessage.includes('insufficient funds')) {
         userFriendlyMessage += 'Insufficient funds for transaction fees.';
-      } else if (error.message?.includes('gas')) {
+      } else if (errorMessage.includes('gas')) {
         userFriendlyMessage += 'Gas estimation failed. Please check your parameters.';
-      } else if (error.message?.includes('network')) {
+      } else if (errorMessage.includes('network')) {
         userFriendlyMessage += 'Network error. Please check your connection and try again.';
-      } else if (error.message?.includes('revert')) {
+      } else if (errorMessage.includes('revert')) {
         userFriendlyMessage += 'Contract execution reverted. Please check your parameters.';
       } else {
-        userFriendlyMessage += `${error.message || 'Unknown error occurred.'}`;
+        userFriendlyMessage += errorMessage;
       }
       
       setErrorMessage(userFriendlyMessage);
@@ -593,7 +582,7 @@ export default function CreateCampaign() {
   };
 
   // Section toggle handler
-  const toggleSection = (section) => {
+  const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? '' : section);
   };
 

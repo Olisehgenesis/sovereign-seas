@@ -32,7 +32,6 @@ export interface VotingStats {
 
 // Get token addresses from environment
 const celoToken = import.meta.env.VITE_CELO_TOKEN;
-const cUSDToken = import.meta.env.VITE_CUSD_TOKEN;
 
 // Custom hook for token approval
 export function useApproveToken() {

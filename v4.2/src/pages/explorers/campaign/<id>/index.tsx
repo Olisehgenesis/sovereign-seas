@@ -1,21 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, SetStateAction } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAccount, useReadContract, useReadContracts } from 'wagmi';
+import { useAccount, useReadContracts } from 'wagmi';
 import { formatEther } from 'viem';
-import { contractABI as abi } from '@/abi/seas4ABI';
 import { 
   ArrowLeft, 
   Trophy, 
   Sparkles, 
   Zap, 
   Target,
-  Star,
   Crown,
-  Flame,
   Rocket,
-  Diamond,
   Medal,
   Heart,
   Users,
@@ -24,19 +20,13 @@ import {
   Vote,
   Coins,
   BarChart3,
-  TrendingUp,
-  ChevronUp,
-  ChevronDown,
-  Play,
+
   Award,
-  Building,
-  Gamepad2,
-  Calendar,
+
   DollarSign,
   Percent,
-  Activity,
+
   Menu,
-  X,
   Timer,
   Waves
 } from 'lucide-react';
@@ -47,13 +37,9 @@ import VoteModal from '@/components/voteModal';
 import { useAllProjects, formatProjectForDisplay } from '@/hooks/useProjectMethods';
 import {
   useVote,
-  useVotingManager,
-  useSupportedTokens,
   useUserTotalVotesInCampaign,
-  useProjectVotedTokensWithAmounts,
-  useCampaignVotedTokens,
   useCampaignTokenAmount,
-  VoteAllocation
+
 } from '@/hooks/useVotingMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 
@@ -143,11 +129,7 @@ export default function CampaignView() {
   
   const { 
     vote, 
-    voteWithCelo,
-    batchVote, 
     isPending: isVoting, 
-    isSuccess: voteSuccess,
-    error: voteError 
   } = useVote(contractAddress);
   
   

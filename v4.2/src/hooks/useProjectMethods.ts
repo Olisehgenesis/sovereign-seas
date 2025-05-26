@@ -1,5 +1,5 @@
 import { useWriteContract, useReadContract, useReadContracts, useAccount } from 'wagmi'
-import { parseEther, formatEther, Address, type Abi, type AbiFunction } from 'viem'
+import { formatEther, Address, type Abi, } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -165,14 +165,14 @@ export function useSingleProject(contractAddress: Address, projectId: bigint) {
   })
 
   const project = data ? {
-    id: data[0],
-    owner: data[1],
-    name: data[2],
-    description: data[3],
-    transferrable: data[4],
-    active: data[5],
-    createdAt: data[6],
-    campaignIds: data[7]
+    id: (data as any[])[0],
+    owner: (data as any[])[1],
+    name: (data as any[])[2],
+    description: (data as any[])[3],
+    transferrable: (data as any[])[4],
+    active: (data as any[])[5],
+    createdAt: (data as any[])[6],
+    campaignIds: (data as any[])[7]
   } as Project : null
 
   return {
@@ -393,7 +393,11 @@ export function useProjectCount(contractAddress: Address) {
   }
 }
 
-const useProjectParticipations = (contractAddress, campaignId, projectIds) => {
+const useProjectParticipations = (
+  contractAddress: Address,
+  campaignId: bigint,
+  projectIds: bigint[]
+) => {
   const participationContracts = projectIds.map(projectId => ({
     address: contractAddress,
     abi,
@@ -402,20 +406,30 @@ const useProjectParticipations = (contractAddress, campaignId, projectIds) => {
   }));
 
   const { data, isLoading, error } = useReadContracts({
-    contracts: participationContracts,
+    contracts: participationContracts as unknown as readonly {
+      address: Address
+      abi: Abi
+      functionName: string
+      args: readonly [bigint, bigint]
+    }[],
     query: {
       enabled: !!contractAddress && !!campaignId && projectIds.length > 0
     }
   });
 
-  const participations = {};
+  const participations: Record<string, {
+    approved: boolean;
+    voteCount: bigint;
+    fundsReceived: bigint;
+  }> = {};
+  
   if (data) {
     projectIds.forEach((projectId, index) => {
       if (data[index]?.result) {
-        participations[projectId] = {
-          approved: data[index].result[0],
-          voteCount: data[index].result[1],
-          fundsReceived: data[index].result[2]
+        participations[projectId.toString()] = {
+          approved: (data[index].result as any[])[0],
+          voteCount: (data[index].result as any[])[1],
+          fundsReceived: (data[index].result as any[])[2]
         };
       }
     });
@@ -437,7 +451,7 @@ export function useProjectCampaigns(contractAddress: Address, projectId: bigint)
     }
   })
 
-  const campaignIds = projectData ? projectData[7] as bigint[] : []
+  const campaignIds = projectData ? (projectData as any[])[7] as bigint[] : []
 
   // Get campaign details for each campaign ID
   const campaignContracts = campaignIds.map(campaignId => ({
@@ -456,7 +470,7 @@ export function useProjectCampaigns(contractAddress: Address, projectId: bigint)
   }))
 
   const { data: campaignsData, isLoading: campaignsLoading, error: campaignsError } = useReadContracts({
-    contracts: [...campaignContracts, ...participationContracts] as readonly {
+    contracts: [...campaignContracts, ...participationContracts] as unknown as readonly {
       address: Address
       abi: Abi
       functionName: string
@@ -468,31 +482,32 @@ export function useProjectCampaigns(contractAddress: Address, projectId: bigint)
   })
 
   const projectCampaigns = campaignIds.map((campaignId, index) => {
+    console.log(campaignId)
     const campaignResult = campaignsData?.[index]?.result
     const participationResult = campaignsData?.[index + campaignIds.length]?.result
 
     if (!campaignResult || !participationResult) return null
 
     const campaign = {
-      id: campaignResult[0],
-      admin: campaignResult[1],
-      name: campaignResult[2],
-      description: campaignResult[3],
-      startTime: campaignResult[4],
-      endTime: campaignResult[5],
-      adminFeePercentage: campaignResult[6],
-      maxWinners: campaignResult[7],
-      useQuadraticDistribution: campaignResult[8],
-      useCustomDistribution: campaignResult[9],
-      payoutToken: campaignResult[10],
-      active: campaignResult[11],
-      totalFunds: campaignResult[12]
+      id: (campaignResult as any[])[0],
+      admin: (campaignResult as any[])[1],
+      name: (campaignResult as any[])[2],
+      description: (campaignResult as any[])[3],
+      startTime: (campaignResult as any[])[4],
+      endTime: (campaignResult as any[])[5],
+      adminFeePercentage: (campaignResult as any[])[6],
+      maxWinners: (campaignResult as any[])[7],
+      useQuadraticDistribution: (campaignResult as any[])[8],
+      useCustomDistribution: (campaignResult as any[])[9],
+      payoutToken: (campaignResult as any[])[10],
+      active: (campaignResult as any[])[11],
+      totalFunds: (campaignResult as any[])[12]
     }
 
     const participation = {
-      approved: participationResult[0],
-      voteCount: participationResult[1],
-      fundsReceived: participationResult[2]
+      approved: (participationResult as any[])[0],
+      voteCount: (participationResult as any[])[1],
+      fundsReceived: (participationResult as any[])[2]
     }
 
     // Determine campaign status
@@ -542,10 +557,10 @@ export function useProjectMetadata(contractAddress: Address, projectId: bigint) 
   })
 
   const metadata = data ? {
-    bio: data[0],
-    contractInfo: data[1],
-    additionalData: data[2],
-    contracts: data[3]
+    bio: (data as any[])[0],
+    contractInfo: (data as any[])[1],
+    additionalData: (data as any[])[2],
+    contracts: (data as any[])[3]
   } : null
 
   return {
@@ -580,21 +595,21 @@ export function useProjectDetails(contractAddress: Address, projectId: bigint) {
 
   const projectDetails: ProjectDetails | null = data && data[0].result && data[1].result ? {
     project: {
-      id: data[0].result[0],
-      owner: data[0].result[1],
-      name: data[0].result[2],
-      description: data[0].result[3],
-      transferrable: data[0].result[4],
-      active: data[0].result[5],
-      createdAt: data[0].result[6],
-      campaignIds: data[0].result[7]
+      id: (data[0].result as any[])[0],
+      owner: (data[0].result as any[])[1],
+      name: (data[0].result as any[])[2],
+      description: (data[0].result as any[])[3],
+      transferrable: (data[0].result as any[])[4],
+      active: (data[0].result as any[])[5],
+      createdAt: (data[0].result as any[])[6],
+      campaignIds: (data[0].result as any[])[7]
     },
     metadata: {
-      bio: data[1].result[0],
-      contractInfo: data[1].result[1],
-      additionalData: data[1].result[2]
+      bio: (data[1].result as any[])[0],
+      contractInfo: (data[1].result as any[])[1],
+      additionalData: (data[1].result as any[])[2]
     },
-    contracts: data[1].result[3]
+    contracts: (data[1].result as any[])[3]
   } : null
 
   return {
@@ -644,21 +659,21 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
       if (data[basicIndex]?.result && data[metadataIndex]?.result) {
         projects.push({
           project: {
-            id: data[basicIndex].result[0],
-            owner: data[basicIndex].result[1],
-            name: data[basicIndex].result[2],
-            description: data[basicIndex].result[3],
-            transferrable: data[basicIndex].result[4],
-            active: data[basicIndex].result[5],
-            createdAt: data[basicIndex].result[6],
-            campaignIds: data[basicIndex].result[7]
+            id: (data[basicIndex].result as any[])[0],
+            owner: (data[basicIndex].result as any[])[1],
+            name: (data[basicIndex].result as any[])[2],
+            description: (data[basicIndex].result as any[])[3],
+            transferrable: (data[basicIndex].result as any[])[4],
+            active: (data[basicIndex].result as any[])[5],
+            createdAt: (data[basicIndex].result as any[])[6],
+            campaignIds: (data[basicIndex].result as any[])[7]
           },
           metadata: {
-            bio: data[metadataIndex].result[0],
-            contractInfo: data[metadataIndex].result[1],
-            additionalData: data[metadataIndex].result[2]
+            bio: (data[metadataIndex].result as any[])[0],
+            contractInfo: (data[metadataIndex].result as any[])[1],
+            additionalData: (data[metadataIndex].result as any[])[2]
           },
-          contracts: data[metadataIndex].result[3]
+          contracts: (data[metadataIndex].result as any[])[3]
         })
       }
     }
@@ -691,6 +706,7 @@ export function useAllProjects(contractAddress: Address) {
 
 // Main hook for project methods - FIXED VERSION
 export function useProject(contractAddress: Address, projectId?: string | number) {
+  console.log(projectId)
   const [isInitialized, setIsInitialized] = useState(false)
 
   // Initialize the hook
@@ -714,6 +730,7 @@ export function useProject(contractAddress: Address, projectId?: string | number
 
     try {
       const enhancedProjects: EnhancedProject[] = allProjectsData.map((projectDetails, index) => {
+        console.log(index)
         const { project, metadata, contracts } = projectDetails
         
         // Parse additional metadata if available
@@ -789,7 +806,7 @@ export function useProject(contractAddress: Address, projectId?: string | number
 }
 
 // Hook for reading project participation in a campaign
-export function useProjectParticipation(contractAddress, campaignId, projectId) {
+export function useProjectParticipation(contractAddress: Address, campaignId: bigint, projectId: bigint) {
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
     abi: abi, // Make sure you import the abi
@@ -802,9 +819,9 @@ export function useProjectParticipation(contractAddress, campaignId, projectId) 
 
   return {
     participation: data ? {
-      approved: data[0],
-      voteCount: data[1],
-      fundsReceived: data[2]
+      approved: (data as any[])[0],
+      voteCount: (data as any[])[1],
+      fundsReceived: (data as any[])[2]
     } : null,
     isLoading,
     error,
@@ -848,8 +865,8 @@ export function useProjectVotedTokensWithAmounts(
   })
 
   const tokenData = data ? {
-    tokens: data[0] as Address[],
-    amounts: data[1] as bigint[]
+    tokens: (data as any[])[0] as Address[],
+    amounts: (data as any[])[1] as bigint[]
   } : null
 
   return {

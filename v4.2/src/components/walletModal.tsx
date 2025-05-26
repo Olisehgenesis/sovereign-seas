@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Fragment } from 'react';
 import { useAccount, useWalletClient } from 'wagmi';
-import { formatEther, parseEther, parseUnits } from 'viem';
+import { formatEther, parseUnits } from 'viem';
 import { abbreviateAddress } from '@/utils/formatting';
 import { usePrivy } from '@privy-io/react-auth';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
@@ -49,7 +49,6 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
   const [sendAddressInput, setSendAddressInput] = useState('');
   const [sendAmountInput, setSendAmountInput] = useState('');
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
-  const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
