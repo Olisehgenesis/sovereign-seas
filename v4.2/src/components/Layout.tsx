@@ -79,10 +79,10 @@ export default function Layout() {
               <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                   <div className="text-sm text-gray-600">
-                    © 2024 Your App. All rights reserved.
+                    ©Sovereign Seas All rights reserved.
                   </div>
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>Built with ❤️</span>
+                    <span>Built with ❤️ by Oliseh Genesis</span>
                     <div className="flex space-x-2">
                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                       <span>System Online</span>

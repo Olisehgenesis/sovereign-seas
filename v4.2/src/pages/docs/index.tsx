@@ -1,7 +1,6 @@
-'use client';
+
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Search,
@@ -9,27 +8,15 @@ import {
   FileText,
   Code,
   Terminal,
-  Settings,
+
   Users,
-  Shield,
-  Award,
+
   Globe,
-  ArrowRight,
+
   ChevronRight,
-  AlertTriangle,
+ 
   Github,
-  ExternalLink,
-  Bookmark,
-  Star,
-  Eye,
-  Plus,
-  TrendingUp,
-  Activity,
-  Lock,
-  Unlock,
-  Network,
-  Database,
-  Bookmark as BookmarkFilled
+
 } from 'lucide-react';
 
 // Animation variants
@@ -95,7 +82,7 @@ const docsSections = [
 ];
 
 export default function DocsPage() {
-  const navigate = useNavigate();
+
   const [isMounted, setIsMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 

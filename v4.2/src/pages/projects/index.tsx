@@ -1,68 +1,25 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Search,
-  Filter,
+
   Code,
   Users,
-  Calendar,
+
   MapPin,
   Tag,
-  Star,
+
   Eye,
-  Plus,
-  ArrowRight,
-  TrendingUp,
-  Activity,
+
   AlertTriangle,
   Github,
-  Globe,
-  FileText,
-  Share2,
-  Bookmark,
-  Shield,
-  Copy,
-  Twitter,
-  Linkedin,
-  Mail,
-  MessageCircle,
-  Link as LinkIcon,
-  Award,
-  Target,
-  Lightbulb,
-  Globe2,
-  Send,
   BadgeCheck,
-  User,
-  Terminal,
-  X,
-  Video,
-  Play,
-  Edit,
-  Crown,
-  Timer,
-  Vote,
-  Coins,
-  Heart,
-  BarChart3,
-  Gauge,
-  Clock,
-  Rocket,
-  Camera,
-  Lock,
-  Unlock,
-  Network,
-  Database,
-  ChevronRight,
-  Bookmark as BookmarkFilled,
+
   Trophy
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { Address } from 'viem';
-import { formatIpfsUrl } from '@/utils/imageUtils';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -91,6 +48,16 @@ export default function ProjectsPage() {
 
   // Get projects data
   const { projects, isLoading, error } = useAllProjects(CONTRACT_ADDRESS);
+
+  // Parse additional data
+  const parseAdditionalData = (data: string | undefined) => {
+    if (!data) return {};
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -235,7 +202,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center text-gray-600">
                     <Users className="h-4 w-4 mr-2" />
-                    <span>{project.project.teamSize || 'Unknown'} Team Size</span>
+                    <span>{parseAdditionalData(project.metadata?.additionalData)?.teamSize || 'Unknown'} Team Size</span>
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Trophy className="h-4 w-4 mr-2" />
@@ -245,11 +212,11 @@ export default function ProjectsPage() {
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center text-gray-600">
                     <MapPin className="h-4 w-4 mr-2" />
-                    <span>{project.project.location || 'Remote'}</span>
+                    <span>{parseAdditionalData(project.metadata?.additionalData)?.location || 'Remote'}</span>
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Tag className="h-4 w-4 mr-2" />
-                    <span>{project.project.category || 'Uncategorized'}</span>
+                    <span>{parseAdditionalData(project.metadata?.additionalData)?.category || 'Uncategorized'}</span>
                   </div>
                 </div>
               </div>
@@ -262,9 +229,9 @@ export default function ProjectsPage() {
                   <Eye className="h-4 w-4" />
                   View Details
                 </button>
-                {project.project.githubRepo && (
+                {parseAdditionalData(project.metadata?.additionalData)?.githubRepo && (
                   <a
-                    href={project.project.githubRepo}
+                    href={parseAdditionalData(project.metadata?.additionalData)?.githubRepo}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"

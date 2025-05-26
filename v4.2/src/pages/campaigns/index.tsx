@@ -1,26 +1,19 @@
-
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Search,
-  Filter,
+
   Trophy,
-  Clock,
+
   Users,
   Coins,
-  ArrowRight,
-  Plus,
+
   Award,
   Eye,
   Vote,
   Calendar,
-  Tag,
-  MapPin,
-  Star,
-  TrendingUp,
-  Activity,
+ 
   AlertTriangle
 } from 'lucide-react';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -197,7 +190,7 @@ export default function CampaignsPage() {
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Users className="h-4 w-4 mr-2" />
-                    <span>{campaign.campaign.maxWinners} Winners</span>
+                    <span>{Number(campaign.campaign.maxWinners)} Winners</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -207,7 +200,7 @@ export default function CampaignsPage() {
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Award className="h-4 w-4 mr-2" />
-                    <span>{campaign.campaign.adminFeePercentage}% Fee</span>
+                    <span>{Number(campaign.campaign.adminFeePercentage)}% Fee</span>
                   </div>
                 </div>
               </div>
