@@ -1,15 +1,15 @@
 import { createWalletClient, http, parseEther, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { celoAlfajores } from 'viem/chains';
+import { celo, celoAlfajores } from 'viem/chains';
 import * as dotenv from 'dotenv';
 import sovereignSeasV4Abi from '../artifacts/contracts/SovereignSeasV4.sol/SovereignSeasV4.json';
-import { readFileSync } from 'fs';
+
 
 dotenv.config();
 
 // Read configuration from environment variables
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const RPC_URL = process.env.CELO_RPC_URL || 'https://alfajores-forno.celo-testnet.org';
+const RPC_URL = process.env.CELO_RPC_URL ;
 const CELO_TOKEN_ADDRESS = process.env.CELO_TOKEN_ADDRESS;
 const MENTO_BROKER_ADDRESS = process.env.MENTO_BROKER_ADDRESS;
 
@@ -51,12 +51,12 @@ async function deploySovereignSeasV4() {
     const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     const walletClient = createWalletClient({
       account,
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
     

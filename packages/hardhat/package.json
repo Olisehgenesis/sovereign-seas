@@ -40,7 +40,7 @@
     "deploy": "hardhat run scripts/deploy.ts ",
     "withdraw": "pnpm hardhat run scripts/withdraw.ts --network celo",
     "verify": "hardhat verify",
-    "verify:contract": "hardhat run scripts/verify.ts --network alfajores",
+    "verify:contract": "hardhat run scripts/verify.ts --network celo",
     "vote": "hardhat run scripts/swapVote.ts ",
     "viewProjects": "hardhat run scripts/viewProjects.ts",
     "viewCampaign": "hardhat run scripts/viewCampaign.ts",
