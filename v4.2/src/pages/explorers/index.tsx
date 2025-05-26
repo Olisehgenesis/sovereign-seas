@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount } from 'wagmi';
 import { 
   Search,
   Filter,
@@ -119,11 +118,8 @@ interface Campaign {
   status?: 'upcoming' | 'active' | 'ended' | 'paused';
 }
 
-type ExplorerItem = (Project | Campaign) & { itemType: 'project' | 'campaign' };
-
 export default function UnifiedExplorer() {
   const navigate = useNavigate();
-  const { address, isConnected } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'projects' | 'campaigns'>('projects');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -984,7 +980,7 @@ function ProjectCard({
      <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : 'aspect-video'}`}>
        {project.metadata?.logo || project.metadata?.coverImage ? (
          <img
-           src={formatIpfsUrl(project.metadata.logo || project.metadata.coverImage)}
+           src={formatIpfsUrl(project.metadata?.logo || project.metadata?.coverImage || '')}
            alt={project.name}
            className="w-full h-full object-cover"
          />
@@ -1124,7 +1120,7 @@ function CampaignCard({
      <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : 'aspect-video'}`}>
        {campaign.metadata?.logo || campaign.metadata?.bannerImage ? (
          <img
-           src={formatIpfsUrl(campaign.metadata.logo || campaign.metadata.bannerImage)}
+           src={formatIpfsUrl(campaign.metadata?.logo || campaign.metadata?.bannerImage || '')}
            alt={campaign.name}
            className="w-full h-full object-cover"
          />
@@ -1138,7 +1134,7 @@ function CampaignCard({
        <div className="absolute top-3 right-3">
          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
            <div className={`w-1.5 h-1.5 rounded-full mr-1 ${statusColors.dot}`} />
-           {campaign.status?.charAt(0).toUpperCase() + campaign.status?.slice(1)}
+           {campaign.status ? campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1) : 'Paused'}
          </span>
        </div>
 

@@ -1,519 +1,494 @@
-// types/project.ts
+// types/index.ts
 
-export interface TeamMember {
-    name: string;
-    role: string;
-    email: string;
-    linkedin: string;
-    twitter: string;
-  }
-  
-  export interface ProjectLinks {
-    website: string;
-    demoUrl: string;
-    githubRepo: string;
-    documentation: string;
-    twitter: string;
-    linkedin: string;
-    discord: string;
-    telegram: string;
-  }
-  
-  export interface ProjectMedia {
-    logo: string;
-    demoVideo: string;
-  }
-  
-  export type ProjectCategory = 
-    | 'DeFi' 
-    | 'NFT' 
-    | 'Gaming' 
-    | 'Infrastructure' 
-    | 'DAO' 
-    | 'Social' 
-    | 'Identity' 
-    | 'Privacy' 
-    | 'Analytics' 
-    | 'Developer Tools' 
-    | 'Wallet' 
-    | 'Exchange' 
-    | 'Lending' 
-    | 'Insurance' 
-    | 'Real Estate' 
-    | 'Supply Chain' 
-    | 'Healthcare' 
-    | 'Education' 
-    | 'Other';
-  
-  export type ProjectType = 
-    | 'dapp' 
-    | 'protocol' 
-    | 'infrastructure' 
-    | 'tooling' 
-    | 'defi' 
-    | 'nft' 
-    | 'gaming' 
-    | 'dao';
-  
-  export type ProjectStatus = 'active' | 'inactive' | 'completed' | 'paused';
-  
-  export type MaturityLevel = 'early' | 'mvp' | 'beta' | 'production' | 'mature';
-  
-  export type DevelopmentStage = 
-    | 'Concept' 
-    | 'Design' 
-    | 'Development' 
-    | 'Testing' 
-    | 'Beta' 
-    | 'Production' 
-    | 'Maintenance';
-  
-  export type Blockchain = 
-    | 'Celo' 
-    | 'Ethereum' 
-    | 'Polygon' 
-    | 'Arbitrum' 
-    | 'Optimism' 
-    | 'Base' 
-    | 'Avalanche' 
-    | 'Solana' 
-    | 'Near' 
-    | 'Cosmos' 
-    | 'Polkadot' 
-    | 'Cardano' 
-    | 'Multi-chain' 
-    | 'Other';
-  
-  export type TechStack = 
-    | 'React' 
-    | 'Next.js' 
-    | 'Vue.js' 
-    | 'Angular' 
-    | 'Svelte' 
-    | 'Node.js' 
-    | 'Python' 
-    | 'Rust' 
-    | 'Solidity' 
-    | 'Go' 
-    | 'TypeScript' 
-    | 'JavaScript' 
-    | 'Web3.js' 
-    | 'Ethers.js' 
-    | 'Wagmi' 
-    | 'Hardhat' 
-    | 'Foundry' 
-    | 'Truffle' 
-    | 'IPFS' 
-    | 'PostgreSQL' 
-    | 'MongoDB' 
-    | 'Redis';
-  
-  export type License = 
-    | 'MIT' 
-    | 'Apache 2.0' 
-    | 'GPL v3' 
-    | 'GPL v2' 
-    | 'BSD 3-Clause' 
-    | 'BSD 2-Clause' 
-    | 'MPL 2.0' 
-    | 'LGPL v3' 
-    | 'AGPL v3' 
-    | 'ISC' 
-    | 'Unlicense' 
-    | 'Proprietary' 
-    | 'Other';
-  
-  export interface Project {
-    // Basic Information
-    name: string;
-    tagline: string;
-    description: string;
-    category: ProjectCategory;
-    tags: string[];
-    location: string;
-    establishedDate: string;
-    
-    // Media & Links
-    media: ProjectMedia;
-    links: ProjectLinks;
-    
-    // Team & Contact Information
-    teamMembers: TeamMember[];
-    contactEmail: string;
-    
-    // Technical Details
-    techStack: TechStack[];
-    blockchain: Blockchain;
-    smartContracts: string[];
-    license: License;
-    developmentStage: DevelopmentStage;
-    
-    // Features & Innovation
-    keyFeatures: string[];
-    innovation: string;
-    useCases: string[];
-    targetAudience: string;
-    
-    // Project Status
-    status: ProjectStatus;
-    projectType: ProjectType;
-    maturityLevel: MaturityLevel;
-    openSource: boolean;
-    transferrable: boolean;
-  }
-  
-  export interface ProjectFormData {
-    // Basic Information
-    name: string;
-    tagline: string;
-    description: string;
-    category: string;
-    tags: string[];
-    location: string;
-    establishedDate: string;
-    website: string;
-    
-    // Media & Links
-    logo: string;
-    demoVideo: string;
-    demoUrl: string;
-    
-    // Repository & Technical Links
-    githubRepo: string;
-    documentation: string;
-    
-    // Social Media Links
-    twitter: string;
-    linkedin: string;
-    discord: string;
-    telegram: string;
-    
-    // Team & Contact Information
-    teamMembers: TeamMember[];
-    contactEmail: string;
-    
-    // Technical Details
-    techStack: string[];
-    blockchain: string;
-    smartContracts: string[];
-    license: string;
-    developmentStage: string;
-    
-    // Features & Innovation
-    keyFeatures: string[];
-    innovation: string;
-    useCases: string[];
-    targetAudience: string;
-    
-    // Project Status
-    status: string;
-    projectType: string;
-    maturityLevel: string;
-    openSource: boolean;
-    transferrable: boolean;
-  }
-  
-  export interface ProjectFormErrors {
-    name: string;
-    tagline: string;
-    description: string;
-    category: string;
-    githubRepo: string;
-    contactEmail: string;
-    techStack: string[];
-    keyFeatures: string[];
-  }
-  
-  export interface ProjectMetadata {
-    version: string;
-    timestamp: number;
-    creator: string;
-    name: string;
-    tagline: string;
-    description: string;
-    category: string;
-    tags: string[];
-    location: string;
-    establishedDate: string;
-    website: string;
-    logo: string;
-    demoVideo: string;
-    demoUrl: string;
-    githubRepo: string;
-    documentation: string;
-    twitter: string;
-    linkedin: string;
-    discord: string;
-    telegram: string;
-    teamMembers: TeamMember[];
-    contactEmail: string;
-    techStack: string[];
-    blockchain: string;
-    smartContracts: string[];
-    license: string;
-    developmentStage: string;
-    keyFeatures: string[];
-    innovation: string;
-    useCases: string[];
-    targetAudience: string;
-    status: string;
-    projectType: string;
-    maturityLevel: string;
-    openSource: boolean;
-    transferrable: boolean;
-  }
-  
-  export interface CreateProjectParams {
-    name: string;
-    description: string;
+import { Address } from 'viem';
+
+// ==================== SHARED TYPES ====================
+
+export interface BaseMetadata {
+  version: string;
+  timestamp: number;
+  creator: Address;
+}
+
+// ==================== PROJECT TYPES ====================
+
+export interface ProjectMetadata {
+  bio: string;
+  contractInfo: string;
+  additionalData: string;
+  logo?: string;
+}
+
+export interface Project {
+  id: bigint;
+  owner: Address;
+  name: string;
+  description: string;
+  tagline?: string;
+  transferrable: boolean;
+  active: boolean;
+  createdAt: bigint;
+  campaignIds: bigint[];
+  metadata?: ProjectMetadata;
+  verified?: boolean;
+}
+
+export interface ProjectDetails {
+  project: Project;
+  metadata: ProjectMetadata;
+  contracts: Address[];
+}
+
+// Enhanced Project interface for components
+export interface EnhancedProject {
+  id: number;
+  owner: Address;
+  name: string;
+  description: string;
+  tagline?: string;
+  transferrable: boolean;
+  active: boolean;
+  createdAt: bigint;
+  campaignIds: bigint[];
+  metadata?: {
     bio: string;
     contractInfo: string;
     additionalData: string;
-    contracts: string[];
-    transferrable: boolean;
-  }
-  
-  // Utility type for form stage validation
-  export type FormStage = 1 | 2 | 3 | 4;
-  
-  // Constants for form options
-  export const PROJECT_CATEGORIES: ProjectCategory[] = [
-    'DeFi', 'NFT', 'Gaming', 'Infrastructure', 'DAO', 'Social', 'Identity', 
-    'Privacy', 'Analytics', 'Developer Tools', 'Wallet', 'Exchange', 'Lending',
-    'Insurance', 'Real Estate', 'Supply Chain', 'Healthcare', 'Education', 'Other'
-  ];
-  
-  export const BLOCKCHAINS: Blockchain[] = [
-    'Celo', 'Ethereum', 'Polygon', 'Arbitrum', 'Optimism', 'Base', 'Avalanche',
-    'Solana', 'Near', 'Cosmos', 'Polkadot', 'Cardano', 'Multi-chain', 'Other'
-  ];
-  
-  export const TECH_STACK_OPTIONS: TechStack[] = [
-    'React', 'Next.js', 'Vue.js', 'Angular', 'Svelte', 'Node.js', 'Python', 'Rust',
-    'Solidity', 'Go', 'TypeScript', 'JavaScript', 'Web3.js', 'Ethers.js', 'Wagmi',
-    'Hardhat', 'Foundry', 'Truffle', 'IPFS', 'PostgreSQL', 'MongoDB', 'Redis'
-  ];
-  
-  export const LICENSES: License[] = [
-    'MIT', 'Apache 2.0', 'GPL v3', 'GPL v2', 'BSD 3-Clause', 'BSD 2-Clause',
-    'MPL 2.0', 'LGPL v3', 'AGPL v3', 'ISC', 'Unlicense', 'Proprietary', 'Other'
-  ];
-  
-  export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
-    'Concept', 'Design', 'Development', 'Testing', 'Beta', 'Production', 'Maintenance'
-  ];
-  
-  export const PROJECT_TYPES: ProjectType[] = [
-    'dapp', 'protocol', 'infrastructure', 'tooling', 'defi', 'nft', 'gaming', 'dao'
-  ];
-  
-  // Helper functions for type guards
-  export const isValidProjectCategory = (category: string): category is ProjectCategory => {
-    return PROJECT_CATEGORIES.includes(category as ProjectCategory);
+    // Parsed metadata fields
+    category?: string;
+    tags?: string[];
+    location?: string;
+    establishedDate?: string;
+    website?: string;
+    projectType?: string;
+    maturityLevel?: string;
+    status?: string;
+    openSource?: boolean;
+    // Media & Links
+    logo?: string;
+    demoVideo?: string;
+    demoUrl?: string;
+    documentation?: string;
+    karmaGapProfile?: string;
+    githubRepo?: string;
+    // Social Media
+    social?: {
+      twitter?: string;
+      linkedin?: string;
+      discord?: string;
+      telegram?: string;
+      youtube?: string;
+      instagram?: string;
+    };
+    // Team & Contact
+    teamMembers?: TeamMember[];
+    contactEmail?: string;
+    businessEmail?: string;
+    phone?: string;
+    // Technical Details
+    blockchain?: string;
+    techStack?: string[];
+    smartContracts?: string[];
+    license?: string;
+    developmentStage?: string;
+    keyFeatures?: string[];
+    innovation?: string;
+    useCases?: string[];
+    targetAudience?: string;
+    // Milestones & Metrics
+    milestones?: Milestone[];
+    launchDate?: string;
+    userCount?: string;
+    transactionVolume?: string;
+    tvl?: string;
+    // Security & Compliance
+    auditReports?: string[];
+    kycCompliant?: boolean;
+    regulatoryCompliance?: string[];
+    [key: string]: any;
   };
-  
-  export const isValidBlockchain = (blockchain: string): blockchain is Blockchain => {
-    return BLOCKCHAINS.includes(blockchain as Blockchain);
-  };
-  
-  export const isValidTechStack = (tech: string): tech is TechStack => {
-    return TECH_STACK_OPTIONS.includes(tech as TechStack);
-  };
-  
-  export const isValidLicense = (license: string): license is License => {
-    return LICENSES.includes(license as License);
-  };
-  
-  export const isValidDevelopmentStage = (stage: string): stage is DevelopmentStage => {
-    return DEVELOPMENT_STAGES.includes(stage as DevelopmentStage);
-  };
-  
-  export const isValidProjectType = (type: string): type is ProjectType => {
-    return PROJECT_TYPES.includes(type as ProjectType);
-  };
-
-export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
-
-export type CampaignType = 
-  | 'fundraising' 
-  | 'community' 
-  | 'marketing' 
-  | 'development' 
-  | 'research' 
-  | 'partnership' 
-  | 'event' 
-  | 'other';
-
-export type CampaignVisibility = 'public' | 'private' | 'restricted';
-
-export interface CampaignMedia {
-  banner: string;
-  thumbnail: string;
-  gallery: string[];
-  video: string;
+  contracts?: Address[];
 }
 
-export interface CampaignLinks {
-  website: string;
-  socialMedia: {
-    twitter: string;
-    discord: string;
-    telegram: string;
-    linkedin: string;
-  };
-  documentation: string;
-  resources: string[];
+export interface TeamMember {
+  name: string;
+  role: string;
+  email: string;
+  linkedin: string;
+  twitter: string;
+  avatar: string;
 }
 
-export interface CampaignMilestone {
+export interface Milestone {
   title: string;
   description: string;
-  dueDate: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'delayed';
-  deliverables: string[];
+  targetDate: string;
+  status: 'planned' | 'in-progress' | 'completed';
+}
+
+// Project creation form interface
+export interface ProjectFormData {
+  // Basic Information
+  name: string;
+  tagline: string;
+  description: string;
+  category: string;
+  tags: string[];
+  location: string;
+  establishedDate: string;
+  website: string;
+  
+  // Media & Links
+  logo: string;
+  demoVideo: string;
+  demoUrl: string;
+  
+  // Repository & Technical Links
+  githubRepo: string;
+  karmaGapProfile: string;
+  documentation: string;
+  
+  // Social Media Links
+  twitter: string;
+  linkedin: string;
+  discord: string;
+  telegram: string;
+  youtube: string;
+  instagram: string;
+  
+  // Team & Contact Information
+  teamMembers: TeamMember[];
+  contactEmail: string;
+  businessEmail: string;
+  phone: string;
+  
+  // Technical Details
+  techStack: string[];
+  blockchain: string;
+  smartContracts: string[];
+  license: string;
+  developmentStage: string;
+  
+  // Features & Innovation
+  keyFeatures: string[];
+  innovation: string;
+  useCases: string[];
+  targetAudience: string;
+  
+  // Milestones & Roadmap
+  milestones: Milestone[];
+  
+  // Project Status & Metrics
+  status: string;
+  launchDate: string;
+  userCount: string;
+  transactionVolume: string;
+  tvl: string;
+  
+  // Compliance & Security
+  auditReports: string[];
+  kycCompliant: boolean;
+  regulatoryCompliance: string[];
+  
+  // Additional Metadata
+  projectType: string;
+  maturityLevel: string;
+  openSource: boolean;
+  
+  // Transferable ownership
+  transferrable: boolean;
+}
+
+// ==================== CAMPAIGN TYPES ====================
+
+export interface CampaignMetadata {
+  mainInfo: string;
+  additionalInfo: string;
+  customDistributionData: string;
 }
 
 export interface Campaign {
-  // Basic Information
-  id: string;
+  id: bigint;
+  admin: Address;
   name: string;
-  tagline: string;
   description: string;
-  type: CampaignType;
-  status: CampaignStatus;
-  visibility: CampaignVisibility;
-  startDate: string;
-  endDate: string;
+  startTime: bigint;
+  endTime: bigint;
+  adminFeePercentage: bigint;
+  maxWinners: bigint;
+  useQuadraticDistribution: boolean;
+  useCustomDistribution: boolean;
+  payoutToken: Address;
+  feeToken: Address;
+  active: boolean;
+  totalFunds: bigint;
+}
+
+export interface CampaignDetails {
+  campaign: Campaign;
+  metadata: CampaignMetadata;
+}
+
+// Enhanced Campaign interface for components
+export interface EnhancedCampaign {
+  id: number;
+  admin: Address;
+  name: string;
+  description: string;
+  startTime: bigint;
+  endTime: bigint;
+  adminFeePercentage: number;
+  maxWinners: number;
+  useQuadraticDistribution: boolean;
+  useCustomDistribution: boolean;
+  payoutToken: Address;
+  feeToken: Address;
+  active: boolean;
+  totalFunds: bigint;
+  metadata?: {
+    mainInfo: string;
+    additionalInfo: string;
+    customDistributionData: string;
+    // Parsed metadata fields
+    type?: string;
+    category?: string;
+    maxParticipants?: number;
+    eligibilityCriteria?: string[];
+    requirements?: string[];
+    judgesCriteria?: string[];
+    rewards?: CampaignRewards;
+    submissionGuidelines?: string;
+    tags?: string[];
+    logo?: string;
+    prizePool?: string;
+    media?: {
+      website?: string;
+      videoLink?: string;
+    };
+    social?: {
+      twitter?: string;
+      discord?: string;
+      telegram?: string;
+      contactEmail?: string;
+    };
+    [key: string]: any;
+  };
+  status: 'upcoming' | 'active' | 'ended' | 'paused';
+  daysRemaining?: number;
+  fundingProgress?: number;
+}
+
+export interface CampaignRewards {
+  totalPrizePool?: string;
+  distribution: string[];
+  [key: string]: any;
+}
+
+// Campaign creation form interface
+export interface CampaignFormData {
+  // Basic Information (Required fields marked)
+  name: string; // Required
+  description: string; // Required
+  campaignType: string; // Required
+  category: string;
+  tags: string[];
   
   // Media & Links
-  media: CampaignMedia;
-  links: CampaignLinks;
+  logo: string;
+  website: string;
+  videoLink: string;
   
-  // Campaign Details
-  goals: string[];
-  targetAmount: number;
-  raisedAmount: number;
-  currency: string;
-  milestones: CampaignMilestone[];
+  // Timeline & Funding (Required fields marked)
+  startDate: string; // Required
+  endDate: string; // Required
+  prizePool: string; // Required
+  maxParticipants: string;
+  adminFeePercentage: string;
+  maxWinners: string;
   
-  // Project Association
-  projectId: string;
-  projectName: string;
+  // Distribution Settings
+  useQuadraticDistribution: boolean;
+  useCustomDistribution: boolean;
+  customDistributionNotes?: string;
   
-  // Team & Contact
-  teamMembers: TeamMember[];
-  contactEmail: string;
+  // Rewards & Prizes
+  rewards: CampaignRewards;
   
-  // Additional Information
-  tags: string[];
-  location: string;
+  // Eligibility & Requirements
+  eligibilityCriteria: string[];
   requirements: string[];
-  benefits: string[];
-  risks: string[];
+  judgesCriteria: string[];
   
-  // Metrics & Analytics
-  metrics: {
-    views: number;
-    contributors: number;
-    engagement: number;
-    conversionRate: number;
+  // Contact & Social
+  contactEmail: string; // Required
+  twitter: string;
+  discord: string;
+  telegram: string;
+  
+  // Additional Info
+  submissionGuidelines: string;
+  
+  // Technical Settings
+  payoutToken: Address;
+  feeToken: Address;
+}
+
+// Campaign type options
+export interface CampaignTypeOption {
+  value: string;
+  label: string;
+  icon: any; // React component
+  desc: string;
+}
+
+// ==================== PARTICIPATION & VOTING TYPES ====================
+
+export interface Participation {
+  approved: boolean;
+  voteCount: bigint;
+  fundsReceived: bigint;
+}
+
+export interface Vote {
+  voter: Address;
+  campaignId: bigint;
+  projectId: bigint;
+  token: Address;
+  amount: bigint;
+  celoEquivalent: bigint;
+}
+
+export interface ProjectParticipation {
+  [projectId: number]: {
+    approved: boolean;
+    voteCount: bigint;
+    fundsReceived: bigint;
   };
 }
 
-export interface CampaignFormData {
-  // Basic Information
+// ==================== HOOK PARAMETER TYPES ====================
+
+// Project creation parameters
+export interface CreateProjectParams {
+  name: string;
+  description: string;
+  bio: string;
+  contractInfo: string;
+  additionalData: string;
+  contracts?: Address[];
+  transferrable?: boolean;
+}
+
+// Project update parameters
+export interface UpdateProjectParams {
+  projectId: bigint;
+  name: string;
+  description: string;
+  bio: string;
+  contractInfo: string;
+  additionalData: string;
+  contracts: Address[];
+}
+
+// Campaign creation parameters
+export interface CreateCampaignParams {
+  name: string;
+  description: string;
+  mainInfo: string;
+  additionalInfo: string;
+  startTime: bigint;
+  endTime: bigint;
+  adminFeePercentage: bigint;
+  maxWinners: bigint;
+  useQuadraticDistribution: boolean;
+  useCustomDistribution: boolean;
+  customDistributionData: string;
+  payoutToken: Address;
+  feeToken: Address;
+}
+
+// Campaign creation with fees parameters
+export interface CreateCampaignWithFeesParams extends Omit<CreateCampaignParams, 'feeToken'> {
+  feeToken: Address;
+}
+
+// Add project to campaign parameters
+export interface AddProjectToCampaignParams {
+  campaignId: bigint;
+  projectId: bigint;
+  feeToken: Address;
+  feeAmount?: bigint;
+  shouldPayFee?: boolean;
+}
+
+// Voting parameters
+export interface VoteParams {
+  campaignId: bigint;
+  projectId: bigint;
+  token: Address;
+  amount: bigint;
+  bypassCode?: string;
+}
+
+// ==================== FORM VALIDATION TYPES ====================
+
+export interface ProjectFormErrors {
   name: string;
   tagline: string;
   description: string;
-  type: string;
-  status: string;
-  visibility: string;
-  startDate: string;
-  endDate: string;
-  
-  // Media & Links
-  banner: string;
-  thumbnail: string;
-  gallery: string[];
-  video: string;
-  website: string;
-  socialMedia: {
-    twitter: string;
-    discord: string;
-    telegram: string;
-    linkedin: string;
-  };
-  documentation: string;
-  resources: string[];
-  
-  // Campaign Details
-  goals: string[];
-  targetAmount: number;
-  currency: string;
-  milestones: CampaignMilestone[];
-  
-  // Project Association
-  projectId: string;
-  
-  // Team & Contact
-  teamMembers: TeamMember[];
+  category: string;
+  githubRepo: string;
   contactEmail: string;
-  
-  // Additional Information
-  tags: string[];
-  location: string;
-  requirements: string[];
-  benefits: string[];
-  risks: string[];
+  techStack: string[];
+  keyFeatures: string[];
 }
 
 export interface CampaignFormErrors {
   name: string;
-  tagline: string;
   description: string;
-  type: string;
+  campaignType: string;
   startDate: string;
   endDate: string;
-  targetAmount: string;
-  goals: string[];
-  milestones: string[];
+  prizePool: string;
+  contactEmail: string;
 }
 
-// Constants for campaign options
-export const CAMPAIGN_TYPES: CampaignType[] = [
-  'fundraising',
-  'community',
-  'marketing',
-  'development',
-  'research',
-  'partnership',
-  'event',
-  'other'
-];
+// ==================== SECTION COMPONENT TYPES ====================
 
-export const CAMPAIGN_STATUSES: CampaignStatus[] = [
-  'draft',
-  'active',
-  'paused',
-  'completed',
-  'cancelled'
-];
+export interface SectionProps {
+  id: string;
+  title: string;
+  icon: any; // React component
+  children: React.ReactNode;
+  required?: boolean;
+  expandedSection: string;
+  toggleSection: (section: string) => void;
+}
 
-export const CAMPAIGN_VISIBILITY: CampaignVisibility[] = [
-  'public',
-  'private',
-  'restricted'
-];
+// ==================== API RESPONSE TYPES ====================
 
-// Helper functions for type guards
-export const isValidCampaignType = (type: string): type is CampaignType => {
-  return CAMPAIGN_TYPES.includes(type as CampaignType);
-};
+export interface ContractReadResult<T = any> {
+  data?: T;
+  isLoading: boolean;
+  error?: Error;
+  refetch: () => void;
+}
 
-export const isValidCampaignStatus = (status: string): status is CampaignStatus => {
-  return CAMPAIGN_STATUSES.includes(status as CampaignStatus);
-};
+export interface ContractWriteResult {
+  writeContract: (args: any) => Promise<any>;
+  isPending: boolean;
+  isError: boolean;
+  error?: Error;
+  isSuccess: boolean;
+  data?: any;
+}
 
-export const isValidCampaignVisibility = (visibility: string): visibility is CampaignVisibility => {
-  return CAMPAIGN_VISIBILITY.includes(visibility as CampaignVisibility);
-};
+// ==================== UTILITY TYPES ====================
+
+export type ProjectStatus = 'active' | 'paused' | 'completed' | 'deprecated';
+export type CampaignStatus = 'upcoming' | 'active' | 'ended' | 'paused';
+export type DistributionMethod = 'linear' | 'quadratic' | 'custom';
+
+// Union types for form field names
+export type ProjectField = keyof ProjectFormData;
+export type CampaignField = keyof CampaignFormData;

@@ -1,6 +1,6 @@
 // useVotingMethods.tsx - FIXED VERSION
-import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
-import { parseEther, formatEther, Address, type Abi } from 'viem'
+import { useWriteContract, useReadContract } from 'wagmi'
+import { parseEther, formatEther, Address } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback } from 'react'
 import { erc20ABI } from "@/abi/erc20ABI"
@@ -64,6 +64,9 @@ export function useVote(contractAddress: Address) {
   const { approveToken } = useApproveToken()
   const [votingStats, setVotingStats] = useState<VotingStats | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
+
+  console.log('setVote, setVotingStats', setVotingStats)
+  console.log('setIsCalculating', setIsCalculating)
 
   // FIXED version for ERC20 tokens
   const vote = async ({

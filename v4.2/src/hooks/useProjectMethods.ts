@@ -8,6 +8,7 @@ export interface ProjectMetadata {
   bio: string
   contractInfo: string
   additionalData: string
+  logo?: string
 }
 
 export interface Project {
@@ -15,10 +16,13 @@ export interface Project {
   owner: Address
   name: string
   description: string
+  tagline?: string
   transferrable: boolean
   active: boolean
   createdAt: bigint
   campaignIds: bigint[]
+  metadata?: ProjectMetadata
+  verified?: boolean
 }
 
 export interface ProjectDetails {

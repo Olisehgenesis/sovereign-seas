@@ -1,7 +1,7 @@
 // hooks/useCampaignMethods.ts
 
 import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
-import { parseEther, formatEther, Address, type Abi } from 'viem'
+import {  formatEther, Address, type Abi } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -99,7 +99,6 @@ const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 
 
 
 const celoToken = import.meta.env.VITE_CELO_TOKEN;
-const cusdToken = import.meta.env.VITE_CUSD_TOKEN;
 
 // Fixed hook for creating a new campaign
 export function useCreateCampaign(contractAddress: Address) {
@@ -193,10 +192,10 @@ export function useCreateCampaign(contractAddress: Address) {
     } catch (err) {
       logDebug('Campaign Creation Error', {
         error: err,
-        message: err.message,
-        code: err.code,
-        stack: err.stack,
-        cause: err.cause
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: err instanceof Error ? (err as any).code : undefined,
+        stack: err instanceof Error ? err.stack : undefined,
+        // Remove cause property since it's not supported in the current TypeScript target
       }, 'error');
       throw err;
     }
@@ -843,21 +842,21 @@ export function useSingleCampaign(contractAddress: Address, campaignId: bigint) 
       enabled: !!contractAddress && campaignId !== undefined
     }
   })
-
   const campaign = data ? {
-    id: data[0],
-    admin: data[1],
-    name: data[2],
-    description: data[3],
-    startTime: data[4],
-    endTime: data[5],
-    adminFeePercentage: data[6],
-    maxWinners: data[7],
-    useQuadraticDistribution: data[8],
-    useCustomDistribution: data[9],
-    payoutToken: data[10],
-    active: data[11],
-    totalFunds: data[12]
+    id: (data as any[])[0] as bigint,
+    admin: (data as any[])[1] as Address,
+    name: (data as any[])[2] as string,
+    description: (data as any[])[3] as string,
+    startTime: (data as any[])[4] as bigint,
+    endTime: (data as any[])[5] as bigint,
+    adminFeePercentage: (data as any[])[6] as bigint,
+    maxWinners: (data as any[])[7] as bigint,
+    useQuadraticDistribution: (data as any[])[8] as boolean,
+    useCustomDistribution: (data as any[])[9] as boolean,
+    payoutToken: (data as any[])[10] as Address,
+    feeToken: (data as any[])[13] as Address,
+    active: (data as any[])[11] as boolean,
+    totalFunds: (data as any[])[12] as bigint
   } as Campaign : null
 
   return {
@@ -881,9 +880,9 @@ export function useCampaignMetadata(contractAddress: Address, campaignId: bigint
   })
 
   const metadata = data ? {
-    mainInfo: data[0],
-    additionalInfo: data[1],
-    customDistributionData: data[2]
+    mainInfo: (data as any[])[0] as string,
+    additionalInfo: (data as any[])[1] as string,
+    customDistributionData: (data as any[])[2] as string
   } : null
 
   return {
@@ -894,7 +893,7 @@ export function useCampaignMetadata(contractAddress: Address, campaignId: bigint
   }
 }
 
-// Hook for reading complete campaign details (combines basic + metadata)
+// Hook for reading complete campaign details
 export function useCampaignDetails(contractAddress: Address, campaignId: bigint) {
   const { data, isLoading, error, refetch } = useReadContracts({
     contracts: [
@@ -918,24 +917,25 @@ export function useCampaignDetails(contractAddress: Address, campaignId: bigint)
 
   const campaignDetails: CampaignDetails | null = data && data[0].result && data[1].result ? {
     campaign: {
-      id: data[0].result[0],
-      admin: data[0].result[1],
-      name: data[0].result[2],
-      description: data[0].result[3],
-      startTime: data[0].result[4],
-      endTime: data[0].result[5],
-      adminFeePercentage: data[0].result[6],
-      maxWinners: data[0].result[7],
-      useQuadraticDistribution: data[0].result[8],
-      useCustomDistribution: data[0].result[9],
-      payoutToken: data[0].result[10],
-      active: data[0].result[11],
-      totalFunds: data[0].result[12]
+      id: (data[0].result as any[])[0] as bigint,
+      admin: (data[0].result as any[])[1] as Address,
+      name: (data[0].result as any[])[2] as string,
+      description: (data[0].result as any[])[3] as string,
+      startTime: (data[0].result as any[])[4] as bigint,
+      endTime: (data[0].result as any[])[5] as bigint,
+      adminFeePercentage: (data[0].result as any[])[6] as bigint,
+      maxWinners: (data[0].result as any[])[7] as bigint,
+      useQuadraticDistribution: (data[0].result as any[])[8] as boolean,
+      useCustomDistribution: (data[0].result as any[])[9] as boolean,
+      payoutToken: (data[0].result as any[])[10] as Address,
+      feeToken: (data[0].result as any[])[13] as Address,
+      active: (data[0].result as any[])[11] as boolean,
+      totalFunds: (data[0].result as any[])[12] as bigint
     },
     metadata: {
-      mainInfo: data[1].result[0],
-      additionalInfo: data[1].result[1],
-      customDistributionData: data[1].result[2]
+      mainInfo: (data[1].result as any[])[0] as string,
+      additionalInfo: (data[1].result as any[])[1] as string,
+      customDistributionData: (data[1].result as any[])[2] as string
     }
   } : null
 
@@ -986,24 +986,25 @@ export function useCampaigns(contractAddress: Address, campaignIds: bigint[]) {
       if (data[basicIndex]?.result && data[metadataIndex]?.result) {
         campaigns.push({
           campaign: {
-            id: data[basicIndex].result[0],
-            admin: data[basicIndex].result[1],
-            name: data[basicIndex].result[2],
-            description: data[basicIndex].result[3],
-            startTime: data[basicIndex].result[4],
-            endTime: data[basicIndex].result[5],
-            adminFeePercentage: data[basicIndex].result[6],
-            maxWinners: data[basicIndex].result[7],
-            useQuadraticDistribution: data[basicIndex].result[8],
-            useCustomDistribution: data[basicIndex].result[9],
-            payoutToken: data[basicIndex].result[10],
-            active: data[basicIndex].result[11],
-            totalFunds: data[basicIndex].result[12]
+            id: (data[basicIndex].result as any[])[0] as bigint,
+            admin: (data[basicIndex].result as any[])[1] as Address,
+            name: (data[basicIndex].result as any[])[2] as string,
+            description: (data[basicIndex].result as any[])[3] as string,
+            startTime: (data[basicIndex].result as any[])[4] as bigint,
+            endTime: (data[basicIndex].result as any[])[5] as bigint,
+            adminFeePercentage: (data[basicIndex].result as any[])[6] as bigint,
+            maxWinners: (data[basicIndex].result as any[])[7] as bigint,
+            useQuadraticDistribution: (data[basicIndex].result as any[])[8] as boolean,
+            useCustomDistribution: (data[basicIndex].result as any[])[9] as boolean,
+            payoutToken: (data[basicIndex].result as any[])[10] as Address,
+            feeToken: (data[basicIndex].result as any[])[13] as Address,
+            active: (data[basicIndex].result as any[])[11] as boolean,
+            totalFunds: (data[basicIndex].result as any[])[12] as bigint
           },
           metadata: {
-            mainInfo: data[metadataIndex].result[0],
-            additionalInfo: data[metadataIndex].result[1],
-            customDistributionData: data[metadataIndex].result[2]
+            mainInfo: (data[metadataIndex].result as any[])[0] as string,
+            additionalInfo: (data[metadataIndex].result as any[])[1] as string,
+            customDistributionData: (data[metadataIndex].result as any[])[2] as string
           }
         })
       }
@@ -1038,6 +1039,8 @@ export function useAllCampaigns(contractAddress: Address) {
 // Main hook for campaign methods - following the same pattern as useProject
 export function useCampaign(contractAddress: Address, campaignId?: string | number) {
   const [isInitialized, setIsInitialized] = useState(false)
+  console.log('contractAddress', contractAddress)
+  console.log('campaignId', campaignId)
 
   // Initialize the hook
   useEffect(() => {
@@ -1095,6 +1098,8 @@ export function useCampaign(contractAddress: Address, campaignId?: string | numb
     try {
       const enhancedCampaigns: EnhancedCampaign[] = allCampaignsData.map((campaignDetails, index) => {
         const { campaign, metadata } = campaignDetails
+        console.log('index', index )
+        console.log('campaignDetails', campaignDetails)
         
         // Parse metadata if available
         let parsedMetadata = { ...metadata }
@@ -1192,9 +1197,9 @@ export function useParticipation(
   })
 
   const participation = data ? {
-    approved: data[0],
-    voteCount: data[1],
-    fundsReceived: data[2]
+    approved: (data as any[])[0] as boolean,
+    voteCount: (data as any[])[1] as bigint,
+    fundsReceived: (data as any[])[2] as bigint
   } : null
 
   return {

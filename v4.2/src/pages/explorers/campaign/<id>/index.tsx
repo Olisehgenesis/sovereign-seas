@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, SetStateAction } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { formatEther } from 'viem';
@@ -40,6 +40,7 @@ import {
   Timer,
   Waves
 } from 'lucide-react';
+import { type AbiFunction } from 'viem';
 
 import { useCampaignDetails } from '@/hooks/useCampaignMethods';
 import VoteModal from '@/components/voteModal';
@@ -56,7 +57,17 @@ import {
 } from '@/hooks/useVotingMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 
-
+interface Project {
+  voteCount: bigint;
+  voteCountFormatted: string;
+  participation: { approved: boolean; voteCount: bigint; fundsReceived: bigint; } | null;
+  additionalDataParsed?: any;
+  campaignCount?: number;
+  verified?: boolean;
+  name?: string;
+  id?: string | number | bigint;
+  description?: string;
+}
 
 // Countdown Timer Hook
 function useCountdown(endTime: number) {
@@ -94,8 +105,7 @@ export default function CampaignView() {
   
   // UI state
   const [showVoteModal, setShowVoteModal] = useState(false);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [showStats, setShowStats] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
   const campaignId = id ? BigInt(id) : BigInt(0);
@@ -107,8 +117,7 @@ export default function CampaignView() {
   );
   
   const { projects: allProjects, isLoading: projectsLoading } = useAllProjects(contractAddress);
-  const { supportedTokens } = useSupportedTokens(contractAddress);
-  const { votedTokens } = useCampaignVotedTokens(contractAddress, campaignId);
+  
   
   // Get token amounts for CELO and cUSD
   const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN;
@@ -129,7 +138,7 @@ export default function CampaignView() {
   const { totalVotes } = useUserTotalVotesInCampaign(
     contractAddress,
     campaignId,
-    address
+    address || '0x0000000000000000000000000000000000000000'
   );
   
   const { 
@@ -141,14 +150,7 @@ export default function CampaignView() {
     error: voteError 
   } = useVote(contractAddress);
   
-  const {
-    votingState,
-    formatTokenAmount,
-    parseTokenAmount,
-    getProjectVoteAllocation,
-    setProjectVoteAllocation,
-    clearAllAllocations
-  } = useVotingManager(contractAddress, campaignId, address);
+  
 
   // Data processing logic remains the same...
   const campaignProjectsBasic = useMemo(() => {
@@ -159,19 +161,24 @@ export default function CampaignView() {
   }, [allProjects, campaignId]);
 
   const projectIds = useMemo(() => 
-    campaignProjectsBasic.map(project => BigInt(project.id)), 
+    campaignProjectsBasic
+      .filter((project): project is NonNullable<typeof project> => project != null && project.id !== undefined)
+      .map(project => BigInt(project.id)), 
     [campaignProjectsBasic]
   );
 
-  const participationContracts = useMemo(() => 
-    projectIds.map(projectId => ({
-      address: contractAddress,
-      abi,
-      functionName: 'getParticipation',
-      args: [campaignId, projectId]
-    })), 
-    [contractAddress, campaignId, projectIds]
-  );
+  const participationContracts = projectIds.map(projectId => ({
+    address: contractAddress as `0x${string}`,
+    abi: [{
+      inputs: [{ name: 'projectId', type: 'uint256' }],
+      name: 'getParticipation',
+      outputs: [{ name: '', type: 'tuple' }],
+      stateMutability: 'view',
+      type: 'function'
+    } satisfies AbiFunction],
+    functionName: 'getParticipation',
+    args: [projectId]
+  }));
 
   const { data: participationData, isLoading: participationLoading } = useReadContracts({
     contracts: participationContracts,
@@ -184,7 +191,7 @@ export default function CampaignView() {
     if (!campaignProjectsBasic.length || !participationData) return [];
 
     return campaignProjectsBasic.map((project, index) => {
-      const participation = participationData[index]?.result;
+      const participation = participationData[index]?.result as [boolean, bigint, bigint] | undefined;
       const voteCount = participation ? participation[1] : 0n;
       
       return {
@@ -223,7 +230,7 @@ export default function CampaignView() {
   // Use countdown hook
   const countdown = useCountdown(endTime);
 
-  const openVoteModal = (project) => {
+  const openVoteModal = (project: Project) => {
     setSelectedProject(project);
     setShowVoteModal(true);
   };
@@ -237,7 +244,7 @@ export default function CampaignView() {
     navigate('/explore');
   };
 
-  const getPositionStyling = (index) => {
+  const getPositionStyling = (index: number) => {
     switch (index) {
       case 0:
         return {
@@ -303,7 +310,7 @@ export default function CampaignView() {
     return null;
   };
 
-  const getProjectLogo = (project) => {
+  const getProjectLogo = (project: any) => {
     try {
 
       if (project.additionalDataParsed?.logo) return project.additionalDataParsed.logo;
@@ -323,6 +330,10 @@ export default function CampaignView() {
     console.log('project', project);
     return null;
   };
+
+  const handleVote = useCallback((projectId: bigint, token: string, amount: bigint) => {
+    return vote({ campaignId, projectId, token: token as `0x${string}`, amount });
+  }, [campaignId, vote]);
 
   if (!isMounted) return null;
 
@@ -462,10 +473,8 @@ export default function CampaignView() {
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
-                      const nextElement = target.nextElementSibling as HTMLDivElement;
-                      if (nextElement) {
-                        nextElement.style.display = 'flex';
-                      }
+                      const fallback = target.nextSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
                     }}
                   />
                   <div className="text-white text-xs font-bold hidden">🪙</div>
@@ -485,10 +494,8 @@ export default function CampaignView() {
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
-                      const nextElement = target.nextElementSibling as HTMLDivElement;
-                      if (nextElement) {
-                        nextElement.style.display = 'flex';
-                      }
+                      const fallback = target.nextSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
                     }}
                   />
                   <div className="text-white text-xs font-bold hidden">$</div>
@@ -634,19 +641,21 @@ export default function CampaignView() {
                         alt={`${campaign.name} logo`}
                         className="w-12 h-12 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 transition-colors duration-300"
                         onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = target.nextSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
                         }}
                       />
                     ) : null}
                     <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
-                      {campaign.name.charAt(0)}
+                      {campaign.name?.charAt(0) || ''}
                     </div>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
-                      {campaign.name}
+                      {campaign.name || 'Untitled Campaign'}
                     </h1>
                     <p className="text-sm text-gray-600 line-clamp-1">{campaign.description}</p>
                   </div>
@@ -759,20 +768,22 @@ export default function CampaignView() {
                           alt={`${project.name} logo`}
                           className="w-12 h-12 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300"
                           onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const fallback = target.nextSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
                           }}
                         />
                       ) : null}
                       <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
-                        {project.name.charAt(0)}
+                        {project.name?.charAt(0) || ''}
                       </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-bold text-gray-800 text-lg truncate group-hover:text-blue-600 transition-colors duration-300">
-                          {project.name}
+                          {project.name || 'Untitled Project'}
                         </h3>
                         <div className="text-right ml-4">
                           <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
@@ -879,6 +890,7 @@ export default function CampaignView() {
         selectedProject={selectedProject}
         campaignId={campaignId}
         isVoting={isVoting}
+        onVote={handleVote}
       />
 
       
