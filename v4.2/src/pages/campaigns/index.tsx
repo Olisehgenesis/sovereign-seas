@@ -127,7 +127,7 @@ const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
 
   return (
     <div
-      onClick={() => navigate(`/campaigns/${campaign.id}`)}
+      onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
       className="group relative bg-white/90 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg border border-blue-100 hover:shadow-xl hover:-translate-y-3 transition-all duration-500 cursor-pointer"
     >
       {/* Enhanced shadow and glow effects */}
@@ -514,7 +514,7 @@ export default function CampaignsPage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate('/create-campaign')}
+                  onClick={() => navigate('/app/campaigns/start')}
                   className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
                 >
                   <Trophy className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />

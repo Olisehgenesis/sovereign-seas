@@ -993,7 +993,7 @@ function ProjectCard({
 
      {/* Project Info */}
      <div className={`p-4 relative z-10 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-       <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata?.bio || project.description}</p>
+       <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata?.bio["tagline"] || project.description?.tagline}</p>
 
        {/* Project Meta */}
        <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">

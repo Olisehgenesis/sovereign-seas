@@ -109,7 +109,7 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
 
   return (
     <div
-      onClick={() => navigate(`/projects/${project.id}`)}
+      onClick={() => navigate(`/explorer/project/${project.id.toString()}`)}
       className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500"
     >
       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
@@ -496,7 +496,7 @@ export default function ProjectsPage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate('/create-project')}
+                  onClick={() => navigate('/app/project/start')}
                   className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
                 >
                   <Code className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />

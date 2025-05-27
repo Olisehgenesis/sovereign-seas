@@ -416,7 +416,7 @@ const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: 
 
   return (
     <div 
-      onClick={() => navigate(`/campaigns/${campaign.id.toString()}`)}
+      onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
       className="group relative bg-white/90 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg border border-blue-100 hover:shadow-xl hover:-translate-y-3 transition-all duration-500 cursor-pointer"
     >
       {/* Enhanced shadow and glow effects */}
@@ -480,7 +480,7 @@ const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: 
       </div>
       
       <div className="p-4 relative">
-        <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{campaign.metadata.tagline || campaign.metadata.bio || campaign.description}</p>
+        <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{campaign.metadata.bio['tagline'] }</p>
         
         <div className="absolute bottom-4 right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
           <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -699,7 +699,7 @@ export default function HomePage() {
                   <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                 </button>
                 <button 
-                  onClick={() => navigate('/create-campaign')}
+                  onClick={() => navigate('/app/campaigns/start')}
                   className="px-6 py-3 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group relative overflow-hidden"
                 >
                   <Rocket className="h-4 w-4 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
@@ -759,7 +759,7 @@ export default function HomePage() {
                   </div>
                   
                   <button 
-                    onClick={() => navigate('/create-campaign')}
+                    onClick={() => navigate('/app/campaigns/start')}
                     className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-lg transition-all flex items-center justify-center group relative overflow-hidden"
                   >
                     Get Started 
@@ -918,7 +918,7 @@ export default function HomePage() {
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">No Campaigns Yet</h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm sm:text-base">Be the first to create a campaign and start your blockchain journey!</p>
               <button 
-                onClick={() => navigate('/create-campaign')}
+                onClick={() => navigate('/app/campaigns/start')}
                 className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
               >
                 <Lightbulb className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
@@ -964,7 +964,7 @@ export default function HomePage() {
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">No Projects Yet</h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm sm:text-base">Be the first to create an innovative project!</p>
               <button 
-                onClick={() => navigate('/create-project')}
+                onClick={() => navigate('/app/project/start')}
                 className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
               >
                 <Code className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
