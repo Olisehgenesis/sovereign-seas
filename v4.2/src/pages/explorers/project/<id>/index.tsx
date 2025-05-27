@@ -972,7 +972,7 @@ export default function ProjectView() {
                             
                             <div className="flex gap-3">
                               <button
-                                onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                                onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
                                 className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-gray-200 text-gray-700 rounded-lg hover:bg-white hover:shadow-md transition-all duration-200 font-medium"
                               >
                                 <Eye className="h-4 w-4" />
@@ -980,7 +980,7 @@ export default function ProjectView() {
                               </button>
                               {campaign.status === 'active' && (
                                 <button
-                                  onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                                  onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
                                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
                                 >
                                   <Vote className="h-4 w-4" />

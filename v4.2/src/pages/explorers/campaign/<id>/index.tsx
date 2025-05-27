@@ -818,7 +818,7 @@ export default function CampaignView() {
                         )}
                         
                         <button
-                          onClick={() => navigate(`/explore/project/${project.id}`)}
+                          onClick={() => project?.id ? navigate(`/explorer/project/${project.id.toString()}`) : null}
                           className="px-4 py-2 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 text-sm group/btn relative overflow-hidden"
                         >
                           <Eye className="h-3 w-3 group-hover/btn:scale-110 transition-transform duration-300" />
