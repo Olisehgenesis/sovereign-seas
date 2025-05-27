@@ -273,7 +273,7 @@ export function useCalculateFeeInToken(
     abi,
     functionName: 'getExpectedConversionRate',
     args: [
-      '0x471ece3750da237f93b8e339c536989b8978a438', // CELO token address
+      celoToken, // CELO token address
       targetToken,
       baseFeeAmount
     ],

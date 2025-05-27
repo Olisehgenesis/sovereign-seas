@@ -9,6 +9,7 @@ import { celo, celoAlfajores } from 'wagmi/chains';
 
 const appId = import.meta.env.VITE_PRIVY_APP_ID as string;
 const clientId = import.meta.env.VITE_PRIVY_CLIENT_ID as string;
+const isTestnet = import.meta.env.VITE_ENV === 'testnet';
 
 if (!appId || !clientId) {
   throw new Error(
@@ -37,8 +38,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             logo: "https://auth.privy.io/logos/privy-logo.png",
             walletChainType: "ethereum-only",
           },
-          defaultChain: celoAlfajores,
-          supportedChains: [celo, celoAlfajores]
+          defaultChain: isTestnet ? celoAlfajores : celo,
+          supportedChains: isTestnet ? [celoAlfajores] : [celo]
         }}
       >
         <WagmiProvider config={config}>

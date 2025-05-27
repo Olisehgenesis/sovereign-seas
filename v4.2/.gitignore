@@ -33,3 +33,4 @@ dist-ssr
 .env.test.local.example
 .env.test.local.example
 .env*
+.env.live
