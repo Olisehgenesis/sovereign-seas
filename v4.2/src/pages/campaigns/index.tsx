@@ -101,6 +101,7 @@ const getCampaignStatus = (campaign: any): 'upcoming' | 'active' | 'ended' | 'pa
 // Campaign Card Component
 const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
   const navigate = useNavigate();
+  const [timeLeft, setTimeLeft] = useState('');
 
   // Calculate time status properly
   const now = Math.floor(Date.now() / 1000);
@@ -124,6 +125,33 @@ const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
     statusText = 'Active';
     StatusIcon = Activity;
   }
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!hasStarted) {
+      const updateCountdown = () => {
+        const startTime = Number(campaign.startTime);
+        const now = Math.floor(Date.now() / 1000);
+        const diff = startTime - now;
+
+        if (diff <= 0) {
+          setTimeLeft('Starting...');
+          return;
+        }
+
+        const days = Math.floor(diff / 86400);
+        const hours = Math.floor((diff % 86400) / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+
+        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      };
+
+      updateCountdown();
+      const interval = setInterval(updateCountdown, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [campaign.startTime, hasStarted]);
 
   return (
     <div
@@ -176,7 +204,7 @@ const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
         {!hasStarted && (
           <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-blue-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
             <Timer className="h-3 w-3 mr-1.5 animate-pulse" /> 
-            Coming Soon
+            {timeLeft}
           </div>
         )}
 

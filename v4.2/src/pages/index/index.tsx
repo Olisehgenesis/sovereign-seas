@@ -390,6 +390,7 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
 
 const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: number }) => {
   const navigate = useNavigate();
+  const [timeLeft, setTimeLeft] = useState('');
 
   // Calculate time status properly
   const now = Math.floor(Date.now() / 1000);
@@ -413,6 +414,33 @@ const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: 
     statusText = 'Active';
     StatusIcon = Activity;
   }
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!hasStarted) {
+      const updateCountdown = () => {
+        const startTime = Number(campaign.startTime);
+        const now = Math.floor(Date.now() / 1000);
+        const diff = startTime - now;
+
+        if (diff <= 0) {
+          setTimeLeft('Starting...');
+          return;
+        }
+
+        const days = Math.floor(diff / 86400);
+        const hours = Math.floor((diff % 86400) / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+
+        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      };
+
+      updateCountdown();
+      const interval = setInterval(updateCountdown, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [campaign.startTime, hasStarted]);
 
   return (
     <div 
@@ -453,7 +481,7 @@ const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: 
         {!hasStarted && (
           <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-blue-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
             <Timer className="h-3 w-3 mr-1.5 animate-pulse" /> 
-            Coming Soon
+            {timeLeft}
           </div>
         )}
 
@@ -699,7 +727,7 @@ export default function HomePage() {
                   <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                 </button>
                 <button 
-                  onClick={() => navigate('/app/campaigns/start')}
+                  onClick={() => navigate('/app/campaign/start')}
                   className="px-6 py-3 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group relative overflow-hidden"
                 >
                   <Rocket className="h-4 w-4 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
@@ -747,6 +775,9 @@ export default function HomePage() {
                     <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100/50 transform hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                       <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-3">
                         <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
+
+
+                        
                       </div>
                       <span className="text-gray-700">Automated fund distribution</span>
                     </div>
@@ -759,7 +790,7 @@ export default function HomePage() {
                   </div>
                   
                   <button 
-                    onClick={() => navigate('/app/campaigns/start')}
+                    onClick={() => navigate('/app/campaign/start')}
                     className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-lg transition-all flex items-center justify-center group relative overflow-hidden"
                   >
                     Get Started 
@@ -918,7 +949,7 @@ export default function HomePage() {
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">No Campaigns Yet</h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm sm:text-base">Be the first to create a campaign and start your blockchain journey!</p>
               <button 
-                onClick={() => navigate('/app/campaigns/start')}
+                onClick={() => navigate('/app/campaign/start')}
                 className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
               >
                 <Lightbulb className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
