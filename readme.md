@@ -108,6 +108,8 @@ graph TD
 v1- 0x2C378422434932d490ccdF674178e194842336a4
 swapper-0xe0dbbaea6aacf915c2ede4540f1ba67a0658c931
 
+v2-0x0cc096b1cc568a22c1f02dab769881d1afe6161a
+
 
 - **Solidity ^0.8.28**
 - **OpenZeppelin** security standards

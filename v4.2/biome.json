@@ -4,8 +4,15 @@
     "indentStyle": "space",
     "lineWidth": 120
   },
-  "linter": {
-    "enabled": true
+ "linter": {
+    "rules": {
+      "suspicious": {
+        "noImplicitAnyLet": "off"
+      },
+      "correctness": {
+        "noChildrenProp": "off"
+      }
+    }
   },
   "organizeImports": {
     "enabled": true

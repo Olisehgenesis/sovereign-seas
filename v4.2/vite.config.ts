@@ -19,9 +19,11 @@ export default defineConfig({
   },
   base: '/',
   server: {
-    allowedHosts: true
+    allowedHosts: true,
+    port: 4173
   },
   preview: {
-    allowedHosts: true
+    allowedHosts: true,
+    port: 5173
   }
 })

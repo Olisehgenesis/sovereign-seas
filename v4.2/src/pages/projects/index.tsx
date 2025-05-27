@@ -3,22 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Search,
   Code,
-  Users,
+
   MapPin,
-  Tag,
+  
   Eye,
   AlertTriangle,
   Github,
-  BadgeCheck,
+  
   Trophy,
-  Calendar,
+
   Network,
   ExternalLink,
   ArrowUpRight,
-  Anchor,
+
   BarChart,
   Shield,
-  Activity
+
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { Address } from 'viem';
@@ -28,7 +28,10 @@ import { formatIpfsUrl } from '@/utils/imageUtils';
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
 
 interface ProjectMetadata {
-  bio?: string;
+  bio?: {
+    tagline?: string;
+    [key: string]: any;
+  };
   contractInfo?: string;
   additionalData?: string;
   category?: string;
@@ -58,14 +61,7 @@ interface EnhancedProject {
 }
 
 // Utility functions
-const safeJsonParse = (jsonString: string, fallback = {}) => {
-  try {
-    return jsonString ? JSON.parse(jsonString) : fallback;
-  } catch (e) {
-    console.warn('Failed to parse JSON:', e);
-    return fallback;
-  }
-};
+
 
 const parseProjectMetadata = (projectDetails: any): ProjectMetadata => {
   let parsedMetadata: ProjectMetadata = {};
