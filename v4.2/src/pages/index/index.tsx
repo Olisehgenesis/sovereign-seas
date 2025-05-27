@@ -1,8 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { 
   Search,
   Calendar,
@@ -19,13 +16,21 @@ import {
   Github,
   Coins,
   Timer,
-  Home,
   Sparkles,
   Star,
   Eye,
   Rocket,
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  Anchor,
+  Globe,
+  Lightbulb,
+  Shield,
+  BarChart,
+  DollarSign,
+  ArrowUpRight,
+  Zap,
+  CreditCard
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -133,62 +138,6 @@ interface EnhancedCampaign {
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 60 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6 }
-};
-
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const scaleOnHover = {
-  whileHover: { scale: 1.05 },
-  whileTap: { scale: 0.95 }
-};
-
-// ==================== ROADMAP DATA ====================
-
-const roadmapData = [
-  {
-    version: "V1",
-    title: "Proof of Ship",
-    status: "completed",
-    items: [
-      "2-3 successful campaigns launched",
-      "Initial user feedback collected",
-      "Core voting mechanism implemented"
-    ]
-  },
-  {
-    version: "V2",
-    title: "Anti-Sybil & Protocol",
-    status: "current",
-    items: [
-      "Self-protocol with 60% testing complete",
-      "Good Dollar integration (10% complete)",
-      "Enhanced security measures"
-    ]
-  },
-  {
-    version: "V3",
-    title: "Enhanced Platform",
-    status: "active",
-    items: [
-      "New tested voting system",
-      "Projects as moveable entities",
-      "Running on Celo mainnet",
-      "Multi-token voting (CELO & cUSD)",
-      "Complete platform revamp"
-    ]
-  }
-];
-
 // ==================== UTILITY FUNCTIONS ====================
 
 const safeJsonParse = (jsonString: string, fallback = {}) => {
@@ -288,56 +237,47 @@ interface StatCardProps {
   gradient: string;
 }
 
-const StatCard = ({ icon: Icon, label, value, gradient }: StatCardProps) => (
-  <motion.div
-    className={`relative p-6 rounded-2xl bg-gradient-to-br ${gradient} border border-white/20 backdrop-blur-sm overflow-hidden group`}
-    whileHover={{ scale: 1.05, y: -5 }}
-    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-    <div className="relative z-10">
-      <div className="flex items-center justify-between mb-4">
-        <Icon className="h-8 w-8 text-white" />
-        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-          <Sparkles className="h-5 w-5 text-white animate-pulse" />
-        </div>
+const StatCard = ({ icon: Icon, label, value }: StatCardProps) => (
+  <div className="bg-white/90 backdrop-blur-sm rounded-xl overflow-hidden border border-blue-100 group hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 relative">
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-transparent to-indigo-400/5"></div>
+    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur transition-opacity duration-500"></div>
+    <div className="p-5 relative">
+      <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity duration-500">
+        <Icon className="h-6 w-6 text-blue-500" />
       </div>
-      <div className="text-3xl font-bold text-white mb-2">{value}</div>
-      <div className="text-white/90 font-medium">{label}</div>
+      <p className="text-indigo-500 font-medium">{label}</p>
+      <p className="text-3xl font-bold text-gray-800 mt-1 mb-2">{value}</p>
+      <div className="w-full h-1 rounded-full bg-blue-100 overflow-hidden">
+        <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style={{ width: "75%" }}></div>
+      </div>
     </div>
-  </motion.div>
+  </div>
 );
 
 const ProjectCard = ({ project }: { project: EnhancedProject }) => {
   const navigate = useNavigate();
 
   return (
-    <motion.div
+    <div
       onClick={() => navigate(`/projects/${project.id}`)}
-      className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden cursor-pointer relative"
-      whileHover={{ y: -8, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
       
       {/* Project Image */}
-      <div className="relative aspect-video overflow-hidden">
+      <div className="relative h-40 sm:h-48 bg-gradient-to-r from-blue-100 to-indigo-100 overflow-hidden">
         {project.metadata.logo || project.metadata.coverImage ? (
-          <img
-            src={formatIpfsUrl(project.metadata.logo ?? project.metadata.coverImage ?? '')}
-            alt={project.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          />
+          <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${formatIpfsUrl(project.metadata.logo ?? project.metadata.coverImage ?? '')})`, opacity: 0.9 }}></div>
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <Code className="h-12 w-12 text-white" />
+          <div className="absolute inset-0 flex items-center justify-center opacity-30">
+            <Code className="h-16 w-16 text-blue-500" />
           </div>
         )}
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
         
         {/* Status Badge */}
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-3 right-3">
           <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
             project.active 
               ? 'bg-emerald-500/90 text-white' 
@@ -361,7 +301,7 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
 
         {/* Campaigns Count */}
         {project.campaignIds.length > 0 && (
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-3 left-3">
             <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2">
               <div className="flex items-center gap-1">
                 <Trophy className="h-4 w-4 text-purple-600" />
@@ -371,17 +311,20 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
             </div>
           </div>
         )}
+
+        {/* Project name overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-1">{project.name}</h3>
+          <div className="flex items-center text-white/80 text-sm">
+            <BarChart className="h-3.5 w-3.5 mr-1.5" />
+            {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}
+          </div>
+        </div>
       </div>
 
       {/* Project Info */}
-      <div className="p-6 relative z-10">
-        <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-2 line-clamp-1">
-          {project.name}
-        </h3>
-
-        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">
-          {project.metadata.tagline || project.metadata.bio || project.description}
-        </p>
+      <div className="p-4 relative z-10">
+        <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata.tagline || project.metadata.bio || project.description}</p>
 
         {/* Project Meta */}
         <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
@@ -391,10 +334,6 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
               <span>{project.metadata.location}</span>
             </div>
           )}
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            <span>{new Date(Number(project.createdAt) * 1000).toLocaleDateString()}</span>
-          </div>
           {project.metadata.blockchain && (
             <div className="flex items-center gap-1">
               <Network className="h-3 w-3" />
@@ -409,7 +348,7 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
             {project.metadata.tags.slice(0, 3).map((tag, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg"
+                className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
               >
                 #{tag}
               </span>
@@ -423,841 +362,722 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
         )}
 
         {/* Action Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Eye className="h-4 w-4" />
-            <span>View Project</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {project.metadata.githubRepo && (
-              <a
-                href={project.metadata.githubRepo}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
-              >
-                <Github className="h-4 w-4" />
-              </a>
-            )}
-            {project.metadata.website && (
-              <a 
-                href={project.metadata.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
-            <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-          </div>
+        <div className="absolute bottom-4 right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
+          <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
+        </div>
+        
+        {/* Voting tokens for this project */}
+        <div className="flex -space-x-1.5">
+          <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
+          <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
-const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
+const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: number }) => {
   const navigate = useNavigate();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return { bg: 'bg-emerald-500/90', text: 'text-white', dot: 'bg-white' };
-      case 'upcoming': return { bg: 'bg-blue-500/90', text: 'text-white', dot: 'bg-white' };
-      case 'ended': return { bg: 'bg-gray-500/90', text: 'text-white', dot: 'bg-gray-300' };
-      case 'paused': return { bg: 'bg-orange-500/90', text: 'text-white', dot: 'bg-white' };
-      default: return { bg: 'bg-gray-500/90', text: 'text-white', dot: 'bg-gray-300' };
-    }
-  };
-
-  const statusColors = getStatusColor(campaign.status);
-  const daysLeft = campaign.status === 'active' 
-    ? Math.max(0, Math.ceil((Number(campaign.endTime) - Date.now() / 1000) / (24 * 60 * 60)))
-    : 0;
-
-  const fundingAmount = parseFloat(formatEther(campaign.totalFunds));
+  // Calculate time status properly
+  const now = Math.floor(Date.now() / 1000);
+  const hasStarted = now >= Number(campaign.startTime);
+  const hasEnded = now >= Number(campaign.endTime);
+  
+  // Format CELO amount as whole number
+  const celoAmount = Number(formatEther(campaign.totalFunds)).toFixed(0);
+  
+  // Determine status class and text
+  let statusClass = 'bg-gray-200 text-gray-700';
+  let statusText = 'Ended';
+  let StatusIcon = CheckCircle;
+  
+  if (!hasStarted) {
+    statusClass = 'bg-cyan-400 text-blue-900';
+    statusText = 'Coming Soon';
+    StatusIcon = Timer;
+  } else if (!hasEnded) {
+    statusClass = 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white';
+    statusText = 'Active';
+    StatusIcon = Activity;
+  }
 
   return (
-    <motion.div
+    <div 
       onClick={() => navigate(`/campaigns/${campaign.id}`)}
-      className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden cursor-pointer relative"
-      whileHover={{ y: -8, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="group relative bg-white/90 backdrop-blur-sm rounded-xl overflow-hidden shadow-lg border border-blue-100 hover:shadow-xl hover:-translate-y-3 transition-all duration-500 cursor-pointer"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      {/* Enhanced shadow and glow effects */}
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
       
-      {/* Campaign Image */}
-      <div className="relative aspect-video overflow-hidden">
-        {campaign.metadata.logo || campaign.metadata.bannerImage ? (
-          <img
-            src={formatIpfsUrl(campaign.metadata.logo ?? campaign.metadata.bannerImage ?? '')}
-            alt={campaign.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          />
+      <div className="h-40 sm:h-48 bg-gradient-to-r from-blue-100 to-indigo-100 relative overflow-hidden">
+        {campaign.metadata.logo ? (
+          <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${formatIpfsUrl(campaign.metadata.logo)})`, opacity: 0.9 }}></div>
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-            <Trophy className="h-12 w-12 text-white" />
+          <div className="absolute inset-0 flex items-center justify-center opacity-30">
+            <Anchor className="h-16 w-16 text-blue-500" />
           </div>
         )}
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
         
-        {/* Status Badge */}
-        <div className="absolute top-4 right-4">
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${statusColors.bg} ${statusColors.text}`}>
-            <div className={`w-2 h-2 rounded-full mr-2 ${statusColors.dot} ${campaign.status === 'active' ? 'animate-pulse' : ''}`} />
-            {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-          </span>
+        {/* Status badge with improved styling */}
+        <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-medium flex items-center shadow-md z-10 ${statusClass}`}>
+          <StatusIcon className="h-3 w-3 mr-1.5" />
+          {statusText}
         </div>
-
-        {/* Type Badge */}
-        {campaign.metadata.type && (
-          <div className="absolute bottom-4 left-4">
-            <span className="inline-flex items-center px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
-              {campaign.metadata.type.replace('_', ' ').split(' ').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1)
-              ).join(' ')}
-            </span>
+        
+        {/* Campaign name overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-1">{campaign.name}</h3>
+          <div className="flex items-center text-white/80 text-sm">
+            <BarChart className="h-3.5 w-3.5 mr-1.5" />
+            {celoAmount} CELO
+          </div>
+        </div>
+        
+        {/* Time remaining indicator with better formatting */}
+        {!hasStarted && (
+          <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-blue-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
+            <Timer className="h-3 w-3 mr-1.5 animate-pulse" /> 
+            Coming Soon
           </div>
         )}
 
-        {/* Prize Pool Overlay */}
-        {fundingAmount > 0 && (
-          <div className="absolute top-4 left-4">
-            <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2">
-              <div className="flex items-center gap-1">
-                <Coins className="h-4 w-4 text-green-600" />
-                <span className="font-bold text-green-600 text-lg">{fundingAmount.toFixed(1)}</span>
-              </div>
-              <p className="text-xs text-gray-600">CELO Prize</p>
-            </div>
+        {hasStarted && !hasEnded && campaign.endTime && (
+          <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-indigo-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
+            <Timer className="h-3 w-3 mr-1.5 animate-pulse" /> 
+            {(() => {
+              const endDiff = Number(campaign.endTime) - now;
+              if (endDiff <= 0) return "Ending soon";
+              
+              const days = Math.floor(endDiff / 86400);
+              const hours = Math.floor((endDiff % 86400) / 3600);
+              
+              return `${days}d ${hours}h left`;
+            })()}
           </div>
         )}
-
-        {/* Days Left */}
-        {campaign.status === 'active' && daysLeft > 0 && (
-          <div className="absolute bottom-4 right-4">
-            <div className="bg-red-500/90 backdrop-blur-sm rounded-lg px-3 py-2 text-white">
-              <div className="flex items-center gap-1">
-                <Timer className="h-4 w-4" />
-                <span className="font-bold text-sm">{daysLeft}d</span>
-              </div>
-              <p className="text-xs">Left</p>
-            </div>
+        
+        {hasEnded && (
+          <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-gray-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
+            <CheckCircle className="h-3 w-3 mr-1.5" /> Ended
           </div>
         )}
       </div>
-
-      {/* Campaign Info */}
-      <div className="p-6 relative z-10">
-        <h3 className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors mb-2 line-clamp-1">
-          {campaign.name}
-        </h3>
-
-        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">
-          {campaign.metadata.tagline || campaign.metadata.bio || campaign.description}
-        </p>
-
-        {/* Campaign Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Coins className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-900">Funding</span>
-            </div>
-            <p className="font-bold text-green-600 text-lg">
-              {fundingAmount.toFixed(1)}
-            </p>
-            <p className="text-xs text-green-700">CELO</p>
-          </div>
-          <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-100">
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Award className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-900">Winners</span>
-            </div>
-            <p className="font-bold text-purple-600 text-lg">
-              {campaign.maxWinners > 0n ? Number(campaign.maxWinners) : '∞'}
-            </p>
-            <p className="text-xs text-purple-700">Max</p>
-          </div>
+      
+      <div className="p-4 relative">
+        <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{campaign.metadata.tagline || campaign.metadata.bio || campaign.description}</p>
+        
+        <div className="absolute bottom-4 right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
+          <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
         </div>
-
-        {/* Campaign Timeline */}
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            <span>
-              {new Date(Number(campaign.startTime) * 1000).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric' 
-              })} - {new Date(Number(campaign.endTime) * 1000).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric' 
-              })}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users className="h-3 w-3" />
-            <span>
-              {campaign.useQuadraticDistribution ? 'Quadratic' : 
-               campaign.useCustomDistribution ? 'Custom' : 'Linear'}
-            </span>
-          </div>
-        </div>
-
-        {/* Tags */}
-        {campaign.metadata.tags && campaign.metadata.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {campaign.metadata.tags.slice(0, 3).map((tag, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-lg"
-              >
-                #{tag}
-              </span>
-            ))}
-            {campaign.metadata.tags.length > 3 && (
-              <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
-                +{campaign.metadata.tags.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Action Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            {campaign.status === 'active' && <PlayCircle className="h-4 w-4 text-green-500" />}
-            {campaign.status === 'upcoming' && <Timer className="h-4 w-4 text-blue-500" />}
-            {campaign.status === 'ended' && <CheckCircle className="h-4 w-4 text-gray-500" />}
-            <span>
-              {campaign.status === 'active' && 'Join Campaign'}
-              {campaign.status === 'upcoming' && 'Coming Soon'}
-              {campaign.status === 'ended' && 'View Results'}
-              {campaign.status === 'paused' && 'Campaign Paused'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {campaign.metadata.website && (
-              <a 
-                href={campaign.metadata.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
-            <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
-          </div>
+        
+        {/* Voting tokens for this campaign */}
+        <div className="flex -space-x-1.5">
+          <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
+          {(index === 0 || index === 2) && (
+            <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
+          )}
+          {index === 1 && (
+            <div className="w-6 h-6 rounded-full bg-purple-100 ring-2 ring-white flex items-center justify-center text-purple-500 text-xs font-bold">G</div>
+          )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
-
-const RoadmapSection = () => (
-  <motion.section
-    className="py-20 relative overflow-hidden"
-    initial="initial"
-    whileInView="animate"
-    viewport={{ once: true }}
-    variants={staggerContainer}
-  >
-    {/* Background Elements */}
-    <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-blue-50" />
-    <div className="absolute top-10 left-10 w-32 h-32 bg-blue-400/10 rounded-full blur-3xl animate-pulse" />
-    <div className="absolute bottom-10 right-10 w-40 h-40 bg-purple-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
-    
-    <div className="relative max-w-7xl mx-auto px-6">
-      <motion.div className="text-center mb-16" variants={fadeInUp}>
-        <h2 className="text-4xl font-bold text-gray-900 mb-4">
-          Our Journey & Roadmap
-        </h2>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          From proof of concept to a robust multi-token voting platform on Celo
-        </p>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {roadmapData.map((phase, idx) => (
-          <motion.div
-            key={phase.version}
-            className={`relative p-8 rounded-2xl border-2 ${
-              phase.status === 'completed' ? 'bg-green-50 border-green-200' :
-           phase.status === 'current' ? 'bg-blue-50 border-blue-200' :
-           phase.status === 'active' ? 'bg-purple-50 border-purple-200' :
-           'bg-gray-50 border-gray-200'
-         } backdrop-blur-sm`}
-           variants={fadeInUp}
-           whileHover={{ y: -5 }}
-           transition={{ delay: idx * 0.1 }}
-         >
-           {/* Status Badge */}
-           <div className={`absolute -top-3 left-6 px-4 py-1 rounded-full text-sm font-semibold ${
-             phase.status === 'completed' ? 'bg-green-500 text-white' :
-             phase.status === 'current' ? 'bg-blue-500 text-white' :
-             phase.status === 'active' ? 'bg-purple-500 text-white' :
-             'bg-gray-500 text-white'
-           }`}>
-             {phase.status === 'completed' ? '✓ Completed' :
-              phase.status === 'current' ? '🔄 In Progress' :
-              phase.status === 'active' ? '🚀 Live' : 'Planned'}
-           </div>
-
-           {/* Version Badge */}
-           <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl text-2xl font-bold text-white mb-6 ${
-             phase.status === 'completed' ? 'bg-green-500' :
-             phase.status === 'current' ? 'bg-blue-500' :
-             phase.status === 'active' ? 'bg-purple-500' :
-             'bg-gray-500'
-           }`}>
-             {phase.version}
-           </div>
-
-           <h3 className="text-2xl font-bold text-gray-900 mb-4">{phase.title}</h3>
-
-           <ul className="space-y-3">
-             {phase.items.map((item, itemIdx) => (
-               <li key={itemIdx} className="flex items-start gap-3">
-                 <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                   phase.status === 'completed' ? 'bg-green-500' :
-                   phase.status === 'current' ? 'bg-blue-500' :
-                   phase.status === 'active' ? 'bg-purple-500' :
-                   'bg-gray-400'
-                 }`} />
-                 <span className="text-gray-700 leading-relaxed">{item}</span>
-               </li>
-             ))}
-           </ul>
-
-           {/* Progress Indicator */}
-           {phase.status === 'current' && (
-             <div className="mt-6">
-               <div className="flex items-center justify-between text-sm text-blue-600 mb-2">
-                 <span>Progress</span>
-                 <span>60%</span>
-               </div>
-               <div className="w-full bg-blue-100 rounded-full h-2">
-                 <motion.div
-                   className="bg-blue-500 h-2 rounded-full"
-                   initial={{ width: 0 }}
-                   animate={{ width: "60%" }}
-                   transition={{ duration: 1, delay: 0.5 }}
-                 />
-               </div>
-             </div>
-           )}
-         </motion.div>
-       ))}
-     </div>
-   </div>
- </motion.section>
-);
 
 // ==================== MAIN COMPONENT ====================
 
 export default function HomePage() {
- const navigate = useNavigate();
- const [isMounted, setIsMounted] = useState(false);
- const [searchQuery, setSearchQuery] = useState('');
- const [featuredProjects, setFeaturedProjects] = useState<EnhancedProject[]>([]);
- const [featuredCampaigns, setFeaturedCampaigns] = useState<EnhancedCampaign[]>([]);
+  const navigate = useNavigate();
+  const [isMounted, setIsMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [featuredProjects, setFeaturedProjects] = useState<EnhancedProject[]>([]);
+  const [featuredCampaigns, setFeaturedCampaigns] = useState<EnhancedCampaign[]>([]);
+  const [currentToken, setCurrentToken] = useState(0);
+  
+  const tokens = ['CELO', 'cUSD', 'GS', 'GLOdollar'];
+  const tokenColors = ['text-green-500', 'text-blue-500', 'text-purple-500', 'text-yellow-500'];
 
- // Use hooks for data fetching
- const { projects, isLoading: projectsLoading, error: projectsError } = useAllProjects(CONTRACT_ADDRESS);
- const { campaigns, isLoading: campaignsLoading, error: campaignsError } = useAllCampaigns(CONTRACT_ADDRESS);
+  // Use hooks for data fetching
+  const { projects, isLoading: projectsLoading, error: projectsError } = useAllProjects(CONTRACT_ADDRESS);
+  const { campaigns, isLoading: campaignsLoading, error: campaignsError } = useAllCampaigns(CONTRACT_ADDRESS);
 
- useEffect(() => {
-   setIsMounted(true);
- }, []);
+  // Typing animation for tokens
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentToken((prev) => (prev + 1) % tokens.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [tokens.length]);
 
- // Process and set featured projects
- useEffect(() => {
-   if (!projects) return;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-   const enhanced = projects.map(projectDetails => {
-     const parsedMetadata = parseProjectMetadata(projectDetails);
-     
-     return {
-       id: projectDetails.project.id,
-       owner: projectDetails.project.owner,
-       name: projectDetails.project.name,
-       description: projectDetails.project.description,
-       transferrable: projectDetails.project.transferrable,
-       active: projectDetails.project.active,
-       createdAt: projectDetails.project.createdAt,
-       campaignIds: projectDetails.project.campaignIds,
-       contracts: projectDetails.contracts,
-       metadata: parsedMetadata
-     } as EnhancedProject;
-   });
+  // Process and set featured projects
+  useEffect(() => {
+    if (!projects) return;
 
-   // Get featured projects (active ones with campaigns, sorted by newest)
-   const featured = enhanced
-     .filter(p => p.active && p.campaignIds.length > 0)
-     .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
-     .slice(0, 6);
+    const enhanced = projects.map(projectDetails => {
+      const parsedMetadata = parseProjectMetadata(projectDetails);
+      
+      return {
+        id: projectDetails.project.id,
+        owner: projectDetails.project.owner,
+        name: projectDetails.project.name,
+        description: projectDetails.project.description,
+        transferrable: projectDetails.project.transferrable,
+        active: projectDetails.project.active,
+        createdAt: projectDetails.project.createdAt,
+        campaignIds: projectDetails.project.campaignIds,
+        contracts: projectDetails.contracts,
+        metadata: parsedMetadata
+      } as EnhancedProject;
+    });
 
-   setFeaturedProjects(featured);
- }, [projects]);
+    // Get featured projects (active ones with campaigns, sorted by newest)
+    // Get featured projects (active ones with campaigns, sorted by newest)
+const featured = enhanced
+.filter(p => p.active && p.campaignIds.length > 0)
+.sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
+.slice(0, 6);
 
- // Process and set featured campaigns
- useEffect(() => {
-   if (!campaigns) return;
+setFeaturedProjects(featured);
+}, [projects]);
 
-   const enhanced = campaigns.map(campaignDetails => {
-     const parsedMetadata = parseCampaignMetadata(campaignDetails);
-     const status = getCampaignStatus(campaignDetails.campaign);
-     
-     return {
-       id: campaignDetails.campaign.id,
-       admin: campaignDetails.campaign.admin,
-       name: campaignDetails.campaign.name,
-       description: campaignDetails.campaign.description,
-       startTime: campaignDetails.campaign.startTime,
-       endTime: campaignDetails.campaign.endTime,
-       adminFeePercentage: campaignDetails.campaign.adminFeePercentage,
-       maxWinners: campaignDetails.campaign.maxWinners,
-       useQuadraticDistribution: campaignDetails.campaign.useQuadraticDistribution,
-       useCustomDistribution: campaignDetails.campaign.useCustomDistribution,
-       payoutToken: campaignDetails.campaign.payoutToken,
-       active: campaignDetails.campaign.active,
-       totalFunds: campaignDetails.campaign.totalFunds,
-       status,
-       metadata: parsedMetadata
-     } as EnhancedCampaign;
-   });
+// Process and set featured campaigns
+useEffect(() => {
+if (!campaigns) return;
 
-   // Get featured campaigns (active and upcoming ones with funds, sorted by total funds)
-   const featured = enhanced
-     .filter(c => ['active', 'upcoming'].includes(c.status))
-     .sort((a, b) => Number(b.totalFunds) - Number(a.totalFunds))
-     .slice(0, 6);
+const enhanced = campaigns.map(campaignDetails => {
+  const parsedMetadata = parseCampaignMetadata(campaignDetails);
+  const status = getCampaignStatus(campaignDetails.campaign);
+  
+  return {
+    id: campaignDetails.campaign.id,
+    admin: campaignDetails.campaign.admin,
+    name: campaignDetails.campaign.name,
+    description: campaignDetails.campaign.description,
+    startTime: campaignDetails.campaign.startTime,
+    endTime: campaignDetails.campaign.endTime,
+    adminFeePercentage: campaignDetails.campaign.adminFeePercentage,
+    maxWinners: campaignDetails.campaign.maxWinners,
+    useQuadraticDistribution: campaignDetails.campaign.useQuadraticDistribution,
+    useCustomDistribution: campaignDetails.campaign.useCustomDistribution,
+    payoutToken: campaignDetails.campaign.payoutToken,
+    active: campaignDetails.campaign.active,
+    totalFunds: campaignDetails.campaign.totalFunds,
+    status,
+    metadata: parsedMetadata
+  } as EnhancedCampaign;
+});
 
-   setFeaturedCampaigns(featured);
- }, [campaigns]);
+// Get featured campaigns (active and upcoming ones with funds, sorted by total funds)
+const featured = enhanced
+  .filter(c => ['active', 'upcoming'].includes(c.status))
+  .sort((a, b) => Number(b.totalFunds) - Number(a.totalFunds))
+  .slice(0, 6);
 
- if (!isMounted) {
-   return null;
- }
+setFeaturedCampaigns(featured);
+}, [campaigns]);
 
- const isLoading = projectsLoading || campaignsLoading;
- const error = projectsError || campaignsError;
+if (!isMounted) {
+return null;
+}
 
- if (error) {
-   return (
-     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-       <motion.div 
-         className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl max-w-md mx-auto border border-red-200"
-         initial={{ opacity: 0, scale: 0.8 }}
-         animate={{ opacity: 1, scale: 1 }}
-         transition={{ duration: 0.5 }}
-       >
-         <div className="text-center">
-           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-             <AlertTriangle className="h-8 w-8 text-red-600" />
-           </div>
-           <h2 className="text-2xl font-bold text-red-600 mb-4">Unable to Load</h2>
-           <p className="text-gray-600 mb-6">{error.message || 'Something went wrong'}</p>
-           <motion.button 
-             onClick={() => window.location.reload()} 
-             className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium"
-             whileHover={{ scale: 1.05 }}
-             whileTap={{ scale: 0.95 }}
-           >
-             Try Again
-           </motion.button>
-         </div>
-       </motion.div>
-     </div>
-   );
- }
+const isLoading = projectsLoading || campaignsLoading;
+const error = projectsError || campaignsError;
 
- if (isLoading) {
-   return (
-     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-       <motion.div 
-         className="text-center"
-         initial={{ opacity: 0 }}
-         animate={{ opacity: 1 }}
-         transition={{ duration: 0.5 }}
-       >
-         <div className="relative mb-8">
-           <motion.div 
-             className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto"
-             animate={{ rotate: 360 }}
-             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-           />
-           <motion.div
-             className="absolute inset-0 flex items-center justify-center"
-             animate={{ scale: [1, 1.1, 1] }}
-             transition={{ duration: 2, repeat: Infinity }}
-           >
-             <Home className="h-10 w-10 text-blue-600" />
-           </motion.div>
-         </div>
-         <motion.h2 
-           className="text-2xl font-bold text-gray-800 mb-2"
-           initial={{ y: 20, opacity: 0 }}
-           animate={{ y: 0, opacity: 1 }}
-           transition={{ delay: 0.2 }}
-         >
-           Loading Ecosystem
-         </motion.h2>
-         <motion.p 
-           className="text-gray-600"
-           initial={{ y: 20, opacity: 0 }}
-           animate={{ y: 0, opacity: 1 }}
-           transition={{ delay: 0.4 }}
-         >
-           Discovering projects and opportunities...
-         </motion.p>
-       </motion.div>
-     </div>
-   );
- }
+if (error) {
+return (
+  <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-cyan-50 flex items-center justify-center p-4">
+    <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl max-w-md mx-auto border border-red-200">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="h-8 w-8 text-red-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Unable to Load</h2>
+        <p className="text-gray-600 mb-6">{error.message || 'Something went wrong'}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
+  </div>
+);
+}
 
- const totalProjects = projects?.length || 0;
- const totalCampaigns = campaigns?.length || 0;
- const activeProjects = featuredProjects.length;
- const activeCampaigns = featuredCampaigns.filter(c => c.status === 'active').length;
- const totalFunds = featuredCampaigns.reduce((sum, c) => sum + parseFloat(formatEther(c.totalFunds)), 0);
+if (isLoading) {
+return (
+  <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-cyan-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="relative mb-8">
+        <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Anchor className="h-10 w-10 text-blue-600 animate-pulse" />
+        </div>
+      </div>
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading Ecosystem</h2>
+      <p className="text-gray-600">Discovering projects and opportunities...</p>
+    </div>
+  </div>
+);
+}
 
- return (
-   <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-     {/* Hero Section - Minimal */}
-     <motion.section 
-       className="relative py-20 px-6"
-       initial="initial"
-       animate="animate"
-       variants={staggerContainer}
-     >
-       {/* Background Elements */}
-       <div className="absolute inset-0 overflow-hidden">
-         <motion.div 
-           className="absolute top-20 left-20 w-64 h-64 bg-blue-400/5 rounded-full blur-3xl"
-           animate={{ 
-             scale: [1, 1.2, 1],
-             rotate: [0, 180, 360] 
-           }}
-           transition={{ 
-             duration: 20,
-             repeat: Infinity,
-             ease: "linear"
-           }}
-         />
-         <motion.div 
-           className="absolute bottom-20 right-20 w-80 h-80 bg-purple-400/5 rounded-full blur-3xl"
-           animate={{ 
-             scale: [1.2, 1, 1.2],
-             rotate: [360, 180, 0] 
-           }}
-           transition={{ 
-             duration: 25,
-             repeat: Infinity,
-             ease: "linear"
-           }}
-         />
-       </div>
-       
-       <div className="relative max-w-6xl mx-auto text-center">
-         <motion.div 
-           className="inline-flex items-center gap-3 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-white/20 mb-8"
-           variants={fadeInUp}
-         >
-           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-             <Rocket className="h-4 w-4 text-white" />
-           </div>
-           <span className="text-gray-700 font-medium">Welcome to Sovereign Seas</span>
-         </motion.div>
-         
-         <motion.h1 
-           className="text-5xl md:text-7xl font-bold text-gray-900 mb-6"
-           variants={fadeInUp}
-         >
-           Fund the{' '}
-           <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-             Future
-           </span>
-         </motion.h1>
-         
-         <motion.p 
-           className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed"
-           variants={fadeInUp}
-         >
-           Discover innovative projects, participate in funding campaigns, and shape the next generation of technology on Celo.
-         </motion.p>
+const totalProjects = projects?.length || 0;
+const totalCampaigns = campaigns?.length || 0;
+const activeProjects = featuredProjects.length;
+const activeCampaigns = featuredCampaigns.filter(c => c.status === 'active').length;
+const totalFunds = featuredCampaigns.reduce((sum, c) => sum + parseFloat(formatEther(c.totalFunds)), 0);
 
-         {/* Search Bar */}
-         <motion.div 
-           className="max-w-2xl mx-auto mb-12"
-           variants={fadeInUp}
-         >
-           <div className="relative">
-             <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-             <input
-               type="text"
-               placeholder="Search projects, campaigns, or technologies..."
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-               className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/90 backdrop-blur-sm border border-white/30 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all text-gray-900 placeholder-gray-500 shadow-lg"
-             />
-           </div>
-         </motion.div>
+return (
+<div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-cyan-50 transition-all duration-300">
+  {/* Hero Section with Geometric Elements - following original design */}
+  <div className="relative overflow-hidden">
+    <div className="container mx-auto px-4 sm:px-6 py-16 md:py-28 relative z-10">
+      <div className="flex flex-col md:flex-row items-center justify-between">
+        <div className="w-full md:w-1/2 mb-10 md:mb-0 text-center md:text-left">
+          <div className="inline-flex items-center px-3 py-1 mb-6 rounded-full bg-blue-100/80 text-blue-700 text-sm font-medium transform hover:scale-105 transition-transform duration-300 backdrop-blur-sm shadow-sm border border-blue-200/50">
+            <Sparkles className="h-3.5 w-3.5 mr-1.5 animate-pulse" />
+            Multi-Token Governance
+          </div>
+          
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 tracking-tight mb-4 relative">
+            Sovereign <span className="text-blue-600 relative">
+              Seas
+              <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500 transform origin-left"></span>
+            </span>
+            <span className="absolute -right-4 -top-4 text-4xl animate-pulse text-blue-400">✦</span>
+          </h1>
+          
+          <div className="relative mb-6">
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-lg mx-auto md:mx-0">
+              A vibrant ecosystem where community voting with 
+              <span className={`font-semibold relative ml-2 ${tokenColors[currentToken]}`}>
+                ${tokens[currentToken]}
+                <span className="absolute right-0 top-0 h-full w-1 bg-current animate-pulse"></span>
+              </span>
+              <br className="hidden xs:block" />
+              powers the future of blockchain innovation.
+            </p>
+            
+            <div className="mt-4 flex flex-wrap gap-2 items-center justify-center md:justify-start">
+              <div className="flex -space-x-1 mr-2">
+                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center ring-2 ring-white text-green-500 text-xs font-bold">C</div>
+                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center ring-2 ring-white text-blue-500 text-xs font-bold">$</div>
+                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center ring-2 ring-white text-purple-500 text-xs font-bold">G</div>
+                <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center ring-2 ring-white text-yellow-500 text-xs font-bold">Ⓖ</div>
+              </div>
+              <span className="text-sm text-gray-500">Vote with multiple tokens</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-3 mb-8">
+            <button 
+              onClick={() => navigate('/campaigns')}
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group border border-blue-400/30 relative overflow-hidden"
+            >
+              <Globe className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+              Explore Campaigns
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+            </button>
+            <button 
+              onClick={() => navigate('/create-campaign')}
+              className="px-6 py-3 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group relative overflow-hidden"
+            >
+              <Rocket className="h-4 w-4 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
+              Launch Campaign
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+            </button>
+          </div>
 
-         {/* Action Buttons */}
-         <motion.div 
-           className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16"
-           variants={staggerContainer}
-         >
-           <motion.button
-             onClick={() => navigate('/projects')}
-             className="px-8 py-4 bg-white text-blue-600 rounded-2xl font-semibold hover:bg-gray-50 transition-all shadow-lg border border-gray-200 flex items-center gap-3 group"
-             variants={scaleOnHover}
-           >
-             <Code className="h-5 w-5" />
-             <span>Explore Projects</span>
-             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-           </motion.button>
-           <motion.button
-             onClick={() => navigate('/campaigns')}
-             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold hover:shadow-xl transition-all flex items-center gap-3 group"
-             variants={scaleOnHover}
-           >
-             <Trophy className="h-5 w-5" />
-             <span>View Campaigns</span>
-             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-           </motion.button>
-         </motion.div>
+          {/* Search Bar */}
+          <div className="max-w-md mx-auto md:mx-0 mb-6">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search projects, campaigns..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/90 backdrop-blur-sm border border-white/30 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-900 placeholder-gray-500 shadow-sm"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="w-full md:w-1/2 flex justify-center md:justify-end">
+          <div className="relative transform hover:scale-105 transition-transform duration-300 w-full max-w-sm">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-2xl transform rotate-6 scale-95 opacity-30 blur-sm"></div>
+            <div className="relative bg-white/90 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-xl border border-blue-100">
+              <div className="flex items-center mb-4">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center justify-center mr-3 text-white">
+                  <Anchor className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-800">Governance Simplified</h3>
+                  <p className="text-sm text-gray-500">Multi-token decision making</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3 mb-6 relative">
+                <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100/50 transform hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                    <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  <span className="text-gray-700">Multi-token governance voting</span>
+                </div>
+                <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100/50 transform hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                    <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  <span className="text-gray-700">Automated fund distribution</span>
+                </div>
+                <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100/50 transform hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                    <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  <span className="text-gray-700">Transparent on-chain governance</span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => navigate('/create-campaign')}
+                className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-lg transition-all flex items-center justify-center group relative overflow-hidden"
+              >
+                Get Started 
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5 group-hover:translate-x-1 transition-transform duration-300" />
+                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  {/* Token Distribution Visualization - following original design */}
+  <div className="container mx-auto px-4 sm:px-6 -mt-4 mb-16">
+    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 sm:p-5 shadow-lg border border-blue-100 overflow-hidden relative">
+      <div className="flex flex-col md:flex-row items-center justify-between">
+        <div className="mb-4 md:mb-0 md:mr-8 w-full md:w-auto">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2 flex items-center justify-center md:justify-start">
+            <BarChart className="h-5 w-5 mr-2 text-blue-500" />
+            Multi-Token Ecosystem
+          </h3>
+          <p className="text-sm text-gray-600 mb-2 text-center md:text-left">Vote with any supported token in our ecosystem</p>
+          
+          <div className="flex space-x-2 flex-wrap justify-center md:justify-start">
+            <div className="flex items-center px-3 py-1 bg-gradient-to-r from-green-100 to-green-200 rounded-full text-green-800 text-sm font-medium border border-green-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300 mb-2">
+              <div className="w-4 h-4 rounded-full bg-green-500 mr-1.5 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">$</span>
+              </div>
+              CELO
+            </div>
+            <div className="flex items-center px-3 py-1 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full text-blue-800 text-sm font-medium border border-blue-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300 mb-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500 mr-1.5 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">$</span>
+              </div>
+              cUSD
+            </div>
+            <div className="flex items-center px-3 py-1 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full text-purple-800 text-sm font-medium border border-purple-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300 mb-2">
+              <div className="w-4 h-4 rounded-full bg-purple-500 mr-1.5 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">$</span>
+              </div>
+              GS
+            </div>
+            <div className="flex items-center px-3 py-1 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-full text-yellow-800 text-sm font-medium border border-yellow-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300 mb-2">
+              <div className="w-4 h-4 rounded-full bg-yellow-500 mr-1.5 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">$</span>
+              </div>
+              GLOdollar
+            </div>
+          </div>
+        </div>
+        
+        <div className="w-full md:w-1/2">
+          <div className="flex items-center h-6 rounded-full overflow-hidden bg-gray-100/80 shadow-inner">
+            <div className="h-full bg-green-500 flex items-center justify-center relative group overflow-hidden" style={{ width: '45%' }}>
+              <span className="text-xs text-white font-medium px-2 group-hover:scale-110 transition-transform duration-300 hidden sm:block">CELO</span>
+              <span className="text-xs text-white font-medium px-1 sm:hidden">C</span>
+            </div>
+            <div className="h-full bg-blue-500 flex items-center justify-center relative group overflow-hidden" style={{ width: '25%' }}>
+              <span className="text-xs text-white font-medium px-2 group-hover:scale-110 transition-transform duration-300 hidden sm:block">cUSD</span>
+              <span className="text-xs text-white font-medium px-1 sm:hidden">$</span>
+            </div>
+            <div className="h-full bg-purple-500 flex items-center justify-center relative group overflow-hidden" style={{ width: '20%' }}>
+              <span className="text-xs text-white font-medium px-2 group-hover:scale-110 transition-transform duration-300 hidden sm:block">GS</span>
+              <span className="text-xs text-white font-medium px-1 sm:hidden">G</span>
+            </div>
+            <div className="h-full bg-yellow-500 flex items-center justify-center relative group overflow-hidden" style={{ width: '10%' }}>
+              <span className="text-xs text-white font-medium px-1 group-hover:scale-110 transition-transform duration-300">GLO</span>
+            </div>
+          </div>
+          
+          <div className="flex justify-between mt-2 text-xs text-gray-500 flex-wrap">
+            <div className="flex items-center">
+              <Star className="h-3 w-3 mr-1 text-green-500" />
+              <span>CELO: 45%</span>
+            </div>
+            <div className="flex items-center">
+              <Star className="h-3 w-3 mr-1 text-blue-500" />
+              <span>cUSD: 25%</span>
+            </div>
+            <div className="flex items-center">
+              <Star className="h-3 w-3 mr-1 text-purple-500" />
+              <span>GS: 20%</span>
+            </div>
+            <div className="flex items-center">
+              <Star className="h-3 w-3 mr-1 text-yellow-500" />
+              <span>GLO: 10%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  {/* Stats Section (Floating Cards) - following original design */}
+  <div className="container mx-auto px-4 sm:px-6 mb-16 relative z-20">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+      <StatCard 
+        icon={Activity} 
+        label="Active Campaigns" 
+        value={totalCampaigns} 
+        gradient="from-blue-500 to-indigo-600"
+      />
+      <StatCard 
+        icon={Lightbulb} 
+        label="Total Projects" 
+        value={totalProjects} 
+        gradient="from-purple-500 to-pink-600"
+      />
+      <StatCard 
+        icon={Award} 
+        label="Total Votes" 
+        value="1,247" 
+        gradient="from-green-500 to-emerald-600"
+      />
+      <StatCard 
+        icon={DollarSign} 
+        label="Total Value" 
+        value={`${totalFunds.toFixed(1)}K CELO`} 
+        gradient="from-orange-500 to-red-600"
+      />
+    </div>
+  </div>
+  
+  {/* Featured Campaigns Section - following original design */}
+  <div className="container mx-auto px-4 sm:px-6 pb-16">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center mb-3 sm:mb-0">
+        <Rocket className="h-5 w-5 text-blue-500 mr-2" />
+        Featured Campaigns
+        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">New</span>
+      </h2>
+      {featuredCampaigns.length > 0 && (
+        <button 
+          onClick={() => navigate('/campaigns')}
+          className="px-4 py-2 rounded-full text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors flex items-center group border border-blue-200 shadow-sm hover:shadow-md"
+        >
+          View All <ArrowRight className="ml-1 h-3.5 w-3.5 group-hover:translate-x-1 transition-transform duration-300" />
+        </button>
+      )}
+    </div>
+    
+    {featuredCampaigns.length > 0 ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+        {featuredCampaigns.map((campaign, index) => (
+          <CampaignCard key={campaign.id.toString()} campaign={campaign} index={index} />
+        ))}
+      </div>
+    ) : (
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 sm:p-8 text-center border border-blue-100 shadow-lg relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100/50 via-transparent to-indigo-100/50"></div>
+        <div className="relative z-10">
+          <div className="inline-flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 mb-4 text-white">
+            <Rocket className="h-6 w-6 sm:h-8 sm:w-8" />
+          </div>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">No Campaigns Yet</h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm sm:text-base">Be the first to create a campaign and start your blockchain journey!</p>
+          <button 
+            onClick={() => navigate('/create-campaign')}
+            className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
+          >
+            <Lightbulb className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+            Start a Campaign
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
 
-         {/* Stats */}
-         <motion.div 
-           className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto"
-           variants={staggerContainer}
-         >
-           <StatCard 
-             icon={Code} 
-             label="Total Projects" 
-             value={totalProjects} 
-             gradient="from-blue-500 to-indigo-600"
-           />
-           <StatCard 
-             icon={Trophy} 
-             label="Active Campaigns" 
-             value={totalCampaigns} 
-             gradient="from-purple-500 to-pink-600"
-           />
-           <StatCard 
-             icon={Coins} 
-             label="CELO Raised" 
-             value={`${totalFunds.toFixed(1)}K`} 
-             gradient="from-green-500 to-emerald-600"
-           />
-           <StatCard 
-             icon={Activity} 
-             label="Live Projects" 
-             value={activeProjects + activeCampaigns} 
-             gradient="from-orange-500 to-red-600"
-           />
-         </motion.div>
-       </div>
-     </motion.section>
-
-     <div className="max-w-7xl mx-auto px-6 pb-20">
-       {/* Featured Projects Section */}
-       <motion.section 
-         className="mb-20"
-         initial="initial"
-         whileInView="animate"
-         viewport={{ once: true }}
-         variants={staggerContainer}
-       >
-         <motion.div 
-           className="flex items-center justify-between mb-12"
-           variants={fadeInUp}
-         >
-           <div>
-             <h2 className="text-4xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-               <Star className="h-8 w-8 text-yellow-500" />
-               Featured Projects
-             </h2>
-             <p className="text-gray-600 text-lg">Innovative projects making waves in the ecosystem</p>
-           </div>
-           <motion.button
-             onClick={() => navigate('/projects')}
-             className="flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium group"
-             whileHover={{ scale: 1.05 }}
-             whileTap={{ scale: 0.95 }}
-           >
-             <span>View All Projects</span>
-             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-           </motion.button>
-         </motion.div>
-
-         {featuredProjects.length > 0 ? (
-           <motion.div 
-             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-             variants={staggerContainer}
-           >
-             {featuredProjects.map(project => (
-               <motion.div key={project.id.toString()} variants={fadeInUp}>
-                 <ProjectCard project={project} />
-               </motion.div>
-             ))}
-           </motion.div>
-         ) : (
-           <motion.div 
-             className="text-center py-16 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200"
-             variants={fadeInUp}
-           >
-             <Code className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-             <h3 className="text-2xl font-semibold text-gray-700 mb-4">No Featured Projects Yet</h3>
-             <p className="text-gray-600 mb-8 text-lg">Be the first to create an innovative project</p>
-             <motion.button
-               onClick={() => navigate('/create-project')}
-               className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
-             >
-               Create Project
-             </motion.button>
-           </motion.div>
-         )}
-       </motion.section>
-
-       {/* Featured Campaigns Section */}
-       <motion.section 
-         className="mb-20"
-         initial="initial"
-         whileInView="animate"
-         viewport={{ once: true }}
-         variants={staggerContainer}
-       >
-         <motion.div 
-           className="flex items-center justify-between mb-12"
-           variants={fadeInUp}
-         >
-           <div>
-             <h2 className="text-4xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-               <Trophy className="h-8 w-8 text-purple-500" />
-               Active Campaigns
-             </h2>
-             <p className="text-gray-600 text-lg">Live funding opportunities and competitions</p>
-           </div>
-           <motion.button
-             onClick={() => navigate('/campaigns')}
-             className="flex items-center gap-3 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium group"
-             whileHover={{ scale: 1.05 }}
-             whileTap={{ scale: 0.95 }}
-           >
-             <span>View All Campaigns</span>
-             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-           </motion.button>
-         </motion.div>
-
-         {featuredCampaigns.length > 0 ? (
-           <motion.div 
-             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-             variants={staggerContainer}
-           >
-             {featuredCampaigns.map(campaign => (
-               <motion.div key={campaign.id.toString()} variants={fadeInUp}>
-                 <CampaignCard campaign={campaign} />
-               </motion.div>
-             ))}
-           </motion.div>
-         ) : (
-           <motion.div 
-             className="text-center py-16 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200"
-             variants={fadeInUp}
-           >
-             <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-             <h3 className="text-2xl font-semibold text-gray-700 mb-4">No Active Campaigns</h3>
-             <p className="text-gray-600 mb-8 text-lg">Be the first to start a funding campaign</p>
-             <motion.button
-               onClick={() => navigate('/create-campaign')}
-               className="px-8 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium"
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
-             >
-               Start Campaign
-             </motion.button>
-           </motion.div>
-         )}
-       </motion.section>
-
-       {/* Roadmap Section */}
-       <RoadmapSection />
-
-       {/* Quick Actions Section */}
-       <motion.section 
-         className="mt-20"
-         initial="initial"
-         whileInView="animate"
-         viewport={{ once: true }}
-         variants={staggerContainer}
-       >
-         <motion.div 
-           className="bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200 p-12 shadow-xl"
-           variants={fadeInUp}
-         >
-           <motion.h2 
-             className="text-3xl font-bold text-gray-900 mb-12 text-center"
-             variants={fadeInUp}
-           >
-             Ready to Get Started?
-           </motion.h2>
-           <motion.div 
-             className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-             variants={staggerContainer}
-           >
-             <motion.div 
-               className="text-center p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 group hover:shadow-lg transition-all duration-300"
-               variants={fadeInUp}
-               whileHover={{ y: -5 }}
-             >
-               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                 <Code className="h-10 w-10 text-white" />
+  {/* Featured Projects Section */}
+  <div className="container mx-auto px-4 sm:px-6 pb-16">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center mb-3 sm:mb-0">
+        <Code className="h-5 w-5 text-purple-500 mr-2" />
+        Featured Projects
+        <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">Active</span>
+      </h2>
+      {featuredProjects.length > 0 && (
+        <button 
+          onClick={() => navigate('/projects')}
+          className="px-4 py-2 rounded-full text-purple-600 text-sm font-medium hover:bg-purple-50 transition-colors flex items-center group border border-purple-200 shadow-sm hover:shadow-md"
+        >
+          View All <ArrowRight className="ml-1 h-3.5 w-3.5 group-hover:translate-x-1 transition-transform duration-300" />
+        </button>
+      )}
+    </div>
+    
+    {featuredProjects.length > 0 ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+        {featuredProjects.map(project => (
+          <ProjectCard key={project.id.toString()} project={project} />
+        ))}
+      </div>
+    ) : (
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 sm:p-8 text-center border border-blue-100 shadow-lg relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-100/50 via-transparent to-indigo-100/50"></div>
+        <div className="relative z-10">
+          <div className="inline-flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 mb-4 text-white">
+            <Code className="h-6 w-6 sm:h-8 sm:w-8" />
+          </div>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">No Projects Yet</h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm sm:text-base">Be the first to create an innovative project!</p>
+          <button 
+            onClick={() => navigate('/create-project')}
+            className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
+          >
+            <Code className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+            Create Project
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+  
+  {/* How It Works Section - following original design */}
+  <div className="bg-gradient-to-b from-indigo-50 via-blue-50 to-cyan-50 py-12 sm:py-16 relative overflow-hidden">
+    <div className="container mx-auto px-4 sm:px-6">
+      <div className="text-center mb-8 sm:mb-12">
+        <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full mb-3">Simple Process</span>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-4">How Sovereign Seas Works</h2>
+        <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">A seamless multi-token governance platform for blockchain innovation</p>
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 relative">
+        {/* Connecting line (visible on md screens and up) */}
+        <div className="hidden md:block absolute top-24 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-200 via-indigo-300 to-blue-200"></div>
+        
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-xl border border-blue-100 relative overflow-hidden group hover:shadow-2xl transition-all hover:-translate-y-2 duration-500">
+           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
+           <div className="absolute top-0 right-0 h-16 sm:h-24 w-16 sm:w-24 bg-blue-100/50 rounded-bl-full opacity-50 group-hover:bg-blue-200/50 transition-colors"></div>
+           
+           <div className="relative z-10">
+             <div className="relative mb-6">
+               <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold mb-4 shadow-lg group-hover:scale-110 transition-transform duration-500">1</div>
+               <div className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4">
+                 <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 animate-pulse" />
                </div>
-               <h3 className="text-2xl font-semibold text-gray-900 mb-4">Create a Project</h3>
-               <p className="text-gray-600 mb-8 leading-relaxed">Share your innovative idea with the community and attract collaborators</p>
-               <motion.button
-                 onClick={() => navigate('/create-project')}
-                 className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
-                 whileHover={{ scale: 1.05 }}
-                 whileTap={{ scale: 0.95 }}
-               >
-                 Start Building
-               </motion.button>
-             </motion.div>
+             </div>
              
-             <motion.div 
-               className="text-center p-8 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-100 group hover:shadow-lg transition-all duration-300"
-               variants={fadeInUp}
-               whileHover={{ y: -5 }}
-             >
-               <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                 <Trophy className="h-10 w-10 text-white" />
+             <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 flex items-center">
+               Create
+               <ArrowRight className="h-4 w-4 ml-2 text-blue-500 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-500" />
+             </h3>
+             <p className="text-xs sm:text-sm text-gray-600 mb-4">Start your own campaign with custom parameters and multiple token support.</p>
+             
+             <div className="flex flex-wrap gap-2">
+               <div className="flex items-center px-2 py-1 bg-blue-50 rounded-full text-blue-700 text-xs">
+                 <Rocket className="h-3 w-3 mr-1" />
+                 <span>Launch</span>
                </div>
-               <h3 className="text-2xl font-semibold text-gray-900 mb-4">Launch a Campaign</h3>
-               <p className="text-gray-600 mb-8 leading-relaxed">Fund innovative projects and discover the next big breakthrough</p>
-               <motion.button
-                 onClick={() => navigate('/create-campaign')}
-                 className="px-8 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium"
-                 whileHover={{ scale: 1.05 }}
-                 whileTap={{ scale: 0.95 }}
-               >
-                 Start Funding
-               </motion.button>
-             </motion.div>
-           </motion.div>
-         </motion.div>
-       </motion.section>
+               <div className="flex items-center px-2 py-1 bg-blue-50 rounded-full text-blue-700 text-xs">
+                 <CreditCard className="h-3 w-3 mr-1" />
+                 <span>Multi-Token</span>
+               </div>
+             </div>
+           </div>
+         </div>
+         
+         <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-xl border border-blue-100 relative overflow-hidden group hover:shadow-2xl transition-all hover:-translate-y-2 duration-500">
+           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
+           <div className="absolute top-0 right-0 h-16 sm:h-24 w-16 sm:w-24 bg-blue-100/50 rounded-bl-full opacity-50 group-hover:bg-blue-200/50 transition-colors"></div>
+           
+           <div className="relative z-10">
+             <div className="relative mb-6">
+               <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold mb-4 shadow-lg group-hover:scale-110 transition-transform duration-500">2</div>
+               <div className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4">
+                 <Award className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 animate-pulse" />
+               </div>
+             </div>
+             
+             <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 flex items-center">
+               Vote
+               <ArrowRight className="h-4 w-4 ml-2 text-blue-500 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-500" />
+             </h3>
+             <p className="text-xs sm:text-sm text-gray-600 mb-4">Support initiatives you believe in using CELO, cUSD, GS, or GLOdollar tokens.</p>
+             
+             <div className="flex flex-wrap gap-2">
+               <div className="flex items-center px-2 py-1 bg-green-50 rounded-full text-green-700 text-xs">
+                 <DollarSign className="h-3 w-3 mr-1" />
+                 <span>CELO</span>
+               </div>
+               <div className="flex items-center px-2 py-1 bg-blue-50 rounded-full text-blue-700 text-xs">
+                 <DollarSign className="h-3 w-3 mr-1" />
+                 <span>cUSD</span>
+               </div>
+               <div className="flex items-center px-2 py-1 bg-purple-50 rounded-full text-purple-700 text-xs">
+                 <DollarSign className="h-3 w-3 mr-1" />
+                 <span>GS</span>
+               </div>
+             </div>
+           </div>
+         </div>
+         
+         <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-xl border border-blue-100 relative overflow-hidden group hover:shadow-2xl transition-all hover:-translate-y-2 duration-500">
+           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
+           <div className="absolute top-0 right-0 h-16 sm:h-24 w-16 sm:w-24 bg-blue-100/50 rounded-bl-full opacity-50 group-hover:bg-blue-200/50 transition-colors"></div>
+           
+           <div className="relative z-10">
+             <div className="relative mb-6">
+               <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold mb-4 shadow-lg group-hover:scale-110 transition-transform duration-500">3</div>
+               <div className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4">
+                 <BarChart className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 animate-pulse" />
+               </div>
+             </div>
+             
+             <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 flex items-center">
+               Receive
+               <CheckCircle className="h-4 w-4 ml-2 text-blue-500 opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 transition-all duration-500" />
+             </h3>
+             <p className="text-xs sm:text-sm text-gray-600 mb-4">Automatic distribution of funds through secure smart contracts.</p>
+             
+             <div className="flex flex-wrap gap-2">
+               <div className="flex items-center px-2 py-1 bg-blue-50 rounded-full text-blue-700 text-xs">
+                 <Shield className="h-3 w-3 mr-1" />
+                 <span>Secure</span>
+               </div>
+               <div className="flex items-center px-2 py-1 bg-blue-50 rounded-full text-blue-700 text-xs">
+                 <Activity className="h-3 w-3 mr-1" />
+                 <span>Automated</span>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
      </div>
    </div>
- );
+ </div>
+);
 }

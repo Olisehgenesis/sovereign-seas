@@ -43,7 +43,7 @@ export default function Header() {
   const { authenticated, logout, ready } = usePrivy();
   const { login } = useLogin();
 
-  // Handle scroll effect
+  // Handle scroll effect - more subtle than original
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -99,28 +99,30 @@ export default function Header() {
     <div className="relative z-50">
       <Disclosure as="nav" className={`fixed w-full top-0 z-50 transition-all duration-300 ${
         isScrolled 
-          ? 'bg-blue-900/95 backdrop-blur-xl shadow-2xl border-b border-blue-800/30' 
-          : 'bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900'
+          ? 'bg-white/90 backdrop-blur-md shadow-md border-b border-blue-200/50' 
+          : 'bg-white/80 backdrop-blur-sm border-b border-blue-200/30'
       }`}>
         {({ open, close }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 items-center justify-between">
                 
-                {/* Logo */}
+                {/* Logo - following original design */}
                 <Link to="/" className="flex items-center group">
-                  <div className="relative h-10 w-10 mr-3">
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg group-hover:shadow-blue-400/50 transition-all duration-300 group-hover:scale-105"></div>
-                    <div className="absolute inset-0.5 rounded-xl bg-white flex items-center justify-center">
-                      <Anchor className="h-5 w-5 text-blue-600 group-hover:rotate-12 transition-transform duration-300" />
+                  <div className="relative h-8 w-8 mr-3">
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-sm group-hover:shadow-blue-400/30 transition-all duration-300 group-hover:scale-105 flex items-center justify-center">
+                      <Anchor className="h-4 w-4 text-white group-hover:rotate-12 transition-transform duration-300" />
                     </div>
                   </div>
-                  <span className="text-xl font-bold text-white">
-                    Sovereign<span className="text-blue-300">Seas</span>
+                  <span className="text-xl font-bold text-gray-800">
+                    Sovereign<span className="text-blue-600 relative">
+                      Seas
+                      <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-400 to-indigo-500"></span>
+                    </span>
                   </span>
                 </Link>
 
-                {/* Desktop Navigation */}
+                {/* Desktop Navigation - simplified styling */}
                 <div className="hidden md:flex items-center space-x-1">
                   {navigation.map((item) => {
                     const NavIcon = item.icon;
@@ -130,10 +132,10 @@ export default function Header() {
                       <Link
                         key={item.name}
                         to={item.href}
-                        className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                        className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
                           isActive 
-                            ? 'bg-blue-600 text-white shadow-lg' 
-                            : 'text-blue-100 hover:text-white hover:bg-blue-700/50'
+                            ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                            : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                         }`}
                       >
                         <NavIcon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
@@ -142,14 +144,14 @@ export default function Header() {
                     );
                   })}
                   
-                  {/* Create Dropdown */}
+                  {/* Create Dropdown - simplified */}
                   <div className="relative">
                     <button
                       onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                      className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                      className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
                         showCreateDropdown 
-                          ? 'bg-blue-600 text-white shadow-lg' 
-                          : 'text-blue-100 hover:text-white hover:bg-blue-700/50'
+                          ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                          : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                       }`}
                     >
                       <PlusCircle className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
@@ -167,7 +169,7 @@ export default function Header() {
                       leaveTo="transform opacity-0 scale-95 translate-y-1"
                     >
                       <div 
-                        className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50"
+                        className="absolute right-0 mt-2 w-72 bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border border-blue-200/50 py-3 z-50"
                         onMouseLeave={() => setShowCreateDropdown(false)}
                       >
                         {createOptions.map((option) => {
@@ -181,8 +183,8 @@ export default function Header() {
                               }}
                               className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors duration-200 group"
                             >
-                              <div className="bg-blue-100 p-3 rounded-xl mr-4 group-hover:bg-blue-200 transition-colors">
-                                <OptionIcon className="h-5 w-5 text-blue-600" />
+                              <div className="bg-blue-100 p-2.5 rounded-lg mr-4 group-hover:bg-blue-200 transition-colors">
+                                <OptionIcon className="h-4 w-4 text-blue-600" />
                               </div>
                               <div className="text-left">
                                 <div className="font-semibold text-sm text-gray-900">{option.name}</div>
@@ -196,22 +198,22 @@ export default function Header() {
                   </div>
                 </div>
 
-                {/* Right Side Actions */}
+                {/* Right Side Actions - simplified */}
                 <div className="flex items-center space-x-2">
                   
                   {/* Authenticated User Actions */}
                   {authenticated && (
                     <>
                       {/* Notifications */}
-                      <button className="p-2.5 rounded-xl text-blue-100 hover:text-white hover:bg-blue-700/50 relative transition-all duration-200 group">
-                        <Bell className="h-5 w-5 group-hover:animate-pulse" />
+                      <button className="p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 relative transition-all duration-200 group">
+                        <Bell className="h-4 w-4 group-hover:animate-pulse" />
                         <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
                       </button>
 
                       {/* Wallet Button */}
                       <button
                         onClick={openWalletModal}
-                        className="flex items-center px-4 py-2.5 rounded-xl text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200 group"
+                        className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 group"
                       >
                         <Wallet className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
                         <span className="hidden sm:inline">
@@ -222,22 +224,22 @@ export default function Header() {
                       {/* Profile Button */}
                       <Link
                         to="/app/me"
-                        className="p-2.5 rounded-xl text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200 group"
+                        className="p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 group"
                       >
-                        <User className="h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
+                        <User className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                       </Link>
 
                       {/* Dashboard Dropdown */}
                       <div className="relative hidden sm:block">
                         <button
                           onClick={() => setShowDropdown(!showDropdown)}
-                          className={`p-2.5 rounded-xl transition-all duration-200 group ${
+                          className={`p-2 rounded-lg transition-all duration-200 group ${
                             showDropdown 
-                              ? 'bg-blue-600 text-white shadow-lg' 
-                              : 'text-blue-100 hover:text-white hover:bg-blue-700/50'
+                              ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                              : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                           }`}
                         >
-                          <Settings className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+                          <Settings className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
                         </button>
                         
                         <Transition
@@ -250,7 +252,7 @@ export default function Header() {
                           leaveTo="transform opacity-0 scale-95 translate-y-1"
                         >
                           <div 
-                            className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50"
+                            className="absolute right-0 mt-2 w-52 bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border border-blue-200/50 py-3 z-50"
                             onMouseLeave={() => setShowDropdown(false)}
                           >
                             <Link
@@ -294,19 +296,20 @@ export default function Header() {
                     </>
                   )}
 
-                  {/* Connect Wallet Button */}
+                  {/* Connect Wallet Button - following original design */}
                   {!hideConnectBtn && !authenticated && (
                     <button 
                       onClick={handleLogin}
                       disabled={!ready} 
-                      className="px-6 py-2.5 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white rounded-xl text-sm font-semibold hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group"
                     >
                       Connect Wallet
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                     </button>
                   )}
 
                   {/* Mobile Menu Button */}
-                  <Disclosure.Button className="md:hidden p-2.5 rounded-xl text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200">
+                  <Disclosure.Button className="md:hidden p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200">
                     <span className="sr-only">Open main menu</span>
                     {open ? (
                       <X className="h-5 w-5" aria-hidden="true" />
@@ -318,8 +321,8 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Mobile Menu */}
-            <Disclosure.Panel className="md:hidden bg-blue-900/98 backdrop-blur-xl border-t border-blue-800/30">
+            {/* Mobile Menu - simplified styling */}
+            <Disclosure.Panel className="md:hidden bg-white/95 backdrop-blur-md border-t border-blue-200/50 shadow-lg">
               <div className="px-4 py-4 space-y-2">
                 {navigation.map((item) => {
                   const NavIcon = item.icon;
@@ -330,10 +333,10 @@ export default function Header() {
                       key={item.name}
                       to={item.href}
                       onClick={() => close()}
-                      className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                         isActive 
-                          ? 'bg-blue-600 text-white shadow-lg' 
-                          : 'text-blue-100 hover:text-white hover:bg-blue-700/50'
+                          ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                          : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                       }`}
                     >
                       <NavIcon className="h-4 w-4 mr-3" />
@@ -343,8 +346,8 @@ export default function Header() {
                 })}
                 
                 {/* Create Options in Mobile */}
-                <div className="pt-4 border-t border-blue-800/30">
-                  <div className="px-4 py-2 text-xs font-semibold text-blue-300 uppercase tracking-wide">
+                <div className="pt-4 border-t border-blue-200/50">
+                  <div className="px-4 py-2 text-xs font-semibold text-blue-600 uppercase tracking-wide">
                     Create New
                   </div>
                   {createOptions.map((option) => {
@@ -354,7 +357,7 @@ export default function Header() {
                         key={option.name}
                         to={option.href}
                         onClick={() => close()}
-                        className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200"
+                        className="flex items-center px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                       >
                         <OptionIcon className="h-4 w-4 mr-3" />
                         {option.name}
@@ -365,14 +368,14 @@ export default function Header() {
                 
                 {/* Mobile User Menu */}
                 {authenticated && (
-                  <div className="pt-4 border-t border-blue-800/30">
-                    <div className="px-4 py-2 text-xs font-semibold text-blue-300 uppercase tracking-wide">
+                  <div className="pt-4 border-t border-blue-200/50">
+                    <div className="px-4 py-2 text-xs font-semibold text-blue-600 uppercase tracking-wide">
                       Account
                     </div>
                     <Link
                       to="/app/me"
                       onClick={() => close()}
-                      className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200"
+                      className="flex items-center px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                     >
                       <User className="h-4 w-4 mr-3" />
                       Profile
@@ -380,7 +383,7 @@ export default function Header() {
                     <Link
                       to="/campaign/mycampaigns"
                       onClick={() => close()}
-                      className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200"
+                      className="flex items-center px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                     >
                       <Globe className="h-4 w-4 mr-3" />
                       My Campaigns
@@ -388,7 +391,7 @@ export default function Header() {
                     <Link
                       to="/votes"
                       onClick={() => close()}
-                      className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200"
+                      className="flex items-center px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                     >
                       <Award className="h-4 w-4 mr-3" />
                       My Votes
@@ -396,7 +399,7 @@ export default function Header() {
                     <Link
                       to="/myprojects"
                       onClick={() => close()}
-                      className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200"
+                      className="flex items-center px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                     >
                       <FileCode className="h-4 w-4 mr-3" />
                       My Projects
@@ -406,7 +409,7 @@ export default function Header() {
                         openWalletModal();
                         close();
                       }}
-                      className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700/50 transition-all duration-200"
+                      className="flex items-center w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                     >
                       <Wallet className="h-4 w-4 mr-3" />
                       My Wallet
@@ -416,10 +419,27 @@ export default function Header() {
                         logout();
                         close();
                       }}
-                      className="flex items-center w-full px-4 py-3 rounded-xl text-sm font-medium text-red-300 hover:text-red-200 hover:bg-red-900/30 transition-all duration-200"
+                      className="flex items-center w-full px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:text-red-200 hover:bg-red-50 transition-all duration-200"
                     >
                       <Settings className="h-4 w-4 mr-3" />
                       Logout
+                    </button>
+                  </div>
+                )}
+
+                {/* Mobile Connect Button */}
+                {!hideConnectBtn && !authenticated && (
+                  <div className="pt-4 border-t border-blue-200/50">
+                    <button 
+                      onClick={() => {
+                        handleLogin();
+                        close();
+                      }}
+                      disabled={!ready} 
+                      className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-xl transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                    >
+                      Connect Wallet
+                      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                     </button>
                   </div>
                 )}
