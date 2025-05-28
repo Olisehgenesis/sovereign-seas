@@ -1587,7 +1587,7 @@ export default function ProjectView() {
                
                <div className="space-y-3">
                  <button
-                   onClick={() => navigate(`/project/edit/${project.id}`)}
+                   onClick={() => navigate(`/app/project/edit/${project.id}`)}
                    className="w-full flex items-center justify-center gap-2 p-4 bg-white hover:bg-gray-50 rounded-xl transition-all duration-200 border border-green-200 text-green-700 hover:text-green-800 font-medium shadow-sm hover:shadow-md"
                  >
                    <Edit className="h-4 w-4" />

@@ -633,7 +633,7 @@ export default function ProfilePage() {
                 <CampaignCard
                   key={campaign.campaign.id.toString()}
                   campaign={campaign.campaign}
-                  onClick={() => navigate(`/explorers/campaign/${campaign.campaign.id}`)}
+                  onClick={() => navigate(`/explorer/campaign/${campaign.campaign.id}`)}
                 />
               ))}
               
