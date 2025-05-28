@@ -31,18 +31,21 @@ import {
   XCircle,
   X,
   Loader2,
-  Search
+  Search,
+  Settings,
+  Shield,
+  RotateCcw
 } from 'lucide-react';
 import { type AbiFunction } from 'viem';
 
-import { useCampaignDetails, useApproveProject, useAddCampaignAdmin, useDistributeFunds, useIsCampaignAdmin } from '@/hooks/useCampaignMethods';
+import { useCampaignDetails, useApproveProject, useAddCampaignAdmin, useDistributeFunds, useIsCampaignAdmin, useSortedProjects } from '@/hooks/useCampaignMethods';
 import VoteModal from '@/components/voteModal';
+import { getProjectVotesByCampaignId } from './voteutils';
 import { useAllProjects, formatProjectForDisplay, useAddProjectToCampaign, useCanBypassFees } from '@/hooks/useProjectMethods';
 import {
   useVote,
   useUserTotalVotesInCampaign,
   useCampaignTokenAmount,
-
 } from '@/hooks/useVotingMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 
@@ -58,31 +61,86 @@ interface Project {
   description?: string;
 }
 
-// Countdown Timer Hook
-function useCountdown(endTime: number) {
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+// Enhanced countdown timer hook that handles "preparing" state
+function useCountdown(startTime: number, endTime: number) {
+  const [timeLeft, setTimeLeft] = useState({ 
+    days: 0, 
+    hours: 0, 
+    minutes: 0, 
+    seconds: 0,
+    phase: 'loading' as 'preparing' | 'active' | 'ended' | 'loading'
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
-      const difference = endTime - now;
-
-      if (difference > 0) {
+      
+      if (now < startTime) {
+        // Campaign hasn't started yet - show countdown to start
+        const difference = startTime - now;
         setTimeLeft({
-          hours: Math.floor(difference / 3600),
+          days: Math.floor(difference / 86400),
+          hours: Math.floor((difference % 86400) / 3600),
           minutes: Math.floor((difference % 3600) / 60),
-          seconds: difference % 60
+          seconds: difference % 60,
+          phase: 'preparing'
+        });
+      } else if (now >= startTime && now <= endTime) {
+        // Campaign is active - show countdown to end
+        const difference = endTime - now;
+        setTimeLeft({
+          days: Math.floor(difference / 86400),
+          hours: Math.floor((difference % 86400) / 3600),
+          minutes: Math.floor((difference % 3600) / 60),
+          seconds: difference % 60,
+          phase: 'active'
         });
       } else {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        // Campaign has ended
+        setTimeLeft({
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          phase: 'ended'
+        });
         clearInterval(timer);
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [endTime]);
+  }, [startTime, endTime]);
 
   return timeLeft;
+}
+
+// New hook to check if user is campaign admin
+function useIsCampaignAdminCheck(contractAddress: Address, campaignId: bigint, userAddress?: Address) {
+  const { data, isLoading, error } = useReadContracts({
+    contracts: [
+      {
+        address: contractAddress,
+        abi: [{
+          inputs: [{ name: 'campaignId', type: 'uint256' }, { name: 'admin', type: 'address' }],
+          name: 'isCampaignAdmin',
+          outputs: [{ name: '', type: 'bool' }],
+          stateMutability: 'view',
+          type: 'function'
+        } satisfies AbiFunction],
+        functionName: 'isCampaignAdmin',
+        args: [campaignId, userAddress || '0x0000000000000000000000000000000000000000']
+      }
+    ],
+    query: {
+      enabled: !!contractAddress && !!campaignId && !!userAddress
+    }
+  });
+
+  return {
+    isAdmin: data?.[0]?.result as boolean || false,
+    isLoading,
+    error
+  };
 }
 
 export default function CampaignView() {
@@ -96,21 +154,28 @@ export default function CampaignView() {
   const [showVoteModal, setShowVoteModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'approved' | 'pending'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
   const campaignId = id ? BigInt(id) : BigInt(0);
   
-  // All hooks remain the same...
+  // Contract hooks
   const { campaignDetails, isLoading: campaignLoading } = useCampaignDetails(
     contractAddress,
     campaignId
   );
   
   const { projects: allProjects, isLoading: projectsLoading } = useAllProjects(contractAddress);
+  console.log('Campaign view - allProjects:', allProjects?.length);
   
+  // Check if user is admin
+  const { isAdmin, isLoading: adminLoading } = useIsCampaignAdminCheck(
+    contractAddress, 
+    campaignId, 
+    address
+  );
   
   // Get token amounts for CELO and cUSD
   const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN;
@@ -138,70 +203,224 @@ export default function CampaignView() {
     vote, 
     isPending: isVoting, 
   } = useVote(contractAddress);
-  
-  
 
-  // Data processing logic remains the same...
-  const campaignProjectsBasic = useMemo(() => {
-    return allProjects?.filter(projectDetails => {
-      const formatted = formatProjectForDisplay(projectDetails);
-      return formatted && projectDetails.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-    }).map(formatProjectForDisplay).filter(Boolean) || [];
-  }, [allProjects, campaignId]);
-
-  const projectIds = useMemo(() => 
-    campaignProjectsBasic
-      .filter((project): project is NonNullable<typeof project> => project != null && project.id !== undefined)
-      .map(project => BigInt(project.id)), 
-    [campaignProjectsBasic]
+  // Get sorted (approved) projects from contract
+  const { sortedProjectIds, isLoading: sortedProjectsLoading, refetch: refetchSorted } = useSortedProjects(
+    contractAddress,
+    campaignId
   );
 
+  // Create a Set of approved project IDs for O(1) lookup
+  const approvedProjectIds = useMemo(() => {
+    return new Set(sortedProjectIds.map(id => id.toString()));
+  }, [sortedProjectIds]);
+
+  // Data processing logic
+  const campaignProjectsBasic = useMemo(() => {
+    console.log('Processing campaignProjectsBasic with:', {
+      allProjectsLength: allProjects?.length,
+      campaignId: campaignId.toString(),
+      allProjects: allProjects?.map(p => ({
+        id: p.project.id.toString(),
+        campaignIds: p.project.campaignIds.map(id => id.toString())
+      }))
+    });
+
+    const filtered = allProjects?.filter(projectDetails => {
+      const formatted = formatProjectForDisplay(projectDetails);
+      const hasCampaign = projectDetails.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
+      console.log('Project filtering:', {
+        projectId: projectDetails.project.id.toString(),
+        campaignIds: projectDetails.project.campaignIds.map(id => id.toString()),
+        hasCampaign,
+        formatted: !!formatted
+      });
+      return formatted && hasCampaign;
+    }).map(formatProjectForDisplay).filter(Boolean) || [];
+
+    console.log('campaignProjectsBasic result:', {
+      filteredLength: filtered.length,
+      filteredProjects: filtered.map(p => ({
+        id: p.id?.toString(),
+        name: p.name
+      }))
+    });
+    return filtered;
+  }, [allProjects, campaignId]);
+
+  const projectIds = useMemo(() => {
+    const ids = campaignProjectsBasic
+      .filter((project): project is NonNullable<typeof project> => project != null && project.id !== undefined)
+      .map(project => BigInt(project.id));
+    
+    console.log('Generated projectIds:', ids.map(id => id.toString()));
+    return ids;
+  }, [campaignProjectsBasic]);
+
+  // FIXED: Corrected the typo from uint250 to uint256
   const participationContracts = projectIds.map(projectId => ({
     address: contractAddress as `0x${string}`,
     abi: [{
-      inputs: [{ name: 'projectId', type: 'uint256' }],
+      inputs: [{ name: 'campaignId', type: 'uint256' }, { name: 'projectId', type: 'uint256' }], // FIXED: uint256 not uint250
       name: 'getParticipation',
       outputs: [{ name: '', type: 'tuple' }],
       stateMutability: 'view',
       type: 'function'
     } satisfies AbiFunction],
     functionName: 'getParticipation',
-    args: [projectId]
+    args: [campaignId, projectId]
   }));
 
-  const { data: participationData, isLoading: participationLoading } = useReadContracts({
+  console.log('Generated participationContracts:', participationContracts.length);
+
+  const { data: participationData, isLoading: participationLoading, error: participationError, refetch: refetchParticipation } = useReadContracts({
     contracts: participationContracts,
     query: {
-      enabled: !!contractAddress && !!campaignId && projectIds.length > 0
+      enabled: !!contractAddress && !!campaignId && projectIds.length > 0,
+      retry: 3,
+      retryDelay: 1000,
+      staleTime: 0 // Always fetch fresh data
     }
   });
 
-  const campaignProjects = useMemo(() => {
-    if (!campaignProjectsBasic.length || !participationData) return [];
+  console.log('Participation data fetch:', {
+    data: participationData?.length,
+    error: participationError,
+    isLoading: participationLoading
+  });
 
-    return campaignProjectsBasic.map((project, index) => {
-      const participation = participationData[index]?.result as [boolean, bigint, bigint] | undefined;
+  // FIXED: Debug participation data
+  console.log('🔍 Participation Data Debug:', {
+    contractsGenerated: participationContracts.length,
+    dataReceived: participationData?.length,
+    error: participationError,
+    isLoading: participationLoading,
+    projectIds: projectIds.map(id => id.toString()),
+    rawParticipationData: participationData?.map((data, index) => ({
+      index,
+      projectId: projectIds[index]?.toString(),
+      hasResult: !!data?.result,
+      result: data?.result ? {
+        approved: (data.result as [boolean, bigint, bigint])[0],
+        voteCount: (data.result as [boolean, bigint, bigint])[1].toString(),
+        fundsReceived: (data.result as [boolean, bigint, bigint])[2].toString()
+      } : null,
+      error: data?.error
+    }))
+  });
+
+  // Add effect to log when participation data changes
+  useEffect(() => {
+    if (participationData && projectIds.length > 0) {
+      console.log('📊 Participation data updated:', {
+        timestamp: new Date().toISOString(),
+        projectCount: projectIds.length,
+        dataCount: participationData.length,
+        voteCounts: participationData.map((data, index) => ({
+          projectId: projectIds[index]?.toString(),
+          voteCount: data?.result ? (data.result as [boolean, bigint, bigint])[1].toString() : '0'
+        }))
+      });
+    }
+  }, [participationData, projectIds]);
+
+  // FIXED: Updated campaignProjects to use correct vote count mapping
+  const campaignProjects = useMemo(() => {
+    if (!campaignProjectsBasic.length) {
+      console.log('No campaignProjectsBasic available');
+      return [];
+    }
+
+    console.log('🔍 Processing campaign projects with participation data:', {
+      campaignProjectsBasicLength: campaignProjectsBasic.length,
+      projectIdsLength: projectIds.length,
+      participationDataLength: participationData?.length,
+      approvedProjectIdsSize: approvedProjectIds.size
+    });
+
+    // Create a mapping of projectId -> participationData index
+    const projectIdToParticipationIndex = new Map();
+    projectIds.forEach((projectId, index) => {
+      projectIdToParticipationIndex.set(projectId.toString(), index);
+    });
+
+    const projects = campaignProjectsBasic.map((project) => {
+      const projectIdStr = project.id?.toString();
+      
+      // Get the correct participation data using project ID mapping
+      const participationIndex = projectIdToParticipationIndex.get(projectIdStr);
+      const participation = participationIndex !== undefined 
+        ? participationData?.[participationIndex]?.result as [boolean, bigint, bigint] | undefined 
+        : undefined;
+
+      // Get approval status from sortedProjectIds (the authoritative source)
+      const isApproved = approvedProjectIds.has(projectIdStr || '');
+      
+      // Get vote count and funds from participation data
       const voteCount = participation ? participation[1] : 0n;
+      const fundsReceived = participation ? participation[2] : 0n;
+      
+      console.log(`📊 Project ${projectIdStr} data:`, {
+        name: project.name,
+        participationIndex,
+        hasParticipation: !!participation,
+        contractApproved: participation ? participation[0] : 'N/A',
+        sortedApproved: isApproved,
+        voteCount: voteCount.toString(),
+        fundsReceived: fundsReceived.toString()
+      });
       
       return {
         ...project,
         voteCount,
         voteCountFormatted: formatEther(voteCount),
-        participation: participation ? {
-          approved: participation[0],
-          voteCount: participation[1],
-          fundsReceived: participation[2]
-        } : null
+        participation: {
+          approved: isApproved, // Use the authoritative approval status
+          voteCount: voteCount,
+          fundsReceived: fundsReceived
+        }
       };
     });
-  }, [campaignProjectsBasic, participationData]);
+
+    console.log('📈 Final processed campaignProjects:', {
+      length: projects.length,
+      approved: projects.filter(p => p.participation?.approved).length,
+      pending: projects.filter(p => !p.participation?.approved).length,
+      totalVotes: projects.reduce((sum, p) => sum + Number(formatEther(p.voteCount || 0n)), 0),
+      projectsWithVotes: projects.filter(p => (p.voteCount || 0n) > 0n).map(p => ({
+        id: p.id?.toString(),
+        name: p.name,
+        votes: formatEther(p.voteCount || 0n)
+      }))
+    });
+
+    return projects;
+  }, [campaignProjectsBasic, participationData, projectIds, approvedProjectIds]);
 
   const sortedProjects = useMemo(() => {
-    return [...campaignProjects].sort((a, b) => {
+    // Separate approved and pending projects
+    const approved = campaignProjects.filter(p => p.participation?.approved);
+    const pending = campaignProjects.filter(p => !p.participation?.approved);
+
+    // Sort approved by votes (descending)
+    approved.sort((a, b) => {
       const aVotes = Number(a.voteCount || 0n);
       const bVotes = Number(b.voteCount || 0n);
       return bVotes - aVotes;
     });
+
+    // Sort pending alphabetically
+    pending.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    // Return approved first, then pending
+    const sorted = [...approved, ...pending];
+
+    console.log('Final sorted projects:', {
+      total: sorted.length,
+      approved: approved.length,
+      pending: pending.length
+    });
+    return sorted;
   }, [campaignProjects]);
 
   useEffect(() => {
@@ -216,8 +435,8 @@ export default function CampaignView() {
   const hasEnded = now >= endTime;
   const isActive = hasStarted && !hasEnded && campaignDetails?.campaign?.active;
   
-  // Use countdown hook
-  const countdown = useCountdown(endTime);
+  // Use enhanced countdown hook
+  const countdown = useCountdown(startTime, endTime);
 
   const openVoteModal = (project: Project) => {
     setSelectedProject(project);
@@ -232,6 +451,20 @@ export default function CampaignView() {
   const handleBackToArena = () => {
     navigate('/explore');
   };
+
+  const handleAdminPanel = () => {
+    navigate(`/app/campaign/manage/${id}`);
+  };
+
+  // Refetch function that updates both data sources
+  const refetchAllData = useCallback(async () => {
+    console.log('🔄 Refetching all data...');
+    await Promise.all([
+      refetchParticipation(),
+      refetchSorted()
+    ]);
+    console.log('✅ Refetch completed');
+  }, [refetchParticipation, refetchSorted]);
 
   const getPositionStyling = (index: number) => {
     switch (index) {
@@ -275,11 +508,21 @@ export default function CampaignView() {
           shadowColor: 'shadow-blue-300/20',
           iconColor: 'text-blue-600',
           icon: Target,
-          badge: `#${index + 1}`,
-          rank: `${index + 1}th`,
+          badge: `${index + 1}`,
+          rank: `${index + 1}${getOrdinalSuffix(index + 1)}`,
           glowColor: 'shadow-blue-400/30'
         };
     }
+  };
+
+  // Helper function to get ordinal suffix
+  const getOrdinalSuffix = (n: number): string => {
+    const j = n % 10;
+    const k = n % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
   };
 
   const getCampaignLogo = () => {
@@ -301,7 +544,6 @@ export default function CampaignView() {
 
   const getProjectLogo = (project: any) => {
     try {
-
       if (project.additionalDataParsed?.logo) return project.additionalDataParsed.logo;
       
       if (project.additionalData) {
@@ -310,13 +552,7 @@ export default function CampaignView() {
       }
     } catch (e) {
       console.log('error', e);
-      // If JSON parsing fails, return null
     }
-    //log teh logo
-    console.log('project.additionalDataParsed', project.additionalDataParsed);
-    console.log('project.additionalData', project.metadata);
-
-    console.log('project', project);
     return null;
   };
 
@@ -324,18 +560,16 @@ export default function CampaignView() {
     return vote({ campaignId, projectId, token: token as `0x${string}`, amount });
   }, [campaignId, vote]);
 
-  // Filter projects based on active tab and search term
+  // FIXED: Filter projects based on active tab using the correct approval logic
   const filteredProjects = useMemo(() => {
-    // First get all projects in the campaign
-    const campaignProjects = allProjects?.filter(projectDetails => {
-      const formatted = formatProjectForDisplay(projectDetails);
-      return formatted && projectDetails.project.campaignIds.some(cId => 
-        Number(cId) === Number(campaignId)
-      );
-    }).map(formatProjectForDisplay).filter(Boolean) || [];
-    
-    // Then apply search and verification filters
-    let filtered = [...campaignProjects];
+    console.log('Starting project filtering with:', {
+      totalProjects: sortedProjects.length,
+      activeTab,
+      searchTerm,
+      approvedProjectIds: Array.from(approvedProjectIds)
+    });
+
+    let filtered = [...sortedProjects];
     
     // Apply search filter
     if (searchTerm) {
@@ -347,29 +581,37 @@ export default function CampaignView() {
       );
     }
     
-    // Apply verification filter
+    console.log('Projects after search filter:', filtered.length);
+    
+    // FIXED: Apply approval status filter using the correct logic
     switch (activeTab) {
-      case 'verified':
-        filtered = filtered.filter(project => project.verified);
+      case 'approved':
+        filtered = filtered.filter(project => 
+          project.participation?.approved === true
+        );
         break;
-      case 'unverified':
-        filtered = filtered.filter(project => !project.verified);
+      case 'pending':
+        filtered = filtered.filter(project => 
+          project.participation?.approved !== true
+        );
         break;
       default:
         break;
     }
     
-    // Sort by vote count
-    return filtered.sort((a, b) => {
-      const aVotes = Number(a.voteCount || 0n);
-      const bVotes = Number(b.voteCount || 0n);
-      return bVotes - aVotes;
+    console.log('Final filtered projects:', {
+      total: filtered.length,
+      approved: filtered.filter(p => p.participation?.approved === true).length,
+      pending: filtered.filter(p => p.participation?.approved !== true).length
     });
-  }, [allProjects, campaignId, activeTab, searchTerm]);
+    
+    return filtered;
+  }, [sortedProjects, activeTab, searchTerm]);
 
   // Add hooks for project management
   const { addProjectToCampaign, isPending: isAddingProject } = useAddProjectToCampaign(contractAddress);
-  const { isAdmin } = useCanBypassFees(contractAddress, campaignId);
+  const { isAdmin: canBypassFees } = useCanBypassFees(contractAddress, campaignId);
+  const { approveProject, isPending: isApprovingProject } = useApproveProject(contractAddress);
   
   // Add handler for adding project to campaign
   const handleAddToCampaign = async (projectId: bigint) => {
@@ -387,12 +629,14 @@ export default function CampaignView() {
         campaignId,
         projectId,
         feeToken,
-        shouldPayFee: !isAdmin
+        shouldPayFee: !canBypassFees
       });
       
       setShowAddProjectModal(false);
-      // Reload the page to show updated project list
-      window.location.reload();
+      // Refetch data after adding project
+      setTimeout(() => {
+        refetchAllData();
+      }, 2000);
       
     } catch (err: any) {
       console.error('Error adding project to campaign:', err);
@@ -417,9 +661,27 @@ export default function CampaignView() {
     }
   };
 
+  // Handle project approval with refetch
+  const handleApproveProject = async (projectId: bigint) => {
+    try {
+      await approveProject({
+        campaignId,
+        projectId
+      });
+      
+      // Refetch data after approval
+      setTimeout(() => {
+        refetchAllData();
+      }, 2000); // Wait for transaction to be mined
+      
+    } catch (error) {
+      console.error('Error approving project:', error);
+    }
+  };
+
   if (!isMounted) return null;
 
-  if (campaignLoading || projectsLoading || participationLoading) {
+  if (campaignLoading || projectsLoading || participationLoading || adminLoading || sortedProjectsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 flex items-center justify-center relative overflow-hidden">
         {/* Animated background elements */}
@@ -479,7 +741,11 @@ export default function CampaignView() {
     sum + Number(formatEther(project.voteCount || 0n)), 0
   );
 
-  // Sovereign Seas Themed Sidebar Component
+  // Get accurate counts for display
+  const approvedCount = sortedProjects.filter(p => p.participation?.approved === true).length;
+  const pendingCount = sortedProjects.filter(p => p.participation?.approved !== true).length;
+
+  // Sidebar Component with enhanced analytics
   const Sidebar = ({ className = "" }) => (
     <div className={`glass-morphism ${className} relative overflow-hidden`}>
       {/* Decorative wave pattern */}
@@ -487,45 +753,61 @@ export default function CampaignView() {
       
       <div className="p-6 sticky top-4 space-y-6">
         {/* Campaign Stats */}
-        <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-xl p-4 border border-blue-200/50 shadow-sm animate-float">
-          <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
-            <BarChart3 className="h-4 w-4 text-blue-500 mr-2" />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-              Campaign Analytics
-            </span>
-          </h3>
-          
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center group">
-              <span className="text-gray-600 flex items-center">
-                <DollarSign className="h-3 w-3 text-blue-500 mr-1" />
-                Total Treasury
-              </span>
-              <div className="flex items-center space-x-1">
-                <span className="font-bold text-gray-800">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
-                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">$</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 flex items-center">
-                <Vote className="h-3 w-3 text-indigo-500 mr-1" />
-                Total Votes
-              </span>
-              <span className="font-bold text-indigo-600">{totalCampaignVotes.toFixed(1)}</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 flex items-center">
-                <Users className="h-3 w-3 text-cyan-500 mr-1" />
-                Active Projects
-              </span>
-              <span className="font-bold text-cyan-600">{sortedProjects.length}</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
+        <div className="bg-gradient-to-br from-blue-50/80to-indigo-50/80 rounded-xl p-4 border border-blue-200/50 shadow-sm animate-float">
+         <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
+           <BarChart3 className="h-4 w-4 text-blue-500 mr-2" />
+           <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+             Campaign Analytics
+           </span>
+         </h3>
+         
+         <div className="space-y-3 text-xs">
+           <div className="flex justify-between items-center group">
+             <span className="text-gray-600 flex items-center">
+               <DollarSign className="h-3 w-3 text-blue-500 mr-1" />
+               Total Treasury
+             </span>
+             <div className="flex items-center space-x-1">
+               <span className="font-bold text-gray-800">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
+               <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center">
+                 <span className="text-white text-xs font-bold">$</span>
+               </div>
+             </div>
+           </div>
+           
+           <div className="flex justify-between items-center">
+             <span className="text-gray-600 flex items-center">
+               <Vote className="h-3 w-3 text-indigo-500 mr-1" />
+               Total Votes
+             </span>
+             <span className="font-bold text-indigo-600">{totalCampaignVotes.toFixed(1)}</span>
+           </div>
+           
+           <div className="flex justify-between items-center">
+             <span className="text-gray-600 flex items-center">
+               <Users className="h-3 w-3 text-cyan-500 mr-1" />
+               Active Projects
+             </span>
+             <span className="font-bold text-cyan-600">{sortedProjects.length}</span>
+           </div>
+           
+           <div className="flex justify-between items-center">
+             <span className="text-gray-600 flex items-center">
+               <CheckCircle className="h-3 w-3 text-emerald-500 mr-1" />
+               Approved
+             </span>
+             <span className="font-bold text-emerald-600">{approvedCount}</span>
+           </div>
+           
+           <div className="flex justify-between items-center">
+             <span className="text-gray-600 flex items-center">
+               <Clock className="h-3 w-3 text-amber-500 mr-1" />
+               Pending
+             </span>
+             <span className="font-bold text-amber-600">{pendingCount}</span>
+           </div>
+           
+           <div className="flex justify-between items-center">
               <span className="text-gray-600 flex items-center">
                 <Percent className="h-3 w-3 text-amber-500 mr-1" />
                 Platform Fee
@@ -548,18 +830,7 @@ export default function CampaignView() {
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <div className="w-6 h-6 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 flex items-center justify-center animate-shimmer">
-                  <img 
-                    src="/images/celo.png" 
-                    alt="CELO"
-                    className="w-4 h-4"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const fallback = target.nextSibling as HTMLElement;
-                      if (fallback) fallback.style.display = 'flex';
-                    }}
-                  />
-                  <div className="text-white text-xs font-bold hidden">🪙</div>
+                  <span className="text-white text-xs font-bold">🪙</span>
                 </div>
                 <span className="text-gray-700 font-medium">CELO</span>
               </div>
@@ -569,18 +840,7 @@ export default function CampaignView() {
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 flex items-center justify-center">
-                  <img 
-                    src="/images/cusd.png" 
-                    alt="cUSD"
-                    className="w-4 h-4"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const fallback = target.nextSibling as HTMLElement;
-                      if (fallback) fallback.style.display = 'flex';
-                    }}
-                  />
-                  <div className="text-white text-xs font-bold hidden">$</div>
+                  <span className="text-white text-xs font-bold">$</span>
                 </div>
                 <span className="text-gray-700 font-medium">cUSD</span>
               </div>
@@ -623,24 +883,51 @@ export default function CampaignView() {
                   {Number(totalVotes || 0n) > 0 ? 'Active Sovereign' : 'Observer'}
                 </span>
               </div>
+
+              {/* Admin Badge */}
+              {isAdmin && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Role</span>
+                  <span className="font-bold text-purple-600 flex items-center">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Admin
+                  </span>
+                </div>
+              )}
             </div>
             
-            {isActive && (
-              <button
-                onClick={() => {
-                  if (sortedProjects.length > 0) {
-                    openVoteModal(sortedProjects[0]);
-                  }
-                }}
-                className="w-full mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
-              >
-                <span className="relative z-10 flex items-center justify-center">
-                  <Sparkles className="h-3 w-3 mr-1 group-hover:rotate-12 transition-transform duration-300" />
-                  Cast Your Vote
-                </span>
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-              </button>
-            )}
+            <div className="flex space-x-2 mt-4">
+              {isActive && (
+                <button
+                  onClick={() => {
+                    if (sortedProjects.length > 0) {
+                      openVoteModal(sortedProjects[0]);
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center justify-center">
+                    <Sparkles className="h-3 w-3 mr-1 group-hover:rotate-12 transition-transform duration-300" />
+                    Cast Vote
+                  </span>
+                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                </button>
+              )}
+              
+              {/* Admin Panel Button */}
+              {isAdmin && (
+                <button
+                  onClick={handleAdminPanel}
+                  className="flex-1 px-3 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-xs font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center justify-center">
+                    <Settings className="h-3 w-3 mr-1 group-hover:rotate-12 transition-transform duration-300" />
+                    Admin
+                  </span>
+                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -689,6 +976,18 @@ export default function CampaignView() {
               >
                 <Menu className="h-4 w-4 text-blue-600" />
               </button>
+
+              {/* Refresh Button */}
+              <button
+                onClick={refetchAllData}
+                disabled={participationLoading || sortedProjectsLoading}
+                className="p-2 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200 hover:shadow-lg transition-all gradient-border flex items-center space-x-2"
+              >
+                <RotateCcw className={`h-4 w-4 text-blue-600 ${(participationLoading || sortedProjectsLoading) ? 'animate-spin' : ''}`} />
+                <span className="text-sm text-blue-600 hidden sm:inline">
+                  {(participationLoading || sortedProjectsLoading) ? 'Refreshing...' : 'Refresh'}
+                </span>
+              </button>
             </div>
             
             <div className="flex items-center space-x-2 text-xs">
@@ -703,6 +1002,14 @@ export default function CampaignView() {
                 <span className="font-bold text-emerald-600">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
                 <span className="text-gray-600 hidden sm:inline">CELO</span>
               </div>
+
+              {/* Admin indicator */}
+              {isAdmin && (
+                <div className="flex items-center space-x-2 glass-morphism px-3 py-2 rounded-full shadow-sm animate-float-delay-2 bg-gradient-to-r from-purple-100 to-pink-100 border-purple-200">
+                  <Shield className="h-3 w-3 text-purple-500" />
+                  <span className="font-bold text-purple-600 hidden sm:inline">Admin</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -740,14 +1047,26 @@ export default function CampaignView() {
                         {campaign.name || 'Untitled Campaign'}
                       </h1>
                       
-                      {/* Enhanced Add to Campaign Button */}
-                      {isActive && (
+                      {/* Enhanced Add to Campaign Button - Only show if active and not ended */}
+                      {isActive && !hasEnded && (
                         <button
                           onClick={() => setShowAddProjectModal(true)}
                           className="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden"
                         >
                           <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
-                          <span>Add to Campaign</span>
+                          <span>Add Project</span>
+                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                        </button>
+                      )}
+
+                      {/* Admin Panel Button */}
+                      {isAdmin && (
+                        <button
+                          onClick={handleAdminPanel}
+                          className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden"
+                        >
+                          <Settings className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
+                          <span>Admin Panel</span>
                           <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                         </button>
                       )}
@@ -756,13 +1075,18 @@ export default function CampaignView() {
                   </div>
                 </div>
 
+                {/* Enhanced Status Badge */}
                 <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${
-                  isActive ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
-                  hasEnded ? 'bg-gray-100 text-gray-700' : 
+                  countdown.phase === 'active' ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
+                  countdown.phase === 'ended' ? 'bg-gray-100 text-gray-700' : 
                   'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700'
                 }`}>
                   <Clock className="h-3 w-3" />
-                  <span>{hasEnded ? 'Voyage Complete' : isActive ? 'LIVE VOYAGE' : 'Preparing'}</span>
+                  <span>
+                    {countdown.phase === 'ended' ? 'Voyage Complete' : 
+                     countdown.phase === 'active' ? 'LIVE VOYAGE' : 
+                     'Preparing Launch'}
+                  </span>
                 </span>
               </div>
 
@@ -779,22 +1103,22 @@ export default function CampaignView() {
                 </div>
               </div>
 
-              {/* Enhanced Countdown Timer (Only when active) */}
-              {isActive && !hasEnded && (
+              {/* Enhanced Countdown Timer */}
+              {countdown.phase !== 'ended' && (
                 <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm rounded-lg p-3 border border-blue-200/50">
                   <div className="flex items-center justify-center space-x-3">
                     <Timer className="h-4 w-4 text-blue-500 animate-wave" />
                     <div className="flex items-center space-x-1">
                       <div className="text-center">
                         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
-                          {Math.floor(countdown.hours / 24).toString().padStart(2, '0')}
+                          {countdown.days.toString().padStart(2, '0')}
                         </div>
                         <div className="text-xs text-gray-600 mt-1">D</div>
                       </div>
                       <div className="text-blue-500 font-bold">:</div>
                       <div className="text-center">
                         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
-                          {(countdown.hours % 24).toString().padStart(2, '0')}
+                          {countdown.hours.toString().padStart(2, '0')}
                         </div>
                         <div className="text-xs text-gray-600 mt-1">H</div>
                       </div>
@@ -814,7 +1138,7 @@ export default function CampaignView() {
                       </div>
                     </div>
                     <span className="text-xs font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                      Until Voyage Ends
+                      {countdown.phase === 'preparing' ? 'Until Launch' : 'Until Voyage Ends'}
                     </span>
                   </div>
                 </div>
@@ -837,7 +1161,7 @@ export default function CampaignView() {
               </div>
             </div>
 
-            {/* Project Filtering Tabs */}
+            {/* FIXED: Enhanced Project Filtering Tabs with correct counts */}
             <div className="flex items-center space-x-4 mb-6">
               <div className="flex space-x-2 bg-white/80 backdrop-blur-sm rounded-lg p-1 border border-blue-200">
                 <button
@@ -848,29 +1172,35 @@ export default function CampaignView() {
                       : 'text-gray-600 hover:text-blue-600'
                   }`}
                 >
-                  All Projects
+                  All Projects ({sortedProjects.length})
                 </button>
                 <button
-                  onClick={() => setActiveTab('verified')}
+                  onClick={() => setActiveTab('approved')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
-                    activeTab === 'verified'
+                    activeTab === 'approved'
                       ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-emerald-600'
                   }`}
                 >
                   <CheckCircle className="h-4 w-4" />
-                  <span>Verified</span>
+                  <span>Approved</span>
+                  <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                    {approvedCount}
+                  </span>
                 </button>
                 <button
-                  onClick={() => setActiveTab('unverified')}
+                  onClick={() => setActiveTab('pending')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
-                    activeTab === 'unverified'
+                    activeTab === 'pending'
                       ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-amber-600'
                   }`}
                 >
-                  <XCircle className="h-4 w-4" />
-                  <span>Unverified</span>
+                  <Clock className="h-4 w-4" />
+                  <span>Pending</span>
+                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                    {pendingCount}
+                  </span>
                 </button>
               </div>
 
@@ -895,6 +1225,7 @@ export default function CampaignView() {
               const voteCount = Number(formatEther(project.voteCount || 0n));
               const percentage = totalCampaignVotes > 0 ? ((voteCount / totalCampaignVotes) * 100).toFixed(1) : '0.0';
               const projectLogo = getProjectLogo(project);
+              const isApproved = project.participation?.approved === true;
 
               return (
                 <div
@@ -902,21 +1233,71 @@ export default function CampaignView() {
                   className={`
                     group glass-morphism rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-4 relative overflow-hidden
                     hover:-translate-y-2 gradient-border animate-float
+                    ${index < 3 ? 'bg-gradient-to-br from-white/90 to-white/80' : 'bg-white/80'}
                   `}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   {/* Enhanced Position Badge */}
-                  <div className={`absolute -top-2 -left-2 w-10 h-10 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-lg ${styling.glowColor} flex items-center justify-center text-white font-bold text-sm border-2 border-white transform group-hover:scale-110 transition-transform duration-300`}>
-                    {index < 3 ? styling.badge.split('')[0] : index + 1}
+                  <div className={`absolute -top-4 -left-4 w-16 h-16 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-xl ${styling.glowColor} flex items-center justify-center font-bold text-lg border-4 border-white transform group-hover:scale-110 transition-transform duration-300 z-10`}>
+                    {index < 3 ? (
+                      <div className="flex items-center justify-center w-full h-full">
+                        <span className="text-2xl text-white">{styling.badge}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full">
+                        <span className="text-xl text-blue-900">{index + 1}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Animated background glow for top 3 */}
-                  {index < 3 && (
-                    <div className={`absolute inset-0 bg-gradient-to-r ${styling.bgGradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500 rounded-xl`}></div>
-                  )}
+                  {/* Position Badge Glow Effect */}
+                  <div className={`absolute -top-4 -left-4 w-16 h-16 rounded-full ${styling.glowColor} blur-xl opacity-50 animate-pulse`}></div>
 
-                  <div className="relative z-10 flex items-center space-x-4 pl-6">
-                    {/* Enhanced Project Logo with Fallback */}
+                  {/* FIXED: Approval Status Badge and Admin Controls */}
+                  <div className="absolute top-2 right-2 flex items-center space-x-2">
+                    {/* Approval Status Badge */}
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      isApproved 
+                        ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
+                        : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
+                    }`}>
+                      {isApproved ? (
+                        <div className="flex items-center space-x-1">
+                          <CheckCircle className="h-3 w-3" />
+                          <span>Approved</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-3 w-3" />
+                          <span>Pending</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Admin Approve Button */}
+                    {isAdmin && !isApproved && (
+                      <button
+                        onClick={() => handleApproveProject(BigInt(project.id))}
+                        disabled={isApprovingProject}
+                        className="px-3 py-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-1"
+                      >
+                        {isApprovingProject ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Approving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-3 w-3" />
+                            <span>Approve</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="relative z-10 flex items-start space-x-4 pl-8">
+                    {/* Project Logo */}
                     <div className="animate-float-delay-1 relative">
                       {projectLogo ? (
                         <img 
@@ -931,31 +1312,31 @@ export default function CampaignView() {
                           }}
                         />
                       ) : null}
-                      <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
+                      <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
                         {project.name?.charAt(0) || ''}
                       </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-gray-800 text-lg truncate group-hover:text-blue-600 transition-colors duration-300">
-                          {project.name || 'Untitled Project'}
-                        </h3>
-                        <div className="text-right ml-4">
-                          <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                            {voteCount.toFixed(1)}
-                          </div>
-                          <div className="text-xs text-gray-500 flex items-center justify-end">
-                            <Heart className="h-3 w-3 mr-1 text-red-400" />
-                            {percentage}%
-                          </div>
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-lg truncate group-hover:text-blue-600 transition-colors duration-300">
+                            {project.name || 'Untitled Project'}
+                          </h3>
+                          <p className="text-sm text-gray-600 line-clamp-1">{project.description}</p>
                         </div>
                       </div>
                       
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-1">{project.description}</p>
-                      
-                      {/* Enhanced Progress Bar */}
-                      <div className="mb-3">
+                      {/* Progress Bar */}
+                      <div className="mb-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-xs font-medium text-gray-600">Votes</div> {
+                            getProjectVotesByCampaignId(campaignId, project.id)
+                          }
+                          <div className="text-xs font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 ml-12">
+                            {voteCount.toFixed(1)} ({percentage}%)
+                          </div>
+                        </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                           <div 
                             className={`h-full bg-gradient-to-r ${styling.bgGradient} transition-all duration-1000 rounded-full relative`}
@@ -966,48 +1347,39 @@ export default function CampaignView() {
                         </div>
                       </div>
                       
-                      {/* Enhanced Action Buttons */}
-                      <div className="flex space-x-2">
+                      {/* Action Button */}
+                      <div className="flex justify-end">
                         {isActive && (
-                          project.participation?.approved ? (
+                          isApproved ? (
                             <button
                               onClick={() => openVoteModal(project)}
                               className={`
-                                px-4 py-2 rounded-full text-white font-medium shadow-md transition-all duration-300 
+                                px-4 py-1.5 rounded-full text-white font-medium shadow-md transition-all duration-300 
                                 hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-sm group/btn relative overflow-hidden
                                 bg-gradient-to-r ${styling.bgGradient}
                               `}
                             >
-                              <Vote className="h-3 w-3 group-hover/btn:rotate-12 transition-transform duration-300" />
-                              <span>Cast Vote</span>
-                              <Sparkles className="h-3 w-3 group-hover/btn:rotate-180 transition-transform duration-500" />
+                              <Vote className="h-3.5 w-3.5 group-hover/btn:rotate-12 transition-transform duration-300" />
+                              <span>Vote</span>
                               <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></span>
                             </button>
                           ) : (
-                            <div className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 font-medium flex items-center space-x-2 text-sm">
-                              <Clock className="h-3 w-3" />
-                              <span>Not Yet Approved</span>
+                            <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-gray-100 to-gray-50 text-gray-600 font-medium flex items-center space-x-2 text-sm border border-gray-200">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>Pending</span>
                             </div>
                           )
                         )}
-                        
-                        <button
-                          onClick={() => project?.id ? navigate(`/explorer/project/${project.id.toString()}`) : null}
-                          className="px-4 py-2 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 text-sm group/btn relative overflow-hidden"
-                        >
-                          <Eye className="h-3 w-3 group-hover/btn:scale-110 transition-transform duration-300" />
-                          <span>Explore</span>
-                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></span>
-                        </button>
                       </div>
                     </div>
 
-                    {/* Enhanced Winner Badge */}
-                    {index < Number(campaign.maxWinners) && hasEnded && voteCount > 0 && (
-                      <div className="absolute top-3 right-3 bg-gradient-to-r from-emerald-400 to-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse border border-emerald-300">
-                        🏆 Sovereign Winner
-                      </div>
-                    )}
+                    {/* Explore Arrow Button */}
+                    <button
+                      onClick={() => project?.id ? navigate(`/explorer/project/${project.id}`) : null}
+                      className="absolute bottom-2 right-2 p-2 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow"
+                    >
+                      <ArrowLeft className="h-4 w-4 transform rotate-180 group-hover/arrow:translate-x-1 transition-transform duration-300" />
+                    </button>
                   </div>
                 </div>
               );
@@ -1021,7 +1393,12 @@ export default function CampaignView() {
               <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-3">
                 The Seas Await
               </h3>
-              <p className="text-gray-600">No projects have joined this sovereign voyage yet.</p>
+              <p className="text-gray-600">
+                {activeTab === 'approved' ? 'No approved projects in this campaign yet.' :
+                 activeTab === 'pending' ? 'No pending projects in this campaign.' :
+                 searchTerm ? `No projects match "${searchTerm}"` :
+                 'No projects have joined this sovereign voyage yet.'}
+              </p>
               <div className="mt-6">
                 <button
                   onClick={handleBackToArena}
@@ -1093,7 +1470,7 @@ export default function CampaignView() {
                       >
                         {isAddingProject ? (
                           <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-4 animate-spin" />
                             <span>Adding...</span>
                           </>
                         ) : (
@@ -1106,12 +1483,34 @@ export default function CampaignView() {
                     </div>
                   );
                 })}
+
+                {allProjects?.filter(project => {
+                  const formatted = formatProjectForDisplay(project);
+                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
+                }).length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📋</div>
+                    <h4 className="text-lg font-bold text-gray-800 mb-2">No Available Projects</h4>
+                    <p className="text-gray-600 text-sm">All existing projects are already part of this campaign.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        )}
+
+        {/* Vote Modal */}
+        {showVoteModal && selectedProject && (
+          <VoteModal
+            isOpen={showVoteModal}
+            onClose={closeVoteModal}
+            project={selectedProject}
+            campaignId={campaignId}
+            onVote={handleVote}
+            isVoting={isVoting}
+          />
         )}
       </div>
     </div>
   );
 }
-          

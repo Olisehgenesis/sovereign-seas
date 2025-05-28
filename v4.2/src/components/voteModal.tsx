@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,14 +14,13 @@ import {
   Ship
 } from 'lucide-react';
 
-import {useVote} from '@/hooks/useVotingMethods'
+import { useVote } from '@/hooks/useVotingMethods';
 
 interface VoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedProject: any;
   campaignId: bigint;
-  onVote: (projectId: bigint, token: string, amount: bigint) => Promise<void>;
   isVoting: boolean;
 }
 

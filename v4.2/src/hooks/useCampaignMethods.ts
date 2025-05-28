@@ -1196,6 +1196,8 @@ export function useParticipation(
     args: [campaignId, projectId]
   })
 
+  console.log('Participation data:', data);
+
   const participation = data ? {
     approved: (data as any[])[0] as boolean,
     voteCount: (data as any[])[1] as bigint,

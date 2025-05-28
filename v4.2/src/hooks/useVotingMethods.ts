@@ -4,6 +4,7 @@ import { parseEther, formatEther, Address } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback } from 'react'
 import { erc20ABI } from "@/abi/erc20ABI"
+import { AbiFunction } from 'viem'
 
 // Types for voting functionality
 export interface Vote {
@@ -31,7 +32,7 @@ export interface VotingStats {
 }
 
 // Get token addresses from environment
-const celoToken = import.meta.env.VITE_CELO_TOKEN;
+
 
 // Custom hook for token approval
 export function useApproveToken() {
@@ -56,6 +57,41 @@ export function useApproveToken() {
   }
 }
 
+// Hook to verify CELO token address
+export function useVerifyCeloToken(contractAddress: Address) {
+  const { data: celoToken, isLoading, error } = useReadContract({
+    address: contractAddress,
+    abi: [{
+      inputs: [],
+      name: 'celoToken',
+      outputs: [{ name: '', type: 'address' }],
+      stateMutability: 'view',
+      type: 'function'
+    } satisfies AbiFunction],
+    functionName: 'celoToken',
+    query: {
+      enabled: !!contractAddress
+    }
+  }) as { data: Address | undefined; isLoading: boolean; error: Error | null };
+
+  const envCeloToken = import.meta.env.VITE_CELO_TOKEN;
+  const isMatching = celoToken?.toLowerCase() === envCeloToken?.toLowerCase();
+
+  console.log('🔍 CELO Token Verification:', {
+    contractCeloToken: celoToken,
+    envCeloToken,
+    isMatching,
+    error
+  });
+
+  return {
+    celoToken,
+    envCeloToken,
+    isMatching,
+    isLoading,
+    error
+  };
+}
 
 // Hook for voting functionality - FIXED to include voteWithCelo
 export function useVote(contractAddress: Address) {
@@ -63,6 +99,7 @@ export function useVote(contractAddress: Address) {
   const { approveToken } = useApproveToken()
   const [votingStats, setVotingStats] = useState<VotingStats | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
+  const { celoToken, isMatching } = useVerifyCeloToken(contractAddress)
 
   console.log('setVote, setVotingStats', setVotingStats)
   console.log('setIsCalculating', setIsCalculating)
@@ -81,6 +118,14 @@ export function useVote(contractAddress: Address) {
     amount: bigint
     bypassCode?: string
   }) => {
+    console.log('🎯 Vote called with:', {
+      campaignId: campaignId.toString(),
+      projectId: projectId.toString(),
+      token,
+      amount: amount.toString(),
+      isCeloToken: token.toLowerCase() === celoToken?.toLowerCase()
+    });
+
     try {
       console.log('Voting with ERC20 token:', token, 'for amount:', amount);
       
@@ -89,14 +134,17 @@ export function useVote(contractAddress: Address) {
       // Wait for approval confirmation
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      await writeContract({
+      const tx = await writeContract({
         address: contractAddress,
         abi,
         functionName: 'vote', // ✅ Use the ERC20 vote function
         args: [campaignId, projectId, token, amount, bypassCode as `0x${string}`]
-      })
+      });
+
+      console.log('✅ Vote transaction submitted:', tx);
+      return tx;
     } catch (err) {
-      console.error('Error voting with ERC20:', err)
+      console.error('❌ Error in vote:', err)
       throw err
     }
   }
@@ -113,18 +161,28 @@ export function useVote(contractAddress: Address) {
     amount: bigint
     bypassCode?: string
   }) => {
+    console.log('🎯 VoteWithCelo called with:', {
+      campaignId: campaignId.toString(),
+      projectId: projectId.toString(),
+      amount: amount.toString(),
+      celoToken
+    });
+
     try {
       console.log('Voting with native CELO:', amount.toString());
       
-      await writeContract({
+      const tx = await writeContract({
         address: contractAddress,
         abi,
         functionName: 'voteWithCelo', // ✅ Use the CELO-specific function
         args: [campaignId, projectId, bypassCode as `0x${string}`],
         value: amount // Send CELO as msg.value
-      })
+      });
+
+      console.log('✅ VoteWithCelo transaction submitted:', tx);
+      return tx;
     } catch (err) {
-      console.error('Error voting with CELO:', err)
+      console.error('❌ Error in voteWithCelo:', err)
       throw err
     }
   }
@@ -179,7 +237,9 @@ export function useVote(contractAddress: Address) {
     isSuccess,
     reset,
     votingStats,
-    isCalculating
+    isCalculating,
+    celoToken,
+    isMatching
   }
 }
 

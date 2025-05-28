@@ -1,5 +1,5 @@
 import { useWriteContract, useReadContract, useReadContracts, useAccount } from 'wagmi'
-import { formatEther, Address, type Abi, } from 'viem'
+import { formatEther, Address, type Abi, AbiFunction } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 
@@ -392,70 +392,88 @@ export function useProjectCount(contractAddress: Address) {
   }
 }
 
-const useProjectParticipations = (
+// Hook for fetching multiple project participations at once
+export function useProjectParticipations(
   contractAddress: Address,
   campaignId: bigint,
   projectIds: bigint[]
-) => {
-  console.log('useProjectParticipations called with:', {
+) {
+  console.log('🔍 useProjectParticipations called with:', {
     contractAddress,
     campaignId: campaignId.toString(),
     projectIds: projectIds.map(id => id.toString())
   });
 
-  const participationContracts = projectIds.map(projectId => ({
-    address: contractAddress,
-    abi,
-    functionName: 'getParticipation',
-    args: [campaignId, BigInt(projectId)]
-  }));
-
-  const { data, isLoading, error } = useReadContracts({
-    contracts: participationContracts as unknown as readonly {
-      address: Address
-      abi: Abi
-      functionName: string
-      args: readonly [bigint, bigint]
-    }[],
+  const { data, isLoading, error, refetch } = useReadContracts({
+    contracts: projectIds.map(projectId => ({
+      address: contractAddress,
+      abi: [{
+        inputs: [
+          { name: 'campaignId', type: 'uint256' },
+          { name: 'projectId', type: 'uint256' }
+        ],
+        name: 'getParticipation',
+        outputs: [
+          { name: 'approved', type: 'bool' },
+          { name: 'voteCount', type: 'uint256' },
+          { name: 'fundsReceived', type: 'uint256' }
+        ],
+        stateMutability: 'view',
+        type: 'function'
+      } satisfies AbiFunction],
+      functionName: 'getParticipation',
+      args: [campaignId, projectId]
+    })),
     query: {
-      enabled: !!contractAddress && !!campaignId && projectIds.length > 0
+      enabled: !!contractAddress && !!campaignId && projectIds.length > 0,
+      retry: 3,
+      retryDelay: 1000,
+      staleTime: 0 // Always fetch fresh data
     }
   });
 
-  console.log('Raw participation data from contract:', data);
+  console.log('📊 Raw participation data from contract:', data?.map((d, i) => ({
+    projectId: projectIds[i].toString(),
+    result: d?.result
+  })));
 
-  const participations: Record<string, {
-    approved: boolean;
-    voteCount: bigint;
-    fundsReceived: bigint;
-  }> = {};
-  
-  if (data) {
-    projectIds.forEach((projectId, index) => {
-      if (data[index]?.result) {
-        const result = data[index].result as any[];
-        console.log(`Participation result for project ${projectId.toString()}:`, {
-          approved: result[0],
-          voteCount: result[1].toString(),
-          fundsReceived: result[2].toString()
-        });
-        
-        participations[projectId.toString()] = {
+  // Process the data into a more usable format
+  const participations = useMemo(() => {
+    if (!data) {
+      console.log('❌ No participation data available');
+      return {};
+    }
+
+    const processed = projectIds.reduce((acc, projectId, index) => {
+      const result = data[index]?.result as [boolean, bigint, bigint] | undefined;
+      if (result) {
+        acc[projectId.toString()] = {
           approved: result[0],
           voteCount: result[1],
           fundsReceived: result[2]
         };
+        console.log(`✅ Processed participation for project ${projectId.toString()}:`, {
+          approved: result[0],
+          voteCount: result[1].toString(),
+          fundsReceived: result[2].toString()
+        });
       } else {
-        console.log(`No participation data for project ${projectId.toString()}`);
+        console.log(`⚠️ No participation data for project ${projectId.toString()}`);
       }
-    });
-  }
+      return acc;
+    }, {} as Record<string, { approved: boolean; voteCount: bigint; fundsReceived: bigint }>);
 
-  console.log('Final processed participations:', participations);
+    console.log('📈 Final processed participations:', processed);
+    return processed;
+  }, [data, projectIds]);
 
-  return { participations, isLoading, error };
-};
-
+  return {
+    participations,
+    isLoading,
+    error,
+    refetch
+  };
+}
 
 // Hook for getting project campaigns and their status
 export function useProjectCampaigns(contractAddress: Address, projectId: bigint) {
