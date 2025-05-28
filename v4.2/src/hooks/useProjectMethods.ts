@@ -1,7 +1,7 @@
 import { useWriteContract, useReadContract, useReadContracts, useAccount } from 'wagmi'
 import { formatEther, Address, type Abi, } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 // Types for better TypeScript support
 export interface ProjectMetadata {
@@ -260,7 +260,7 @@ export function useAddProjectToCampaign(contractAddress: Address) {
     campaignId,
     projectId,
     feeToken,
-    feeAmount = 0n, // Pass the calculated fee amount from component
+    feeAmount = 1000000000000000000n, 
     shouldPayFee = true // Pass whether fee should be paid from component
   }: {
     campaignId: bigint
@@ -270,10 +270,8 @@ export function useAddProjectToCampaign(contractAddress: Address) {
     shouldPayFee?: boolean
   }) => {
     try {
-      // Only send CELO value if fee should be paid and paying with CELO
-      // Assuming CELO token address - you should define this constant
-      const CELO_TOKEN_ADDRESS = import.meta.env.VITE_CELO_TOKEN // Replace with actual CELO token address
-      const value = (shouldPayFee && feeToken === CELO_TOKEN_ADDRESS) ? feeAmount : 0n
+      
+      const value = feeAmount;
 
       await writeContract({
         address: contractAddress,
@@ -283,6 +281,7 @@ export function useAddProjectToCampaign(contractAddress: Address) {
         value
       })
     } catch (err) {
+      console.log("should pay fee", shouldPayFee)
       console.error('Error adding project to campaign:', err)
       throw err
     }
@@ -925,6 +924,26 @@ export function formatProjectForDisplay(projectDetails: ProjectDetails) {
   }
 }
 
+// Hook for getting projects filtered by campaign ID
+export function useCampaignProjects(contractAddress: Address, campaignId: bigint) {
+  const { projects: allProjects, isLoading, error } = useAllProjects(contractAddress);
+
+  const campaignProjects = useMemo(() => {
+    return allProjects?.filter(projectDetails => {
+      const formatted = formatProjectForDisplay(projectDetails);
+      return formatted && projectDetails.project.campaignIds.some(cId => 
+        Number(cId) === Number(campaignId)
+      );
+    }).map(formatProjectForDisplay).filter(Boolean) || [];
+  }, [allProjects, campaignId]);
+
+  return {
+    campaignProjects,
+    isLoading,
+    error
+  };
+}
+
 export default {
   useCreateProject,
   useUpdateProject,
@@ -945,5 +964,6 @@ export default {
   useProjectVotedTokensWithAmounts,
   useProjectFees,
   parseProjectMetadata,
-  formatProjectForDisplay
+  formatProjectForDisplay,
+  useCampaignProjects
 }
