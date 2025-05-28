@@ -397,6 +397,12 @@ const useProjectParticipations = (
   campaignId: bigint,
   projectIds: bigint[]
 ) => {
+  console.log('useProjectParticipations called with:', {
+    contractAddress,
+    campaignId: campaignId.toString(),
+    projectIds: projectIds.map(id => id.toString())
+  });
+
   const participationContracts = projectIds.map(projectId => ({
     address: contractAddress,
     abi,
@@ -416,6 +422,8 @@ const useProjectParticipations = (
     }
   });
 
+  console.log('Raw participation data from contract:', data);
+
   const participations: Record<string, {
     approved: boolean;
     voteCount: bigint;
@@ -425,14 +433,25 @@ const useProjectParticipations = (
   if (data) {
     projectIds.forEach((projectId, index) => {
       if (data[index]?.result) {
+        const result = data[index].result as any[];
+        console.log(`Participation result for project ${projectId.toString()}:`, {
+          approved: result[0],
+          voteCount: result[1].toString(),
+          fundsReceived: result[2].toString()
+        });
+        
         participations[projectId.toString()] = {
-          approved: (data[index].result as any[])[0],
-          voteCount: (data[index].result as any[])[1],
-          fundsReceived: (data[index].result as any[])[2]
+          approved: result[0],
+          voteCount: result[1],
+          fundsReceived: result[2]
         };
+      } else {
+        console.log(`No participation data for project ${projectId.toString()}`);
       }
     });
   }
+
+  console.log('Final processed participations:', participations);
 
   return { participations, isLoading, error };
 };
@@ -621,6 +640,8 @@ export function useProjectDetails(contractAddress: Address, projectId: bigint) {
 
 // Hook for reading multiple projects at once
 export function useProjects(contractAddress: Address, projectIds: bigint[]) {
+  console.log('useProjects - called with projectIds:', projectIds.map(id => id.toString()))
+
   const contracts = projectIds.flatMap(id => [
     {
       address: contractAddress,
@@ -636,6 +657,8 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
     }
   ])
 
+  console.log('useProjects - generated contracts:', contracts.length)
+
   const { data, isLoading, error, refetch } = useReadContracts({
     contracts: contracts as unknown as readonly {
       address: Address
@@ -647,6 +670,8 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
       enabled: !!contractAddress && projectIds.length > 0
     }
   })
+
+  console.log('useProjects - contract data received:', data?.length)
 
   const projects: ProjectDetails[] = []
   
@@ -678,6 +703,8 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
     }
   }
 
+  console.log('useProjects - processed projects:', projects.length)
+
   return {
     projects,
     isLoading,
@@ -690,10 +717,16 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
 export function useAllProjects(contractAddress: Address) {
   const { projectCount, isLoading: countLoading } = useProjectCount(contractAddress)
   
+  console.log('useAllProjects - projectCount:', projectCount?.toString())
+  
   const projectIds = projectCount ? 
     Array.from({ length: Number(projectCount) }, (_, i) => BigInt(i)) : []
 
+  console.log('useAllProjects - generated projectIds:', projectIds.map(id => id.toString()))
+
   const { projects, isLoading: projectsLoading, error, refetch } = useProjects(contractAddress, projectIds)
+
+  console.log('useAllProjects - fetched projects:', projects?.length)
 
   return {
     projects,
@@ -909,18 +942,40 @@ export function parseProjectMetadata(jsonString: string) {
 
 // Helper function to format project for display
 export function formatProjectForDisplay(projectDetails: ProjectDetails) {
-  if (!projectDetails) return null
+  console.log('formatProjectForDisplay input:', {
+    projectId: projectDetails?.project?.id?.toString(),
+    name: projectDetails?.project?.name,
+    hasMetadata: !!projectDetails?.metadata
+  });
 
-  const { project, metadata } = projectDetails
+  if (!projectDetails) {
+    console.log('formatProjectForDisplay: no project details');
+    return null;
+  }
+
+  const { project, metadata } = projectDetails;
   
-  return {
-    ...project,
-    ...metadata,
-    additionalDataParsed: parseProjectMetadata(metadata.additionalData),
-    campaignCount: project.campaignIds.length,
-    createdAtDate: new Date(Number(project.createdAt) * 1000),
-    isTransferrable: project.transferrable,
-    isActive: project.active
+  try {
+    const formatted = {
+      ...project,
+      ...metadata,
+      additionalDataParsed: parseProjectMetadata(metadata.additionalData),
+      campaignCount: project.campaignIds.length,
+      createdAtDate: new Date(Number(project.createdAt) * 1000),
+      isTransferrable: project.transferrable,
+      isActive: project.active
+    };
+
+    console.log('formatProjectForDisplay output:', {
+      id: formatted.id?.toString(),
+      name: formatted.name,
+      campaignCount: formatted.campaignCount
+    });
+
+    return formatted;
+  } catch (error) {
+    console.error('Error formatting project:', error);
+    return null;
   }
 }
 
