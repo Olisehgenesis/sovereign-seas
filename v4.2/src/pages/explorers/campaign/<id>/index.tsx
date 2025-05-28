@@ -1222,7 +1222,7 @@ export default function CampaignView() {
 
                    {/* Explore Arrow Button */}
                    <button
-                     onClick={() => project?.id ? navigate(`/explorer/project/${project.id.toString()}`) : null}
+                     onClick={() => project?.id ? navigate(`/explorer/project/${project.id}`) : null}
                      className="absolute bottom-2 right-2 p-2 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow"
                    >
                      <ArrowLeft className="h-4 w-4 transform rotate-180 group-hover/arrow:translate-x-1 transition-transform duration-300" />
