@@ -25,9 +25,7 @@ import {
   CheckCircle,
   AlertCircle,
   Shield,
-
   UserCheck,
-
   X,
   Star
 } from 'lucide-react';
@@ -601,7 +599,7 @@ export default function ProfilePage() {
                 <ProjectCard
                   key={project.project.id.toString()}
                   project={project.project}
-                  onClick={() => navigate(`/explorers/project/${project.project.id}`)}
+                  onClick={() => navigate(`/explorer/project/${project.project.id}`)}
                 />
               ))}
               
@@ -696,8 +694,8 @@ export default function ProfilePage() {
                 <VoteCard
                   key={index}
                   vote={vote}
-                  onViewProject={(projectId) => navigate(`/explorers/project/${projectId}`)}
-                  onViewCampaign={(campaignId) => navigate(`/explorers/campaign/${campaignId}`)}
+                  onViewProject={(projectId) => navigate(`/explorer/project/${projectId}`)}
+                  onViewCampaign={(campaignId) => navigate(`/explorer/campaign/${campaignId}`)}
                 />
               ))}
               

@@ -46,12 +46,15 @@
     "viewCampaign": "hardhat run scripts/viewCampaign.ts",
     "createCampaign": "hardhat run scripts/createCampaign.ts",
     "endCampaign": "hardhat run scripts/endCampaigns.ts",
+    "getCampaign": "npx ts-node scripts/getCampaign.ts",
 
     "addSupportedToken": "hardhat run scripts/addSupportedToken.ts",
     "add-tokens": "npx ts-node scripts/addSupportedToken.ts",
     "add-providers": "npx ts-node scripts/addExchangeProviders.ts",
     "add-sample": "npx ts-node scripts/generateSampleData.ts",
     "add-custom-sample": "npx ts-node scripts/generateCustomSampleData.ts",
+        "updateWinners": "npx ts-node scripts/updateCampaignWinners.ts",
+
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",

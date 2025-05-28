@@ -674,7 +674,14 @@ export default function CampaignView() {
                     <div className="flex items-center space-x-1">
                       <div className="text-center">
                         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
-                          {countdown.hours.toString().padStart(2, '0')}
+                          {Math.floor(countdown.hours / 24).toString().padStart(2, '0')}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">D</div>
+                      </div>
+                      <div className="text-blue-500 font-bold">:</div>
+                      <div className="text-center">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
+                          {(countdown.hours % 24).toString().padStart(2, '0')}
                         </div>
                         <div className="text-xs text-gray-600 mt-1">H</div>
                       </div>
