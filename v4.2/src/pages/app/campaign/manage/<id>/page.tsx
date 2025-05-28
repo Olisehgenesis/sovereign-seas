@@ -13,21 +13,18 @@ import {
   Eye, 
   Github, 
   Globe, 
-
   AlertTriangle,
   Loader2,
   Award,
   BarChart3,
   Users,
-
   UserPlus,
   Settings,
-
   ListChecks,
   User,
   Sparkles,
   TrendingUp,
-
+  RotateCcw
 } from 'lucide-react';
 
 import { 
@@ -36,6 +33,7 @@ import {
   useAddCampaignAdmin, 
   useDistributeFunds,
   useIsCampaignAdmin,
+  useSortedProjects
 } from '@/hooks/useCampaignMethods';
 
 import { 
@@ -46,7 +44,7 @@ import {
 import { contractABI as abi } from '@/abi/seas4ABI';
 import { Abi } from 'viem';
 
-// Custom hook for project participations
+// FIXED: Custom hook for project participations with better error handling
 const useProjectParticipations = (
   contractAddress: `0x${string}`,
   campaignId: bigint,
@@ -59,7 +57,7 @@ const useProjectParticipations = (
     args: [campaignId, BigInt(projectId)]
   }));
 
-  const { data, isLoading, error } = useReadContracts({
+  const { data, isLoading, error, refetch } = useReadContracts({
     contracts: participationContracts as unknown as readonly {
       address: `0x${string}`
       abi: Abi
@@ -67,7 +65,10 @@ const useProjectParticipations = (
       args: readonly [bigint, bigint]
     }[],
     query: {
-      enabled: !!contractAddress && !!campaignId && projectIds.length > 0
+      enabled: !!contractAddress && !!campaignId && projectIds.length > 0,
+      staleTime: 0, // Always fetch fresh data
+      retry: 3,
+      retryDelay: 1000
     }
   });
 
@@ -76,19 +77,23 @@ const useProjectParticipations = (
     voteCount: bigint;
     fundsReceived: bigint;
   }> = {};
+  
   if (data) {
     projectIds.forEach((projectId, index) => {
-      if (data[index]?.result) {
+      if (data[index]?.result && !data[index]?.error) {
+        const result = data[index].result as any[];
         participations[projectId] = {
-          approved: (data[index].result as any[])[0],
-          voteCount: (data[index].result as any[])[1],
-          fundsReceived: (data[index].result as any[])[2]
+          approved: result[0],
+          voteCount: result[1],
+          fundsReceived: result[2]
         };
+      } else if (data[index]?.error) {
+        console.error(`Error fetching participation for project ${projectId}:`, data[index].error);
       }
     });
   }
 
-  return { participations, isLoading, error };
+  return { participations, isLoading, error, refetch };
 };
 
 export default function CampaignManagePage() {
@@ -123,11 +128,19 @@ export default function CampaignManagePage() {
     address as `0x${string}`
   );
   
-  
+  // FIXED: Get sorted (approved) projects from contract for authoritative approval status
+  const { sortedProjectIds, isLoading: sortedLoading, refetch: refetchSorted } = useSortedProjects(
+    contractAddress as `0x${string}`,
+    campaignId
+  );
+
+  // Create a Set of approved project IDs for O(1) lookup
+  const approvedProjectIds = new Set(sortedProjectIds.map(id => id.toString()));
   
   const { 
     approveProject, 
-    isPending: isApprovingProject 
+    isPending: isApprovingProject,
+    error: approveError
   } = useApproveProject(contractAddress as `0x${string}`);
   
   const { 
@@ -153,6 +166,14 @@ export default function CampaignManagePage() {
     }
   }, [statusMessage]);
 
+  // FIXED: Log approval errors
+  useEffect(() => {
+    if (approveError) {
+      console.error('Approval error:', approveError);
+      setStatusMessage({ text: `Failed to approve project: ${approveError.message}`, type: 'error' });
+    }
+  }, [approveError]);
+
   // Filter projects for this campaign
   const campaignProjects = allProjects?.filter(projectDetails => {
     return projectDetails.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
@@ -160,52 +181,90 @@ export default function CampaignManagePage() {
 
   // Get project IDs and fetch participation data
   const projectIds = campaignProjects.map(p => Number(formatProjectForDisplay(p)?.id)).filter(Boolean);
-  const { participations, isLoading: participationsLoading } = useProjectParticipations(
+  const { participations, isLoading: participationsLoading, refetch: refetchParticipations } = useProjectParticipations(
     contractAddress,
     campaignId,
     projectIds
   );
 
-  // Filter projects based on approval status
+  // FIXED: Use authoritative approval status from sortedProjectIds
   const filteredProjects = campaignProjects.filter(projectDetails => {
     const project = formatProjectForDisplay(projectDetails);
     if (!project) return false;
     
-    const participation = participations[Number(project.id)];
-    const isApproved = participation?.approved || false;
+    const isApproved = approvedProjectIds.has(project.id.toString());
     
     if (projectFilter === 'pending') return !isApproved;
     if (projectFilter === 'approved') return isApproved;
     return true;
   });
 
-  // Calculate stats
+  // FIXED: Calculate stats using authoritative approval status
   const totalProjects = campaignProjects.length;
-  const pendingProjects = campaignProjects.filter(p => {
-    const project = formatProjectForDisplay(p);
-    const participation = participations[Number(project?.id)];
-    return !participation?.approved;
-  }).length;
   const approvedProjects = campaignProjects.filter(p => {
     const project = formatProjectForDisplay(p);
-    const participation = participations[Number(project?.id)];
-    return participation?.approved;
+    return project && approvedProjectIds.has(project.id.toString());
   }).length;
+  const pendingProjects = totalProjects - approvedProjects;
 
+  // FIXED: Refetch all data function
+  const refetchAllData = () => {
+    refetchParticipations();
+    refetchSorted();
+  };
+
+  // FIXED: Better error handling for project approval
   const handleApproveProject = async (projectId: bigint) => {
+    console.log('Starting approval process for project:', projectId.toString());
+    
+    if (!isConnected || !address) {
+      setStatusMessage({ text: 'Please connect your wallet to approve projects', type: 'error' });
+      return;
+    }
+
+    if (!isAdmin) {
+      setStatusMessage({ text: 'Only campaign admins can approve projects', type: 'error' });
+      return;
+    }
+
     try {
-      const tx = await approveProject({
+      console.log('Calling approveProject function...');
+      setStatusMessage({ text: 'Approval transaction initiated...', type: 'info' });
+      
+      const result = await approveProject({
         campaignId,
         projectId
       });
-      console.log('tx', tx);
-
+      
+      console.log('Approval transaction result:', result);
+      setStatusMessage({ text: 'Project approved successfully! Transaction submitted.', type: 'success' });
       setConfirmApproval({ show: false, projectId: null });
-      //reload the page
-      window.location.reload();
-    } catch (error) {
+      
+      // Refetch data after a delay to allow transaction to be mined
+      setTimeout(() => {
+        console.log('Refetching data after approval...');
+        refetchAllData();
+      }, 3000);
+      
+    } catch (error: any) {
       console.error('Error approving project:', error);
-      setStatusMessage({ text: 'Failed to approve project', type: 'error' });
+      
+      let errorMessage = 'Failed to approve project';
+      
+      if (error?.message) {
+        if (error.message.includes('user rejected')) {
+          errorMessage = 'Transaction was rejected by user';
+        } else if (error.message.includes('insufficient funds')) {
+          errorMessage = 'Insufficient funds for transaction';
+        } else if (error.message.includes('Project already approved')) {
+          errorMessage = 'Project is already approved';
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+      
+      setStatusMessage({ text: errorMessage, type: 'error' });
+      setConfirmApproval({ show: false, projectId: null });
     }
   };
 
@@ -220,9 +279,9 @@ export default function CampaignManagePage() {
       setStatusMessage({ text: 'Admin added successfully!', type: 'success' });
       setShowAdminModal(false);
       setNewAdminAddress('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding admin:', error);
-      setStatusMessage({ text: 'Failed to add admin', type: 'error' });
+      setStatusMessage({ text: `Failed to add admin: ${error.message || 'Unknown error'}`, type: 'error' });
     }
   };
 
@@ -231,15 +290,15 @@ export default function CampaignManagePage() {
       await distributeFunds({ campaignId });
       setStatusMessage({ text: 'Funds distributed successfully!', type: 'success' });
       setShowDistributeModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error distributing funds:', error);
-      setStatusMessage({ text: 'Failed to distribute funds', type: 'error' });
+      setStatusMessage({ text: `Failed to distribute funds: ${error.message || 'Unknown error'}`, type: 'error' });
     }
   };
 
   if (!isMounted) return null;
 
-  if (campaignLoading || projectsLoading || participationsLoading) {
+  if (campaignLoading || projectsLoading || participationsLoading || sortedLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -323,6 +382,18 @@ export default function CampaignManagePage() {
               <Shield className="h-5 w-5 text-blue-500" />
               <span className="text-lg font-semibold text-gray-800">Campaign Management</span>
             </div>
+            
+            {/* FIXED: Add refresh button */}
+            <button
+              onClick={refetchAllData}
+              disabled={participationsLoading || sortedLoading}
+              className="p-2 bg-white/90 backdrop-blur-sm rounded-full border border-blue-100 hover:shadow-lg transition-all flex items-center space-x-2"
+            >
+              <RotateCcw className={`h-4 w-4 text-blue-600 ${(participationsLoading || sortedLoading) ? 'animate-spin' : ''}`} />
+              <span className="text-sm text-blue-600 hidden sm:inline">
+                {(participationsLoading || sortedLoading) ? 'Refreshing...' : 'Refresh'}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -371,7 +442,9 @@ export default function CampaignManagePage() {
           <div className={`mb-6 p-4 rounded-xl shadow-lg ${
             statusMessage.type === 'success' 
               ? 'bg-green-50 border border-green-200 text-green-700' 
-              : 'bg-red-50 border border-red-200 text-red-700'
+              : statusMessage.type === 'error'
+              ? 'bg-red-50 border border-red-200 text-red-700'
+              : 'bg-blue-50 border border-blue-200 text-blue-700'
           }`}>
             <div className="flex items-start">
               {statusMessage.type === 'success' ? (
@@ -565,227 +638,315 @@ export default function CampaignManagePage() {
                       const project = formatProjectForDisplay(projectDetails);
                       if (!project) return null;
 
+                      // FIXED: Use authoritative approval status
+                      const isApproved = approvedProjectIds.has(project.id.toString());
                       const participation = participations[Number(project.id)];
-                      const isApproved = participation?.approved || false;
 
                       return (
                         <div key={project.id} className="bg-white rounded-xl p-6 shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
-                          <div className="flex flex-col md:flex-row md:items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <h4 className="text-lg font-semibold text-gray-800">{project.name}</h4>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  isApproved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                                }`}>
-                                  {isApproved ? 'Approved' : 'Pending'}
-                                </span>
-                              </div>
-                              <p className="text-gray-600 mb-3">{project.description}</p>
-                              <div className="flex items-center space-x-4 text-sm text-gray-500">
-                                <span className="flex items-center">
-                                  <User className="h-3 w-3 mr-1" />
-                                  {project.owner.slice(0, 6)}...{project.owner.slice(-4)}
-                                </span>
-                                {project.additionalDataParsed?.githubRepo && (
-                                  <a 
-                                    href={project.additionalDataParsed.githubRepo} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center text-blue-600 hover:text-blue-700"
-                                  >
-                                    <Github className="h-3 w-3 mr-1" />
-                                    GitHub
-                                  </a>
+                        <div className="flex flex-col md:flex-row md:items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h4 className="text-lg font-semibold text-gray-800">{project.name}</h4>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                isApproved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {isApproved ? (
+                                  <div className="flex items-center space-x-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    <span>Approved</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center space-x-1">
+                                    <Clock className="h-3 w-3" />
+                                    <span>Pending</span>
+                                  </div>
                                 )}
-                                {project.additionalDataParsed?.website && (
-                                  <a 
-                                    href={project.additionalDataParsed.website} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center text-blue-600 hover:text-blue-700"
-                                  >
-                                    <Globe className="h-3 w-3 mr-1" />
-                                    Website
-                                  </a>
-                                )}
-                              </div>
+                              </span>
                             </div>
-                            
-                            <div className="flex items-center space-x-3 mt-4 md:mt-0">
-                              <button
-                                onClick={() => navigate(`/explore/project/${project.id}`)}
-                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors flex items-center"
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </button>
-                              
-                              {!isApproved && (
-                                  <button
-                                    onClick={() => setConfirmApproval({ show: true, projectId: BigInt(project.id) })}
-                                    disabled={isApprovingProject}
-                                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center disabled:opacity-50"
-                                  >
-                                    {isApprovingProject ? (
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    ) : (
-                                      <CheckCircle className="h-4 w-4 mr-2" />
-                                    )}
-                                    Approve
-                                  </button>
-                                )}
-                              </div>
+                            <p className="text-gray-600 mb-3">{project.description}</p>
+                            <div className="flex items-center space-x-4 text-sm text-gray-500">
+                              <span className="flex items-center">
+                                <User className="h-3 w-3 mr-1" />
+                                {project.owner.slice(0, 6)}...{project.owner.slice(-4)}
+                              </span>
+                              {project.additionalDataParsed?.githubRepo && (
+                                <a 
+                                  href={project.additionalDataParsed.githubRepo} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center text-blue-600 hover:text-blue-700"
+                                >
+                                  <Github className="h-3 w-3 mr-1" />
+                                  GitHub
+                                </a>
+                              )}
+                              {project.additionalDataParsed?.website && (
+                                <a 
+                                  href={project.additionalDataParsed.website} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center text-blue-600 hover:text-blue-700"
+                                >
+                                  <Globe className="h-3 w-3 mr-1" />
+                                  Website
+                                </a>
+                              )}
+                              {participation && (
+                                <span className="flex items-center text-indigo-600">
+                                  <Award className="h-3 w-3 mr-1" />
+                                  {Number(participation.voteCount) / 1e18} votes
+                                </span>
+                              )}
                             </div>
                           </div>
-                        );
-                      })
-                    )}
+                          
+                          <div className="flex items-center space-x-3 mt-4 md:mt-0">
+                            <button
+                              onClick={() => navigate(`/explore/project/${project.id}`)}
+                              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors flex items-center"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </button>
+                            
+                            {!isApproved && (
+                              <button
+                                onClick={() => {
+                                  console.log('Approve button clicked for project:', project.id);
+                                  setConfirmApproval({ show: true, projectId: BigInt(project.id) });
+                                }}
+                                disabled={isApprovingProject}
+                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isApprovingProject ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    <span>Approving...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    <span>Approve</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Campaign Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Name</label>
+                    <p className="text-gray-900">{campaign.name}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Admin Fee</label>
+                    <p className="text-gray-900">{Number(campaign.adminFeePercentage)}%</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Winners</label>
+                    <p className="text-gray-900">{Number(campaign.maxWinners) || 'Unlimited'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Distribution Method</label>
+                    <p className="text-gray-900">{campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}</p>
                   </div>
                 </div>
-              )}
+                
+                <div className="mt-6">
+                  <button
+                    onClick={() => navigate(`/explore/campaign/${id}/edit`)}
+                    className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Edit Campaign
+                  </button>
+                </div>
+              </div>
 
-              {/* Settings Tab */}
-              {activeTab === 'settings' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Campaign Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Name</label>
-                        <p className="text-gray-900">{campaign.name}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Admin Fee</label>
-                        <p className="text-gray-900">{Number(campaign.adminFeePercentage)}%</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Max Winners</label>
-                        <p className="text-gray-900">{Number(campaign.maxWinners) || 'Unlimited'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Distribution Method</label>
-                        <p className="text-gray-900">{campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6">
-                      <button
-                        onClick={() => navigate(`/explore/campaign/${id}/edit`)}
-                        className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center"
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Edit Campaign
-                      </button>
+              <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Admin Management</h3>
+                <p className="text-gray-600 mb-4">Add additional administrators to help manage this campaign.</p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Current Admin</label>
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      <span className="font-mono text-sm">{campaign.admin}</span>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Owner</span>
                     </div>
                   </div>
+                  
+                  <button
+                    onClick={() => setShowAdminModal(true)}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add New Admin
+                  </button>
+                </div>
+              </div>
 
-                  <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Admin Management</h3>
-                    <p className="text-gray-600 mb-4">Add additional administrators to help manage this campaign.</p>
-                    
+              {hasEnded && (
+                <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Fund Distribution</h3>
+                  {canDistribute ? (
                     <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Current Admin</label>
-                        <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                          <Shield className="h-4 w-4 text-blue-500" />
-                          <span className="font-mono text-sm">{campaign.admin}</span>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Owner</span>
+                      <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="flex items-start">
+                          <AlertTriangle className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-amber-800">Ready to Distribute</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                              The campaign has ended and funds can now be distributed to winning projects.
+                              This action cannot be undone.
+                            </p>
+                          </div>
                         </div>
                       </div>
                       
                       <button
-                        onClick={() => setShowAdminModal(true)}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center"
+                        onClick={() => setShowDistributeModal(true)}
+                        className="px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center"
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Add New Admin
+                        <Award className="h-4 w-4 mr-2" />
+                        Distribute Funds Now
                       </button>
                     </div>
-                  </div>
-
-                  {hasEnded && (
-                    <div className="bg-white rounded-xl p-6 shadow-lg border border-blue-100">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Fund Distribution</h3>
-                      {canDistribute ? (
-                        <div className="space-y-4">
-                          <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                            <div className="flex items-start">
-                              <AlertTriangle className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <p className="font-medium text-amber-800">Ready to Distribute</p>
-                                <p className="text-sm text-amber-700 mt-1">
-                                  The campaign has ended and funds can now be distributed to winning projects.
-                                  This action cannot be undone.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => setShowDistributeModal(true)}
-                            className="px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center"
-                          >
-                            <Award className="h-4 w-4 mr-2" />
-                            Distribute Funds Now
-                          </button>
+                  ) : (
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-start">
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-green-800">Funds Distributed</p>
+                          <p className="text-sm text-green-700 mt-1">
+                            Funds have been successfully distributed to the winning projects.
+                          </p>
                         </div>
-                      ) : (
-                        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                          <div className="flex items-start">
-                            <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <p className="font-medium text-green-800">Funds Distributed</p>
-                              <p className="text-sm text-green-700 mt-1">
-                                Funds have been successfully distributed to the winning projects.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      
+      {/* Approve Project Confirmation Modal */}
+      {confirmApproval.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Confirm Approval</h3>
+              <button
+                onClick={() => setConfirmApproval({ show: false, projectId: null })}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to approve this project? Once approved, it will be visible to voters and eligible for funding.
+            </p>
+            
+            <div className="flex space-x-4">
+              <button
+                onClick={() => {
+                  console.log('Confirm approval clicked');
+                  if (confirmApproval.projectId) {
+                    handleApproveProject(confirmApproval.projectId);
+                  }
+                }}
+                disabled={isApprovingProject}
+                className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {isApprovingProject ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span>Approving...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span>Approve Project</span>
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setConfirmApproval({ show: false, projectId: null })}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Modals */}
-        
-        {/* Approve Project Confirmation Modal */}
-        {confirmApproval.show && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-800">Confirm Approval</h3>
-                <button
-                  onClick={() => setConfirmApproval({ show: false, projectId: null })}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <XCircle className="h-6 w-6" />
-                </button>
+      {/* Add Admin Modal */}
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Add Campaign Admin</h3>
+              <button
+                onClick={() => setShowAdminModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Wallet Address</label>
+                <input
+                  type="text"
+                  value={newAdminAddress}
+                  onChange={(e) => setNewAdminAddress(e.target.value)}
+                  placeholder="0x..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
               </div>
-              
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to approve this project? Once approved, it will be visible to voters and eligible for funding.
-              </p>
               
               <div className="flex space-x-4">
                 <button
-                  onClick={() => confirmApproval.projectId && handleApproveProject(confirmApproval.projectId)}
-                  disabled={isApprovingProject}
-                  className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
+                  onClick={handleAddAdmin}
+                  disabled={isAddingAdmin || !newAdminAddress}
+                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
                 >
-                  {isApprovingProject ? (
+                  {isAddingAdmin ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <UserPlus className="h-4 w-4 mr-2" />
                   )}
-                  Approve Project
+                  Add Admin
                 </button>
                 
                 <button
-                  onClick={() => setConfirmApproval({ show: false, projectId: null })}
+                  onClick={() => {
+                    setShowAdminModal(false);
+                    setNewAdminAddress('');
+                  }}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                 >
                   Cancel
@@ -793,137 +954,84 @@ export default function CampaignManagePage() {
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Add Admin Modal */}
-        {showAdminModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-800">Add Campaign Admin</h3>
-                <button
-                  onClick={() => setShowAdminModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <XCircle className="h-6 w-6" />
-                </button>
+      {/* Distribute Funds Modal */}
+      {showDistributeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Distribute Campaign Funds</h3>
+              <button
+                onClick={() => setShowDistributeModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-800 mb-3">Distribution Summary</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Funds:</span>
+                    <span className="font-medium">{Number(campaign.totalFunds) / 1e18} CELO</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Platform Fee (15%):</span>
+                    <span className="font-medium">{(Number(campaign.totalFunds) / 1e18 * 0.15).toFixed(2)} CELO</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Admin Fee ({Number(campaign.adminFeePercentage)}%):</span>
+                    <span className="font-medium">{(Number(campaign.totalFunds) / 1e18 * Number(campaign.adminFeePercentage) / 100).toFixed(2)} CELO</span>
+                  </div>
+                  <div className="flex justify-between font-medium border-t pt-2">
+                    <span className="text-gray-800">To Projects:</span>
+                    <span className="text-green-600">{(Number(campaign.totalFunds) / 1e18 * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} CELO</span>
+                  </div>
+                </div>
               </div>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Admin Wallet Address</label>
-                  <input
-                    type="text"
-                    value={newAdminAddress}
-                    onChange={(e) => setNewAdminAddress(e.target.value)}
-                    placeholder="0x..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                </div>
-                
-                <div className="flex space-x-4">
-                  <button
-                    onClick={handleAddAdmin}
-                    disabled={isAddingAdmin || !newAdminAddress}
-                    className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
-                  >
-                    {isAddingAdmin ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 mr-2" />
-                    )}
-                    Add Admin
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      setShowAdminModal(false);
-                      setNewAdminAddress('');
-                    }}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800 mb-1">Warning</p>
+                    <p className="text-sm text-amber-700">
+                      This action is irreversible. Funds will be distributed to winning projects based on their vote counts.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Distribute Funds Modal */}
-        {showDistributeModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-800">Distribute Campaign Funds</h3>
+              
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleDistributeFunds}
+                  disabled={isDistributingFunds}
+                  className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
+                >
+                  {isDistributingFunds ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Award className="h-4 w-4 mr-2" />
+                  )}
+                  Distribute Now
+                </button>
+                
                 <button
                   onClick={() => setShowDistributeModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                 >
-                  <XCircle className="h-6 w-6" />
+                  Cancel
                 </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-800 mb-3">Distribution Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Funds:</span>
-                      <span className="font-medium">{Number(campaign.totalFunds) / 1e18} CELO</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Platform Fee (15%):</span>
-                      <span className="font-medium">{(Number(campaign.totalFunds) / 1e18 * 0.15).toFixed(2)} CELO</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Admin Fee ({Number(campaign.adminFeePercentage)}%):</span>
-                      <span className="font-medium">{(Number(campaign.totalFunds) / 1e18 * Number(campaign.adminFeePercentage) / 100).toFixed(2)} CELO</span>
-                    </div>
-                    <div className="flex justify-between font-medium border-t pt-2">
-                      <span className="text-gray-800">To Projects:</span>
-                      <span className="text-green-600">{(Number(campaign.totalFunds) / 1e18 * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} CELO</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <AlertTriangle className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-amber-800 mb-1">Warning</p>
-                      <p className="text-sm text-amber-700">
-                        This action is irreversible. Funds will be distributed to winning projects based on their vote counts.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-4">
-                  <button
-                    onClick={handleDistributeFunds}
-                    disabled={isDistributingFunds}
-                    className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
-                  >
-                    {isDistributingFunds ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Award className="h-4 w-4 mr-2" />
-                    )}
-                    Distribute Now
-                  </button>
-                  
-                  <button
-                    onClick={() => setShowDistributeModal(false)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    );
-  }
+        </div>
+      )}
+    </div>
+  </div>
+);
+}

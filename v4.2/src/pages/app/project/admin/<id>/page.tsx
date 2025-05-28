@@ -47,7 +47,7 @@ import {
   Activity,
   ExternalLink
 } from 'lucide-react';
-import { useProjectDetails, useUpdateProject, useProjectCampaigns } from '@/hooks/useProjectMethods';
+import { useProjectDetails, useUpdateProject, useProjectCampaigns, useCanBypassFees } from '@/hooks/useProjectMethods';
 import { uploadToIPFS } from '@/utils/imageUtils';
 
 const contractAddress = import.meta.env.VITE_CONTRACT_V4;
@@ -148,6 +148,11 @@ const EditProjectPage = () => {
     transferrable: true
   });
 
+  // Check if user is project owner or admin
+  const { canBypass: isAdmin } = useCanBypassFees(contractAddress, address as Address);
+  const isOwner = projectDetails?.project?.owner?.toLowerCase() === address?.toLowerCase();
+  const canEdit = isOwner || isAdmin;
+  
   // Populate project data when loaded
   useEffect(() => {
     if (projectDetails && projectDetails.project && projectDetails.metadata) {
@@ -259,9 +264,6 @@ const EditProjectPage = () => {
     }
   }, [updateError]);
 
-  // Check if user is project owner
-  const isOwner = projectDetails?.project?.owner?.toLowerCase() === address?.toLowerCase();
-  
   if (!isMounted) {
     return null;
   }
@@ -305,12 +307,12 @@ const EditProjectPage = () => {
     );
   }
 
-  if (!isOwner) {
+  if (!canEdit) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-600">You can only edit projects you own</p>
+          <p className="text-gray-600">You need to be the project owner or an admin to edit projects</p>
           <button
             onClick={() => navigate('/explorer')}
             className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
