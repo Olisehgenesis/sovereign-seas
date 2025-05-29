@@ -109,6 +109,8 @@ export function useVote(contractAddress: Address) {
     sendTransactionAsync
   } = useSendTransaction()
 
+  console.log(writeContract)
+
   console.log('setVote, setVotingStats', setVotingStats)
   console.log('setIsCalculating', setIsCalculating)
 
@@ -188,42 +190,106 @@ export function useVote(contractAddress: Address) {
   }
 
   // NEW: Separate function for CELO voting
-  const voteWithCelo = async ({
-    campaignId,
-    projectId,
-    amount,
-    bypassCode = '0x0000000000000000000000000000000000000000000000000000000000000000'
-  }: {
-    campaignId: bigint
-    projectId: bigint
-    amount: bigint
-    bypassCode?: string
-  }) => {
-    console.log('🎯 VoteWithCelo called with:', {
-      campaignId: campaignId.toString(),
-      projectId: projectId.toString(),
-      amount: amount.toString(),
-      celoToken
+  // const voteWithCelo = async ({
+  //   campaignId,
+  //   projectId,
+  //   amount,
+  //   bypassCode = '0x0000000000000000000000000000000000000000000000000000000000000000'
+  // }: {
+  //   campaignId: bigint
+  //   projectId: bigint
+  //   amount: bigint
+  //   bypassCode?: string
+  // }) => {
+  //   console.log('🎯 VoteWithCelo called with:', {
+  //     campaignId: campaignId.toString(),
+  //     projectId: projectId.toString(),
+  //     amount: amount.toString(),
+  //     celoToken
+  //   });
+
+  //   try {
+  //     console.log('Voting with native CELO:', amount.toString());
+
+  //     const tx = await writeContract({
+  //       address: contractAddress,
+  //       abi,
+  //       functionName: 'voteWithCelo', // ✅ Use the CELO-specific function
+  //       args: [campaignId, projectId, bypassCode as `0x${string}`],
+  //       value: amount // Send CELO as msg.value
+  //     });
+
+  //     console.log('✅ VoteWithCelo transaction submitted:', tx);
+  //     return tx;
+  //   } catch (err) {
+  //     console.error('❌ Error in voteWithCelo:', err)
+  //     throw err
+  //   }
+  // }
+
+  // NEW: Updated voteWithCelo function with Divvi integration
+const voteWithCelo = async ({
+  campaignId,
+  projectId,
+  amount,
+  bypassCode = '0x0000000000000000000000000000000000000000000000000000000000000000'
+}: {
+  campaignId: bigint
+  projectId: bigint
+  amount: bigint
+  bypassCode?: string
+}) => {
+  console.log('🎯 VoteWithCelo called with:', {
+    campaignId: campaignId.toString(),
+    projectId: projectId.toString(),
+    amount: amount.toString(),
+    celoToken
+  });
+
+  try {
+    console.log('Voting with native CELO:', amount.toString());
+
+    // Divvi referral integration section
+    const voteInterface = new Interface(abi);
+
+    const voteWithCeloData = voteInterface.encodeFunctionData('voteWithCelo', [
+      campaignId, 
+      projectId, 
+      bypassCode as `0x${string}`
+    ]);
+    const celoChainId = 42220; // Celo mainnet chain ID
+
+    const dataWithSuffix = voteWithCeloData + dataSuffix;
+
+    // Using sendTransactionAsync to support referral integration
+    const tx = await sendTransactionAsync({
+      to: contractAddress,
+      data: dataWithSuffix as `0x${string}`,
+      value: amount // Send CELO as msg.value
     });
 
-    try {
-      console.log('Voting with native CELO:', amount.toString());
-
-      const tx = await writeContract({
-        address: contractAddress,
-        abi,
-        functionName: 'voteWithCelo', // ✅ Use the CELO-specific function
-        args: [campaignId, projectId, bypassCode as `0x${string}`],
-        value: amount // Send CELO as msg.value
-      });
-
-      console.log('✅ VoteWithCelo transaction submitted:', tx);
-      return tx;
-    } catch (err) {
-      console.error('❌ Error in voteWithCelo:', err)
-      throw err
+    if (!tx) {
+      throw new Error('Transaction failed to send');
     }
+
+    // Submit the referral to Divvi
+    try {
+      await submitReferral({
+        txHash: tx as unknown as `0x${string}`,
+        chainId: celoChainId
+      });
+      console.log('✅ Divvi referral submitted for voteWithCelo transaction');
+    } catch (referralError) {
+      console.error("Referral submission error:", referralError);
+    }
+
+    console.log('✅ VoteWithCelo transaction submitted:', tx);
+    return tx;
+  } catch (err) {
+    console.error('❌ Error in voteWithCelo:', err)
+    throw err
   }
+}
 
   const batchVote = async ({
     campaignId,

@@ -263,6 +263,7 @@ export default function CampaignView() {
   const [activeTab, setActiveTab] = useState<'all' | 'approved' | 'pending'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
   
   // Add update function for vote counts
   const updateProjectVoteCount = useCallback((projectId: string, voteCount: bigint) => {
@@ -316,7 +317,7 @@ export default function CampaignView() {
   
   const { 
     vote, 
-    isPending: isVoting, 
+    isPending: isVotePending, 
   } = useVote(contractAddress);
 
   // FIXED: Always call sorted projects hook
@@ -481,14 +482,26 @@ export default function CampaignView() {
   // Use enhanced countdown hook
   const countdown = useCountdown(startTime, endTime);
 
-  const openVoteModal = (project: Project) => {
-    setSelectedProject(project);
-    setShowVoteModal(true);
+  const handleVoteSuccess = async () => {
+    // First set selectedProject to null to prevent re-rendering with old data
+    setSelectedProject(null);
+    // Then close the modal
+    setShowVoteModal(false);
+    // Wait for state updates to complete
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Finally refetch data
+    await refetchAllData();
   };
 
   const closeVoteModal = () => {
     setShowVoteModal(false);
+    // Clear selected project immediately to prevent re-rendering
     setSelectedProject(null);
+  };
+
+  const openVoteModal = (project: Project) => {
+    setSelectedProject(project);
+    setShowVoteModal(true);
   };
 
   const handleBackToArena = () => {
@@ -1092,8 +1105,8 @@ export default function CampaignView() {
         {/* Main Content */}
         <div className="flex-1 p-4 lg:p-6">
           {/* Enhanced Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center space-x-3 w-full sm:w-auto">
               <button
                 onClick={handleBackToArena}
                 className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
@@ -1124,7 +1137,7 @@ export default function CampaignView() {
               </button>
             </div>
             
-            <div className="flex items-center space-x-2 text-xs">
+            <div className="flex items-center space-x-2 text-xs w-full sm:w-auto justify-between sm:justify-end">
               <div className="flex items-center space-x-2 glass-morphism px-3 py-2 rounded-full shadow-sm animate-float">
                 <Users className="h-3 w-3 text-blue-500" />
                 <span className="font-bold text-blue-600">{sortedProjects.length}</span>
@@ -1153,7 +1166,7 @@ export default function CampaignView() {
             
             <div className="relative z-10">
               {/* Top Row - Campaign Title and Status */}
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                 <div className="flex items-center space-x-3">
                   {/* Compact Campaign Logo */}
                   <div className="animate-float">
@@ -1176,7 +1189,7 @@ export default function CampaignView() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                       <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
                         {campaign.name || 'Untitled Campaign'}
                       </h1>
@@ -1185,7 +1198,7 @@ export default function CampaignView() {
                       {isActive && !hasEnded && (
                         <button
                           onClick={() => setShowAddProjectModal(true)}
-                          className="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden"
+                          className="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center"
                         >
                           <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
                           <span>Add Project</span>
@@ -1197,7 +1210,7 @@ export default function CampaignView() {
                       {isAdmin && (
                         <button
                           onClick={handleAdminPanel}
-                          className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden"
+                          className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center"
                         >
                           <Settings className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
                           <span>Admin Panel</span>
@@ -1205,12 +1218,12 @@ export default function CampaignView() {
                         </button>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 line-clamp-1">{campaign.description}</p>
+                    <p className="text-sm text-gray-600 line-clamp-1 mt-1">{campaign.description}</p>
                   </div>
                 </div>
 
                 {/* Enhanced Status Badge */}
-                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${
+                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 justify-center sm:justify-start ${
                   countdown.phase === 'active' ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
                   countdown.phase === 'ended' ? 'bg-gray-100 text-gray-700' : 
                   'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700'
@@ -1240,7 +1253,7 @@ export default function CampaignView() {
               {/* Enhanced Countdown Timer */}
               {countdown.phase !== 'ended' && (
                 <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm rounded-lg p-3 border border-blue-200/50">
-                  <div className="flex items-center justify-center space-x-3">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                     <Timer className="h-4 w-4 text-blue-500 animate-wave" />
                     <div className="flex items-center space-x-1">
                       <div className="text-center">
@@ -1282,7 +1295,7 @@ export default function CampaignView() {
 
           {/* Enhanced Projects Leaderboard */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
               <h2 className="text-xl font-bold flex items-center">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
                   <Rocket className="h-5 w-5 text-blue-500 mr-2 inline animate-wave" />
@@ -1296,8 +1309,8 @@ export default function CampaignView() {
             </div>
 
             {/* FIXED: Enhanced Project Filtering Tabs with correct counts */}
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="flex space-x-2 bg-white/80 backdrop-blur-sm rounded-lg p-1 border border-blue-200">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 bg-white/80 backdrop-blur-sm rounded-lg p-1 border border-blue-200">
                 <button
                   onClick={() => setActiveTab('all')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
@@ -1339,7 +1352,7 @@ export default function CampaignView() {
               </div>
 
               {/* Search Input */}
-              <div className="flex-1 max-w-md">
+              <div className="flex-1">
                 <div className="relative">
                   <input
                     type="text"
@@ -1354,311 +1367,308 @@ export default function CampaignView() {
             </div>
 
             {/* Project List */}
-           {/* Project List */}
-           {filteredProjects.map((project, index) => {
-             const styling = getPositionStyling(index);
-             const voteCount = Number(formatEther(project.voteCount || 0n));
-             const projectLogo = getProjectLogo(project);
-             const isApproved = project.participation?.approved === true;
+            {filteredProjects.map((project, index) => {
+              const styling = getPositionStyling(index);
+              const voteCount = Number(formatEther(project.voteCount || 0n));
+              const projectLogo = getProjectLogo(project);
+              const isApproved = project.participation?.approved === true;
 
-             return (
-               <div
-                 key={project.id}
-                 onClick={() => isApproved && isActive ? openVoteModal(project) : null}
-                 className={`
-                   group glass-morphism rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-3 relative overflow-hidden cursor-pointer
-                   hover:-translate-y-2 gradient-border animate-float
-                   ${index < 3 ? 'bg-gradient-to-br from-white/90 to-white/80' : 'bg-white/80'}
-                   ${isApproved && isActive ? 'hover:ring-2 hover:ring-blue-400' : ''}
-                 `}
-                 style={{ animationDelay: `${index * 0.1}s` }}
-               >
-                 {/* Enhanced Position Badge */}
-                 <div className={`absolute -top-2 -left-2 w-12 h-12 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-xl ${styling.glowColor} flex items-center justify-center font-bold text-lg border-4 border-white transform group-hover:scale-110 transition-transform duration-300 z-10`}>
-                   {index < 3 ? (
-                     <div className="flex items-center justify-center w-full h-full">
-                       <span className="text-xl text-white">{styling.badge}</span>
-                     </div>
-                   ) : (
-                     <div className="flex items-center justify-center w-full h-full">
-                       <span className="text-lg text-blue-900">{index + 1}</span>
-                     </div>
-                   )}
-                 </div>
+              return (
+                <div
+                  key={project.id}
+                  onClick={() => isApproved && isActive ? openVoteModal(project) : null}
+                  className={`
+                    group glass-morphism rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-3 relative overflow-hidden cursor-pointer
+                    hover:-translate-y-2 gradient-border animate-float
+                    ${index < 3 ? 'bg-gradient-to-br from-white/90 to-white/80' : 'bg-white/80'}
+                    ${isApproved && isActive ? 'hover:ring-2 hover:ring-blue-400' : ''}
+                  `}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  {/* Enhanced Position Badge */}
+                  <div className={`absolute -top-2 -left-2 w-12 h-12 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-xl ${styling.glowColor} flex items-center justify-center font-bold text-lg border-4 border-white transform group-hover:scale-110 transition-transform duration-300 z-10`}>
+                    {index < 3 ? (
+                      <div className="flex items-center justify-center w-full h-full">
+                        <span className="text-xl text-white">{styling.badge}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full">
+                        <span className="text-lg text-blue-900">{index + 1}</span>
+                      </div>
+                    )}
+                  </div>
 
-                 {/* Position Badge Glow Effect */}
-                 <div className={`absolute -top-2 -left-2 w-12 h-12 rounded-full ${styling.glowColor} blur-xl opacity-50 animate-pulse`}></div>
+                  {/* Position Badge Glow Effect */}
+                  <div className={`absolute -top-2 -left-2 w-12 h-12 rounded-full ${styling.glowColor} blur-xl opacity-50 animate-pulse`}></div>
 
-                 {/* FIXED: Approval Status Badge and Admin Controls */}
-                 <div className="absolute top-2 right-2 flex items-center space-x-1">
-                   {/* Approval Status Badge */}
-                   <div className={`px-2 py-1 rounded-full text-xs font-bold ${
-                     isApproved 
-                       ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
-                       : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
-                   }`}>
-                     {isApproved ? (
-                       <div className="flex items-center space-x-1">
-                         <CheckCircle className="h-2.5 w-2.5" />
-                         <span>Approved</span>
-                       </div>
-                     ) : (
-                       <div className="flex items-center space-x-1">
-                         <Clock className="h-2.5 w-2.5" />
-                         <span>Pending</span>
-                       </div>
-                     )}
-                   </div>
+                  {/* FIXED: Approval Status Badge and Admin Controls */}
+                  <div className="absolute top-2 right-2 flex items-center space-x-1">
+                    {/* Approval Status Badge */}
+                    <div className={`px-2 py-1 rounded-full text-xs font-bold ${
+                      isApproved 
+                        ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
+                        : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
+                    }`}>
+                      {isApproved ? (
+                        <div className="flex items-center space-x-1">
+                          <CheckCircle className="h-2.5 w-2.5" />
+                          <span>Approved</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-2.5 w-2.5" />
+                          <span>Pending</span>
+                        </div>
+                      )}
+                    </div>
 
-                   {/* Admin Approve Button */}
-                   {isAdmin && !isApproved && (
-                     <button
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         handleApproveProject(BigInt(project.id));
-                       }}
-                       disabled={isApprovingProject}
-                       className="px-2 py-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-1"
-                     >
-                       {isApprovingProject ? (
-                         <>
-                           <Loader2 className="h-2.5 animate-spin" />
-                           <span>Approving...</span>
-                         </>
-                       ) : (
-                         <>
-                           <CheckCircle className="h-2.5 w-2.5" />
-                           <span>Approve</span>
-                         </>
-                       )}
-                     </button>
-                   )}
-                 </div>
+                    {/* Admin Approve Button */}
+                    {isAdmin && !isApproved && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApproveProject(BigInt(project.id));
+                        }}
+                        disabled={isApprovingProject}
+                        className="px-2 py-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-1"
+                      >
+                        {isApprovingProject ? (
+                          <>
+                            <Loader2 className="h-2.5 animate-spin" />
+                            <span>Approving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-2.5 w-2.5" />
+                            <span>Approve</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
 
-                 <div className="relative z-10 flex items-start space-x-3 pl-6">
-                   {/* Project Logo - Scaled down */}
-                   <div className="animate-float-delay-1 relative">
-                     {projectLogo ? (
-                       <img 
-                         src={formatIpfsUrl(projectLogo)} 
-                         alt={`${project.name} logo`}
-                         className="w-16 h-16 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300"
-                         onError={(e) => {
-                           const target = e.target as HTMLImageElement;
-                           target.style.display = 'none';
-                           const fallback = target.nextSibling as HTMLElement;
-                           if (fallback) fallback.style.display = 'flex';
-                         }}
-                       />
-                     ) : null}
-                     <div className={`w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
-                       {project.name?.charAt(0) || ''}
-                     </div>
-                   </div>
-                   
-                   <div className="flex-1 min-w-0">
-                     {/* Enhanced Vote Display - Moved to top */}
-                     <div className="relative mb-1">
-                       <div className="transform hover:scale-105 transition-transform duration-300">
-                       <ProjectVotes 
-                              campaignId={campaignId} 
-                              projectId={BigInt(project.id)} 
-                              onVoteCountReceived={updateProjectVoteCount}
-                            />
-                         
-                         </div>
-                     </div>
+                  <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 pl-6">
+                    {/* Project Logo - Scaled down */}
+                    <div className="animate-float-delay-1 relative">
+                      {projectLogo ? (
+                        <img 
+                          src={formatIpfsUrl(projectLogo)} 
+                          alt={`${project.name} logo`}
+                          className="w-16 h-16 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const fallback = target.nextSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
+                        {project.name?.charAt(0) || ''}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      {/* Enhanced Vote Display - Moved to top */}
+                      <div className="relative mb-1">
+                        <div className="transform hover:scale-105 transition-transform duration-300">
+                          <ProjectVotes 
+                            campaignId={campaignId} 
+                            projectId={BigInt(project.id)} 
+                            onVoteCountReceived={updateProjectVoteCount}
+                          />
+                        </div>
+                      </div>
 
-                     <div className="flex items-start justify-between">
-                       <div>
-                         <h3 className="font-bold text-gray-800 text-base truncate group-hover:text-blue-600 transition-colors duration-300">
-                           {project.name || 'Untitled Project'}
-                         </h3>
-                         <p className="text-xs text-gray-600 line-clamp-1">{project.description}</p>
-                       </div>
-                     </div>
-                     
-                     {/* Progress Bar */}
-                     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden mt-1">
-                       <div 
-                         className={`h-full bg-gradient-to-r ${styling.bgGradient} transition-all duration-1000 rounded-full relative`}
-                         style={{ width: `${Math.min(75, (voteCount / (totalCampaignVotes || 1)) * 100)}%` }}
-                       >
-                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-                       </div>
-                     </div>
-                     
-                     {/* Action Button - Repositioned to middle height */}
-                     {isActive && isApproved && (
-                       <div className="absolute top-1/2 -translate-y-1/2 right-2">
-                         <button
-                           onClick={(e) => {
-                             e.stopPropagation();
-                             openVoteModal(project);
-                           }}
-                           className={`
-                             px-4 py-2 rounded-xl text-white font-medium shadow-lg transition-all duration-300 
-                             hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-sm group/btn relative overflow-hidden
-                             bg-gradient-to-br from-blue-900/90 to-indigo-900/90 backdrop-blur-sm
-                             border border-blue-400/20
-                           `}
-                         >
-                           <div className="relative z-10 flex items-center space-x-2">
-                             <Vote className="h-4 w-4 group-hover/btn:rotate-12 transition-transform duration-300" />
-                             <span>Cast Vote</span>
-                           </div>
-                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
-                           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-                         </button>
-                       </div>
-                     )}
-                   </div>
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-base truncate group-hover:text-blue-600 transition-colors duration-300">
+                            {project.name || 'Untitled Project'}
+                          </h3>
+                          <p className="text-xs text-gray-600 line-clamp-1">{project.description}</p>
+                        </div>
 
-                   {/* Explore Arrow Button */}
-                   <button
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       if (project?.id) {
-                         navigate(`/explorer/project/${project.id}`);
-                       }
-                     }}
-                     className="absolute bottom-2 right-2 p-1.5 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow"
-                   >
-                     <ArrowLeft className="h-3 w-3 transform rotate-180 group-hover/arrow:translate-x-1 transition-transform duration-300" />
-                   </button>
-                 </div>
-               </div>
-             );
-           })}
-         </div>
+                        {/* Action Button - Repositioned for mobile */}
+                        {isActive && isApproved && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openVoteModal(project);
+                            }}
+                            className={`
+                              px-4 py-2 rounded-xl text-white font-medium shadow-lg transition-all duration-300 
+                              hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-sm group/btn relative overflow-hidden
+                              bg-gradient-to-br from-blue-900/90 to-indigo-900/90 backdrop-blur-sm
+                              border border-blue-400/20 w-full sm:w-auto justify-center
+                            `}
+                          >
+                            <div className="relative z-10 flex items-center space-x-2">
+                              <Vote className="h-4 w-4 group-hover/btn:rotate-12 transition-transform duration-300" />
+                              <span>Cast Vote</span>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden mt-1">
+                        <div 
+                          className={`h-full bg-gradient-to-r ${styling.bgGradient} transition-all duration-1000 rounded-full relative`}
+                          style={{ width: `${Math.min(75, (voteCount / (totalCampaignVotes || 1)) * 100)}%` }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                        </div>
+                      </div>
+                    </div>
 
-         {/* Enhanced Empty State */}
-         {filteredProjects.length === 0 && (
-           <div className="text-center py-16 glass-morphism rounded-2xl shadow-xl">
-             <div className="text-6xl mb-6 animate-wave">🌊</div>
-             <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-3">
-               The Seas Await
-             </h3>
-             <p className="text-gray-600">
-               {activeTab === 'approved' ? 'No approved projects in this campaign yet.' :
-                activeTab === 'pending' ? 'No pending projects in this campaign.' :
-                searchTerm ? `No projects match "${searchTerm}"` :
-                'No projects have joined this sovereign voyage yet.'}
-             </p>
-             <div className="mt-6">
-               <button
-                 onClick={handleBackToArena}
-                 className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
-               >
-                 <span className="relative z-10 flex items-center">
-                   <Rocket className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                   Explore Other Campaigns
-                 </span>
-                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-               </button>
-             </div>
-           </div>
-         )}
-       </div>
+                    {/* Explore Arrow Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (project?.id) {
+                          navigate(`/explorer/project/${project.id}`);
+                        }
+                      }}
+                      className="absolute bottom-2 right-2 p-1.5 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow"
+                    >
+                      <ArrowLeft className="h-3 w-3 transform rotate-180 group-hover/arrow:translate-x-1 transition-transform duration-300" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-       {/* Add Projects Modal */}
-       {showAddProjectModal && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center">
-           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddProjectModal(false)} />
-           <div className="relative bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-             <div className="flex items-center justify-between mb-6">
-               <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                 Add Projects to Campaign
-               </h3>
-               <button
-                 onClick={() => setShowAddProjectModal(false)}
-                 className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-300"
-               >
-                 <X className="h-5 w-5 text-gray-500" />
-               </button>
-             </div>
+          {/* Enhanced Empty State */}
+          {filteredProjects.length === 0 && (
+            <div className="text-center py-16 glass-morphism rounded-2xl shadow-xl">
+              <div className="text-6xl mb-6 animate-wave">🌊</div>
+              <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-3">
+                The Seas Await
+              </h3>
+              <p className="text-gray-600">
+                {activeTab === 'approved' ? 'No approved projects in this campaign yet.' :
+                 activeTab === 'pending' ? 'No pending projects in this campaign.' :
+                 searchTerm ? `No projects match "${searchTerm}"` :
+                 'No projects have joined this sovereign voyage yet.'}
+              </p>
+              <div className="mt-6">
+                <button
+                  onClick={handleBackToArena}
+                  className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center">
+                    <Rocket className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                    Explore Other Campaigns
+                  </span>
+                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
-             {error && (
-               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                 {error}
-               </div>
-             )}
+        {/* Add Projects Modal */}
+        {showAddProjectModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddProjectModal(false)} />
+            <div className="relative bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                  Add Projects to Campaign
+                </h3>
+                <button
+                  onClick={() => setShowAddProjectModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-300"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
 
-             {/* Project List */}
-             <div className="space-y-4">
-               {allProjects?.filter(project => {
-                 const formatted = formatProjectForDisplay(project);
-                 return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-               }).map(project => {
-                 const formatted = formatProjectForDisplay(project);
-                 if (!formatted) return null;
+              {error && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  {error}
+                </div>
+              )}
 
-                 return (
-                   <div
-                     key={formatted.id}
-                     className="flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all duration-300"
-                   >
-                     <div className="flex items-center space-x-4">
-                       <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold">
-                         {formatted.name?.charAt(0) || ''}
-                       </div>
-                       <div>
-                         <h4 className="font-bold text-gray-800">{formatted.name}</h4>
-                         <p className="text-sm text-gray-600 line-clamp-1">{formatted.description}</p>
-                       </div>
-                     </div>
-                     <button
-                       onClick={() => handleAddToCampaign(BigInt(formatted.id))}
-                       disabled={isAddingProject}
-                       className={`px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 ${
-                         isAddingProject ? 'opacity-50 cursor-not-allowed' : ''
-                       }`}
-                     >
-                       {isAddingProject ? (
-                         <>
-                           <Loader2 className="h-4 animate-spin" />
-                           <span>Adding...</span>
-                         </>
-                       ) : (
-                         <>
-                           <Plus className="h-4 w-4" />
-                           <span>Add</span>
-                         </>
-                       )}
-                     </button>
-                   </div>
-                 );
-               })}
+              {/* Project List */}
+              <div className="space-y-4">
+                {allProjects?.filter(project => {
+                  const formatted = formatProjectForDisplay(project);
+                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
+                }).map(project => {
+                  const formatted = formatProjectForDisplay(project);
+                  if (!formatted) return null;
 
-               {allProjects?.filter(project => {
-                 const formatted = formatProjectForDisplay(project);
-                 return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-               }).length === 0 && (
-                 <div className="text-center py-8">
-                   <div className="text-4xl mb-4">📋</div>
-                   <h4 className="text-lg font-bold text-gray-800 mb-2">No Available Projects</h4>
-                   <p className="text-gray-600 text-sm">All existing projects are already part of this campaign.</p>
-                 </div>
-               )}
-             </div>
-           </div>
-         </div>
-       )}
+                  return (
+                    <div
+                      key={formatted.id}
+                      className="flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all duration-300"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold">
+                          {formatted.name?.charAt(0) || ''}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-800">{formatted.name}</h4>
+                          <p className="text-sm text-gray-600 line-clamp-1">{formatted.description}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddToCampaign(BigInt(formatted.id))}
+                        disabled={isAddingProject}
+                        className={`px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 ${
+                          isAddingProject ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {isAddingProject ? (
+                          <>
+                            <Loader2 className="h-4 animate-spin" />
+                            <span>Adding...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4" />
+                            <span>Add</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
 
-{showVoteModal && selectedProject && (
-  <VoteModal
-    isOpen={showVoteModal}
-    onClose={closeVoteModal}
-    selectedProject={selectedProject}
-    campaignId={campaignId}
-    isVoting={isVoting}
-    campaignDetails={campaignDetails}
-    allProjects={sortedProjects}
-    totalCampaignFunds={totalCampaignVotes} // Using total votes as proxy for funds
-  />
-)}
+                {allProjects?.filter(project => {
+                  const formatted = formatProjectForDisplay(project);
+                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
+                }).length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📋</div>
+                    <h4 className="text-lg font-bold text-gray-800 mb-2">No Available Projects</h4>
+                    <p className="text-gray-600 text-sm">All existing projects are already part of this campaign.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
-     </div>
-   </div>
- );
+      {showVoteModal && selectedProject && (
+        <VoteModal
+          isOpen={showVoteModal}
+          onClose={closeVoteModal}
+          selectedProject={selectedProject}
+          campaignId={campaignId}
+          isVoting={isVotePending}
+          campaignDetails={campaignDetails}
+          allProjects={sortedProjects}
+          totalCampaignFunds={totalCampaignVotes}
+          onVoteSuccess={handleVoteSuccess}
+        />
+      )}
+
+    </div>
+  </div>
+);
 }
