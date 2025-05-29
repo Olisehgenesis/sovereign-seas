@@ -11,6 +11,7 @@
     "start": "vite preview --host"
   },
   "dependencies": {
+    "@divvi/referral-sdk": "^1.0.0",
     "@headlessui/react": "^2.2.4",
     "@privy-io/react-auth": "^2.13.3",
     "@privy-io/wagmi": "^1.0.3",
