@@ -1,11 +1,12 @@
 // useVotingMethods.tsx - FIXED VERSION
-import { useWriteContract, useReadContract } from 'wagmi'
+import { useWriteContract, useReadContract, useSendTransaction } from 'wagmi'
 import { parseEther, formatEther, Address } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback } from 'react'
+import { Interface } from "ethers";
 import { erc20ABI } from "@/abi/erc20ABI"
 import { AbiFunction } from 'viem'
-
+import { getDataSuffix, submitReferral } from '@divvi/referral-sdk'
 // Types for voting functionality
 export interface Vote {
   voter: Address
@@ -32,7 +33,11 @@ export interface VotingStats {
 }
 
 // Get token addresses from environment
-
+// Divvi Integration 
+const dataSuffix = getDataSuffix({
+  consumer: '0x53D2fEB0DD37CF6f9B06580FC86921f47685972B',
+  providers: ['0x5f0a55FaD9424ac99429f635dfb9bF20c3360Ab8', '0x6226ddE08402642964f9A6de844ea3116F0dFc7e'],
+})
 
 // Custom hook for token approval
 export function useApproveToken() {
@@ -100,6 +105,9 @@ export function useVote(contractAddress: Address) {
   const [votingStats, setVotingStats] = useState<VotingStats | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const { celoToken, isMatching } = useVerifyCeloToken(contractAddress)
+  const {
+    sendTransactionAsync
+  } = useSendTransaction()
 
   console.log('setVote, setVotingStats', setVotingStats)
   console.log('setIsCalculating', setIsCalculating)
@@ -128,19 +136,49 @@ export function useVote(contractAddress: Address) {
 
     try {
       console.log('Voting with ERC20 token:', token, 'for amount:', amount);
-      
+
       // For ERC20 tokens - approve first, then call vote function
       await approveToken(token, amount, contractAddress);
       // Wait for approval confirmation
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const tx = await writeContract({
-        address: contractAddress,
-        abi,
-        functionName: 'vote', // ✅ Use the ERC20 vote function
-        args: [campaignId, projectId, token, amount, bypassCode as `0x${string}`]
+      // Divvi referral integration section
+      const voteInterface = new Interface(abi);
+
+      const voteData = voteInterface.encodeFunctionData('vote', [campaignId, projectId,
+        token, amount, bypassCode as `0x${string}`]);
+      const celoChainId = 42220; // Celo mainnet chain ID
+
+      const dataWithSuffix = voteData + dataSuffix;
+
+      // Using sendTransactionAsync to support referral integration
+      const tx = await sendTransactionAsync({
+        to: contractAddress,
+        data: dataWithSuffix as `0x${string}`,
       });
 
+      if (!tx) {
+        throw new Error('Transaction failed to send');
+      }
+      /**
+       * const tx = await writeContract({
+       *   address: contractAddress,
+       *   abi,
+       *   functionName: 'vote', // ✅ Use the ERC20 vote function
+       *   args: [campaignId, projectId, token, amount, bypassCode as `0x${string}`]
+       * });
+       */
+
+      // Submit the referral to Divvi
+      try {
+        await submitReferral({
+          txHash: tx as unknown as `0x${string}`,
+          chainId: celoChainId
+        });
+
+      } catch (referralError) {
+        console.error("Referral submission error:", referralError);
+      }
       console.log('✅ Vote transaction submitted:', tx);
       return tx;
     } catch (err) {
@@ -170,7 +208,7 @@ export function useVote(contractAddress: Address) {
 
     try {
       console.log('Voting with native CELO:', amount.toString());
-      
+
       const tx = await writeContract({
         address: contractAddress,
         abi,
@@ -200,7 +238,7 @@ export function useVote(contractAddress: Address) {
       // Execute votes sequentially to avoid nonce issues
       for (const voteAllocation of votes) {
         const isNativeCelo = voteAllocation.token.toLowerCase() === celoToken?.toLowerCase();
-        
+
         if (isNativeCelo) {
           await voteWithCelo({
             campaignId,
@@ -217,7 +255,7 @@ export function useVote(contractAddress: Address) {
             bypassCode
           })
         }
-        
+
         // Small delay between votes to ensure proper transaction ordering
         await new Promise(resolve => setTimeout(resolve, 1000))
       }
@@ -496,7 +534,7 @@ export function useVotingManager(contractAddress: Address, campaignId: bigint, u
 
   // Get user's voting history for this campaign
   const { voteHistory, isLoading: historyLoading } = useUserVoteHistory(
-    contractAddress, 
+    contractAddress,
     user as Address
   )
 
@@ -517,7 +555,7 @@ export function useVotingManager(contractAddress: Address, campaignId: bigint, u
   )
 
   // Filter vote history for this campaign
-  const campaignVoteHistory = voteHistory.filter(vote => 
+  const campaignVoteHistory = voteHistory.filter(vote =>
     vote.campaignId === campaignId
   )
 
@@ -527,7 +565,7 @@ export function useVotingManager(contractAddress: Address, campaignId: bigint, u
 
     const hasVotedInCampaign = campaignVoteHistory.length > 0
     const totalUserVotes = totalVotes
-    
+
     setVotingState(prev => ({
       ...prev,
       isInitialized: true,
@@ -606,13 +644,13 @@ export function useVotingManager(contractAddress: Address, campaignId: bigint, u
     // State
     votingState,
     isLoading,
-    
+
     // Data
     campaignVoteHistory,
     supportedTokens,
     votedTokens,
     totalVotes,
-    
+
     // Helpers
     formatTokenAmount,
     parseTokenAmount,
@@ -620,7 +658,7 @@ export function useVotingManager(contractAddress: Address, campaignId: bigint, u
     setProjectVoteAllocation,
     clearAllAllocations,
     getTotalAllocatedAmount,
-    
+
     // Actions
     calculateVotingStats
   }
