@@ -144,7 +144,15 @@ function useIsCampaignAdminCheck(contractAddress: Address, campaignId: bigint, u
 }
 
 // Update ProjectVotes component to handle undefined data better
-function ProjectVotes({ campaignId, projectId }: { campaignId: bigint; projectId: bigint }) {
+function ProjectVotes({ 
+  campaignId, 
+  projectId, 
+  onVoteCountReceived 
+}: { 
+  campaignId: bigint; 
+  projectId: bigint; 
+  onVoteCountReceived?: (projectId: string, voteCount: bigint) => void;
+}) {
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
   
   // Create unique key for this project's participation data
@@ -167,6 +175,21 @@ function ProjectVotes({ campaignId, projectId }: { campaignId: bigint; projectId
       staleTime: 30 * 1000,
     }
   );
+
+  // Add effect to report vote count changes
+  useEffect(() => {
+    if (participation && onVoteCountReceived) {
+      let voteCount: bigint;
+      if (Array.isArray(participation)) {
+        voteCount = participation[1];
+      } else if (typeof participation === 'object') {
+        voteCount = participation.voteCount || participation[1] || 0n;
+      } else {
+        voteCount = 0n;
+      }
+      onVoteCountReceived(projectId.toString(), voteCount);
+    }
+  }, [participation, projectId, onVoteCountReceived]);
 
   if (isLoading) {
     return (
@@ -226,10 +249,11 @@ export default function CampaignView() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { address, isConnected } = useAccount();
+  
+  // Move state declarations to the top
   const [isMounted, setIsMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // UI state
+  const [projectVoteCounts, setProjectVoteCounts] = useState<Map<string, bigint>>(new Map());
   const [showVoteModal, setShowVoteModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
@@ -237,6 +261,15 @@ export default function CampaignView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   
+  // Add update function for vote counts
+  const updateProjectVoteCount = useCallback((projectId: string, voteCount: bigint) => {
+    setProjectVoteCounts(prev => {
+      const newMap = new Map(prev);
+      newMap.set(projectId, voteCount);
+      return newMap;
+    });
+  }, []);
+
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
   const campaignId = id ? BigInt(id) : BigInt(0);
   
@@ -332,7 +365,7 @@ export default function CampaignView() {
     return projectIds.map(projectId => ({
       address: contractAddress as `0x${string}`,
       abi: [{
-        inputs: [{ name: 'campaignId', type: 'uint256' }, { name: 'projectId', type: 'uint256' }],
+        inputs: [{ name: 'campaignId', type: 'uint250' }, { name: 'projectId', type: 'uint250' }],
         name: 'getParticipation',
         outputs: [{ name: '', type: 'tuple' }],
         stateMutability: 'view',
@@ -362,11 +395,8 @@ export default function CampaignView() {
   // FIXED: Updated campaignProjects to use correct vote count mapping
   const campaignProjects = useMemo(() => {
     if (!campaignProjectsBasic.length) {
-      
       return [];
     }
-
-   
 
     // Create a mapping of projectId -> participationData index
     const projectIdToParticipationIndex = new Map();
@@ -386,50 +416,52 @@ export default function CampaignView() {
       // Get approval status from sortedProjectIds (the authoritative source)
       const isApproved = approvedProjectIds.has(projectIdStr || '');
       
-      // Get vote count and funds from participation data
-      const voteCount = participation ? participation[1] : 0n;
+      // Get vote count from centralized state
+      const voteCount = projectIdStr ? projectVoteCounts.get(projectIdStr) || 0n : 0n;
       const fundsReceived = participation ? participation[2] : 0n;
-      
-     
       
       return {
         ...project,
         voteCount,
         voteCountFormatted: formatEther(voteCount),
         participation: {
-          approved: isApproved, // Use the authoritative approval status
+          approved: isApproved,
           voteCount: voteCount,
           fundsReceived: fundsReceived
         }
       };
     });
 
-    
-
     return projects;
-  }, [campaignProjectsBasic, participationData, projectIds, approvedProjectIds]);
+  }, [campaignProjectsBasic, participationData, projectIds, approvedProjectIds, projectVoteCounts]);
 
   const sortedProjects = useMemo(() => {
-    // Separate approved and pending projects
-    const approved = campaignProjects.filter(p => p.participation?.approved);
-    const pending = campaignProjects.filter(p => !p.participation?.approved);
-
-    // Sort approved by votes (descending)
-    approved.sort((a, b) => {
-      const aVotes = Number(a.voteCount || 0n);
-      const bVotes = Number(b.voteCount || 0n);
-      return bVotes - aVotes;
+    // Sort all projects by vote count (descending)
+    const sorted = [...campaignProjects].sort((a, b) => {
+      const aVotes = a.voteCount || 0n;
+      const bVotes = b.voteCount || 0n;
+      
+      // Convert to number for comparison (safe for vote counts)
+      const aVotesNum = Number(formatEther(aVotes));
+      const bVotesNum = Number(formatEther(bVotes));
+      
+      return bVotesNum - aVotesNum; // Descending order
     });
-
-    // Sort pending alphabetically
-    pending.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-    // Return approved first, then pending
-    const sorted = [...approved, ...pending];
-
-    
+  
     return sorted;
   }, [campaignProjects]);
+
+
+  // const sortedProjects = useMemo(() => {
+  //   // Sort all projects by vote count (descending)
+  //   const sorted = [...campaignProjects].sort((a, b) => {
+  //     const aVotes = a.voteCount || 0n;
+  //     const bVotes = b.voteCount || 0n;
+  //     return aVotes > bVotes ? -1 : aVotes < bVotes ? 1 : 0;
+  //   });
+
+  //   return sorted;
+  // }, [campaignProjects]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -1318,8 +1350,13 @@ export default function CampaignView() {
                      {/* Enhanced Vote Display - Moved to top */}
                      <div className="relative mb-1">
                        <div className="transform hover:scale-105 transition-transform duration-300">
-                         <ProjectVotes campaignId={campaignId} projectId={BigInt(project.id)} />
-                       </div>
+                       <ProjectVotes 
+                              campaignId={campaignId} 
+                              projectId={BigInt(project.id)} 
+                              onVoteCountReceived={updateProjectVoteCount}
+                            />
+                         
+                         </div>
                      </div>
 
                      <div className="flex items-start justify-between">
@@ -1350,18 +1387,18 @@ export default function CampaignView() {
                              openVoteModal(project);
                            }}
                            className={`
-                             px-8 py-4 rounded-2xl text-white font-bold shadow-xl transition-all duration-300 
-                             hover:shadow-2xl hover:-translate-y-1 flex items-center space-x-3 text-base group/btn relative overflow-hidden
-                             bg-gradient-to-r ${styling.bgGradient}
-                             border-2 border-white/20
+                             px-4 py-2 rounded-xl text-white font-medium shadow-lg transition-all duration-300 
+                             hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-sm group/btn relative overflow-hidden
+                             bg-gradient-to-br from-blue-900/90 to-indigo-900/90 backdrop-blur-sm
+                             border border-blue-400/20
                            `}
                          >
-                           <div className="relative z-10 flex items-center space-x-3">
-                             <Vote className="h-6 w-6 group-hover/btn:rotate-12 transition-transform duration-300" />
-                             <span className="text-lg">Cast Vote</span>
+                           <div className="relative z-10 flex items-center space-x-2">
+                             <Vote className="h-4 w-4 group-hover/btn:rotate-12 transition-transform duration-300" />
+                             <span>Cast Vote</span>
                            </div>
-                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
-                           <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
+                           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                          </button>
                        </div>
                      )}

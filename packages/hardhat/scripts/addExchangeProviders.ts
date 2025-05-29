@@ -1,7 +1,7 @@
 // scripts/addExchangeProviders.ts
 
 import { createWalletClient, createPublicClient, http } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+import { celo } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import * as dotenv from 'dotenv';
 import sovereignSeasV4Abi from '../artifacts/contracts/SovereignSeasV4.sol/SovereignSeasV4.json';
@@ -55,7 +55,7 @@ async function checkExchangeProvider(tokenAddress: string, tokenSymbol: string):
 } | null> {
   try {
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
@@ -83,7 +83,7 @@ async function checkExchangeProvider(tokenAddress: string, tokenSymbol: string):
 async function checkTokenSupported(tokenAddress: string, tokenSymbol: string): Promise<boolean> {
   try {
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
@@ -114,17 +114,17 @@ async function setTokenExchangeProvider(
     console.log(`   Token Address: ${tokenInfo.address}`);
     console.log(`   Exchange Provider: ${tokenInfo.exchangeProvider}`);
     console.log(`   Exchange ID: ${tokenInfo.exchangeId}`);
-    
-    const account = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
+
+    const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
     const walletClient = createWalletClient({
       account,
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
@@ -180,10 +180,11 @@ async function setTokenExchangeProvider(
 
 async function checkSuperAdminStatus(): Promise<boolean> {
   try {
-    const account = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
+    const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
+    console.log(account.address);
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 

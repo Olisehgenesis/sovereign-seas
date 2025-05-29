@@ -1,7 +1,7 @@
 // scripts/addSupportedTokens.ts
 
 import { createWalletClient, createPublicClient, http } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+import { celo } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import * as dotenv from 'dotenv';
 import sovereignSeasV4Abi from '../artifacts/contracts/SovereignSeasV4.sol/SovereignSeasV4.json';
@@ -53,7 +53,7 @@ const SUPPORTED_TOKENS: TokenInfo[] = [
 async function checkTokenSupported(tokenAddress: string, tokenSymbol: string): Promise<boolean> {
   try {
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
@@ -77,16 +77,16 @@ async function addSupportedToken(tokenAddress: string, tokenInfo: TokenInfo): Pr
     console.log(`🔄 Adding ${tokenInfo.symbol} (${tokenInfo.name}) as supported token...`);
     console.log(`   Address: ${tokenAddress}`);
     
-    const account = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
+    const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
     const walletClient = createWalletClient({
       account,
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
@@ -137,10 +137,10 @@ async function addSupportedToken(tokenAddress: string, tokenInfo: TokenInfo): Pr
 
 async function checkSuperAdminStatus(): Promise<boolean> {
   try {
-    const account = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
+    const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: celo,
       transport: http(RPC_URL)
     });
 
