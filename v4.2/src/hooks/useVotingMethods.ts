@@ -35,7 +35,7 @@ export interface VotingStats {
 // Get token addresses from environment
 // Divvi Integration 
 const dataSuffix = getDataSuffix({
-  consumer: '0x53D2fEB0DD37CF6f9B06580FC86921f47685972B',
+  consumer: '0x53eaF4CD171842d8144e45211308e5D90B4b0088',
   providers: ['0x5f0a55FaD9424ac99429f635dfb9bF20c3360Ab8', '0x6226ddE08402642964f9A6de844ea3116F0dFc7e'],
 })
 

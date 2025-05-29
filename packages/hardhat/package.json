@@ -54,6 +54,7 @@
     "add-sample": "npx ts-node scripts/generateSampleData.ts",
     "add-custom-sample": "npx ts-node scripts/generateCustomSampleData.ts",
     "updateWinners": "npx ts-node scripts/updateCampaignWinners.ts",
+    "getVoteConversion": "npx ts-node scripts/getVoteConversion.ts",
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",

@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@divvi/referral-sdk':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@headlessui/react':
         specifier: ^2.2.4
         version: 2.2.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -29,6 +32,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.45.1
         version: 5.45.1(react@18.3.1)
+      ethers:
+        specifier: ^6.14.3
+        version: 6.14.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       framer-motion:
         specifier: ^12.12.2
         version: 12.14.0(@emotion/is-prop-valid@1.2.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -247,6 +253,9 @@ packages:
 
   '@coinbase/wallet-sdk@4.3.2':
     resolution: {integrity: sha512-hOLA2YONq8Z9n8f6oVP6N//FEEHOen7nq+adG/cReol6juFTHUelVN5GnA5zTIxiLFMDcrhDwwgCA6Tdb5jubw==}
+
+  '@divvi/referral-sdk@1.0.0':
+    resolution: {integrity: sha512-X1i66AFQMJCu5jdOjg6mruSZ70YXolTNE1VHDr9tSHRnoR3EWki1Wtgb+A5fyE0AVl73uWZClqXlEGivyZbQ1w==}
 
   '@ecies/ciphers@0.2.3':
     resolution: {integrity: sha512-tapn6XhOueMwht3E2UzY0ZZjYokdaw9XtL9kEyjhQ/Fb9vL9xTFbOaI+fV0AWvTpYu4BNloC6getKW6NtSg4mA==}
@@ -3701,6 +3710,8 @@ snapshots:
       clsx: 1.2.1
       eventemitter3: 5.0.1
       preact: 10.26.7
+
+  '@divvi/referral-sdk@1.0.0': {}
 
   '@ecies/ciphers@0.2.3(@noble/ciphers@1.3.0)':
     dependencies:
@@ -7290,8 +7301,8 @@ snapshots:
   ox@0.6.7(typescript@5.8.3)(zod@3.25.30):
     dependencies:
       '@adraffy/ens-normalize': 1.11.0
-      '@noble/curves': 1.8.1
-      '@noble/hashes': 1.7.1
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
       '@scure/bip32': 1.6.2
       '@scure/bip39': 1.5.4
       abitype: 1.0.8(typescript@5.8.3)(zod@3.25.30)

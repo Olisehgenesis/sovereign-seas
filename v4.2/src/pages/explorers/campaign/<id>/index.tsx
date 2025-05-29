@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAccount, useReadContracts } from 'wagmi';
 import { formatEther, Address } from 'viem';
@@ -34,7 +34,10 @@ import {
   Search,
   Settings,
   Shield,
-  RotateCcw
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  Calculator
 } from 'lucide-react';
 import { type AbiFunction } from 'viem';
 
@@ -229,7 +232,7 @@ function ProjectVotes({
       return <div className="text-lg font-bold text-red-600">Invalid Type</div>;
     }
 
-    const formattedVotes = formatEther(voteCount);
+    const formattedVotes = Number(formatEther(voteCount)).toFixed(1);
     return (
       <div className="relative group flex flex-col items-center">
         <div className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:from-blue-500 group-hover:to-indigo-500 transition-all duration-300 tracking-tight">
@@ -770,193 +773,300 @@ export default function CampaignView() {
   const pendingCount = sortedProjects.filter(p => p.participation?.approved !== true).length;
 
   // Sidebar Component with enhanced analytics
-  const Sidebar = ({ className = "" }) => (
-    <div className={`glass-morphism ${className} relative overflow-hidden`}>
-      {/* Decorative wave pattern */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-      
-      <div className="p-6 sticky top-4 space-y-6">
-        {/* Campaign Stats */}
-        <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-xl p-4 border border-blue-200/50 shadow-sm animate-float">
-         <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
-           <BarChart3 className="h-4 w-4 text-blue-500 mr-2" />
-           <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-             Campaign Analytics
-           </span>
-         </h3>
-         
-         <div className="space-y-3 text-xs">
-           <div className="flex justify-between items-center group">
-             <span className="text-gray-600 flex items-center">
-               <DollarSign className="h-3 w-3 text-blue-500 mr-1" />
-               Total Treasury
-             </span>
-             <div className="flex items-center space-x-1">
-               <span className="font-bold text-gray-800">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
-               <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center">
-                 <span className="text-white text-xs font-bold">$</span>
-               </div>
-             </div>
-           </div>
-           
-           <div className="flex justify-between items-center">
-             <span className="text-gray-600 flex items-center">
-               <Vote className="h-3 w-3 text-indigo-500 mr-1" />
-               Total Votes
-             </span>
-             <span className="font-bold text-indigo-600">{totalCampaignVotes.toFixed(1)}</span>
-           </div>
-           
-           <div className="flex justify-between items-center">
-             <span className="text-gray-600 flex items-center">
-               <Users className="h-3 w-3 text-cyan-500 mr-1" />
-               Active Projects
-             </span>
-             <span className="font-bold text-cyan-600">{sortedProjects.length}</span>
-           </div>
-           
-           <div className="flex justify-between items-center">
-             <span className="text-gray-600 flex items-center">
-               <CheckCircle className="h-3 w-3 text-emerald-500 mr-1" />
-               Approved
-             </span>
-             <span className="font-bold text-emerald-600">{approvedCount}</span>
-           </div>
-           
-           <div className="flex justify-between items-center">
-             <span className="text-gray-600 flex items-center">
-               <Clock className="h-3 w-3 text-amber-500 mr-1" />
-               Pending
-             </span>
-             <span className="font-bold text-amber-600">{pendingCount}</span>
-           </div>
-           
-           <div className="flex justify-between items-center">
-              <span className="text-gray-600 flex items-center">
-                <Percent className="h-3 w-3 text-amber-500 mr-1" />
-                Platform Fee
-              </span>
-              <span className="font-bold text-amber-600">{Number(campaign.adminFeePercentage)}%</span>
-            </div>
-          </div>
-        </div>
+  const Sidebar = ({ className = "" }) => {
+    const [expandedSections, setExpandedSections] = useState({
+      analytics: true,
+      tokenOcean: true,
+      sovereignPower: true,
+      simulator: true
+    });
 
-        {/* Token Ocean */}
-        <div className="bg-gradient-to-br from-emerald-50/80 to-cyan-50/80 rounded-xl p-4 border border-cyan-200/50 shadow-sm animate-float-delay-1">
-          <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
-            <Waves className="h-4 w-4 text-cyan-500 mr-2" />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-blue-600">
-              Token Ocean
-            </span>
-          </h3>
-          
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 flex items-center justify-center animate-shimmer">
-                  <span className="text-white text-xs font-bold">🪙</span>
-                </div>
-                <span className="text-gray-700 font-medium">CELO</span>
-              </div>
-              <span className="font-bold text-amber-600">{parseFloat(formatEther(celoAmount || 0n)).toFixed(1)}</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">$</span>
-                </div>
-                <span className="text-gray-700 font-medium">cUSD</span>
-              </div>
-              <span className="font-bold text-emerald-600">{parseFloat(formatEther(cusdAmount || 0n)).toFixed(1)}</span>
-            </div>
-            
-            {/* Animated progress wave */}
-            <div className="pt-2">
-              <div className="text-xs text-gray-500 mb-2">Token Distribution</div>
-              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-yellow-400 via-emerald-400 to-cyan-400 w-full relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    const toggleSection = (section: string) => {
+      setExpandedSections(prev => ({
+        ...prev,
+        [section]: !prev[section]
+      }));
+    };
 
-        {/* Your Sovereign Power */}
-        {isConnected && (
-          <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-xl p-4 border border-indigo-200/50 shadow-sm animate-float-delay-2 relative overflow-hidden">
-            <div className="absolute -top-1 -right-1 w-8 h-8 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-md"></div>
+    return (
+      <div className={`glass-morphism ${className} relative`}>
+        <div className="p-6 space-y-6">
+          {/* Campaign Stats */}
+          <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-xl p-4 border border-blue-200/50">
+            <button
+              onClick={() => toggleSection('analytics')}
+              className="w-full flex items-center justify-between mb-4"
+            >
+              <h3 className="text-sm font-bold text-gray-800 flex items-center">
+                <BarChart3 className="h-4 w-4 text-blue-500 mr-2" />
+                <span className="text-blue-600">Campaign Analytics</span>
+              </h3>
+              {expandedSections.analytics ? (
+                <ChevronUp className="h-4 w-4 text-blue-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-blue-500" />
+              )}
+            </button>
             
-            <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
-              <Zap className="h-4 w-4 text-indigo-500 mr-2" />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                Your Sovereign Power
-              </span>
-            </h3>
-            
-            <div className="space-y-3 text-xs relative z-10">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Votes Cast</span>
-                <span className="font-bold text-indigo-600">{parseFloat(formatEther(totalVotes || 0n)).toFixed(1)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Influence</span>
-                <span className={`font-bold ${Number(totalVotes || 0n) > 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
-                  {Number(totalVotes || 0n) > 0 ? 'Active Sovereign' : 'Observer'}
-                </span>
-              </div>
-
-              {/* Admin Badge */}
-              {isAdmin && (
+            {expandedSections.analytics && (
+              <div className="space-y-3 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Role</span>
-                  <span className="font-bold text-purple-600 flex items-center">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Admin
+                  <span className="text-gray-600 flex items-center">
+                    <DollarSign className="h-3 w-3 text-blue-500 mr-1" />
+                    Total Treasury
                   </span>
+                  <div className="flex items-center space-x-1">
+                    <span className="font-bold text-gray-800">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
+                    <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">$</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 flex items-center">
+                    <Vote className="h-3 w-3 text-indigo-500 mr-1" />
+                    Total Votes
+                  </span>
+                  <span className="font-bold text-indigo-600">{totalCampaignVotes.toFixed(1)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 flex items-center">
+                    <Users className="h-3 w-3 text-cyan-500 mr-1" />
+                    Active Projects
+                  </span>
+                  <span className="font-bold text-cyan-600">{sortedProjects.length}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 flex items-center">
+                    <CheckCircle className="h-3 w-3 text-emerald-500 mr-1" />
+                    Approved
+                  </span>
+                  <span className="font-bold text-emerald-600">{approvedCount}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 flex items-center">
+                    <Clock className="h-3 w-3 text-amber-500 mr-1" />
+                    Pending
+                  </span>
+                  <span className="font-bold text-amber-600">{pendingCount}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Token Ocean */}
+          <div className="bg-gradient-to-br from-emerald-50/80 to-cyan-50/80 rounded-xl p-4 border border-cyan-200/50">
+            <button
+              onClick={() => toggleSection('tokenOcean')}
+              className="w-full flex items-center justify-between mb-4"
+            >
+              <h3 className="text-sm font-bold text-gray-800 flex items-center">
+                <Waves className="h-4 w-4 text-cyan-500 mr-2" />
+                <span className="text-cyan-600">Token Ocean</span>
+              </h3>
+              {expandedSections.tokenOcean ? (
+                <ChevronUp className="h-4 w-4 text-cyan-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-cyan-500" />
+              )}
+            </button>
+            
+            {expandedSections.tokenOcean && (
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <img 
+                      src="/images/celo.png" 
+                      alt="CELO"
+                      className="w-6 h-6"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const nextElement = target.nextElementSibling as HTMLDivElement;
+                        if (nextElement) {
+                          nextElement.style.display = 'block';
+                        }
+                      }}
+                    />
+                    <div className="text-2xl hidden">🪙</div>
+                    <span className="text-gray-700 font-medium">CELO</span>
+                  </div>
+                  <span className="font-bold text-amber-600">{parseFloat(formatEther(celoAmount || 0n)).toFixed(1)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <img 
+                      src="/images/cusd.png" 
+                      alt="cUSD"
+                      className="w-6 h-6"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const nextElement = target.nextElementSibling as HTMLDivElement;
+                        if (nextElement) {
+                          nextElement.style.display = 'block';
+                        }
+                      }}
+                    />
+                    <div className="text-2xl hidden">💵</div>
+                    <span className="text-gray-700 font-medium">cUSD</span>
+                  </div>
+                  <span className="font-bold text-emerald-600">{parseFloat(formatEther(cusdAmount || 0n)).toFixed(1)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quadratic Funding Simulator */}
+          <div className="bg-gradient-to-br from-purple-50/80 to-pink-50/80 rounded-xl p-4 border border-purple-200/50">
+            <button
+              onClick={() => toggleSection('simulator')}
+              className="w-full flex items-center justify-between mb-4"
+            >
+              <h3 className="text-sm font-bold text-gray-800 flex items-center">
+                <Calculator className="h-4 w-4 text-purple-500 mr-2" />
+                <span className="text-purple-600">Quadratic Simulator</span>
+              </h3>
+              {expandedSections.simulator ? (
+                <ChevronUp className="h-4 w-4 text-purple-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-purple-500" />
+              )}
+            </button>
+            
+            {expandedSections.simulator && (
+              <div className="space-y-3 text-xs">
+                <div className="bg-white/70 rounded-lg p-3">
+                  <div className="text-gray-600 text-xs mb-2">How Quadratic Funding Works</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 text-xs">1</span>
+                      </div>
+                      <span className="text-gray-700">Votes are square-rooted</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 text-xs">2</span>
+                      </div>
+                      <span className="text-gray-700">More unique voters = higher weight</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 text-xs">3</span>
+                      </div>
+                      <span className="text-gray-700">Funds distributed proportionally</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Quadratic Simulator Table */}
+                <div className="bg-white/70 rounded-lg p-3">
+                  <div className="text-gray-600 text-xs mb-2">Current Distribution</div>
+                  <div className="space-y-2">
+                    {sortedProjects.map((project, index) => {
+                      const voteCount = Number(formatEther(project.voteCount || 0n));
+                      const quadraticWeight = Math.sqrt(voteCount);
+                      const totalWeight = sortedProjects.reduce((sum, p) => 
+                        sum + Math.sqrt(Number(formatEther(p.voteCount || 0n))), 0
+                      );
+                      const estimatedShare = totalWeight > 0 ? (quadraticWeight / totalWeight) * 100 : 0;
+                      const estimatedPayout = (quadraticWeight / totalWeight) * Number(formatEther(campaign.totalFunds)) * 0.7;
+                      
+                      return (
+                        <div
+                          key={project.id}
+                          className="flex items-center justify-between p-2 rounded-lg text-xs bg-white border border-gray-200"
+                        >
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                              index === 0 ? 'bg-yellow-400 text-yellow-800' :
+                              index === 1 ? 'bg-gray-400 text-gray-800' :
+                              index === 2 ? 'bg-orange-400 text-orange-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div className="truncate">
+                              <div className="font-medium truncate text-gray-800">
+                                {project.name || `Project ${project.id}`}
+                              </div>
+                              <div className="text-gray-600">
+                                {voteCount.toFixed(1)} votes
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="font-bold text-purple-600">
+                              {estimatedShare.toFixed(1)}%
+                            </div>
+                            <div className="text-gray-600">
+                              {estimatedPayout.toFixed(1)} CELO
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Your Sovereign Power */}
+          {isConnected && (
+            <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-xl p-4 border border-indigo-200/50">
+              <button
+                onClick={() => toggleSection('sovereignPower')}
+                className="w-full flex items-center justify-between mb-4"
+              >
+                <h3 className="text-sm font-bold text-gray-800 flex items-center">
+                  <Zap className="h-4 w-4 text-indigo-500 mr-2" />
+                  <span className="text-indigo-600">Your Sovereign Power</span>
+                </h3>
+                {expandedSections.sovereignPower ? (
+                  <ChevronUp className="h-4 w-4 text-indigo-500" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-indigo-500" />
+                )}
+              </button>
+              
+              {expandedSections.sovereignPower && (
+                <div className="space-y-3 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Votes Cast</span>
+                    <span className="font-bold text-indigo-600">{parseFloat(formatEther(totalVotes || 0n)).toFixed(1)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Influence</span>
+                    <span className={`font-bold ${Number(totalVotes || 0n) > 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
+                      {Number(totalVotes || 0n) > 0 ? 'Active Sovereign' : 'Observer'}
+                    </span>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Role</span>
+                      <span className="font-bold text-purple-600 flex items-center">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Admin
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            
-            <div className="flex space-x-2 mt-4">
-              {isActive && (
-                <button
-                  onClick={() => {
-                    if (sortedProjects.length > 0) {
-                      openVoteModal(sortedProjects[0]);
-                    }
-                  }}
-                  className="flex-1 px-3 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
-                >
-                  <span className="relative z-10 flex items-center justify-center">
-                    <Sparkles className="h-3 w-3 mr-1 group-hover:rotate-12 transition-transform duration-300" />
-                    Cast Vote
-                  </span>
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              )}
-              
-              {/* Admin Panel Button */}
-              {isAdmin && (
-                <button
-                  onClick={handleAdminPanel}
-                  className="flex-1 px-3 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-xs font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
-                >
-                  <span className="relative z-10 flex items-center justify-center">
-                    <Settings className="h-3 w-3 mr-1 group-hover:rotate-12 transition-transform duration-300" />
-                    Admin
-                  </span>
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 relative overflow-hidden">
@@ -1408,7 +1518,9 @@ export default function CampaignView() {
                    <button
                      onClick={(e) => {
                        e.stopPropagation();
-                       project?.id ? navigate(`/explorer/project/${project.id}`) : null;
+                       if (project?.id) {
+                         navigate(`/explorer/project/${project.id}`);
+                       }
                      }}
                      className="absolute bottom-2 right-2 p-1.5 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow"
                    >
@@ -1533,16 +1645,19 @@ export default function CampaignView() {
          </div>
        )}
 
-       {/* Vote Modal */}
-       {showVoteModal && selectedProject && (
-         <VoteModal
-           isOpen={showVoteModal}
-           onClose={closeVoteModal}
-           selectedProject={selectedProject}
-           campaignId={campaignId}
-           isVoting={isVoting}
-         />
-       )}
+{showVoteModal && selectedProject && (
+  <VoteModal
+    isOpen={showVoteModal}
+    onClose={closeVoteModal}
+    selectedProject={selectedProject}
+    campaignId={campaignId}
+    isVoting={isVoting}
+    campaignDetails={campaignDetails}
+    allProjects={sortedProjects}
+    totalCampaignFunds={totalCampaignVotes} // Using total votes as proxy for funds
+  />
+)}
+
      </div>
    </div>
  );

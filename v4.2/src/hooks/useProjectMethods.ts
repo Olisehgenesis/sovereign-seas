@@ -434,7 +434,7 @@ export function useProjectParticipations(
 
   console.log('📊 Raw participation data from contract:', data?.map((d, i) => ({
     projectId: projectIds[i].toString(),
-    result: d?.result
+    result: d.status === 'success' ? d.result : undefined
   })));
 
   // Process the data into a more usable format
