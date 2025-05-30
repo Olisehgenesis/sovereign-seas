@@ -39,7 +39,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             walletChainType: "ethereum-only",
           },
           defaultChain: isTestnet ? celoAlfajores : celo,
-          supportedChains: isTestnet ? [celoAlfajores] : [celo]
+          supportedChains: isTestnet ? [celoAlfajores] : [celo],
+          walletConnectCloudProjectId: import.meta.env.VITE_WALLET_CONNECT_ID as string,
         }}
       >
         <WagmiProvider config={config}>
