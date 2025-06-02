@@ -1,7 +1,15 @@
-import { useWriteContract, useReadContract, useReadContracts, useAccount } from 'wagmi'
+import { useWriteContract, useReadContract, useReadContracts, useAccount, useSendTransaction } from 'wagmi'
 import { formatEther, Address, type Abi, AbiFunction } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Interface } from "ethers"
+import { getDataSuffix, submitReferral } from '@divvi/referral-sdk'
+
+// Get the same dataSuffix used in voting
+const dataSuffix = getDataSuffix({
+  consumer: '0x53eaF4CD171842d8144e45211308e5D90B4b0088',
+  providers: ['0x5f0a55FaD9424ac99429f635dfb9bF20c3360Ab8', '0x6226ddE08402642964f9A6de844ea3116F0dFc7e'],
+})
 
 // Types for better TypeScript support
 export interface ProjectMetadata {
@@ -50,9 +58,10 @@ export interface EnhancedProject {
   contracts?: Address[]
 }
 
-// Hook for creating a new project
+// Hook for creating a new project with Divvi integration
 export function useCreateProject(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
+  const { sendTransactionAsync } = useSendTransaction()
 
   const createProject = async ({
     name,
@@ -72,22 +81,57 @@ export function useCreateProject(contractAddress: Address) {
     transferrable?: boolean
   }) => {
     try {
-      await writeContract({
-        address: contractAddress,
-        abi,
-        functionName: 'createProject',
-        args: [
-          name,
-          description,
-          bio,
-          contractInfo,
-          additionalData,
-          contracts,
-          transferrable
-        ]
-      })
+      console.log('🎯 CreateProject called with:', {
+        name,
+        description,
+        bio,
+        contractInfo,
+        additionalData,
+        contracts,
+        transferrable
+      });
+
+      // Divvi referral integration section
+      const createProjectInterface = new Interface(abi);
+
+      const createProjectData = createProjectInterface.encodeFunctionData('createProject', [
+        name,
+        description,
+        bio,
+        contractInfo,
+        additionalData,
+        contracts,
+        transferrable
+      ]);
+      
+      const celoChainId = 42220; // Celo mainnet chain ID
+      const dataWithSuffix = createProjectData + dataSuffix;
+
+      // Using sendTransactionAsync to support referral integration
+      const tx = await sendTransactionAsync({
+        to: contractAddress,
+        data: dataWithSuffix as `0x${string}`,
+      });
+
+      if (!tx) {
+        throw new Error('Transaction failed to send');
+      }
+
+      // Submit the referral to Divvi
+      try {
+        await submitReferral({
+          txHash: tx as unknown as `0x${string}`,
+          chainId: celoChainId
+        });
+        console.log('✅ Divvi referral submitted for createProject transaction');
+      } catch (referralError) {
+        console.error("Referral submission error:", referralError);
+      }
+
+      console.log('✅ CreateProject transaction submitted:', tx);
+      return tx;
     } catch (err) {
-      console.error('Error creating project:', err)
+      console.error('❌ Error in createProject:', err)
       throw err
     }
   }

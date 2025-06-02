@@ -37,10 +37,15 @@
     "tsc": "npx tsc -p . && cp typechain/*.d.ts dist/typechain/",
     "build": "yarn compile && yarn tsc",
     "mint": "pnpm hardhat run scripts/mint.ts --network alfajores",
-    "deploy": "hardhat run scripts/deploy.ts ",
+    "deployseas": "hardhat run scripts/deploy/deploySov.ts ",
+    "deploygrants": "hardhat run scripts/deploy/deploySovGrants.ts ",
+
+
+
     "withdraw": "pnpm hardhat run scripts/withdraw.ts --network celo",
     "verify": "hardhat verify",
-    "verify:contract": "hardhat run scripts/verify.ts --network alfajores",
+    "verify:seas": "hardhat run scripts/deploy/verifySov.ts --network celo",
+    "verify:grants": "hardhat run scripts/deploy/verifyGrants.ts --network celo",
     "vote": "hardhat run scripts/swapVote.ts ",
     "viewProjects": "hardhat run scripts/viewProjects.ts",
     "viewCampaign": "hardhat run scripts/viewCampaign.ts",
