@@ -264,6 +264,7 @@ export default function CampaignView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isVoting, setIsVoting] = useState(false);
+  const [expandedDescription, setExpandedDescription] = useState(false);
   
   // Add update function for vote counts
   const updateProjectVoteCount = useCallback((projectId: string, voteCount: bigint) => {
@@ -1167,14 +1168,14 @@ export default function CampaignView() {
             <div className="relative z-10">
               {/* Top Row - Campaign Title and Status */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center space-x-3">
-                  {/* Compact Campaign Logo */}
-                  <div className="animate-float">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-3">
+                  {/* Enhanced Campaign Logo - Bigger size */}
+                  <div className="animate-float w-24 h-24 sm:w-32 sm:h-32">
                     {campaignLogo ? (
                       <img 
                         src={formatIpfsUrl(campaignLogo)} 
                         alt={`${campaign.name} logo`}
-                        className="w-12 h-12 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 transition-colors duration-300"
+                        className="w-full h-full rounded-xl object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 transition-colors duration-300"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -1183,14 +1184,14 @@ export default function CampaignView() {
                         }}
                       />
                     ) : null}
-                    <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
+                    <div className={`w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-3xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
                       {campaign.name?.charAt(0) || ''}
                     </div>
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                      <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
+                      <h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
                         {campaign.name || 'Untitled Campaign'}
                       </h1>
                       
@@ -1218,11 +1219,32 @@ export default function CampaignView() {
                         </button>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 line-clamp-1 mt-1">{campaign.description}</p>
+                    
+                    {/* Enhanced Description with Collapse/Expand */}
+                    <div className="mt-2">
+                      <div className="relative">
+                        <p className={`text-sm text-gray-600 ${!expandedDescription ? 'line-clamp-2' : ''}`}>
+                          {campaign.description}
+                        </p>
+                        {campaign.description && campaign.description.length > 100 && (
+                          <button
+                            onClick={() => setExpandedDescription(!expandedDescription)}
+                            className="text-blue-600 text-xs font-medium mt-1 hover:text-blue-700 transition-colors duration-300 flex items-center space-x-1"
+                          >
+                            <span>{expandedDescription ? 'Show Less' : 'Show More'}</span>
+                            {expandedDescription ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Enhanced Status Badge */}
+                {/* Enhanced Status Badge - Mobile Responsive */}
                 <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 justify-center sm:justify-start ${
                   countdown.phase === 'active' ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
                   countdown.phase === 'ended' ? 'bg-gray-100 text-gray-700' : 

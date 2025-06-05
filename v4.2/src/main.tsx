@@ -21,6 +21,7 @@ import CampaignManagePage from '@/pages/app/campaign/manage/<id>/page'
 import ProfilePage from '@/pages/app/profile/page'
 import EditCampaignDetails from '@/pages/app/campaign/edit'
 import EditProjectPage from './pages/app/project/admin/<id>/page'
+import VerifyPage from './pages/app/verify/page'
 
 globalThis.Buffer = Buffer
 
@@ -46,6 +47,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/app/campaign/edit/:id" element={<EditCampaignDetails />} />
             <Route path="/app/project/start" element={<CreateProject />} />
             <Route path="/app/project/edit/:id" element={<EditProjectPage />} />
+            <Route path="/app/verify" element={<VerifyPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

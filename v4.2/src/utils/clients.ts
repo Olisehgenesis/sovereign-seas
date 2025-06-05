@@ -8,7 +8,7 @@ const isTestnet = import.meta.env.VITE_ENV === 'testnet';
 
 // const celoAlfajoresRpcUrl = process.env.NEXT_PUBLIC_CELO_ALFAJORES_RPC_URL;
 
-const rpcUrl = isTestnet ? "https://celo-alfajores.drpc.org" : "https://celo.drpc.org";
+const rpcUrl = isTestnet ? "https://celo-alfajores.drpc.org" : "https://rpc.ankr.com/celo";
 const publicClient = createPublicClient({
   chain: isTestnet ? celoAlfajores : celo,
   transport: http(rpcUrl),

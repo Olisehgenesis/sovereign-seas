@@ -836,7 +836,7 @@ export default function ProfilePage() {
                selfApp={new SelfAppBuilder({
                  appName: "Sovereign Seas",
                  scope: "sovereign-seas-v3",
-                 endpoint: "https://api.sovereignseas.com/verify",
+                 endpoint: "https://sovseas.xyz/verify",
                  endpointType: "https",
                  userId: userId || uuidv4(),
                  logoBase64: "", // Empty string or your base64 logo
