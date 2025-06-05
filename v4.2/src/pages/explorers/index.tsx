@@ -833,12 +833,13 @@ export default function UnifiedExplorer() {
                ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' 
                : 'space-y-4'
              }>
-               {filteredCampaigns.map(campaign => (
+               {filteredCampaigns.map((campaign, index) => (
                  <CampaignCard 
                    key={campaign.id.toString()} 
                    campaign={campaign} 
                    viewMode={viewMode}
                    onClick={() => navigate(`/explorer/campaign/${campaign.id}`)}
+                   index={index}
                  />
                ))}
              </div>
@@ -1036,8 +1037,12 @@ function ProjectCard({
        
        {/* Voting tokens for this project */}
        <div className="flex -space-x-1.5">
-         <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
-         <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
+         <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+           <img src="/images/celo.png" alt="CELO" className="w-full h-full object-cover" />
+         </div>
+         <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+           <img src="/images/cusd.png" alt="cUSD" className="w-full h-full object-cover" />
+         </div>
        </div>
      </div>
    </div>
@@ -1048,11 +1053,13 @@ function ProjectCard({
 function CampaignCard({ 
  campaign, 
  viewMode, 
- onClick 
+ onClick,
+ index 
 }: { 
  campaign: Campaign; 
  viewMode: 'grid' | 'list'; 
  onClick: () => void;
+ index: number;
 }) {
  // Calculate time status properly
  const now = Math.floor(Date.now() / 1000);
@@ -1153,8 +1160,17 @@ function CampaignCard({
        
        {/* Voting tokens for this campaign */}
        <div className="flex -space-x-1.5">
-         <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
-         <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
+         <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+           <img src="/images/celo.png" alt="CELO" className="w-full h-full object-cover" />
+         </div>
+         {(index === 0 || index === 2) && (
+           <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+             <img src="/images/cusd.png" alt="cUSD" className="w-full h-full object-cover" />
+           </div>
+         )}
+         {index === 1 && (
+           <div className="w-6 h-6 rounded-full bg-purple-100 ring-2 ring-white flex items-center justify-center text-purple-500 text-xs font-bold">G</div>
+         )}
        </div>
      </div>
    </div>

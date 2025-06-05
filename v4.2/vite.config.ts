@@ -20,10 +20,20 @@ export default defineConfig({
   base: '/',
   server: {
     allowedHosts: true,
-    port: 4173
+    port: 4173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    }
   },
   preview: {
     allowedHosts: true,
     port: 5173
+  },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
   }
 })

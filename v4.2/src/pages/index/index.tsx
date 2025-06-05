@@ -240,6 +240,41 @@ const formatBigIntNumber = (value: bigint): string => {
   return Number(value).toLocaleString();
 };
 
+// Add this custom hook after the existing hooks
+const useCountUp = (end: number, duration: number = 2000) => {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
+
+  useEffect(() => {
+    if (inView) {
+      setIsVisible(true);
+      let startTime: number;
+      let animationFrame: number;
+
+      const animate = (currentTime: number) => {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        
+        setCount(Math.floor(progress * end));
+
+        if (progress < 1) {
+          animationFrame = requestAnimationFrame(animate);
+        }
+      };
+
+      animationFrame = requestAnimationFrame(animate);
+
+      return () => {
+        cancelAnimationFrame(animationFrame);
+      };
+    }
+  }, [end, duration, inView]);
+
+  return { count, ref };
+};
+
 // ==================== COMPONENTS ====================
 
 interface StatCardProps {
@@ -283,26 +318,39 @@ const ScrollAnimationWrapper = ({ children, delay = 0, direction = 'up' }) => {
   );
 };
 
-const StatCard = ({ icon: Icon, label, value }: StatCardProps) => (
-  <motion.div
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-    className="bg-white/90 backdrop-blur-sm rounded-xl overflow-hidden border border-blue-100 group hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 relative"
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-transparent to-indigo-400/5"></div>
-    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur transition-opacity duration-500"></div>
-    <div className="p-5 relative">
-      <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity duration-500">
-        <Icon className="h-6 w-6 text-blue-500" />
+const StatCard = ({ icon: Icon, label, value }: StatCardProps) => {
+  const numericValue = typeof value === 'string' ? parseInt(value.replace(/[^0-9]/g, '')) : Number(value);
+  const { count, ref } = useCountUp(numericValue);
+  
+  // Format the value with appropriate suffix
+  const formattedValue = typeof value === 'string' && value.includes('K') 
+    ? `${count}K`
+    : typeof value === 'string' && value.includes('CELO')
+    ? `${count} CELO`
+    : count.toString();
+
+  return (
+    <motion.div
+      ref={ref}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className="bg-white/90 backdrop-blur-sm rounded-xl overflow-hidden border border-blue-100 group hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 relative"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-transparent to-indigo-400/5"></div>
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur transition-opacity duration-500"></div>
+      <div className="p-5 relative">
+        <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity duration-500">
+          <Icon className="h-6 w-6 text-blue-500" />
+        </div>
+        <p className="text-indigo-500 font-medium">{label}</p>
+        <p className="text-3xl font-bold text-gray-800 mt-1 mb-2">{formattedValue}</p>
+        <div className="w-full h-1 rounded-full bg-blue-100 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style={{ width: "75%" }}></div>
+        </div>
       </div>
-      <p className="text-indigo-500 font-medium">{label}</p>
-      <p className="text-3xl font-bold text-gray-800 mt-1 mb-2">{value}</p>
-      <div className="w-full h-1 rounded-full bg-blue-100 overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600" style={{ width: "75%" }}></div>
-      </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 const ProjectCard = ({ project }: { project: EnhancedProject }) => {
   const navigate = useNavigate();
@@ -370,11 +418,17 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
         )}
 
         {/* Project name overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-          <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-1">{project.name}</h3>
-          <div className="flex items-center text-white/80 text-sm">
-            <BarChart className="h-3.5 w-3.5 mr-1.5" />
-            {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-10">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 pr-4">
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-100 transition-colors line-clamp-2">{project.name}</h3>
+            </div>
+            <div className="flex flex-col items-end text-white/90 text-sm font-medium">
+              <div className="flex items-center">
+                <BarChart className="h-3.5 w-3.5 mr-1.5" />
+                {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -399,34 +453,31 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
           )}
         </div>
 
-        {/* Tags */}
-        {project.metadata.tags && project.metadata.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {project.metadata.tags.slice(0, 3).map((tag, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
-              >
-                #{tag}
-              </span>
-            ))}
-            {project.metadata.tags.length > 3 && (
-              <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
-                +{project.metadata.tags.length - 3}
-              </span>
-            )}
+        {/* Tags and Action Button in one line */}
+        <div className="flex items-center justify-between">
+          {/* Tags */}
+          {project.metadata.tags && project.metadata.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {project.metadata.tags.slice(0, 3).map((tag, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
+                >
+                  #{tag}
+                </span>
+              ))}
+              {project.metadata.tags.length > 3 && (
+                <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
+                  +{project.metadata.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Action Button */}
+          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
+            <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
           </div>
-        )}
-
-        {/* Action Footer */}
-        <div className="absolute bottom-4 right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
-          <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
-        </div>
-        
-        {/* Voting tokens for this project */}
-        <div className="flex -space-x-1.5">
-          <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
-          <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
         </div>
       </div>
     </motion.div>
@@ -522,39 +573,48 @@ const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: 
         
         {/* Campaign name overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-          <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-1">{campaign.name}</h3>
-          <div className="flex items-center text-white/80 text-sm">
-            <BarChart className="h-3.5 w-3.5 mr-1.5" />
-            {celoAmount} CELO
+          <div className="flex justify-between items-start">
+            <div className="flex-1 pr-4">
+              <h3 className="text-sm sm:text-base font-bold text-white mb-1 group-hover:text-blue-100 transition-colors line-clamp-2">{campaign.name}</h3>
+            </div>
+            <div className="flex flex-col items-end text-white/90 text-sm font-medium">
+              <div className="flex items-center">
+                <BarChart className="h-3.5 w-3.5 mr-1.5" />
+                {celoAmount} CELO
+              </div>
+            </div>
           </div>
         </div>
         
         {/* Time remaining indicator with better formatting */}
         {!hasStarted && (
-          <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-blue-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
+          <div className="absolute top-3 left-3 px-3 py-1.5 bg-blue-500/70 text-white text-xs rounded-full backdrop-blur-sm flex items-center">
             <Timer className="h-3 w-3 mr-1.5 animate-pulse" /> 
-            {timeLeft}
+            <span className="font-bold">{timeLeft}</span>
           </div>
         )}
 
         {hasStarted && !hasEnded && campaign.endTime && (
-          <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-indigo-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
+          <div className="absolute top-3 left-3 px-3 py-1.5 bg-indigo-500/70 text-white text-xs rounded-full backdrop-blur-sm flex items-center">
             <Timer className="h-3 w-3 mr-1.5 animate-pulse" /> 
-            {(() => {
-              const endDiff = Number(campaign.endTime) - now;
-              if (endDiff <= 0) return "Ending soon";
-              
-              const days = Math.floor(endDiff / 86400);
-              const hours = Math.floor((endDiff % 86400) / 3600);
-              
-              return `${days}d ${hours}h left`;
-            })()}
+            <span className="font-bold">
+              {(() => {
+                const endDiff = Number(campaign.endTime) - now;
+                if (endDiff <= 0) return "Ending soon";
+                
+                const days = Math.floor(endDiff / 86400);
+                const hours = Math.floor((endDiff % 86400) / 3600);
+                
+                return `${days}d ${hours}h left`;
+              })()}
+            </span>
           </div>
         )}
         
         {hasEnded && (
-          <div className="absolute bottom-16 left-4 px-3 py-1.5 bg-gray-500/70 text-white text-xs rounded-full backdrop-blur-sm shadow-md flex items-center">
-            <CheckCircle className="h-3 w-3 mr-1.5" /> Ended
+          <div className="absolute top-3 left-3 px-3 py-1.5 bg-gray-500/70 text-white text-xs rounded-full backdrop-blur-sm flex items-center">
+            <CheckCircle className="h-3 w-3 mr-1.5" /> 
+            <span className="font-bold">Ended</span>
           </div>
         )}
       </div>
@@ -568,9 +628,13 @@ const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: 
         
         {/* Voting tokens for this campaign */}
         <div className="flex -space-x-1.5">
-          <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
+          <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+            <img src="/images/celo.png" alt="CELO" className="w-full h-full object-cover" />
+          </div>
           {(index === 0 || index === 2) && (
-            <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
+            <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+              <img src="/images/cusd.png" alt="cUSD" className="w-full h-full object-cover" />
+            </div>
           )}
           {index === 1 && (
             <div className="w-6 h-6 rounded-full bg-purple-100 ring-2 ring-white flex items-center justify-center text-purple-500 text-xs font-bold">G</div>
@@ -728,135 +792,9 @@ export default function HomePage() {
   const totalFunds = featuredCampaigns.reduce((sum, c) => sum + parseFloat(formatEther(c.totalFunds)), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-cyan-50 transition-all duration-300">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-cyan-50 transition-all duration-300 pt-20">
       {/* Hero Section with Geometric Elements - following original design */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="relative overflow-hidden"
-      >
-        <div className="container mx-auto px-4 sm:px-6 py-16 md:py-28 relative z-10">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="w-full md:w-1/2 mb-10 md:mb-0 text-center md:text-left">
-              <div className="inline-flex items-center px-3 py-1 mb-6 rounded-full bg-blue-100/80 text-blue-700 text-sm font-medium transform hover:scale-105 transition-transform duration-300 backdrop-blur-sm shadow-sm border border-blue-200/50">
-                <Sparkles className="h-3.5 w-3.5 mr-1.5 animate-pulse" />
-                Multi-Token Governance
-              </div>
-              
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 tracking-tight mb-4 relative">
-                Sovereign <span className="text-blue-600 relative">
-                  Seas
-                  <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500 transform origin-left"></span>
-                </span>
-                <span className="absolute -right-4 -top-4 text-4xl animate-pulse text-blue-400">✦</span>
-              </h1>
-              
-              <div className="relative mb-6">
-                <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-lg mx-auto md:mx-0">
-                  A vibrant ecosystem where community voting with 
-                  <span className={`font-semibold relative ml-2 ${tokenColors[currentToken]}`}>
-                    ${tokens[currentToken]}
-                    <span className="absolute right-0 top-0 h-full w-1 bg-current animate-pulse"></span>
-                  </span>
-                  <br className="hidden xs:block" />
-                  powers the future of blockchain innovation.
-                </p>
-                
-                <div className="mt-4 flex flex-wrap gap-2 items-center justify-center md:justify-start">
-                  <div className="flex -space-x-1 mr-2">
-                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center ring-2 ring-white text-green-500 text-xs font-bold">C</div>
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center ring-2 ring-white text-blue-500 text-xs font-bold">$</div>
-                    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center ring-2 ring-white text-purple-500 text-xs font-bold">G</div>
-                    <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center ring-2 ring-white text-yellow-500 text-xs font-bold">Ⓖ</div>
-                  </div>
-                  <span className="text-sm text-gray-500">Vote with multiple tokens</span>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-3 mb-8">
-                <button 
-                  onClick={() => navigate('/campaigns')}
-                  className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group border border-blue-400/30 relative overflow-hidden"
-                >
-                  <Globe className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                  Explore Campaigns
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-                <button 
-                  onClick={() => navigate('/app/campaign/start')}
-                  className="px-6 py-3 rounded-full bg-white text-blue-600 font-medium border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group relative overflow-hidden"
-                >
-                  <Rocket className="h-4 w-4 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
-                  Launch Campaign
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              </div>
-
-              {/* Search Bar */}
-              <div className="max-w-md mx-auto md:mx-0 mb-6">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search projects, campaigns..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/90 backdrop-blur-sm border border-white/30 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-900 placeholder-gray-500 shadow-sm"
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="w-full md:w-1/2 flex justify-center md:justify-end">
-              <div className="relative transform hover:scale-105 transition-transform duration-300 w-full max-w-sm">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-2xl transform rotate-6 scale-95 opacity-30 blur-sm"></div>
-                <div className="relative bg-white/90 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-xl border border-blue-100">
-                  <div className="flex items-center mb-4">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center justify-center mr-3 text-white">
-                      <Anchor className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-800">Governance Simplified</h3>
-                      <p className="text-sm text-gray-500">Multi-token decision making</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3 mb-6 relative">
-                    <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100/50 transform hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                      <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                        <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
-                      </div>
-                      <span className="text-gray-700">Multi-token governance voting</span>
-                    </div>
-                    <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100/50 transform hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                      <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                        <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
-                      </div>
-                      <span className="text-gray-700">Automated fund distribution</span>
-                    </div>
-                    <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100/50 transform hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                      <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                        <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
-                      </div>
-                      <span className="text-gray-700">Transparent on-chain governance</span>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={() => navigate('/app/campaign/start')}
-                    className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow-lg transition-all flex items-center justify-center group relative overflow-hidden"
-                  >
-                    Get Started 
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5 group-hover:translate-x-1 transition-transform duration-300" />
-                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+     
       
       {/* Token Distribution Visualization - following original design */}
       <ScrollAnimationWrapper>
@@ -866,7 +804,7 @@ export default function HomePage() {
               <div className="mb-4 md:mb-0 md:mr-8 w-full md:w-auto">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2 flex items-center justify-center md:justify-start">
                   <BarChart className="h-5 w-5 mr-2 text-blue-500" />
-                  Multi-Token Ecosystem
+                  Multi-Token  Governance and Voting Ecosystem
                 </h3>
                 <p className="text-sm text-gray-600 mb-2 text-center md:text-left">Vote with any supported token in our ecosystem</p>
                 

@@ -98,8 +98,17 @@ const getCampaignStatus = (campaign: any): 'upcoming' | 'active' | 'ended' | 'pa
   return 'ended';
 };
 
+// Helper function to capitalize first letter of each word
+const capitalizeWords = (str: string): string => {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 // Campaign Card Component
-const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
+const CampaignCard = ({ campaign, index }: { campaign: EnhancedCampaign; index: number }) => {
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -181,7 +190,7 @@ const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
         
         {/* Campaign name overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-          <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-1">{campaign.name}</h3>
+          <h3 className="text-sm sm:text-base font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-2">{capitalizeWords(campaign.name)}</h3>
           <div className="flex items-center text-white/80 text-sm">
             <BarChart className="h-3.5 w-3.5 mr-1.5" />
             {celoAmount} CELO
@@ -320,8 +329,17 @@ const CampaignCard = ({ campaign }: { campaign: EnhancedCampaign }) => {
         
         {/* Voting tokens for this campaign */}
         <div className="flex -space-x-1.5 mt-4">
-          <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
-          <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
+          <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+            <img src="/images/celo.png" alt="CELO" className="w-full h-full object-cover" />
+          </div>
+          {(index === 0 || index === 2) && (
+            <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+              <img src="/images/cusd.png" alt="cUSD" className="w-full h-full object-cover" />
+            </div>
+          )}
+          {index === 1 && (
+            <div className="w-6 h-6 rounded-full bg-purple-100 ring-2 ring-white flex items-center justify-center text-purple-500 text-xs font-bold">G</div>
+          )}
         </div>
       </div>
     </div>
@@ -511,8 +529,8 @@ export default function CampaignsPage() {
           </div>
         ) : processedCampaigns.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {processedCampaigns.map((campaign) => (
-              <CampaignCard key={campaign.id.toString()} campaign={campaign} />
+            {processedCampaigns.map((campaign, index) => (
+              <CampaignCard key={campaign.id.toString()} campaign={campaign} index={index} />
             ))}
           </div>
         ) : (
