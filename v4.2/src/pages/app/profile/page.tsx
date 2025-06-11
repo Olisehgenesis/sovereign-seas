@@ -308,7 +308,6 @@ export default function ProfilePage() {
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   // Generate userId for Self Protocol using UUID
   useEffect(() => {

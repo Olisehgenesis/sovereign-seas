@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
 import { v4 as uuidv4 } from 'uuid';
-import { getAddress } from 'viem';
 import { useAccount } from 'wagmi';
 
 export default function VerifyPage() {
