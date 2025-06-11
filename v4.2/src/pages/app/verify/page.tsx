@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
 import { v4 as uuidv4 } from 'uuid';
+import { getAddress } from 'viem';
+import { useAccount } from 'wagmi';
 
 export default function VerifyPage() {
     const [userId, setUserId] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function VerifyPage() {
 
     const selfApp = new SelfAppBuilder({
         appName: "Sovereign Seas",
-        scope: "sovereign-seas-v3",
+        scope: "sovereign-seas",
         endpoint: "https://auth.sovseas.xyz/api/verify",
         endpointType: "https",
         userId,
@@ -36,14 +38,22 @@ export default function VerifyPage() {
     }).build();
 
     const handleVerificationSuccess = async () => {
+        const address =  useAccount();
+        if (!address) {
+            setError('No wallet address found');
+            return;
+        }
         try {
             console.log('Starting verification process...');
-            const response = await fetch('https://auth.sovseas.xyz/api/verify', {
+            const response = await fetch('https://auth.sovseas.xyz/api/save-verify', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ userId }),
+                body: JSON.stringify({ 
+                    wallet: address,
+                    verificationStatus: true 
+                }),
             });
 
             if (!response.ok) {
@@ -53,13 +63,15 @@ export default function VerifyPage() {
             const data = await response.json();
             console.log('Verification response:', data);
 
-            if (data.status === 'success') {
+            if (data.success) {
                 console.log('Verification successful');
                 setIsVerified(true);
                 setError(null);
+                // Redirect to me page after successful verification
+                window.location.href = 'https://sovseas.xyz/app/me/';
             } else {
-                console.error('Verification failed:', data.message);
-                setError(data.message || 'Verification failed. Please try again.');
+                console.error('Verification failed:', data.error);
+                setError(data.error || 'Verification failed. Please try again.');
             }
         } catch (err) {
             console.error('Error during verification:', err);
