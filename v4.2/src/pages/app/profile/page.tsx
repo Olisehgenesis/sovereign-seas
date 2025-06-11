@@ -304,7 +304,11 @@ export default function ProfilePage() {
   const [sortBy, setSortBy] = useState('recent');
   const [isVerified, setIsVerified] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Generate userId for Self Protocol using UUID
   useEffect(() => {
@@ -813,6 +817,73 @@ export default function ProfilePage() {
        </div>
      )}
 
+     {/* Verification Success Modal */}
+     {showSuccessModal && (
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div className="bg-white rounded-lg p-6 max-w-md w-full">
+           <div className="flex items-center justify-between mb-4">
+             <h3 className="text-lg font-bold text-gray-900">Identity Verification</h3>
+             <button
+               onClick={() => setShowSuccessModal(false)}
+               className="text-gray-400 hover:text-gray-600"
+             >
+               <X className="h-5 w-5" />
+             </button>
+           </div>
+           
+           <div className="text-center mb-6">
+             {verificationStatus === 'loading' && (
+               <>
+                 <Loader2 className="h-12 w-12 text-blue-500 animate-spin mx-auto mb-4" />
+                 <p className="text-gray-600">Saving verification status...</p>
+               </>
+             )}
+             
+             {verificationStatus === 'success' && (
+               <>
+                 <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                 <h4 className="text-lg font-semibold text-gray-900 mb-2">Identity Verified!</h4>
+                 <p className="text-gray-600">Your identity has been successfully verified.</p>
+               </>
+             )}
+             
+             {verificationStatus === 'error' && (
+               <>
+                 <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                 <h4 className="text-lg font-semibold text-gray-900 mb-2">Verification Error</h4>
+                 <p className="text-red-600 mb-2">{verificationError}</p>
+                 <p className="text-gray-600">Please try again later.</p>
+               </>
+             )}
+           </div>
+
+           {verificationStatus === 'success' && (
+             <button
+               onClick={() => {
+                 setShowSuccessModal(false);
+                 setIsVerified(true);
+               }}
+               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+             >
+               Continue
+             </button>
+           )}
+
+           {verificationStatus === 'error' && (
+             <button
+               onClick={() => {
+                 setShowSuccessModal(false);
+                 setShowVerification(true);
+               }}
+               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+             >
+               Try Again
+             </button>
+           )}
+         </div>
+       </div>
+     )}
+
      {/* Verification Modal */}
      {showVerification && userId && (
        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -835,19 +906,65 @@ export default function ProfilePage() {
              <SelfQRcodeWrapper
                selfApp={new SelfAppBuilder({
                  appName: "Sovereign Seas",
-                 scope: "sovereign-seas-v3",
-                 endpoint: "https://sovseas.xyz/verify",
+                 scope: "sovereign-seas",
+                 endpoint: "https://auth.sovseas.xyz/api/verify",
                  endpointType: "https",
                  userId: userId || uuidv4(),
-                 logoBase64: "", // Empty string or your base64 logo
+                 disclosures: {
+                   name: true,
+                   date_of_birth: true,
+                   nationality: true,
+                   minimumAge: 18,
+                   ofac: true,
+                 }
                }).build()}
-               onSuccess={() => {
-                 console.log('Identity verified successfully for:', userId);
-                 setIsVerified(true);
+               onSuccess={async () => {
+                 console.log('Verification successful');
                  setShowVerification(false);
-                
+                 setShowSuccessModal(true);
+                 setVerificationStatus('loading');
+                 
+                 if (!address) {
+                   setVerificationError('No wallet address found');
+                   setVerificationStatus('error');
+                   return;
+                 }
+
+                 try {
+                   console.log('Starting verification process...');
+                   const response = await fetch('https://auth.sovseas.xyz/api/save-verify', {
+                     method: 'POST',
+                     headers: {
+                       'Content-Type': 'application/json',
+                     },
+                     body: JSON.stringify({ 
+                       wallet: address,
+                       verificationStatus: true 
+                     }),
+                   });
+
+                   if (!response.ok) {
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                   }
+
+                   const data = await response.json();
+                   console.log('Verification response:', data);
+
+                   if (data.success) {
+                     console.log('Verification successful');
+                     setVerificationStatus('success');
+                     setVerificationError(null);
+                   } else {
+                     console.error('Verification failed:', data.error);
+                     setVerificationError(data.error || 'Verification failed. Please try again.');
+                     setVerificationStatus('error');
+                   }
+                 } catch (err) {
+                   console.error('Error during verification:', err);
+                   setVerificationError(err instanceof Error ? err.message : 'Failed to verify identity. Please try again.');
+                   setVerificationStatus('error');
+                 }
                }}
-              
                size={250}
              />
            </div>
@@ -856,9 +973,11 @@ export default function ProfilePage() {
              <p className="text-xs text-gray-500">
                User ID: {userId.substring(0, 8)}...{userId.substring(userId.length - 6)}
              </p>
-             <p className="text-xs text-blue-600">
-               Download the Self app to scan this QR code
-             </p>
+             {verificationError && (
+               <div className="text-red-600 text-sm font-medium">
+                 ✗ {verificationError}
+               </div>
+             )}
            </div>
          </div>
        </div>

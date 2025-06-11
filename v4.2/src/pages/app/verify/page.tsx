@@ -38,6 +38,7 @@ export default function VerifyPage() {
     }).build();
 
     const handleVerificationSuccess = async () => {
+        console.log('Verification successful');
         const address =  useAccount();
         if (!address) {
             setError('No wallet address found');
