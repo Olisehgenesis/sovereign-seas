@@ -741,11 +741,11 @@ export default function ProjectView() {
           />
           <StatCard
             icon={Coins}
-            label="Total Funding"
+            label="Campaign Funding"
             value={`${projectCampaigns ? 
               projectCampaigns.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null)
                 .reduce((sum, campaign) => 
-                  sum + parseFloat(formatEther(campaign.totalFunds || 0n)), 0
+                  sum + parseFloat(formatEther(campaign.participation?.fundsReceived || 0n)), 0
                 ).toFixed(2) 
               : '0.00'} CELO`}
             color="green"
@@ -1248,11 +1248,11 @@ export default function ProjectView() {
                     />
                     <StatCard
                       icon={Coins}
-                      label="Total Funds"
+                      label="Campaign Funding"
                       value={`${projectCampaigns ? 
                         projectCampaigns.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null)
                           .reduce((sum, campaign) => 
-                            sum + parseFloat(formatEther(campaign.totalFunds || 0n)), 0
+                            sum + parseFloat(formatEther(campaign.participation?.fundsReceived || 0n)), 0
                           ).toFixed(2) 
                         : '0.00'} CELO`}
                       color="green"
