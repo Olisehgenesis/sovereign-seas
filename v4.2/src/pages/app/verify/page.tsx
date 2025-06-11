@@ -22,7 +22,7 @@ export default function VerifyPage() {
     const selfApp = new SelfAppBuilder({
         appName: "Sovereign Seas",
         scope: "sovereign-seas-v3",
-        endpoint: "https://sovseas.xyz/verify",
+        endpoint: "https://auth.sovseas.xyz/api/verify",
         endpointType: "https",
         userId,
         disclosures: {
@@ -38,7 +38,7 @@ export default function VerifyPage() {
     const handleVerificationSuccess = async () => {
         try {
             console.log('Starting verification process...');
-            const response = await fetch('/api/verify', {
+            const response = await fetch('https://auth.sovseas.xyz/api/verify', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
