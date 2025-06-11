@@ -37,6 +37,7 @@ export default function VerifyPage() {
 
     const handleVerificationSuccess = async () => {
         try {
+            console.log('Starting verification process...');
             const response = await fetch('/api/verify', {
                 method: 'POST',
                 headers: {
@@ -45,7 +46,12 @@ export default function VerifyPage() {
                 body: JSON.stringify({ userId }),
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
+            console.log('Verification response:', data);
 
             if (data.status === 'success') {
                 console.log('Verification successful');
@@ -53,11 +59,11 @@ export default function VerifyPage() {
                 setError(null);
             } else {
                 console.error('Verification failed:', data.message);
-                setError(data.message);
+                setError(data.message || 'Verification failed. Please try again.');
             }
         } catch (err) {
             console.error('Error during verification:', err);
-            setError('Failed to verify identity. Please try again.');
+            setError(err instanceof Error ? err.message : 'Failed to verify identity. Please try again.');
         }
     };
 

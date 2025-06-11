@@ -39,9 +39,12 @@
     "mint": "pnpm hardhat run scripts/mint.ts --network alfajores",
     "deployseas": "hardhat run scripts/deploy/deploySov.ts ",
     "deploygrants": "hardhat run scripts/deploy/deploySovGrants.ts ",
-
-
-
+    "deploytips": "hardhat run scripts/deploy/deplottips.ts ",
+    "deploytips:celo": "ts-node scripts/deploy/deplottips.ts --network celo",
+    "deploytips:alfajores": "ts-node scripts/deploy/deplottips.ts --network alfajores",
+    "deploytips:sepolia": "ts-node scripts/deploy/deplottips.ts --network sepolia",
+    "deploytips:base": "ts-node scripts/deploy/deplottips.ts --network base",
+    "deploytips:base-sepolia": "ts-node scripts/deploy/deplottips.ts --network base-sepolia",
     "withdraw": "pnpm hardhat run scripts/withdraw.ts --network celo",
     "verify": "hardhat verify",
     "verify:seas": "hardhat run scripts/deploy/verifySov.ts --network celo",
