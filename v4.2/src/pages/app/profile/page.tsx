@@ -55,12 +55,12 @@ interface StatCardProps {
 
 const StatCard = ({ icon: Icon, label, value, color = 'blue', trend = null, onClick }: StatCardProps) => (
   <div 
-    className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all ${onClick ? 'cursor-pointer' : ''}`}
+    className={`bg-gradient-to-br from-${color}-50 to-${color}-100 rounded-xl p-4 shadow-sm border border-${color}-200/50 hover:shadow-md transition-all ${onClick ? 'cursor-pointer' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-center justify-between mb-2">
-      <div className={`w-8 h-8 bg-${color}-50 rounded-lg flex items-center justify-center`}>
-        <Icon className={`h-4 w-4 text-${color}-600`} />
+      <div className={`w-10 h-10 bg-${color}-500/10 rounded-lg flex items-center justify-center`}>
+        <Icon className={`h-5 w-5 text-${color}-600`} />
       </div>
       {trend && (
         <div className={`flex items-center gap-1 text-xs ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -69,8 +69,8 @@ const StatCard = ({ icon: Icon, label, value, color = 'blue', trend = null, onCl
         </div>
       )}
     </div>
-    <p className="text-xl font-bold text-gray-900 mb-1">{value}</p>
-    <p className="text-xs text-gray-600">{label}</p>
+    <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+    <p className="text-xs font-medium text-gray-600">{label}</p>
   </div>
 );
 
@@ -325,6 +325,50 @@ export default function ProfilePage() {
     token: CELO_TOKEN,
   });
 
+  // Check if user is verified when wallet connects
+useEffect(() => {
+  if (isConnected && address) {
+    const checkVerificationStatus = async () => {
+      try {
+        console.log('Checking verification status for wallet:', address);
+        
+        const response = await fetch(`https://auth.sovseas.xyz/api/verify-details?wallet=${address}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Verification check response:', data);
+          
+          if (data.verified) {
+            setIsVerified(true);
+            console.log('User is verified');
+          } else {
+            setIsVerified(false);
+            console.log('User is not verified');
+          }
+        } else {
+          // If 404 or other error, user is not verified
+          setIsVerified(false);
+          console.log('No verification found, user is not verified');
+        }
+      } catch (error) {
+        console.error('Error checking verification status:', error);
+        setIsVerified(false);
+      }
+    };
+
+    checkVerificationStatus();
+  }
+}, [isConnected, address]);
+
+  //check if user is verified
+
+
+
   // Fetch user's data
   const { projects: allProjects, isLoading: projectsLoading } = useAllProjects(CONTRACT_ADDRESS);
   const { campaigns: allCampaigns, isLoading: campaignsLoading } = useAllCampaigns(CONTRACT_ADDRESS);
@@ -399,29 +443,29 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Profile Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200/50 p-6 mb-8">
           <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-lg">
                   {address?.slice(2, 4).toUpperCase()}
                 </div>
                 {isVerified && (
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
                     <CheckCircle className="h-4 w-4 text-white" />
                   </div>
                 )}
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-bold text-gray-900">Profile Dashboard</h1>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Profile</h1>
                   {isVerified ? (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-full">
+                    <div className="flex items-center gap-2 px-2 py-1 bg-green-50 rounded-full">
                       <Shield className="h-4 w-4 text-green-600" />
-                      <span className="text-xs font-medium text-green-700">Verified</span>
+                      <span className="text-xs font-medium text-green-700">Verified by Self Protocol</span>
                     </div>
                   ) : (
                     <button
@@ -429,104 +473,102 @@ export default function ProfilePage() {
                       className="flex items-center gap-1 px-2 py-1 bg-yellow-50 hover:bg-yellow-100 rounded-full transition-colors"
                     >
                       <Shield className="h-4 w-4 text-yellow-600" />
-                      <span className="text-xs font-medium text-yellow-700">Verify Identity</span>
+                      <span className="text-xs font-medium text-yellow-700">Verify</span>
                     </button>
                   )}
                 </div>
-                <p className="text-gray-600 text-sm font-mono bg-gray-50 px-2 py-1 rounded">
-                  {address}
+                <p className="text-gray-600 text-sm font-mono bg-gray-50/50 px-2 py-1 rounded-lg">
+                  {address?.slice(0, 6)}...{address?.slice(-4)}
                 </p>
-                {!isVerified && (
-                  <div className="mt-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                    <strong>V3 Preview:</strong> Anti-Sybil verification coming soon
-                  </div>
-                )}
               </div>
             </div>
             
             <div className="flex-1 lg:ml-auto">
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={FileCode} label="Projects" value={userMetrics.projects} color="blue" />
                 <StatCard icon={Trophy} label="Campaigns" value={userMetrics.campaigns} color="purple" />
-                <StatCard icon={Vote} label="Votes Cast" value={userMetrics.votes} color="green" />
+                <StatCard icon={Vote} label="Votes" value={userMetrics.votes} color="green" />
                 <StatCard icon={Coins} label="Balance" value={`${userMetrics.balance} CELO`} color="amber" />
-                <StatCard 
-                  icon={Shield} 
-                  label="Identity" 
-                  value={isVerified ? "Verified" : "Unverified"} 
-                  color={isVerified ? "green" : "yellow"} 
-                />
               </div>
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-8">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: Home },
-            { id: 'projects', label: 'Projects', icon: FileCode },
-            { id: 'campaigns', label: 'Campaigns', icon: Trophy },
-            { id: 'votes', label: 'Votes', icon: Vote },
+            { id: 'projects', label: 'Projects', icon: FileCode, count: userMetrics.projects },
+            { id: 'campaigns', label: 'Campaigns', icon: Trophy, count: userMetrics.campaigns },
+            { id: 'votes', label: 'Votes', icon: Vote, count: userMetrics.votes },
             { id: 'identity', label: 'Identity', icon: Shield }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-sm relative ${
                 activeTab === tab.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                  : 'bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-gray-50 border border-gray-200'
               }`}
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}
+              {tab.count !== undefined && (
+                <span className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  activeTab === tab.id
+                    ? 'bg-white text-blue-600'
+                    : 'bg-blue-100 text-blue-600'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
                   onClick={() => navigate('/app/project/start')}
-                  className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors group"
+                  className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl hover:from-blue-100 hover:to-indigo-100 transition-all group"
                 >
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                    <Plus className="h-4 w-4" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                    <Plus className="h-5 w-5" />
                   </div>
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-900 text-sm">Create Project</h3>
-                    <p className="text-xs text-gray-600">Start a new project</p>
+                    <h3 className="font-semibold text-gray-900">New Project</h3>
+                    <p className="text-xs text-gray-600">Start building</p>
                   </div>
                 </button>
                 
                 <button
                   onClick={() => navigate('/app/campaign/start')}
-                  className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors group"
+                  className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl hover:from-purple-100 hover:to-indigo-100 transition-all group"
                 >
-                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white">
-                    <Trophy className="h-4 w-4" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                    <Trophy className="h-5 w-5" />
                   </div>
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-900 text-sm">Launch Campaign</h3>
-                    <p className="text-xs text-gray-600">Start funding campaign</p>
+                    <h3 className="font-semibold text-gray-900">New Campaign</h3>
+                    <p className="text-xs text-gray-600">Launch funding</p>
                   </div>
                 </button>
                 
                 <button
                   onClick={() => navigate('/explore')}
-                  className="flex items-center gap-3 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors group"
+                  className="flex items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-teal-50 rounded-xl hover:from-green-100 hover:to-teal-100 transition-all group"
                 >
-                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center text-white">
-                    <Compass className="h-4 w-4" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                    <Compass className="h-5 w-5" />
                   </div>
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-900 text-sm">Explore</h3>
+                    <h3 className="font-semibold text-gray-900">Explore</h3>
                     <p className="text-xs text-gray-600">Discover projects</p>
                   </div>
                 </button>
@@ -537,7 +579,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard 
                 icon={TrendingUp} 
-                label="Total Vote Value" 
+                label="Total Value" 
                 value={`${userMetrics.totalVoteValue} CELO`} 
                 color="green"
               />
@@ -931,13 +973,14 @@ export default function ProfilePage() {
 
                  try {
                    console.log('Starting verification process...');
-                   const response = await fetch('https://auth.sovseas.xyz/api/save-verify', {
+                   const response = await fetch('https://auth.sovseas.xyz/api/verify-save', {
                      method: 'POST',
                      headers: {
                        'Content-Type': 'application/json',
                      },
                      body: JSON.stringify({ 
                        wallet: address,
+                       userId: userId,
                        verificationStatus: true 
                      }),
                    });
