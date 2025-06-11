@@ -27,9 +27,9 @@ export default async function handler(
 ) {
   // Check origin
   const origin = req.headers.origin;
-  if (origin !== 'https://sovseas.xyz') {
-    return res.status(403).json({ error: 'Unauthorized origin' });
-  }
+  // if (origin !== 'https://sovseas.xyz') {
+  //   return res.status(403).json({ error: 'Unauthorized origin' });
+  // }
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
