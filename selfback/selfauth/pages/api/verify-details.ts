@@ -4,10 +4,34 @@ import path from 'path';
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
 
+// Allowed origins
+const allowedOrigins = [
+  'http://localhost:4173',
+  'http://localhost:4174',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://sovseas.xyz',
+  'https://auth.sovseas.xyz'
+];
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Handle CORS
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
