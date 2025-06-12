@@ -41,6 +41,8 @@ export default function Header() {
   
   // Use Privy hooks for authentication
   const { authenticated, logout, ready } = usePrivy();
+
+  console.log('Privy Auth State:', { authenticated, ready });
   const { login } = useLogin();
 
   // Handle scroll effect - more subtle than original
@@ -62,7 +64,12 @@ export default function Header() {
   
   // Handle wallet connection with Privy login
   const handleLogin = () => {
-    console.log(isConnected)
+    console.log('Login attempt - States:', { 
+      isConnected, 
+      hasEthereum: typeof window !== 'undefined' && !!window.ethereum,
+      isMiniPay: typeof window !== 'undefined' && window.ethereum?.isMiniPay,
+      ready
+    });
     if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isMiniPay) {
       connect({ connector: injected({ target: 'metaMask' }) });
     } else {

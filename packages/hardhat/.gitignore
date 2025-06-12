@@ -2,6 +2,15 @@ node_modules
 .env*
 .env.*
 .env
+.env.local
+/env
+env/*
+env
+.env.deployments
+.env.live
+
+
+
 
 
 # Hardhat files
