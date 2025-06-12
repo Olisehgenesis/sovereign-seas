@@ -1,14 +1,34 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import Cors from 'cors';
+import { initMiddleware } from '../../lib/init-middleware';
 
 // Path to the JSON file
 const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
+
+// Initialize CORS middleware
+const cors = initMiddleware(
+  Cors({
+    origin: [
+      'http://localhost:4173',
+      'http://localhost:4174',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://sovseas.xyz',
+      'https://auth.sovseas.xyz'
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+  })
+);
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Run the CORS middleware
+  await cors(req, res);
+
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });

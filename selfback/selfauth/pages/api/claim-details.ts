@@ -1,37 +1,32 @@
 //add api route to claim and vote for a user with reeor logoong
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { claimAndVoteForUser, getContractStats, getCampaignStats, getProjectStats, walletBalance, getContractBalance } from '../../src/utils/claims';
+import Cors from 'cors';
+import { initMiddleware } from '../../lib/init-middleware';
 
-// Allowed origins
-const allowedOrigins = [
-  'http://localhost:4173',
-  'http://localhost:4174',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://sovseas.xyz',
-  'https://auth.sovseas.xyz'
-];
+// Initialize CORS middleware
+const cors = initMiddleware(
+  Cors({
+    origin: [
+      'http://localhost:4173',
+      'http://localhost:4174',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://sovseas.xyz',
+      'https://auth.sovseas.xyz'
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+  })
+);
 
-
-const testnetEnabled=process.env.TESTNET_ENABLED === 'true' 
+const testnetEnabled = process.env.TESTNET_ENABLED === 'true';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Handle CORS
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  }
-
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  // Run the CORS middleware
+  await cors(req, res);
 
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -40,7 +35,6 @@ export default async function handler(
       error: 'Method not allowed' 
     });
   }
-
 
   //get method in req.query
   const { method } = req.query;

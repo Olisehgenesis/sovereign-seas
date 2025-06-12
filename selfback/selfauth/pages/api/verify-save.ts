@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import Cors from 'cors';
+import { initMiddleware } from '../../lib/init-middleware';
 
 interface WalletVerification {
   wallet: string;
@@ -10,6 +12,21 @@ interface WalletVerification {
 }
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
+
+// Initialize CORS middleware
+const cors = initMiddleware(
+  Cors({
+    origin: [
+      'http://localhost:4173',
+      'http://localhost:4174',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://sovseas.xyz',
+      'https://auth.sovseas.xyz'
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+  })
+);
 
 // Ensure data directory exists
 if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
@@ -21,33 +38,12 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify([]));
 }
 
-// Allowed origins
-const allowedOrigins = [
-  'http://localhost:4173',
-  'http://localhost:4174',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://sovseas.xyz',
-  'https://auth.sovseas.xyz'
-];
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Handle CORS
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  }
-
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  // Run the CORS middleware
+  await cors(req, res);
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

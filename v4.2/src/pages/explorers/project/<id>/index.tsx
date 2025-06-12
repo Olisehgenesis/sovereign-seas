@@ -70,6 +70,7 @@ import {
 import { useProjectDetails, useProjectCampaigns } from '@/hooks/useProjectMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import ProjectCampaignsModal from '@/components/ProjectCampaignsModal';
+import VoteModal from '@/components/voteModal';
 
 // ==================== TYPES ====================
 
@@ -481,6 +482,9 @@ export default function ProjectView() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
+  const [showVoteModal, setShowVoteModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [isVotePending, setIsVotePending] = useState(false);
   
   // Data
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -549,6 +553,21 @@ export default function ProjectView() {
   };
 
   const isOwner = isConnected && address && project && address.toLowerCase() === project.owner?.toLowerCase();
+
+  const openVoteModal = (project: any) => {
+    setSelectedProject(project);
+    setShowVoteModal(true);
+  };
+
+  const closeVoteModal = () => {
+    setShowVoteModal(false);
+    setSelectedProject(null);
+  };
+
+  const handleVoteSuccess = () => {
+    // Refresh project data or handle success
+    closeVoteModal();
+  };
 
   // Loading state
   if (isLoading) {
@@ -980,7 +999,7 @@ export default function ProjectView() {
                               </button>
                               {campaign.status === 'active' && (
                                 <button
-                                  onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
+                                  onClick={() => openVoteModal(campaign)}
                                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
                                 >
                                   <Vote className="h-4 w-4" />
@@ -1661,6 +1680,17 @@ export default function ProjectView() {
        onClose={() => setShowCampaignsModal(false)}
        projectId={project?.id?.toString()}
      />
+
+     {showVoteModal && selectedProject && (
+       <VoteModal
+         isOpen={showVoteModal}
+         onClose={closeVoteModal}
+         selectedProject={selectedProject}
+         campaignId={selectedProject.campaignId}
+         isVoting={isVotePending}
+         onVoteSuccess={handleVoteSuccess}
+       />
+     )}
    </div>
  );
 }

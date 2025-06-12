@@ -2,37 +2,61 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { claimAndVoteForUser } from '../../src/utils/claims';
+import Cors from 'cors';
+import { initMiddleware } from '../../lib/init-middleware';
+import fs from 'fs';
+import path from 'path';
 
-// Allowed origins
-const allowedOrigins = [
-  'http://localhost:4173',
-  'http://localhost:4174',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://sovseas.xyz',
-  'https://auth.sovseas.xyz'
-];
+// Initialize CORS middleware
+const cors = initMiddleware(
+  Cors({
+    origin: [
+      'http://localhost:4173',
+      'http://localhost:4174',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://sovseas.xyz',
+      'https://auth.sovseas.xyz'
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+  })
+);
 
+const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
+const testnetEnabled = process.env.TESTNET_ENABLED === 'true';
 
-const testnetEnabled=process.env.TESTNET_ENABLED === 'true' 
+// Helper function to check if a wallet is verified
+async function isWalletVerified(wallet: string): Promise<boolean> {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      return false;
+    }
+
+    const verifications = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    
+    // Find the most recent verification for this wallet
+    const walletVerifications = verifications
+      .filter((v: any) => v.wallet.toLowerCase() === wallet.toLowerCase())
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    if (walletVerifications.length === 0) {
+      return false;
+    }
+
+    // Return the most recent verification status
+    return walletVerifications[0].verificationStatus;
+  } catch (error) {
+    console.error('Error checking wallet verification:', error);
+    return false;
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Handle CORS
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  }
-
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  // Run the CORS middleware
+  await cors(req, res);
 
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -53,8 +77,15 @@ export default async function handler(
         error: 'Missing required fields: beneficiaryAddress, campaignId, and projectId are required'
       });
     }
-    const returnData = await claimAndVoteForUser(beneficiaryAddress, campaignId, projectId, data || {})
 
+    // Check if beneficiary is verified
+    const isVerified = await isWalletVerified(beneficiaryAddress);
+    if (!isVerified) {
+      return res.status(403).json({
+        success: false,
+        error: 'Beneficiary wallet is not verified. Please verify your wallet before claiming.'
+      });
+    }
 
     // Call the claim and vote function
     const result = await claimAndVoteForUser(
