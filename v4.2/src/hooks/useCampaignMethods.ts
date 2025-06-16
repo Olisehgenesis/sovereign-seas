@@ -136,28 +136,12 @@ export function useCreateCampaign(contractAddress: Address) {
     feeAmount: bigint; // The calculated fee amount
   }) => {
     try {
-      const params = {
-        name,
-        descriptionLength: description.length,
-        mainInfoLength: mainInfo.length,
-        additionalInfoLength: additionalInfo.length,
-        startTime: startTime.toString(),
-        endTime: endTime.toString(),
-        adminFeePercentage: adminFeePercentage.toString(),
-        maxWinners: maxWinners.toString(),
-        useQuadraticDistribution,
-        useCustomDistribution,
-        customDistributionDataLength: customDistributionData.length,
-        payoutToken,
-        feeToken,
-        feeAmount: feeAmount.toString()
-      }
+      
 
-      console.log("Creating campaign with data: ", params);
 
       // Check if paying fee in native CELO (assuming CELO token address)
       const isCeloFee = feeToken.toLowerCase() === celoToken.toLowerCase()
-      console.log("isCeloFee: ", isCeloFee);
+      
       const result = await writeContract({
         address: contractAddress,
         abi,
@@ -362,7 +346,7 @@ export function useCreateCampaignWithFees(contractAddress: Address, userAddress:
     
     if (!canBypass && campaignCreationFee) {
       // If paying with CELO, use base fee
-      console.log("params.feeToken: ", params.feeToken);
+
       if (params.feeToken.toLowerCase() === celoToken.toLowerCase()) {
         feeAmount = campaignCreationFee;
       } else {
@@ -1196,7 +1180,7 @@ export function useParticipation(
     args: [campaignId, projectId]
   })
 
-  console.log('Participation data:', data);
+  
 
   const participation = data ? {
     approved: (data as any[])[0] as boolean,

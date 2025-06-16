@@ -82,12 +82,7 @@ export function useVerifyCeloToken(contractAddress: Address) {
   const envCeloToken = import.meta.env.VITE_CELO_TOKEN;
   const isMatching = celoToken?.toLowerCase() === envCeloToken?.toLowerCase();
 
-  console.log('🔍 CELO Token Verification:', {
-    contractCeloToken: celoToken,
-    envCeloToken,
-    isMatching,
-    error
-  });
+
 
   return {
     celoToken,
@@ -100,19 +95,14 @@ export function useVerifyCeloToken(contractAddress: Address) {
 
 // Hook for voting functionality - FIXED to include voteWithCelo
 export function useVote(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess, reset } = useWriteContract()
+  const {  isPending, isError, error, isSuccess, reset } = useWriteContract()
   const { approveToken } = useApproveToken()
-  const [votingStats, setVotingStats] = useState<VotingStats | null>(null)
-  const [isCalculating, setIsCalculating] = useState(false)
   const { celoToken, isMatching } = useVerifyCeloToken(contractAddress)
+
+
   const {
     sendTransactionAsync
   } = useSendTransaction()
-
-  console.log(writeContract)
-
-  console.log('setVote, setVotingStats', setVotingStats)
-  console.log('setIsCalculating', setIsCalculating)
 
   // FIXED version for ERC20 tokens
   const vote = async ({
@@ -128,17 +118,11 @@ export function useVote(contractAddress: Address) {
     amount: bigint
     bypassCode?: string
   }) => {
-    console.log('🎯 Vote called with:', {
-      campaignId: campaignId.toString(),
-      projectId: projectId.toString(),
-      token,
-      amount: amount.toString(),
-      isCeloToken: token.toLowerCase() === celoToken?.toLowerCase()
-    });
+    if (!campaignId || !projectId || !token || !amount) {
+      throw new Error('Missing required parameters for voting');
+    }
 
     try {
-      console.log('Voting with ERC20 token:', token, 'for amount:', amount);
-
       // For ERC20 tokens - approve first, then call vote function
       await approveToken(token, amount, contractAddress);
       // Wait for approval confirmation
@@ -162,14 +146,6 @@ export function useVote(contractAddress: Address) {
       if (!tx) {
         throw new Error('Transaction failed to send');
       }
-      /**
-       * const tx = await writeContract({
-       *   address: contractAddress,
-       *   abi,
-       *   functionName: 'vote', // ✅ Use the ERC20 vote function
-       *   args: [campaignId, projectId, token, amount, bypassCode as `0x${string}`]
-       * });
-       */
 
       // Submit the referral to Divvi
       try {
@@ -177,55 +153,15 @@ export function useVote(contractAddress: Address) {
           txHash: tx as unknown as `0x${string}`,
           chainId: celoChainId
         });
-
       } catch (referralError) {
         console.error("Referral submission error:", referralError);
       }
-      console.log('✅ Vote transaction submitted:', tx);
       return tx;
     } catch (err) {
       console.error('❌ Error in vote:', err)
       throw err
     }
   }
-
-  // NEW: Separate function for CELO voting
-  // const voteWithCelo = async ({
-  //   campaignId,
-  //   projectId,
-  //   amount,
-  //   bypassCode = '0x0000000000000000000000000000000000000000000000000000000000000000'
-  // }: {
-  //   campaignId: bigint
-  //   projectId: bigint
-  //   amount: bigint
-  //   bypassCode?: string
-  // }) => {
-  //   console.log('🎯 VoteWithCelo called with:', {
-  //     campaignId: campaignId.toString(),
-  //     projectId: projectId.toString(),
-  //     amount: amount.toString(),
-  //     celoToken
-  //   });
-
-  //   try {
-  //     console.log('Voting with native CELO:', amount.toString());
-
-  //     const tx = await writeContract({
-  //       address: contractAddress,
-  //       abi,
-  //       functionName: 'voteWithCelo', // ✅ Use the CELO-specific function
-  //       args: [campaignId, projectId, bypassCode as `0x${string}`],
-  //       value: amount // Send CELO as msg.value
-  //     });
-
-  //     console.log('✅ VoteWithCelo transaction submitted:', tx);
-  //     return tx;
-  //   } catch (err) {
-  //     console.error('❌ Error in voteWithCelo:', err)
-  //     throw err
-  //   }
-  // }
 
   // NEW: Updated voteWithCelo function with Divvi integration
 const voteWithCelo = async ({
@@ -239,15 +175,11 @@ const voteWithCelo = async ({
   amount: bigint
   bypassCode?: string
 }) => {
-  console.log('🎯 VoteWithCelo called with:', {
-    campaignId: campaignId.toString(),
-    projectId: projectId.toString(),
-    amount: amount.toString(),
-    celoToken
-  });
+  if (!campaignId || !projectId || !amount) {
+    throw new Error('Missing required parameters for CELO voting');
+  }
 
   try {
-    console.log('Voting with native CELO:', amount.toString());
 
     // Divvi referral integration section
     const voteInterface = new Interface(abi);
@@ -278,12 +210,10 @@ const voteWithCelo = async ({
         txHash: tx as unknown as `0x${string}`,
         chainId: celoChainId
       });
-      console.log('✅ Divvi referral submitted for voteWithCelo transaction');
     } catch (referralError) {
       console.error("Referral submission error:", referralError);
     }
 
-    console.log('✅ VoteWithCelo transaction submitted:', tx);
     return tx;
   } catch (err) {
     console.error('❌ Error in voteWithCelo:', err)
@@ -333,15 +263,13 @@ const voteWithCelo = async ({
 
   return {
     vote,
-    voteWithCelo, // ✅ Export the new function
+    voteWithCelo,
     batchVote,
     isPending,
     isError,
     error,
     isSuccess,
     reset,
-    votingStats,
-    isCalculating,
     celoToken,
     isMatching
   }

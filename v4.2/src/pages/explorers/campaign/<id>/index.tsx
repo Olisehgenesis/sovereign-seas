@@ -179,20 +179,24 @@ function ProjectVotes({
     }
   );
 
-  // Add effect to report vote count changes
+  // Memoize the vote count calculation
+  const voteCount = useMemo(() => {
+    if (!participation) return 0n;
+    
+    if (Array.isArray(participation)) {
+      return participation[1];
+    } else if (typeof participation === 'object') {
+      return participation.voteCount || participation[1] || 0n;
+    }
+    return 0n;
+  }, [participation]);
+
+  // Add effect to report vote count changes only when voteCount changes
   useEffect(() => {
-    if (participation && onVoteCountReceived) {
-      let voteCount: bigint;
-      if (Array.isArray(participation)) {
-        voteCount = participation[1];
-      } else if (typeof participation === 'object') {
-        voteCount = participation.voteCount || participation[1] || 0n;
-      } else {
-        voteCount = 0n;
-      }
+    if (onVoteCountReceived && voteCount !== undefined) {
       onVoteCountReceived(projectId.toString(), voteCount);
     }
-  }, [participation, projectId, onVoteCountReceived]);
+  }, [voteCount, projectId, onVoteCountReceived]);
 
   if (isLoading) {
     return (
@@ -212,21 +216,7 @@ function ProjectVotes({
     return <div className="text-lg font-bold text-gray-600">0.0</div>;
   }
 
-  let voteCount: bigint;
   try {
-    if (Array.isArray(participation)) {
-      if (participation.length < 2) {
-        console.error('Invalid array length for', participationKey, ':', participation);
-        return <div className="text-lg font-bold text-red-600">Invalid Data</div>;
-      }
-      voteCount = participation[1];
-    } else if (typeof participation === 'object') {
-      voteCount = participation.voteCount || participation[1] || 0n;
-    } else {
-      console.error('Unexpected participation data type for', participationKey, ':', typeof participation);
-      return <div className="text-lg font-bold text-red-600">Invalid Type</div>;
-    }
-
     if (typeof voteCount !== 'bigint') {
       console.error('Invalid vote count type for', participationKey, ':', typeof voteCount);
       return <div className="text-lg font-bold text-red-600">Invalid Type</div>;
@@ -273,7 +263,7 @@ export default function CampaignView() {
       newMap.set(projectId, voteCount);
       return newMap;
     });
-  }, []);
+  }, []); // Empty dependency array since it only uses setState
 
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
   const campaignId = id ? BigInt(id) : BigInt(0);

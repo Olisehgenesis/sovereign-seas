@@ -13,14 +13,13 @@ import {
   Crown,
   Ship,
   ChevronDown,
-
   TrendingUp,
-  
   DollarSign,
   Twitter,
   Share2,
   Info,
-  Gift
+  Gift,
+  Shield
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -49,12 +48,62 @@ interface ProjectVoteSimulation {
   estimatedPayout: number;
 }
 
+// API call functions
+const claimFreeVote = async (beneficiaryAddress: string, campaignId: bigint | string, projectId: string) => {
+  const response = await fetch('https://auth.sovseas.xyz/api/claim-vote', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      beneficiaryAddress,
+      campaignId: campaignId.toString(),
+      projectId,
+      data: {
+        source: 'vote_modal',
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        voteType: 'free_claim'
+      }
+    }),
+  });
+
+  const data = await response.json();
+  
+  if (!response.ok) {
+    // Handle specific error cases
+    if (response.status === 403) {
+      throw new Error(data.error || 'Wallet not verified for free voting');
+    } else if (response.status === 400) {
+      throw new Error(data.error || 'Invalid request parameters');
+    } else if (response.status === 409) {
+      throw new Error(data.error || 'Already claimed vote for this campaign');
+    } else {
+      throw new Error(data.error || 'Failed to claim free vote');
+    }
+  }
+
+  return data;
+};
+
+const checkWalletBalance = async (address: string) => {
+  const response = await fetch(`https://auth.sovseas.xyz/api/claim-details?method=walletBalance&address=${address}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  console.log('wallet balance response', response)
+
+  const data = await response.json();
+  return data;
+};
+
 export default function VoteModal({
   isOpen,
   onClose,
   selectedProject,
   campaignId,
-  
   allProjects = [],
   totalCampaignFunds = 0,
   onVoteSuccess
@@ -64,17 +113,29 @@ export default function VoteModal({
   const [error, setError] = useState('');
   const [voteSuccess, setVoteSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showMatchingSimulator, setShowMatchingSimulator] = useState(false);
   const [showTokenDropdown, setShowTokenDropdown] = useState(false);
   const [autoCloseTimer, setAutoCloseTimer] = useState<NodeJS.Timeout | null>(null);
   const [transactionTimer, setTransactionTimer] = useState<NodeJS.Timeout | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [showClaimFreeVote, setShowClaimFreeVote] = useState(false);
+
+ 
   
+  // Claim specific state
+  const [isClaimProcessing, setIsClaimProcessing] = useState(false);
+  const [claimSuccess, setClaimSuccess] = useState(false);
+  const [claimError, setClaimError] = useState('');
+  const [walletBalance, setWalletBalance] = useState<any>(null);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [eligibilityStatus, setEligibilityStatus] = useState<{
+    eligible: boolean;
+    reason?: string;
+    isVerified?: boolean;
+  }>({ eligible: false });
+
   const { vote, voteWithCelo, isPending, isSuccess, reset } = useVote(import.meta.env.VITE_CONTRACT_V4);
   const { address } = useAccount();
   const navigate = useNavigate();
-  console.log(showMatchingSimulator);
 
   // Get token addresses from environment
   const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN;
@@ -97,6 +158,119 @@ export default function VoteModal({
     cUSDTokenAddress as `0x${string}`,
     voteAmount ? parseEther(voteAmount) : 0n
   );
+
+  // Check eligibility when modal opens and address is available
+  useEffect(() => {
+    if (showClaimFreeVote && address && !isCheckingEligibility && !eligibilityStatus.eligible) {
+      checkClaimEligibility();
+    }
+  }, [showClaimFreeVote, address]);
+
+  const checkClaimEligibility = async () => {
+    if (!address) return;
+    
+    setIsCheckingEligibility(true);
+    setClaimError('');
+    
+    try {
+      // Check if user is verified
+      const response = await fetch(`https://auth.sovseas.xyz/api/check-wallet?wallet=${encodeURIComponent(address)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      console.log('check-wallet response:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to check wallet verification');
+      }
+      
+      setEligibilityStatus({
+        eligible: data.verified === true,
+        reason: data.message || (data.verified ? 'Wallet is verified and eligible' : 'Wallet is not verified'),
+        isVerified: data.verified === true
+      });
+      
+    } catch (error: any) {
+      console.error('Error checking eligibility:', error);
+      setEligibilityStatus({
+        eligible: false,
+        reason: error.message || 'Unable to verify wallet eligibility'
+      });
+      setClaimError('Unable to check verification status. Please try again.');
+    } finally {
+      setIsCheckingEligibility(false);
+    }
+  };
+
+  const handleClaimFreeVote = async () => {
+    if (!address || !selectedProject?.id?.toString() || !campaignId?.toString()) {
+      //log the missing fields
+      console.log('address', address);
+      console.log('selectedProject', selectedProject?.id?.toString());
+      console.log('campaignId', campaignId?.toString());
+      setClaimError('Please connect wallet and ensure project and campaign are selected');
+      return;
+    }
+
+    setIsClaimProcessing(true);
+    setClaimError('');
+    setClaimSuccess(false);
+
+    try {
+      console.log('Claiming free vote for:', {
+        beneficiaryAddress: address,
+        campaignId: campaignId.toString(),
+        projectId: selectedProject.id.toString()
+      });
+
+      const result = await claimFreeVote(
+        address,
+        campaignId,
+        selectedProject.id.toString()
+      );
+
+      console.log('Claim successful:', result);
+      setClaimSuccess(true);
+      
+      // Auto-close claim section and return to main voting after 3 seconds
+      setTimeout(() => {
+        setShowClaimFreeVote(false);
+        setClaimSuccess(false);
+        
+        // Call success callback if provided
+        if (onVoteSuccess) {
+          onVoteSuccess();
+        }
+      }, 3000);
+
+    } catch (error: any) {
+      console.error('Claim error:', error);
+      
+      let errorMessage = 'Failed to claim free vote. Please try again.';
+      
+      if (error.message) {
+        if (error.message.includes('not verified') || error.message.includes('Wallet not verified')) {
+          errorMessage = 'Your wallet is not verified. Please verify your wallet with Self Protocol first.';
+        } else if (error.message.includes('Already claimed') || error.message.includes('already claimed')) {
+          errorMessage = 'You have already claimed a free vote for this campaign.';
+        } else if (error.message.includes('Campaign')) {
+          errorMessage = 'This campaign is not accepting votes at the moment.';
+        } else if (error.message.includes('Invalid request')) {
+          errorMessage = 'Invalid request. Please refresh the page and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setClaimError(errorMessage);
+    } finally {
+      setIsClaimProcessing(false);
+    }
+  };
 
   // Handle wagmi hook success state
   useEffect(() => {
@@ -133,9 +307,17 @@ export default function VoteModal({
       setError('');
       setVoteSuccess(false);
       setIsProcessing(false);
-      setShowMatchingSimulator(false);
       setShowTokenDropdown(false);
       setCountdown(0);
+      setShowClaimFreeVote(false);
+      
+      // Reset claim state
+      setIsClaimProcessing(false);
+      setClaimSuccess(false);
+      setClaimError('');
+      setWalletBalance(null);
+      setEligibilityStatus({ eligible: false });
+      setIsCheckingEligibility(false);
       
       // Clear any existing timers
       if (autoCloseTimer) {
@@ -364,9 +546,16 @@ export default function VoteModal({
     setError('');
     setVoteSuccess(false);
     setIsProcessing(false);
-    setShowMatchingSimulator(false);
     setShowTokenDropdown(false);
     setCountdown(0);
+    setShowClaimFreeVote(false);
+    
+    // Reset claim state
+    setIsClaimProcessing(false);
+    setClaimSuccess(false);
+    setClaimError('');
+    setWalletBalance(null);
+    setEligibilityStatus({ eligible: false });
 
     // Reset wagmi hook state
     reset();
@@ -419,18 +608,20 @@ export default function VoteModal({
             </p>
             
             {/* Claim Free Vote Section */}
-            <div className="mt-3 flex items-center justify-between bg-white/10 rounded-lg p-2">
-              <div className="flex items-center space-x-2">
-                <Gift className="h-4 w-4 text-yellow-300" />
-                <span className="text-sm font-medium">Claim Free Vote</span>
+            {!showClaimFreeVote && (
+              <div className="mt-3 flex items-center justify-between bg-white/10 rounded-lg p-2">
+                <div className="flex items-center space-x-2">
+                  <Gift className="h-4 w-4 text-yellow-300" />
+                  <span className="text-sm font-medium">Claim Free Vote</span>
+                </div>
+                <button
+                  onClick={() => setShowClaimFreeVote(true)}
+                  className="text-xs bg-yellow-400 hover:bg-yellow-300 text-blue-900 px-3 py-1 rounded-full font-medium transition-colors"
+                >
+                  Claim Now
+                </button>
               </div>
-              <button
-                onClick={() => setShowClaimFreeVote(true)}
-                className="text-xs bg-yellow-400 hover:bg-yellow-300 text-blue-900 px-3 py-1 rounded-full font-medium transition-colors"
-              >
-                Claim Now
-              </button>
-            </div>
+            )}
             
             {/* Info Tooltip */}
             <div className="mt-2 flex items-center text-xs text-blue-100">
@@ -443,15 +634,167 @@ export default function VoteModal({
         <div className="p-6 space-y-5">
           {/* Claim Free Vote Screen */}
           {showClaimFreeVote ? (
-            <div className="text-center py-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Claim Your Free Vote</h3>
-              <p className="text-gray-600 mb-6">Coming soon...</p>
-              <button
-                onClick={() => setShowClaimFreeVote(false)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Back to Voting
-              </button>
+            <div className="space-y-4">
+              {/* Claim Success State */}
+              {claimSuccess && (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Check className="h-6 w-6 text-white" />
+                  </div>
+                  <h4 className="text-lg font-bold text-emerald-600 mb-2">
+                    Free Vote Claimed Successfully! 🎉
+                  </h4>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Your free vote has been cast for <span className="font-semibold">{selectedProject.name}</span>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Returning to voting options in 3 seconds...
+                  </p>
+                </div>
+              )}
+
+              {/* Claim Interface */}
+              {!claimSuccess && (
+                <>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center justify-center">
+                      <Shield className="h-6 w-6 mr-2 text-blue-600" />
+                      Claim Your Free Vote
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      Verified users can claim one free vote per campaign
+                    </p>
+                  </div>
+
+                  {/* Eligibility Check */}
+                  {isCheckingEligibility && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center">
+                      <Loader2 className="h-4 w-4 text-blue-500 mr-3 animate-spin" />
+                      <span className="text-blue-700">Checking wallet verification status...</span>
+                    </div>
+                  )}
+
+                  {/* Eligibility Status */}
+                  {!isCheckingEligibility && eligibilityStatus.eligible !== undefined && (
+                    <div className={`border rounded-lg p-4 ${
+                      eligibilityStatus.eligible 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-center mb-2">
+                        {eligibilityStatus.eligible ? (
+                          <>
+                            <Check className="h-5 w-5 text-green-600 mr-2" />
+                            <span className="font-semibold text-green-800">Eligible for Free Vote</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                            <span className="font-semibold text-red-800">Not Eligible</span>
+                          </>
+                        )}
+                      </div>
+                      <p className={`text-sm ${
+                        eligibilityStatus.eligible ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {eligibilityStatus.reason}
+                      </p>
+                      
+                      {walletBalance && walletBalance.success && (
+                        <div className="mt-2 text-xs text-gray-600">
+                          Wallet Balance: {parseFloat(walletBalance.balance).toFixed(4)} CELO
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Claim Error */}
+                  {claimError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start">
+                      <AlertCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-red-800">{claimError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Claim Processing */}
+                  {isClaimProcessing && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center">
+                      <Loader2 className="h-4 w-4 text-yellow-500 mr-2 animate-spin" />
+                      <div>
+                        <p className="text-sm font-medium text-yellow-800">Processing your free vote claim...</p>
+                        <p className="text-xs text-yellow-600 mt-1">This may take a few moments</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Free Vote Details */}
+                  {eligibilityStatus.eligible && (
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                      <h4 className="font-semibold text-green-800 mb-3 flex items-center">
+                        <Gift className="h-4 w-4 mr-2" />
+                        Free Vote Details
+                      </h4>
+                      <div className="space-y-2 text-sm text-green-700">
+                        <div className="flex justify-between">
+                          <span>Vote Amount:</span>
+                          <span className="font-semibold">1.0 CELO</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Project:</span>
+                          <span className="font-semibold">{selectedProject.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Campaign:</span>
+                          <span className="font-semibold">#{campaignId.toString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    {!eligibilityStatus.eligible && !isCheckingEligibility && (
+                      <button
+                        onClick={checkClaimEligibility}
+                        className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Check Eligibility
+                      </button>
+                    )}
+                    
+                    {eligibilityStatus.eligible && (
+                      <button
+                        onClick={handleClaimFreeVote}
+                        disabled={isClaimProcessing}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
+                      >
+                        {isClaimProcessing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Claiming...
+                          </>
+                        ) : (
+                          <>
+                            <Gift className="h-4 w-4 mr-2" />
+                            Claim Free Vote
+                          </>
+                        )}
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => setShowClaimFreeVote(false)}
+                      disabled={isClaimProcessing}
+                      className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      Back to Voting
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <>

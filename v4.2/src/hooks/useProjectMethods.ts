@@ -60,7 +60,7 @@ export interface EnhancedProject {
 
 // Hook for creating a new project with Divvi integration
 export function useCreateProject(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
+  const {  isPending, isError, error, isSuccess } = useWriteContract()
   const { sendTransactionAsync } = useSendTransaction()
 
   const createProject = async ({
@@ -81,15 +81,7 @@ export function useCreateProject(contractAddress: Address) {
     transferrable?: boolean
   }) => {
     try {
-      console.log('🎯 CreateProject called with:', {
-        name,
-        description,
-        bio,
-        contractInfo,
-        additionalData,
-        contracts,
-        transferrable
-      });
+     
 
       // Divvi referral integration section
       const createProjectInterface = new Interface(abi);
@@ -123,12 +115,10 @@ export function useCreateProject(contractAddress: Address) {
           txHash: tx as unknown as `0x${string}`,
           chainId: celoChainId
         });
-        console.log('✅ Divvi referral submitted for createProject transaction');
       } catch (referralError) {
         console.error("Referral submission error:", referralError);
       }
 
-      console.log('✅ CreateProject transaction submitted:', tx);
       return tx;
     } catch (err) {
       console.error('❌ Error in createProject:', err)
@@ -442,11 +432,7 @@ export function useProjectParticipations(
   campaignId: bigint,
   projectIds: bigint[]
 ) {
-  console.log('🔍 useProjectParticipations called with:', {
-    contractAddress,
-    campaignId: campaignId.toString(),
-    projectIds: projectIds.map(id => id.toString())
-  });
+
 
   const { data, isLoading, error, refetch } = useReadContracts({
     contracts: projectIds.map(projectId => ({
@@ -476,15 +462,9 @@ export function useProjectParticipations(
     }
   });
 
-  console.log('📊 Raw participation data from contract:', data?.map((d, i) => ({
-    projectId: projectIds[i].toString(),
-    result: d.status === 'success' ? d.result : undefined
-  })));
-
   // Process the data into a more usable format
   const participations = useMemo(() => {
     if (!data) {
-      console.log('❌ No participation data available');
       return {};
     }
 
@@ -496,18 +476,11 @@ export function useProjectParticipations(
           voteCount: result[1],
           fundsReceived: result[2]
         };
-        console.log(`✅ Processed participation for project ${projectId.toString()}:`, {
-          approved: result[0],
-          voteCount: result[1].toString(),
-          fundsReceived: result[2].toString()
-        });
       } else {
-        console.log(`⚠️ No participation data for project ${projectId.toString()}`);
       }
       return acc;
     }, {} as Record<string, { approved: boolean; voteCount: bigint; fundsReceived: bigint }>);
 
-    console.log('📈 Final processed participations:', processed);
     return processed;
   }, [data, projectIds]);
 
@@ -702,7 +675,6 @@ export function useProjectDetails(contractAddress: Address, projectId: bigint) {
 
 // Hook for reading multiple projects at once
 export function useProjects(contractAddress: Address, projectIds: bigint[]) {
-  console.log('useProjects - called with projectIds:', projectIds.map(id => id.toString()))
 
   const contracts = projectIds.flatMap(id => [
     {
@@ -719,7 +691,6 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
     }
   ])
 
-  console.log('useProjects - generated contracts:', contracts.length)
 
   const { data, isLoading, error, refetch } = useReadContracts({
     contracts: contracts as unknown as readonly {
@@ -733,7 +704,6 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
     }
   })
 
-  console.log('useProjects - contract data received:', data?.length)
 
   const projects: ProjectDetails[] = []
   
@@ -765,8 +735,6 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
     }
   }
 
-  console.log('useProjects - processed projects:', projects.length)
-
   return {
     projects,
     isLoading,
@@ -779,16 +747,11 @@ export function useProjects(contractAddress: Address, projectIds: bigint[]) {
 export function useAllProjects(contractAddress: Address) {
   const { projectCount, isLoading: countLoading } = useProjectCount(contractAddress)
   
-  console.log('useAllProjects - projectCount:', projectCount?.toString())
   
   const projectIds = projectCount ? 
     Array.from({ length: Number(projectCount) }, (_, i) => BigInt(i)) : []
 
-  console.log('useAllProjects - generated projectIds:', projectIds.map(id => id.toString()))
-
   const { projects, isLoading: projectsLoading, error, refetch } = useProjects(contractAddress, projectIds)
-
-  console.log('useAllProjects - fetched projects:', projects?.length)
 
   return {
     projects,
@@ -799,8 +762,7 @@ export function useAllProjects(contractAddress: Address) {
 }
 
 // Main hook for project methods - FIXED VERSION
-export function useProject(contractAddress: Address, projectId?: string | number) {
-  console.log(projectId)
+export function useProject(contractAddress: Address) {
   const [isInitialized, setIsInitialized] = useState(false)
 
   // Initialize the hook
@@ -823,8 +785,7 @@ export function useProject(contractAddress: Address, projectId?: string | number
     }
 
     try {
-      const enhancedProjects: EnhancedProject[] = allProjectsData.map((projectDetails, index) => {
-        console.log(index)
+      const enhancedProjects: EnhancedProject[] = allProjectsData.map((projectDetails) => {
         const { project, metadata, contracts } = projectDetails
         
         // Parse additional metadata if available
@@ -1004,14 +965,10 @@ export function parseProjectMetadata(jsonString: string) {
 
 // Helper function to format project for display
 export function formatProjectForDisplay(projectDetails: ProjectDetails) {
-  console.log('formatProjectForDisplay input:', {
-    projectId: projectDetails?.project?.id?.toString(),
-    name: projectDetails?.project?.name,
-    hasMetadata: !!projectDetails?.metadata
-  });
+
+
 
   if (!projectDetails) {
-    console.log('formatProjectForDisplay: no project details');
     return null;
   }
 
@@ -1028,11 +985,7 @@ export function formatProjectForDisplay(projectDetails: ProjectDetails) {
       isActive: project.active
     };
 
-    console.log('formatProjectForDisplay output:', {
-      id: formatted.id?.toString(),
-      name: formatted.name,
-      campaignCount: formatted.campaignCount
-    });
+
 
     return formatted;
   } catch (error) {
