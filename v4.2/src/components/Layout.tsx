@@ -8,14 +8,12 @@ export default function Layout() {
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="relative z-10 min-h-screen flex flex-col">
-          <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-            <Header />
-          </div>
+          <Header />
 
-          <main className="flex-1 relative z-10">
-            <div className="container mx-auto px-4 py-6">
+          <main className="flex-1 relative z-10 pt-16">
+            {/* <div className="container mx-auto px-4 py-6"> */}
               <Outlet />
-            </div>
+            {/* </div> */}
 
             <div className="fixed bottom-8 right-8 z-30">
               <button

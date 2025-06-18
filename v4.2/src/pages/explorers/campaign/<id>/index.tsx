@@ -1093,10 +1093,10 @@ export default function CampaignView() {
           </div>
         )}
 
-        {/* Main Content */}
-        <div className="flex-1 p-4 lg:p-6">
-          {/* Enhanced Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+        {/* Main Content - Improved spacing and padding */}
+        <div className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+          {/* Enhanced Header with better spacing */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center space-x-3 w-full sm:w-auto">
               <button
                 onClick={handleBackToArena}
@@ -1151,16 +1151,16 @@ export default function CampaignView() {
             </div>
           </div>
 
-          {/* Redesigned Compact Campaign Header */}
-          <div className="glass-morphism rounded-xl p-4 shadow-xl mb-6 relative overflow-hidden group hover:shadow-2xl transition-all hover:-translate-y-1 duration-500">
+          {/* Redesigned Campaign Header with better spacing and no cut-offs */}
+          <div className="glass-morphism rounded-xl p-4 sm:p-6 shadow-xl mb-6 sm:mb-8 relative overflow-hidden group hover:shadow-2xl transition-all hover:-translate-y-1 duration-500">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
             
             <div className="relative z-10">
-              {/* Top Row - Campaign Title and Status */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-3">
-                  {/* Enhanced Campaign Logo - Bigger size */}
-                  <div className="animate-float w-24 h-24 sm:w-32 sm:h-32">
+              {/* Top Row - Campaign Title and Status with improved mobile layout */}
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-6 flex-1 min-w-0">
+                  {/* Enhanced Campaign Logo - Mobile responsive sizing */}
+                  <div className="animate-float w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28 flex-shrink-0">
                     {campaignLogo ? (
                       <img 
                         src={formatIpfsUrl(campaignLogo)} 
@@ -1174,52 +1174,52 @@ export default function CampaignView() {
                         }}
                       />
                     ) : null}
-                    <div className={`w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-3xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
+                    <div className={`w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl sm:text-2xl lg:text-3xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
                       {campaign.name?.charAt(0) || ''}
                     </div>
                   </div>
 
                   <div className="flex-1 min-w-0 text-center sm:text-left">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                      <h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
+                    <div className="flex flex-col space-y-2 sm:space-y-3 mb-3">
+                      <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
                         {campaign.name || 'Untitled Campaign'}
                       </h1>
                       
-                      {/* Enhanced Add to Campaign Button - Only show if active and not ended */}
+                      {/* Enhanced Add to Campaign Button - Responsive scaling */}
                       {isActive && !hasEnded && (
                         <button
                           onClick={() => setShowAddProjectModal(true)}
-                          className="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center"
+                          className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-4 md:py-2 lg:px-4 lg:py-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs sm:text-sm md:text-sm lg:text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-1 sm:space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center flex-shrink-0"
                         >
-                          <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
+                          <Plus className="h-3 w-3 sm:h-4 sm:w-4 group-hover:rotate-90 transition-transform duration-300" />
                           <span>Add Project</span>
                           <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                         </button>
                       )}
 
-                      {/* Admin Panel Button */}
+                      {/* Admin Panel Button - Responsive scaling */}
                       {isAdmin && (
                         <button
                           onClick={handleAdminPanel}
-                          className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center"
+                          className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-4 md:py-2 lg:px-4 lg:py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-xs sm:text-sm md:text-sm lg:text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-1 sm:space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center flex-shrink-0"
                         >
-                          <Settings className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
+                          <Settings className="h-3 w-3 sm:h-4 sm:w-4 group-hover:rotate-12 transition-transform duration-300" />
                           <span>Admin Panel</span>
                           <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                         </button>
                       )}
                     </div>
                     
-                    {/* Enhanced Description with Collapse/Expand */}
-                    <div className="mt-2">
+                    {/* Enhanced Description with better mobile spacing */}
+                    <div className="mb-4">
                       <div className="relative">
-                        <p className={`text-sm text-gray-600 ${!expandedDescription ? 'line-clamp-2' : ''}`}>
+                        <p className={`text-sm lg:text-base text-gray-600 leading-relaxed ${!expandedDescription ? 'line-clamp-2' : ''}`}>
                           {campaign.description}
                         </p>
                         {campaign.description && campaign.description.length > 100 && (
                           <button
                             onClick={() => setExpandedDescription(!expandedDescription)}
-                            className="text-blue-600 text-xs font-medium mt-1 hover:text-blue-700 transition-colors duration-300 flex items-center space-x-1"
+                            className="text-blue-600 text-xs font-medium mt-2 hover:text-blue-700 transition-colors duration-300 flex items-center space-x-1"
                           >
                             <span>{expandedDescription ? 'Show Less' : 'Show More'}</span>
                             {expandedDescription ? (
@@ -1234,69 +1234,71 @@ export default function CampaignView() {
                   </div>
                 </div>
 
-                {/* Enhanced Status Badge - Mobile Responsive */}
-                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 justify-center sm:justify-start ${
-                  countdown.phase === 'active' ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
-                  countdown.phase === 'ended' ? 'bg-gray-100 text-gray-700' : 
-                  'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700'
-                }`}>
-                  <Clock className="h-3 w-3" />
-                  <span>
-                    {countdown.phase === 'ended' ? 'Voyage Complete' : 
-                     countdown.phase === 'active' ? 'LIVE VOYAGE' : 
-                     'Preparing Launch'}
+                {/* Enhanced Status Badge - Mobile responsive positioning */}
+                <div className="flex-shrink-0 flex justify-center lg:justify-start">
+                  <span className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-bold flex items-center space-x-1 sm:space-x-2 justify-center lg:justify-start ${
+                    countdown.phase === 'active' ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
+                    countdown.phase === 'ended' ? 'bg-gray-100 text-gray-700' : 
+                    'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700'
+                  }`}>
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>
+                      {countdown.phase === 'ended' ? 'Voyage Complete' : 
+                       countdown.phase === 'active' ? 'LIVE VOYAGE' : 
+                       'Preparing Launch'}
+                    </span>
                   </span>
-                </span>
+                </div>
               </div>
 
-              {/* Middle Row - Compact Stats */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-200/50 shadow-sm">
-                  <Trophy className="h-3 w-3" />
+              {/* Middle Row - Compact Stats with mobile responsive spacing */}
+              <div className="flex flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-2 sm:px-3 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-blue-200/50 shadow-sm">
+                  <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Max {Number(campaign.maxWinners) || 'All'} Winners</span>
                 </div>
                 
-                <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium border border-purple-200/50 shadow-sm">
-                  <Target className="h-3 w-3" />
+                <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 px-2 sm:px-3 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-purple-200/50 shadow-sm">
+                  <Target className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>{campaign.useQuadraticDistribution ? 'Quadratic Flow' : 'Linear Tide'}</span>
                 </div>
               </div>
 
-              {/* Enhanced Countdown Timer */}
+              {/* Enhanced Countdown Timer with mobile responsive design */}
               {countdown.phase !== 'ended' && (
-                <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm rounded-lg p-3 border border-blue-200/50">
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <Timer className="h-4 w-4 text-blue-500 animate-wave" />
-                    <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-blue-200/50">
+                  <div className="flex flex-col lg:flex-row items-center justify-center gap-3 sm:gap-4">
+                    <Timer className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 animate-wave" />
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md">
                           {countdown.days.toString().padStart(2, '0')}
                         </div>
                         <div className="text-xs text-gray-600 mt-1">D</div>
                       </div>
-                      <div className="text-blue-500 font-bold">:</div>
+                      <div className="text-blue-500 font-bold text-sm sm:text-lg">:</div>
                       <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md">
                           {countdown.hours.toString().padStart(2, '0')}
                         </div>
                         <div className="text-xs text-gray-600 mt-1">H</div>
                       </div>
-                      <div className="text-blue-500 font-bold">:</div>
+                      <div className="text-blue-500 font-bold text-sm sm:text-lg">:</div>
                       <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md">
                           {countdown.minutes.toString().padStart(2, '0')}
                         </div>
                         <div className="text-xs text-gray-600 mt-1">M</div>
                       </div>
-                      <div className="text-blue-500 font-bold">:</div>
+                      <div className="text-blue-500 font-bold text-sm sm:text-lg">:</div>
                       <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 py-1 rounded-md font-mono text-sm font-bold shadow-md animate-pulse">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md animate-pulse">
                           {countdown.seconds.toString().padStart(2, '0')}
                         </div>
                         <div className="text-xs text-gray-600 mt-1">S</div>
                       </div>
                     </div>
-                    <span className="text-xs font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                    <span className="text-xs sm:text-sm font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 text-center">
                       {countdown.phase === 'preparing' ? 'Until Launch' : 'Until Voyage Ends'}
                     </span>
                   </div>
@@ -1305,27 +1307,27 @@ export default function CampaignView() {
             </div>
           </div>
 
-          {/* Enhanced Projects Leaderboard */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
-              <h2 className="text-xl font-bold flex items-center">
+          {/* Enhanced Projects Leaderboard with better spacing */}
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <h2 className="text-2xl lg:text-3xl font-bold flex items-center">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                  <Rocket className="h-5 w-5 text-blue-500 mr-2 inline animate-wave" />
+                  <Rocket className="h-6 w-6 text-blue-500 mr-3 inline animate-wave" />
                   Sovereign Leaderboard
                 </span>
               </h2>
               
-              <div className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+              <div className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
                 {totalCampaignVotes.toFixed(1)} total votes cast
               </div>
             </div>
 
-            {/* FIXED: Enhanced Project Filtering Tabs with correct counts */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 bg-white/80 backdrop-blur-sm rounded-lg p-1 border border-blue-200">
+            {/* Enhanced Project Filtering Tabs with better spacing */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-6 mb-8">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 bg-white/80 backdrop-blur-sm rounded-lg p-2 border border-blue-200">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  className={`px-6 py-3 rounded-md text-sm font-medium transition-all duration-300 ${
                     activeTab === 'all'
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-blue-600'
@@ -1335,7 +1337,7 @@ export default function CampaignView() {
                 </button>
                 <button
                   onClick={() => setActiveTab('approved')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                  className={`px-6 py-3 rounded-md text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
                     activeTab === 'approved'
                       ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-emerald-600'
@@ -1349,7 +1351,7 @@ export default function CampaignView() {
                 </button>
                 <button
                   onClick={() => setActiveTab('pending')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                  className={`px-6 py-3 rounded-md text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
                     activeTab === 'pending'
                       ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-amber-600'
@@ -1363,194 +1365,196 @@ export default function CampaignView() {
                 </button>
               </div>
 
-              {/* Search Input */}
-              <div className="flex-1">
+              {/* Search Input with better spacing */}
+              <div className="flex-1 min-w-0">
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="Search projects..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-blue-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-300"
+                    className="w-full px-6 py-3 rounded-full bg-white/80 backdrop-blur-sm border border-blue-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-300 text-base"
                   />
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
               </div>
             </div>
 
-            {/* Project List */}
-            {filteredProjects.map((project, index) => {
-              const styling = getPositionStyling(index);
-              const voteCount = Number(formatEther(project.voteCount || 0n));
-              const projectLogo = getProjectLogo(project);
-              const isApproved = project.participation?.approved === true;
+            {/* Project List with improved spacing and no cut-offs */}
+            <div className="space-y-4">
+              {filteredProjects.map((project, index) => {
+                const styling = getPositionStyling(index);
+                const voteCount = Number(formatEther(project.voteCount || 0n));
+                const projectLogo = getProjectLogo(project);
+                const isApproved = project.participation?.approved === true;
 
-              return (
-                <div
-                  key={project.id}
-                  onClick={() => isApproved && isActive ? openVoteModal(project) : null}
-                  className={`
-                    group glass-morphism rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-3 relative overflow-hidden cursor-pointer
-                    hover:-translate-y-2 gradient-border animate-float
-                    ${index < 3 ? 'bg-gradient-to-br from-white/90 to-white/80' : 'bg-white/80'}
-                    ${isApproved && isActive ? 'hover:ring-2 hover:ring-blue-400' : ''}
-                  `}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  {/* Enhanced Position Badge */}
-                  <div className={`absolute -top-2 -left-2 w-12 h-12 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-xl ${styling.glowColor} flex items-center justify-center font-bold text-lg border-4 border-white transform group-hover:scale-110 transition-transform duration-300 z-10`}>
-                    {index < 3 ? (
-                      <div className="flex items-center justify-center w-full h-full">
-                        <span className="text-xl text-white">{styling.badge}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center w-full h-full">
-                        <span className="text-lg text-blue-900">{index + 1}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Position Badge Glow Effect */}
-                  <div className={`absolute -top-2 -left-2 w-12 h-12 rounded-full ${styling.glowColor} blur-xl opacity-50 animate-pulse`}></div>
-
-                  {/* FIXED: Approval Status Badge and Admin Controls */}
-                  <div className="absolute top-2 right-2 flex items-center space-x-1">
-                    {/* Approval Status Badge */}
-                    <div className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      isApproved 
-                        ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
-                        : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
-                    }`}>
-                      {isApproved ? (
-                        <div className="flex items-center space-x-1">
-                          <CheckCircle className="h-2.5 w-2.5" />
-                          <span>Approved</span>
+                return (
+                  <div
+                    key={project.id}
+                    onClick={() => isApproved && isActive ? openVoteModal(project) : null}
+                    className={`
+                      group glass-morphism rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-6 relative overflow-hidden cursor-pointer
+                      hover:-translate-y-2 gradient-border animate-float
+                      ${index < 3 ? 'bg-gradient-to-br from-white/90 to-white/80' : 'bg-white/80'}
+                      ${isApproved && isActive ? 'hover:ring-2 hover:ring-blue-400' : ''}
+                    `}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {/* Enhanced Position Badge with better positioning */}
+                    <div className={`absolute -top-3 -left-3 w-14 h-14 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-xl ${styling.glowColor} flex items-center justify-center font-bold text-lg border-4 border-white transform group-hover:scale-110 transition-transform duration-300 z-10`}>
+                      {index < 3 ? (
+                        <div className="flex items-center justify-center w-full h-full">
+                          <span className="text-2xl text-white">{styling.badge}</span>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-2.5 w-2.5" />
-                          <span>Pending</span>
+                        <div className="flex items-center justify-center w-full h-full">
+                          <span className="text-lg text-blue-900">{index + 1}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Admin Approve Button */}
-                    {isAdmin && !isApproved && (
+                    {/* Position Badge Glow Effect */}
+                    <div className={`absolute -top-3 -left-3 w-14 h-14 rounded-full ${styling.glowColor} blur-xl opacity-50 animate-pulse`}></div>
+
+                    {/* Approval Status Badge and Admin Controls with better spacing */}
+                    <div className="absolute top-3 right-3 flex items-center space-x-2">
+                      {/* Approval Status Badge */}
+                      <div className={`px-3 py-2 rounded-full text-sm font-bold ${
+                        isApproved 
+                          ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
+                          : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
+                      }`}>
+                        {isApproved ? (
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-4 w-4" />
+                            <span>Approved</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <Clock className="h-4 w-4" />
+                            <span>Pending</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Admin Approve Button */}
+                      {isAdmin && !isApproved && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveProject(BigInt(project.id));
+                          }}
+                          disabled={isApprovingProject}
+                          className="px-3 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
+                        >
+                          {isApprovingProject ? (
+                            <>
+                              <Loader2 className="h-4 animate-spin" />
+                              <span>Approving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Approve</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center space-y-4 lg:space-y-0 lg:space-x-6 pl-8">
+                      {/* Project Logo with better sizing */}
+                      <div className="animate-float-delay-1 relative flex-shrink-0">
+                        {projectLogo ? (
+                          <img 
+                            src={formatIpfsUrl(projectLogo)} 
+                            alt={`${project.name} logo`}
+                            className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallback = target.nextSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-20 h-20 lg:w-24 lg:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-2xl lg:text-3xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
+                          {project.name?.charAt(0) || ''}
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        {/* Enhanced Vote Display with better spacing */}
+                        <div className="relative mb-4">
+                          <div className="transform hover:scale-105 transition-transform duration-300">
+                            <ProjectVotes 
+                              campaignId={campaignId} 
+                              projectId={BigInt(project.id)} 
+                              onVoteCountReceived={updateProjectVoteCount}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-gray-800 text-lg lg:text-xl truncate group-hover:text-blue-600 transition-colors duration-300 mb-2">
+                              {project.name || 'Untitled Project'}
+                            </h3>
+                            <p className="text-sm lg:text-base text-gray-600 line-clamp-2 leading-relaxed">{project.description}</p>
+                          </div>
+
+                          {/* Action Button with better positioning */}
+                          {isActive && isApproved && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openVoteModal(project);
+                              }}
+                              className={`
+                                px-6 py-3 rounded-xl text-white font-medium shadow-lg transition-all duration-300 
+                                hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-base group/btn relative overflow-hidden
+                                bg-gradient-to-br from-blue-900/90 to-indigo-900/90 backdrop-blur-sm
+                                border border-blue-400/20 w-full lg:w-auto justify-center flex-shrink-0
+                              `}
+                            >
+                              <div className="relative z-10 flex items-center space-x-2">
+                                <Vote className="h-5 w-5 group-hover/btn:rotate-12 transition-transform duration-300" />
+                                <span>Cast Vote</span>
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
+                              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Progress Bar with better spacing */}
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mt-4">
+                          <div 
+                            className={`h-full bg-gradient-to-r ${styling.bgGradient} transition-all duration-1000 rounded-full relative`}
+                            style={{ width: `${Math.min(75, (voteCount / (totalCampaignVotes || 1)) * 100)}%` }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Explore Arrow Button with better positioning */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleApproveProject(BigInt(project.id));
+                          if (project?.id) {
+                            navigate(`/explorer/project/${project.id}`);
+                          }
                         }}
-                        disabled={isApprovingProject}
-                        className="px-2 py-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-1"
+                        className="absolute bottom-4 right-4 p-2 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow shadow-md"
                       >
-                        {isApprovingProject ? (
-                          <>
-                            <Loader2 className="h-2.5 animate-spin" />
-                            <span>Approving...</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="h-2.5 w-2.5" />
-                            <span>Approve</span>
-                          </>
-                        )}
+                        <ArrowLeft className="h-4 w-4 transform rotate-180 group-hover/arrow:translate-x-1 transition-transform duration-300" />
                       </button>
-                    )}
-                  </div>
-
-                  <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 pl-6">
-                    {/* Project Logo - Scaled down */}
-                    <div className="animate-float-delay-1 relative">
-                      {projectLogo ? (
-                        <img 
-                          src={formatIpfsUrl(projectLogo)} 
-                          alt={`${project.name} logo`}
-                          className="w-16 h-16 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const fallback = target.nextSibling as HTMLElement;
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div className={`w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
-                        {project.name?.charAt(0) || ''}
-                      </div>
                     </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      {/* Enhanced Vote Display - Moved to top */}
-                      <div className="relative mb-1">
-                        <div className="transform hover:scale-105 transition-transform duration-300">
-                          <ProjectVotes 
-                            campaignId={campaignId} 
-                            projectId={BigInt(project.id)} 
-                            onVoteCountReceived={updateProjectVoteCount}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                        <div>
-                          <h3 className="font-bold text-gray-800 text-base truncate group-hover:text-blue-600 transition-colors duration-300">
-                            {project.name || 'Untitled Project'}
-                          </h3>
-                          <p className="text-xs text-gray-600 line-clamp-1">{project.description}</p>
-                        </div>
-
-                        {/* Action Button - Repositioned for mobile */}
-                        {isActive && isApproved && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openVoteModal(project);
-                            }}
-                            className={`
-                              px-4 py-2 rounded-xl text-white font-medium shadow-lg transition-all duration-300 
-                              hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-sm group/btn relative overflow-hidden
-                              bg-gradient-to-br from-blue-900/90 to-indigo-900/90 backdrop-blur-sm
-                              border border-blue-400/20 w-full sm:w-auto justify-center
-                            `}
-                          >
-                            <div className="relative z-10 flex items-center space-x-2">
-                              <Vote className="h-4 w-4 group-hover/btn:rotate-12 transition-transform duration-300" />
-                              <span>Cast Vote</span>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Progress Bar */}
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden mt-1">
-                        <div 
-                          className={`h-full bg-gradient-to-r ${styling.bgGradient} transition-all duration-1000 rounded-full relative`}
-                          style={{ width: `${Math.min(75, (voteCount / (totalCampaignVotes || 1)) * 100)}%` }}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Explore Arrow Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (project?.id) {
-                          navigate(`/explorer/project/${project.id}`);
-                        }
-                      }}
-                      className="absolute bottom-2 right-2 p-1.5 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow"
-                    >
-                      <ArrowLeft className="h-3 w-3 transform rotate-180 group-hover/arrow:translate-x-1 transition-transform duration-300" />
-                    </button>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {/* Enhanced Empty State */}

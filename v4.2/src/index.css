@@ -1,6 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* Custom breakpoint for extra small screens */
+@media (min-width: 475px) {
+  .xs\:inline {
+    display: inline !important;
+  }
+  
+  .xs\:hidden {
+    display: none !important;
+  }
+}
+
 /* Add this at the very top for better mobile handling */
 * {
   box-sizing: border-box;

@@ -236,6 +236,18 @@ export default function Header() {
                         <User className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
                       </Link>
 
+                      {/* Logout Button */}
+                      <button
+                        onClick={() => logout()}
+                        className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 group"
+                        title="Logout"
+                      >
+                        <svg className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span className="hidden sm:inline">Logout</span>
+                      </button>
+
                       {/* Dashboard Dropdown */}
                       <div className="relative hidden sm:block">
                         <button
@@ -308,9 +320,12 @@ export default function Header() {
                     <button 
                       onClick={handleLogin}
                       disabled={!ready} 
-                      className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group"
+                      className="flex items-center justify-center px-3 sm:px-4 md:px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group min-w-[100px] sm:min-w-[120px] md:min-w-[140px] touch-manipulation"
                     >
-                      Connect Wallet
+                      <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 group-hover:scale-110 transition-transform duration-200" />
+                      <span className="hidden xs:inline">Connect</span>
+                      <span className="xs:hidden">Connect</span>
+                      <span className="hidden sm:inline ml-1">Wallet</span>
                       <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                     </button>
                   )}
@@ -443,8 +458,9 @@ export default function Header() {
                         close();
                       }}
                       disabled={!ready} 
-                      className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-xl transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                      className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-xl transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
                     >
+                      <Wallet className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
                       Connect Wallet
                       <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                     </button>
