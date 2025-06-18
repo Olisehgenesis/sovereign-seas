@@ -3,7 +3,7 @@
 import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
 import { formatEther, Address, type Abi } from 'viem'
 import { grantsABI as abi } from '@/abi/grantsABI' // You'll need to create this ABI file
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 // Types for better TypeScript support
 export interface GrantMetadata {
@@ -943,7 +943,7 @@ export function useMilestoneClaimants(contractAddress: Address, grantId: bigint,
 }
 
 // Main hook for grant methods - following the same pattern as useCampaign
-export function useGrants(contractAddress: Address, grantId?: string | number) {
+export function useGrants(contractAddress: Address) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize the hook
@@ -1125,7 +1125,7 @@ export function parseMilestoneMetadata(jsonString: string): MilestoneMetadata {
    }
    
    // Hook for enhanced grant creation with fee calculation
-   export function useCreateGrantWithFees(contractAddress: Address, userAddress: Address) {
+   export function useCreateGrantWithFees(contractAddress: Address) {
     const { createSecuredGrant, isPending: securedPending, isError: securedError, error: securedErr, isSuccess: securedSuccess, data: securedData } = useCreateSecuredGrant(contractAddress);
     const { createPromisedGrant, isPending: promisedPending, isError: promisedError, error: promisedErr, isSuccess: promisedSuccess, data: promisedData } = useCreatePromisedGrant(contractAddress);
     const { securedGrantCreationFee, promisedGrantCreationFee } = useGrantCreationFees(contractAddress);
@@ -1231,7 +1231,7 @@ export function parseMilestoneMetadata(jsonString: string): MilestoneMetadata {
     token?: Address;
     status?: 'active' | 'expired' | 'completed' | 'cancelled';
    }) {
-    const { allGrantIds, isLoading: idsLoading } = useAllGrants(contractAddress);
+    const { grantIds: allGrantIds, isLoading: idsLoading } = useAllGrants(contractAddress);
     const { grants: allGrants, isLoading: grantsLoading } = useMultipleGrants(contractAddress, allGrantIds);
    
     const filteredGrants = useMemo(() => {
@@ -1293,8 +1293,8 @@ export function parseMilestoneMetadata(jsonString: string): MilestoneMetadata {
    
    // Hook for grant statistics
    export function useGrantStatistics(contractAddress: Address) {
-    const { allGrantIds } = useAllGrants(contractAddress);
-    const { grants } = useMultipleGrants(contractAddress, allGrantIds);
+    const { grantIds } = useAllGrants(contractAddress);
+    const { grants } = useMultipleGrants(contractAddress, grantIds);
    
     const statistics = useMemo(() => {
       if (!grants.length) {

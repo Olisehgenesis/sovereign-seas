@@ -8,7 +8,7 @@ import { getDataSuffix, submitReferral } from '@divvi/referral-sdk'
 // Get the same dataSuffix used in voting
 const dataSuffix = getDataSuffix({
   consumer: '0x53eaF4CD171842d8144e45211308e5D90B4b0088',
-  providers: ['0x5f0a55FaD9424ac99429f635dfb9bF20c3360Ab8', '0x6226ddE08402642964f9A6de844ea3116F0dFc7e'],
+  providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca','0xc95876688026be9d6fa7a7c33328bd013effa2bb','0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
 })
 
 // Types for better TypeScript support
