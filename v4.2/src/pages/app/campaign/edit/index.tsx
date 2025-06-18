@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useCampaignDetails, useUpdateCampaign, useUpdateCampaignMetadata } from '@/hooks/useCampaignMethods';
 import { useParams } from 'react-router-dom';
 import { 
@@ -148,7 +148,6 @@ export default function EditCampaignDetails() {
   const [originalCampaign, setOriginalCampaign] = useState<CampaignFormData | null>(null);
   const [campaign, setCampaign] = useState<CampaignFormData | null>(null);
   
-  const [hasChanges, setHasChanges] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -260,12 +259,12 @@ export default function EditCampaignDetails() {
     setIsMounted(true);
   }, []);
 
-  // Check for changes - Fix to prevent infinite loops
-  useEffect(() => {
+  // Check for changes using useMemo to prevent infinite loops
+  const hasChanges = useMemo(() => {
     if (campaign && originalCampaign) {
-      const hasChanged = JSON.stringify(campaign) !== JSON.stringify(originalCampaign);
-      setHasChanges(hasChanged);
+      return JSON.stringify(campaign) !== JSON.stringify(originalCampaign);
     }
+    return false;
   }, [campaign, originalCampaign]);
 
   // Handle success/error states

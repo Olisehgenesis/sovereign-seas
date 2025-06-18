@@ -31,7 +31,8 @@ import {
   Medal,
   Info,
   Building2,
-  Briefcase
+  Briefcase,
+  Edit
 } from 'lucide-react';
 
 import { 
@@ -537,6 +538,14 @@ export default function CampaignManagePage() {
               <RotateCcw className={`h-4 w-4 text-slate-600 ${sortedLoading ? 'animate-spin' : ''}`} />
             </button>
             
+            <button
+              onClick={() => navigate(`/app/campaign/edit/${id}`)}
+              className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors duration-200 flex items-center space-x-2"
+            >
+              <Edit className="h-4 w-4" />
+              <span>Edit Campaign</span>
+            </button>
+            
             {canDistribute && (
               <button
                 onClick={() => setShowDistributeModal(true)}
@@ -1029,7 +1038,7 @@ export default function CampaignManagePage() {
                      <Target className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                      <div>
                        <div className="font-medium text-slate-800 mb-1">Linear Distribution</div>
-                       <div className="text-sm text-slate-600">
+                       <div className="text-slate-600">
                          Projects receive funding proportional to their total vote amounts. 
                          Higher votes = higher percentage of funds.
                        </div>
@@ -1039,7 +1048,7 @@ export default function CampaignManagePage() {
                      <Zap className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
                      <div>
                        <div className="font-medium text-slate-800 mb-1">Quadratic Distribution</div>
-                       <div className="text-sm text-slate-600">
+                       <div className="text-slate-600">
                          Vote amounts are square-rooted, reducing the advantage of large individual contributions 
                          and promoting broader community support.
                        </div>

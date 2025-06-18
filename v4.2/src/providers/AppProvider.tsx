@@ -38,7 +38,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   console.log('AppProvider Rendering with config:', {
     defaultChain: isTestnet ? 'celoAlfajores' : 'celo',
     supportedChains: isTestnet ? ['celoAlfajores'] : ['celo'],
-    hasWalletConnectId: !!import.meta.env.VITE_WALLET_CONNECT_ID
+    // hasWalletConnectId: !!import.meta.env.VITE_WALLET_CONNECT_ID
   });
 
   return (
@@ -54,7 +54,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           },
           defaultChain: isTestnet ? celoAlfajores : celo,
           supportedChains: isTestnet ? [celoAlfajores] : [celo],
-          walletConnectCloudProjectId: import.meta.env.VITE_WALLET_CONNECT_ID as string,
+          // walletConnectCloudProjectId: import.meta.env.VITE_WALLET_CONNECT_ID as string,
         }}
       >
         <PrivyInitializationTracker>
