@@ -32,6 +32,7 @@ import {
   Save,
   AlertTriangle
 } from 'lucide-react';
+import { uploadToIPFS, formatIpfsUrl } from '@/utils/imageUtils';
 
 interface CampaignFormData {
   id: number;
@@ -207,13 +208,11 @@ export default function EditCampaignDetails() {
   };
 
   useEffect(() => {
-    if (campaignDetails) {
+    if (campaignDetails && !originalCampaign && !campaign) {
       const { campaign: campaignData, metadata } = campaignDetails;
-      
       // Parse metadata
       const mainInfo = parseMetadata(metadata.mainInfo, {});
       const additionalInfo = parseMetadata(metadata.additionalInfo, {});
-      
       const formattedCampaign: CampaignFormData = {
         id: Number(campaignData.id),
         name: campaignData.name,
@@ -249,11 +248,10 @@ export default function EditCampaignDetails() {
         active: campaignData.active,
         status: getCampaignStatus(campaignData.startTime, campaignData.endTime, campaignData.active)
       };
-      
       setOriginalCampaign(formattedCampaign);
       setCampaign(formattedCampaign);
     }
-  }, [campaignDetails]);
+  }, [campaignDetails, originalCampaign, campaign]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -300,22 +298,17 @@ export default function EditCampaignDetails() {
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
       if (file.size > 10 * 1024 * 1024) {
         setErrorMessage('Logo file size must be less than 10MB');
         return;
       }
-      
       if (!file.type.startsWith('image/')) {
         setErrorMessage('Please select a valid image file');
         return;
       }
-      
       setLogoFile(file);
-      handleFieldChange('logo', `File selected: ${file.name}`);
-      
-      const previewUrl = URL.createObjectURL(file);
-      setLogoPreview(previewUrl);
+      setLogoPreview(URL.createObjectURL(file));
+      // Do NOT update campaign.logo here; only after upload
     }
   };
 
@@ -401,38 +394,41 @@ export default function EditCampaignDetails() {
   // Fixed submit handler to handle different update scenarios
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!campaign || !campaignId || !contractAddress) {
       setErrorMessage('Missing required data');
       return;
     }
-
     if (!validateForm()) {
       setErrorMessage('Please fix the validation errors before submitting');
       return;
     }
-
     if (!hasChanges) {
       setErrorMessage('No changes to save');
       return;
     }
-
     setErrorMessage('');
     setSuccessMessage('');
-
     try {
+      let logoUrl = campaign.logo;
+      if (logoFile) {
+        try {
+          logoUrl = await uploadToIPFS(logoFile);
+        } catch (err) {
+          setErrorMessage('Failed to upload logo to IPFS');
+          return;
+        }
+      }
       // Prepare metadata
       const mainInfo = {
         campaignType: campaign.campaignType,
         category: campaign.category,
         tags: campaign.tags,
-        logo: campaign.logo,
+        logo: logoUrl,
         website: campaign.website,
         videoLink: campaign.videoLink,
         prizePool: campaign.prizePool,
         maxParticipants: campaign.maxParticipants
       };
-
       const additionalInfo = {
         eligibilityCriteria: campaign.eligibilityCriteria,
         requirements: campaign.requirements,
@@ -446,15 +442,11 @@ export default function EditCampaignDetails() {
         },
         contactEmail: campaign.contactEmail
       };
-
-      // Always update metadata first (this is always allowed)
       await updateCampaignMetadata({
         campaignId,
         mainInfo: JSON.stringify(mainInfo),
         additionalInfo: JSON.stringify(additionalInfo)
       });
-
-      // Only update basic campaign data if we can edit basic info or specific fields
       if (canEditBasicInfo || canEditDates || canEditPrizePool) {
         try {
           await updateCampaign({
@@ -476,7 +468,6 @@ export default function EditCampaignDetails() {
       } else {
         setSuccessMessage('Metadata and contact information updated successfully!');
       }
-
     } catch (error) {
       console.error('Error updating campaign:', error);
       setErrorMessage('Failed to update campaign. Please try again.');
@@ -872,7 +863,7 @@ export default function EditCampaignDetails() {
                    <div className="mb-4 flex justify-center">
                      <div className="relative">
                        <img
-                         src={logoPreview || campaign.logo}
+                         src={logoPreview || formatIpfsUrl(campaign.logo)}
                          alt="Logo preview"
                          className="w-32 h-32 object-cover rounded-xl border-2 border-purple-200 shadow-lg"
                        />

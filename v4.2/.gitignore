@@ -36,3 +36,4 @@ dist-ssr
 .env.live
 envs
 envs/
+.vercel
