@@ -496,7 +496,6 @@ export default function ProjectView() {
     { id: 'overview', label: 'Overview', icon: Eye },
     { id: 'campaigns', label: 'Campaigns', icon: Trophy, badge: project?.campaignIds?.length || 0 },
     { id: 'technical', label: 'Technical', icon: Code },
-    { id: 'team', label: 'Team', icon: Users },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 }
   ];
 
@@ -610,7 +609,21 @@ export default function ProjectView() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen relative overflow-x-hidden">
+      {/* Colorful background shape */}
+      <div className="absolute inset-0 -z-10">
+        <div className="w-full h-full bg-gradient-to-br from-blue-100 via-indigo-100 to-pink-100 opacity-90" />
+        <svg className="absolute top-0 right-0 w-1/2 h-1/2 opacity-30" viewBox="0 0 400 400" fill="none">
+          <circle cx="300" cy="100" r="120" fill="url(#paint0_radial)" />
+          <defs>
+            <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientTransform="translate(300 100) scale(120)" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#a5b4fc" />
+              <stop offset="1" stop-color="#f472b6" stop-opacity="0.5" />
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+
       {/* Sticky Navigation */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -661,12 +674,12 @@ export default function ProjectView() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Project Header */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 mb-8">
-          <div className="flex flex-col lg:flex-row items-start gap-8">
+        <div className="bg-white/60 backdrop-blur-md rounded-3xl shadow-xl border border-white/20 p-4 sm:p-8 mb-6 sm:mb-8 transition-all duration-200 hover:shadow-2xl hover:bg-white/80">
+          <div className="flex flex-col lg:flex-row items-start gap-4 sm:gap-8">
             {/* Left: Logo & Basic Info */}
-            <div className="flex items-start gap-6 flex-1">
+            <div className="flex items-start gap-4 sm:gap-6 flex-1">
               <ProjectLogo 
                 logo={project.metadata?.logo} 
                 name={project.name} 
@@ -675,37 +688,34 @@ export default function ProjectView() {
               />
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h1 className="text-4xl font-bold text-gray-900 tracking-tight">{project.name}</h1>
-                      {project.metadata?.category && (
-                        <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-sm font-medium border border-blue-200">
-                          {project.metadata.category}
-                        </span>
-                      )}
+                <div className="flex items-start justify-between mb-2 sm:mb-4">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 tracking-tight">{project.name}</h1>
+                    {project.metadata?.category && (
+                      <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-sm font-medium border border-blue-200">
+                        {project.metadata.category}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-base sm:text-xl text-gray-600 mb-2 sm:mb-6 leading-relaxed">
+                    {project.metadata?.tagline || project.description}
+                  </p>
+                  
+                  {/* Project Meta */}
+                  <div className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-500">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4" />
+                      <span>Created {formatDate(project.createdAt)}</span>
                     </div>
-                    
-                    <p className="text-xl text-gray-600 mb-6 leading-relaxed">
-                      {project.metadata?.tagline || project.description}
-                    </p>
-                    
-                    {/* Project Meta */}
-                    <div className="flex items-center gap-6 text-sm text-gray-500">
+                    {project.metadata?.location && (
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="h-4 w-4" />
-                        <span>Created {formatDate(project.createdAt)}</span>
+                        <MapPin className="h-4 w-4" />
+                        <span>{project.metadata.location}</span>
                       </div>
-                      {project.metadata?.location && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4" />
-                          <span>{project.metadata.location}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <Trophy className="h-4 w-4" />
-                        <span>{project.campaignIds?.length || 0} Campaigns</span>
-                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <Trophy className="h-4 w-4" />
+                      <span>{project.campaignIds?.length || 0} Campaigns</span>
                     </div>
                   </div>
                 </div>
@@ -713,7 +723,7 @@ export default function ProjectView() {
             </div>
             
             {/* Right: Tags & Actions */}
-            <div className="flex flex-col items-end gap-4">
+            <div className="flex flex-col items-end gap-2 sm:gap-4 w-full sm:w-auto mt-4 sm:mt-0">
               {/* Tags */}
               {project.metadata?.tags && project.metadata.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 justify-end">
@@ -751,7 +761,7 @@ export default function ProjectView() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 sm:mb-8">
           <StatCard
             icon={Trophy}
             label="Active Campaigns"
@@ -790,7 +800,7 @@ export default function ProjectView() {
         </div>
  
         {/* Navigation Tabs */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 mb-8 overflow-hidden">
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 mb-6 sm:mb-8 overflow-hidden transition-all duration-200 hover:shadow-2xl hover:bg-white/80">
           <div className="flex overflow-x-auto">
             {tabs.map((tab) => (
               <button
@@ -819,26 +829,61 @@ export default function ProjectView() {
         </div>
  
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
-                {/* About Section */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">
+                {/* Hero Section */}
+                <div className="relative w-full rounded-3xl mb-6 overflow-hidden bg-gradient-to-br from-blue-500/90 via-indigo-500/80 to-pink-400/80 shadow-2xl p-6 sm:p-12 flex flex-col sm:flex-row items-center gap-6 sm:gap-12 text-center sm:text-left">
+                  <div className="flex-shrink-0 flex flex-col items-center sm:items-start">
+                    <ProjectLogo 
+                      logo={project.metadata?.logo} 
+                      name={project.name} 
+                      verified={true}
+                      size="lg"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
+                      <h1 className="text-3xl sm:text-5xl font-extrabold text-white drop-shadow-lg tracking-tight">{project.name}</h1>
+                      {project.metadata?.category && (
+                        <span className="px-4 py-1 bg-white/20 text-white font-semibold rounded-full text-sm border border-white/30">{project.metadata.category}</span>
+                      )}
+                    </div>
+                    <p className="text-lg sm:text-2xl font-medium text-white/90 mb-2 italic max-w-2xl mx-auto sm:mx-0">{project.metadata?.tagline || project.description}</p>
+                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start mb-2">
+                      {project.metadata?.tags && project.metadata.tags.slice(0, 4).map((tag, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-white/20 text-white text-xs rounded-full border border-white/30">#{tag}</span>
+                      ))}
+                      {project.metadata?.tags && project.metadata.tags.length > 4 && (
+                        <span className="px-3 py-1 bg-white/20 text-white text-xs rounded-full border border-white/30">+{project.metadata.tags.length - 4} more</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start">
+                      {project.metadata?.demoUrl && (
+                        <a href={project.metadata.demoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                          <Play className="h-4 w-4" />
+                          Try Live Demo
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* About Section with accent bar */}
+                <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border-l-8 border-blue-400/60 p-6 sm:p-8 mb-8">
                   <SectionHeader 
                     icon={FileText}
                     title="About This Project"
                     subtitle="Learn more about the project's mission and goals"
                   />
-                  
-                  <div className="prose prose-lg prose-gray max-w-none">
-                    <p className="text-gray-700 leading-relaxed text-lg mb-6">
+                  <div className="prose prose-lg prose-indigo max-w-none">
+                    <p className="text-gray-800 leading-relaxed text-lg mb-6 font-serif">
                       {project.description}
                     </p>
                   </div>
-                  
                   {/* Innovation & Target Audience Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                     {project.metadata?.innovation && (
@@ -1175,159 +1220,38 @@ export default function ProjectView() {
               </div>
             )}
  
-            {/* Team Tab */}
-            {activeTab === 'team' && (
-              <div className="space-y-8">
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">
-                  <SectionHeader 
-                    icon={Users}
-                    title="Team Members"
-                    subtitle="Meet the people behind the project"
-                  />
-                  
-                  {project.metadata?.teamMembers && project.metadata.teamMembers.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {project.metadata.teamMembers.map((member, idx) => (
-                        <div key={idx} className="p-6 bg-gray-50/80 rounded-xl border border-gray-200 hover:bg-gray-100/80 transition-colors">
-                          <div className="flex items-start gap-4">
-                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                              <User className="h-8 w-8 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-gray-900 text-lg mb-1 truncate">{member.name}</h3>
-                              <p className="text-gray-600 mb-4 font-medium">{member.role}</p>
-                              <div className="flex gap-3">
-                                {member.linkedin && (
-                                  <a 
-                                    href={member.linkedin}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                                    title="LinkedIn Profile"
-                                  >
-                                    <Linkedin className="h-4 w-4" />
-                                  </a>
-                                )}
-                                {member.twitter && (
-                                  <a 
-                                    href={member.twitter}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                                    title="Twitter Profile"
-                                  >
-                                    <Twitter className="h-4 w-4" />
-                                  </a>
-                                )}
-                                {member.email && (
-                                  <a 
-                                    href={`mailto:${member.email}`}
-                                    className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                                    title={`Email ${member.name}`}
-                                  >
-                                    <Mail className="h-4 w-4" />
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Users className="h-12 w-12 text-gray-400" />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-3">No Team Information</h3>
-                      <p className="text-gray-600">Team details haven't been provided for this project yet.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
- 
             {/* Analytics Tab */}
             {activeTab === 'analytics' && (
               <div className="space-y-8">
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">
-                  <SectionHeader 
-                    icon={BarChart3}
-                    title="Project Analytics"
-                    subtitle="Performance metrics and insights"
-                  />
-                  
-                  {/* Analytics Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <StatCard
-                      icon={Trophy}
-                      label="Total Campaigns"
-                      value={project.campaignIds?.length || 0}
-                      color="blue"
-                    />
-                    <StatCard
-                      icon={Coins}
-                      label="Campaign Funding"
-                      value={`${projectCampaigns ? 
-                        projectCampaigns.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null)
-                          .reduce((sum, campaign) => 
-                            sum + parseFloat(formatEther(campaign.participation?.fundsReceived || 0n)), 0
-                          ).toFixed(2) 
-                        : '0.00'} CELO`}
-                      color="green"
-                    />
-                    <StatCard
-                      icon={Vote}
-                      label="Total Votes"
-                      value={projectCampaigns ? 
-                        projectCampaigns.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null)
-                          .reduce((sum, campaign) => 
-                            sum + parseFloat(formatEther(campaign.participation?.voteCount || 0n)), 0
-                          ).toFixed(1)
-                        : '0.0'
-                      }
-                      color="purple"
-                    />
-                  </div>
-                  
-                  {/* Campaign Performance */}
-                  {projectCampaigns && projectCampaigns.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <TrendingUp className="h-4 w-4 text-purple-600" />
-                        </div>
-                        Campaign Performance
-                      </h3>
-                      <div className="space-y-4">
-                        {projectCampaigns?.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null).map((campaign, idx) => (
-                          <div key={idx} className="flex items-center gap-6 p-6 bg-gray-50/80 rounded-xl border border-gray-200 hover:bg-gray-100/80 transition-colors">
-                            <div className="flex-1">
-                              <h4 className="font-bold text-gray-900 mb-1">{campaign.name}</h4>
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                                  campaign.status === 'active' ? 'bg-green-100 text-green-700' :
-                                  campaign.status === 'ended' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {campaign.status}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-green-600 text-xl">
-                                {parseFloat(formatEther(campaign.totalFunds || 0n)).toFixed(2)} CELO
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {parseFloat(formatEther(campaign.participation?.voteCount || 0n)).toFixed(1)} votes
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                {/* Analytics Summary */}
+                <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-6 mb-4">
+                  <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-3">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    Project Analytics
+                  </h3>
+                  <p className="text-lg text-gray-700 mb-4 font-serif">
+                    {project.name} has participated in <span className="font-bold text-blue-600">{project.campaignIds?.length || 0}</span> campaign{project.campaignIds?.length === 1 ? '' : 's'}, raising a total of <span className="font-bold text-green-600">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0).toFixed(2) : '0.00'} CELO</span> and receiving <span className="font-bold text-purple-600">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.voteCount || 0n)), 0).toFixed(1) : '0.0'}</span> votes from the community. Dive into the stats below to see how this project is performing!
+                  </p>
+                  {/* Stat Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+                    <div className="p-4 rounded-xl border bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 text-center shadow-sm">
+                      <div className="flex items-center justify-center mb-1"><Trophy className="h-5 w-5 text-blue-500" /></div>
+                      <div className="text-2xl font-bold text-blue-700">{project.campaignIds?.length || 0}</div>
+                      <div className="text-xs text-blue-700 font-medium">Campaigns</div>
                     </div>
-                  )}
+                    <div className="p-4 rounded-xl border bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 text-center shadow-sm">
+                      <div className="flex items-center justify-center mb-1"><Coins className="h-5 w-5 text-green-500" /></div>
+                      <div className="text-2xl font-bold text-green-700">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0).toFixed(2) : '0.00'} <span className='text-xs'>CELO</span></div>
+                      <div className="text-xs text-green-700 font-medium">Total Funding</div>
+                    </div>
+                    <div className="p-4 rounded-xl border bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 text-center shadow-sm">
+                      <div className="flex items-center justify-center mb-1"><Vote className="h-5 w-5 text-purple-500" /></div>
+                      <div className="text-2xl font-bold text-purple-700">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.voteCount || 0n)), 0).toFixed(1) : '0.0'}</div>
+                      <div className="text-xs text-purple-700 font-medium">Total Votes</div>
+                    </div>
+                  </div>
                 </div>
+                {/* ... existing campaign performance ... */}
               </div>
             )}
           </div>
@@ -1623,6 +1547,41 @@ export default function ProjectView() {
                </div>
              </div>
            )}
+           {/* Team Card (moved from tab) */}
+           {project.metadata?.teamMembers && project.metadata.teamMembers.length > 0 && (
+             <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-6">
+               <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-3">
+                 <div className="p-2 bg-blue-100 rounded-lg">
+                   <Users className="h-4 w-4 text-blue-600" />
+                 </div>
+                 Team
+               </h3>
+               <div className="flex flex-col gap-3">
+                 {project.metadata.teamMembers.map((member, idx) => (
+                   <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 shadow-sm">
+                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 shadow">
+                       <User className="h-6 w-6 text-white" />
+                     </div>
+                     <div className="flex-1 min-w-0">
+                       <div className="font-bold text-gray-900 truncate">{member.name}</div>
+                       <div className="text-xs text-gray-600 truncate">{member.role}</div>
+                     </div>
+                     <div className="flex gap-2">
+                       {member.linkedin && (
+                         <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors" title="LinkedIn Profile"><Linkedin className="h-4 w-4" /></a>
+                       )}
+                       {member.twitter && (
+                         <a href={member.twitter} target="_blank" rel="noopener noreferrer" className="p-1 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors" title="Twitter Profile"><Twitter className="h-4 w-4" /></a>
+                       )}
+                       {member.email && (
+                         <a href={`mailto:${member.email}`} className="p-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors" title={`Email ${member.name}`}><Mail className="h-4 w-4" /></a>
+                       )}
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
          </div>
        </div>
      </div>
@@ -1630,8 +1589,8 @@ export default function ProjectView() {
      {/* Share Modal */}
      {showShareModal && (
        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-         <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20">
-           <div className="p-8">
+         <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20 md:rounded-3xl md:max-w-md md:p-8 p-0 h-full md:h-auto overflow-y-auto transition-all duration-300">
+           <div className="p-8 md:p-8 p-6">
              <div className="flex items-center justify-between mb-8">
                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
                  <div className="p-2 bg-blue-100 rounded-lg">
@@ -1691,6 +1650,30 @@ export default function ProjectView() {
          onVoteSuccess={handleVoteSuccess}
        />
      )}
+
+     {/* Bottom Navigation for Mobile */}
+     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-gray-200/50 shadow-lg flex justify-around items-center py-2 px-2 md:hidden">
+       {tabs.map((tab) => (
+         <button
+           key={tab.id}
+           onClick={() => setActiveTab(tab.id)}
+           className={`flex flex-col items-center justify-center flex-1 px-2 py-1 transition-all duration-200 ${
+             activeTab === tab.id ? 'text-blue-600' : 'text-gray-500'
+           }`}
+           aria-label={tab.label}
+         >
+           <div className={`p-2 rounded-full ${activeTab === tab.id ? 'bg-blue-100' : 'bg-gray-100'}`}> 
+             <tab.icon className="h-5 w-5" />
+           </div>
+           <span className="text-xs mt-1 font-medium">{tab.label}</span>
+           {tab.badge !== undefined && tab.badge > 0 && (
+             <span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full font-semibold mt-0.5">
+               {tab.badge}
+             </span>
+           )}
+         </button>
+       ))}
+     </div>
    </div>
  );
 }
