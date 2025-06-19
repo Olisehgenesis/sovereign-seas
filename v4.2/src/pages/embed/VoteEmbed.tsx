@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useAccount, useConnect } from 'wagmi';
 import { parseEther, formatEther, Address } from 'viem';
 import { useVote, useTokenToCeloEquivalent } from '@/hooks/useVotingMethods';
-import { useProjectTokenVotes, useProjectParticipation, useSingleProject } from '@/hooks/useProjectMethods';
+import { useProjectTokenVotes, useSingleProject } from '@/hooks/useProjectMethods';
 import { useSingleCampaign } from '@/hooks/useCampaignMethods';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
 import { Wallet } from 'lucide-react';
@@ -23,7 +23,7 @@ function formatDate(ts: bigint) {
 
 export default function VoteEmbed() {
   const { campaignid, projectid } = useParams<{ campaignid: string; projectid: string }>();
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
@@ -38,7 +38,7 @@ export default function VoteEmbed() {
   const { campaign, isLoading: campaignLoading } = useSingleCampaign(contractAddress, campaignId);
   // Fetch project details for name
   const { project: projectDetails, isLoading: projectDetailsLoading } = useSingleProject(contractAddress, projectId);
-  const { isLoading: projectLoading } = useProjectParticipation(contractAddress, campaignId, projectId);
+  // const { isLoading: projectLoading } = useProjectParticipation(contractAddress, campaignId, projectId);
   const now = Date.now() / 1000;
   const isEnded = campaign && (!campaign.active || now > Number(campaign.endTime));
 
@@ -46,16 +46,21 @@ export default function VoteEmbed() {
   const tokenMeta = supportedTokens.find(t => t.address === selectedToken) || supportedTokens[0];
 
   // Votes for this project/token
-  const { tokenVotes, isLoading } = useProjectTokenVotes(contractAddress, campaignId, projectId, selectedToken);
+  const { tokenVotes, isLoading } = useProjectTokenVotes(
+    contractAddress,
+    campaignId,
+    projectId,
+    selectedToken as `0x${string}`
+  );
 
   // For cUSD, show CELO equivalent
   const { celoEquivalentFormatted } = useTokenToCeloEquivalent(
-    contractAddress,
-    selectedToken,
+    contractAddress as `0x${string}`,
+    selectedToken as `0x${string}`,
     amount ? parseEther(amount) : 0n
   );
 
-  const { vote, voteWithCelo } = useVote(contractAddress);
+  const { vote, voteWithCelo } = useVote(contractAddress as `0x${string}`);
 
   const handleVote = async () => {
     setError('');
@@ -80,7 +85,7 @@ export default function VoteEmbed() {
         await vote({
           campaignId,
           projectId,
-          token: selectedToken,
+          token: selectedToken as `0x${string}`,
           amount: parseEther(amount)
         });
       }
