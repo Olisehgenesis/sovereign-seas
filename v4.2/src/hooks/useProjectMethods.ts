@@ -4,6 +4,16 @@ import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Interface } from "ethers"
 import { getDataSuffix, submitReferral } from '@divvi/referral-sdk'
+import { waitForTransactionReceipt } from 'viem/actions'
+import { useVerifyCeloToken } from './useVotingMethods'
+
+
+
+
+const projectInterface = new Interface(abi)
+const {
+  sendTransactionAsync
+} = useSendTransaction()
 
 // Get the same dataSuffix used in voting
 const dataSuffix = getDataSuffix({
@@ -288,7 +298,7 @@ export function useTransferProjectOwnership(contractAddress: Address) {
 
 // FIXED: Hook for adding project to campaign
 export function useAddProjectToCampaign(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
+  const {  isPending, isError, error, isSuccess } = useWriteContract()
 
   const addProjectToCampaign = async ({
     campaignId,
@@ -306,14 +316,45 @@ export function useAddProjectToCampaign(contractAddress: Address) {
     try {
       
       const value = feeAmount;
+      //ask for approval of feeToken
+      const approveData = projectInterface.encodeFunctionData('approve', [contractAddress, value])
+      const sendappove = approveData + dataSuffix;
+      const approveTx = await sendTransactionAsync({
+        to: feeToken,
+        data: sendappove as `0x${string}`,
+      });
+      if (!approveTx) {
+        throw new Error('Transaction failed to send');
+      }
+      
+      
+    
 
-      await writeContract({
-        address: contractAddress,
-        abi,
-        functionName: 'addProjectToCampaign',
-        args: [campaignId, projectId, feeToken],
-        value
-      })
+      const projectData = projectInterface.encodeFunctionData('addProjectToCampaign', [campaignId, projectId, feeToken])
+
+      const celoChainId = 42220; // Celo mainnet chain ID
+      const dataWithSuffix = projectData + dataSuffix;
+
+      //use divvi referral sdk to submit referral
+
+      const tx = await sendTransactionAsync({
+
+        to: contractAddress,
+        data: dataWithSuffix as `0x${string}`,
+      });
+
+      if (!tx) {
+        throw new Error('Transaction failed to send');
+      }
+
+      try {
+        await submitReferral({
+          txHash: tx as unknown as `0x${string}`,
+          chainId: celoChainId
+        });
+      } catch (referralError) {
+        console.error("Referral submission error:", referralError);
+      }
     } catch (err) {
       console.log("should pay fee", shouldPayFee)
       console.error('Error adding project to campaign:', err)
