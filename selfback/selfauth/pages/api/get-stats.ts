@@ -1,18 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
+import { originList } from '@/src/utils/origin';
 
 // Initialize CORS middleware
 const cors = initMiddleware(
   Cors({
-    origin: [
-      'http://localhost:4173',
-      'http://localhost:4174',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://sovseas.xyz',
-      'https://auth.sovseas.xyz'
-    ],
+    origin: originList,
     methods: ['GET', 'POST', 'OPTIONS'],
   })
 );

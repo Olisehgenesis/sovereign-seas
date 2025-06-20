@@ -52,6 +52,7 @@
     "verify:grants": "hardhat run scripts/deploy/verifyGrants.ts --network celo",
     "vote": "hardhat run scripts/swapVote.ts ",
     "verifyclaims": "hardhat run scripts/deploy/verifyClaims.ts --network alfajores",
+    "verifyclaims:celo": "hardhat run scripts/deploy/verifyClaims.ts --network celo",
     "viewProjects": "hardhat run scripts/viewProjects.ts",
     "viewCampaign": "hardhat run scripts/viewCampaign.ts",
     "createCampaign": "hardhat run scripts/createCampaign.ts",

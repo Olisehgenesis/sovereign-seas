@@ -1,6 +1,6 @@
 import { createWalletClient, http, parseEther, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { celoAlfajores } from 'viem/chains';
+import { celo, celoAlfajores } from 'viem/chains';
 import * as dotenv from 'dotenv';
 import sovereignSeasVerificationVotingAbi from '../../artifacts/contracts/SovereignSeasVerificationVoting.sol/SovereignSeasVerificationVoting.json';
 import { readFileSync } from 'fs';
@@ -9,6 +9,16 @@ dotenv.config();
 
 // Read configuration from environment variables
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const testnetmode = process.env.TESTNET_ENV_MODE;
+
+
+if (testnetmode === 'true') {
+  console.log('Testnet mode is enabled');
+} else {
+  console.log('Testnet mode is disabled');
+}
+
+
 const RPC_URL = process.env.CELO_RPC_URL || 'https://alfajores-forno.celo-testnet.org';
 const SOVEREIGN_SEAS_ADDRESS = process.env.SOVEREIGN_SEAS_V4_ADDRESS; // The main SovereignSeas contract
 
@@ -46,12 +56,12 @@ async function deploySovereignSeasVerificationVoting() {
     const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     const walletClient = createWalletClient({
       account,
-      chain: celoAlfajores,
+      chain: testnetmode === 'true' ? celoAlfajores : celo,
       transport: http(RPC_URL)
     });
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: testnetmode === 'true' ? celoAlfajores : celo ,
       transport: http(RPC_URL)
     });
     

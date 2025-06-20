@@ -1,5 +1,5 @@
 import { createPublicClient, http } from 'viem';
-import { celoAlfajores } from 'viem/chains';
+import { celo, celoAlfajores } from 'viem/chains';
 import * as dotenv from 'dotenv';
 import { run } from 'hardhat';
 
@@ -9,7 +9,13 @@ dotenv.config();
 const RPC_URL = process.env.CELO_RPC_URL || 'https://alfajores-forno.celo-testnet.org';
 const SOVEREIGN_SEAS_V4_ADDRESS = process.env.SOVEREIGN_SEAS_V4_ADDRESS;
 const SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS = process.env.SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS;
+const testnetmode = process.env.TESTNET_ENV_MODE;
 
+if (testnetmode === 'true') {
+  console.log('Testnet mode is enabled');
+} else {
+  console.log('Testnet mode is disabled');
+}
 // Validate environment variables
 if (!SOVEREIGN_SEAS_V4_ADDRESS) {
   console.error('Error: SOVEREIGN_SEAS_V4_ADDRESS environment variable is required');
@@ -32,7 +38,7 @@ async function verifyVerificationVotingContract() {
 
     // Create public client to check if contract exists
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
+      chain: testnetmode === 'true' ? celoAlfajores : celo ,
       transport: http(RPC_URL)
     });
 

@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
+import { originList } from '@/src/utils/origin';
 
 interface WalletVerification {
   wallet: string;
@@ -16,14 +17,7 @@ const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
 // Initialize CORS middleware
 const cors = initMiddleware(
   Cors({
-    origin: [
-      'http://localhost:4173',
-      'http://localhost:4174',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://sovseas.xyz',
-      'https://auth.sovseas.xyz'
-    ],
+    origin: originList,
     methods: ['GET', 'POST', 'OPTIONS'],
   })
 );

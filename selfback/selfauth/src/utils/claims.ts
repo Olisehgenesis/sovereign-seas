@@ -11,6 +11,7 @@ const SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS = process.env.SOVEREIGN_SEAS_VE
 const PRIVATE_KEY = process.env.PRIVATE_KEY; 
 
 const testnetEnabled=process.env.TESTNET_ENABLED === 'true' 
+const contractAddress=testnetEnabled ? process.env.SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS_TESTNET : process.env.SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS
 const chain=testnetEnabled ? celoAlfajores : celo
 
 const rpcUrl=testnetEnabled ? process.env.CELO_RPC_URL_TESTNET : process.env.CELO_RPC_URL
@@ -54,7 +55,7 @@ async function claimAndVoteForUser(
     // Simulate the transaction first
     const { request } = await publicClient.simulateContract({
       account: walletClient.account,
-      address: SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS as `0x${string}`,
+      address: contractAddress as `0x${string}`,
       abi: abi,
       functionName: 'claimAndVote',
       args: [
@@ -95,7 +96,7 @@ async function getContractStats(): Promise<ApiResponse<any>> {
     console.log('\n📊 Getting contract statistics...');
     
     const totalStats = await publicClient.readContract({
-      address: SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS as `0x${string}`,
+      address: contractAddress as `0x${string}`,
       abi: abi,
       functionName: 'getTotalStats'
     });
@@ -115,7 +116,7 @@ async function getCampaignStats(campaignId: number): Promise<ApiResponse<any>> {
   try {
     // Get campaign stats
     const campaignStats = await publicClient.readContract({
-      address: SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS as `0x${string}`,
+      address: contractAddress as `0x${string}`,
       abi: abi,
       functionName: 'getCampaignStats',
       args: [campaignId] // Campaign 0
@@ -136,7 +137,7 @@ async function getCampaignStats(campaignId: number): Promise<ApiResponse<any>> {
 async function getProjectStats( projectId: number): Promise<ApiResponse<any>> {
   try {
     const projectStats = await publicClient.readContract({
-      address: SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS as `0x${string}`,
+      address: contractAddress as `0x${string}`,
       abi: abi,
       functionName: 'getProjectStats',
       args: [projectId]
@@ -170,7 +171,7 @@ async function walletBalance( address: string): Promise<ApiResponse<string>> {
 
 async function getContractBalance(): Promise<ApiResponse<string>> {
   try {
-    const balance = await publicClient.getBalance({ address: SOVEREIGN_SEAS_VERIFICATION_VOTING_ADDRESS as `0x${string}` });
+    const balance = await publicClient.getBalance({ address: contractAddress as `0x${string}` });
     return {
       success: true,
       data: formatEther(balance)

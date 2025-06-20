@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import { originList } from '@/src/utils/origin';
 
 // Define the data structure
 interface WalletVerification {
