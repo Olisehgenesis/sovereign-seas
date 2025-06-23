@@ -49,8 +49,9 @@ import { type AbiFunction } from 'viem';
 
 import { useCampaignDetails, useApproveProject, useAddCampaignAdmin, useDistributeFunds, useIsCampaignAdmin, useSortedProjects, useParticipation } from '@/hooks/useCampaignMethods';
 import VoteModal from '@/components/voteModal';
+import AddProjectsToCampaignModal from '@/components/AddProjectsToCampaignModal';
 import { getProjectVotesByCampaignId } from './voteutils';
-import { useAllProjects, formatProjectForDisplay, useAddProjectToCampaign, useCanBypassFees } from '@/hooks/useProjectMethods';
+import { useAllProjects, formatProjectForDisplay, useCanBypassFees } from '@/hooks/useProjectMethods';
 import {
   useVote,
   useUserTotalVotesInCampaign,
@@ -324,7 +325,6 @@ export default function CampaignView() {
   );
 
   // FIXED: Always call project management hooks
-  const { addProjectToCampaign, isPending: isAddingProject } = useAddProjectToCampaign(contractAddress);
   const { isAdmin: canBypassFees } = useCanBypassFees(contractAddress, campaignId);
   const { approveProject, isPending: isApprovingProject } = useApproveProject(contractAddress);
 
@@ -1489,181 +1489,195 @@ export default function CampaignView() {
               </div>
             </div>
 
-            {/* Project List with improved spacing and no cut-offs */}
-            <div className="space-y-4">
-              {filteredProjects.map((project, index) => {
-                const styling = getPositionStyling(index);
-                const voteCount = Number(formatEther(project.voteCount || 0n));
-                const projectLogo = getProjectLogo(project);
-                const isApproved = project.participation?.approved === true;
+            {/* Project List with Grid Layout */}
+            <motion.div 
+              layout
+              className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <AnimatePresence>
+                {filteredProjects
+                  .filter(project => project.id !== undefined && project.id !== null)
+                  .map((project, index) => {
+                    const voteCount = Number(formatEther(project.voteCount || 0n));
+                    const projectLogo = getProjectLogo(project);
+                    const isApproved = project.participation?.approved === true;
+                    const voteProgress = Math.min(100, (voteCount / 500) * 100);
 
-                return (
-                  <div
-                    key={project.id}
-                    onClick={() => isApproved && isActive ? openVoteModal(project) : null}
-                    className={`
-                      group glass-morphism rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-6 relative overflow-hidden cursor-pointer
-                      hover:-translate-y-2 gradient-border animate-float
-                      ${index < 3 ? 'bg-gradient-to-br from-white/90 to-white/80' : 'bg-white/80'}
-                      ${isApproved && isActive ? 'hover:ring-2 hover:ring-blue-400' : ''}
-                    `}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    {/* Enhanced Position Badge with better positioning */}
-                    <div className={`absolute -top-3 -left-3 w-14 h-14 rounded-full bg-gradient-to-r ${styling.bgGradient} shadow-xl ${styling.glowColor} flex items-center justify-center font-bold text-lg border-4 border-white transform group-hover:scale-110 transition-transform duration-300 z-10`}>
-                      {index < 3 ? (
-                        <div className="flex items-center justify-center w-full h-full">
-                          <span className="text-2xl text-white">{styling.badge}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center w-full h-full">
-                          <span className="text-lg text-blue-900">{index + 1}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Position Badge Glow Effect */}
-                    <div className={`absolute -top-3 -left-3 w-14 h-14 rounded-full ${styling.glowColor} blur-xl opacity-50 animate-pulse`}></div>
-
-                    {/* Approval Status Badge and Admin Controls with better spacing */}
-                    <div className="absolute top-3 right-3 flex items-center space-x-2">
-                      {/* Approval Status Badge */}
-                      <div className={`px-3 py-2 rounded-full text-sm font-bold ${
-                        isApproved 
-                          ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
-                          : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
-                      }`}>
-                        {isApproved ? (
-                          <div className="flex items-center space-x-2">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>Approved</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4" />
-                            <span>Pending</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Admin Approve Button */}
-                      {isAdmin && !isApproved && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleApproveProject(BigInt(project.id));
-                          }}
-                          disabled={isApprovingProject}
-                          className="px-3 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
-                        >
-                          {isApprovingProject ? (
-                            <>
-                              <Loader2 className="h-4 animate-spin" />
-                              <span>Approving...</span>
-                            </>
+                    return (
+                      <motion.div
+                        key={project.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        onClick={() => isApproved && isActive ? openVoteModal(project) : null}
+                        className={`
+                          relative bg-white/90 backdrop-blur-lg rounded-xl shadow-lg transition-all duration-300 p-4 cursor-pointer border-2 group overflow-hidden
+                          ${isApproved && isActive ? 'border-blue-300' : 'border-gray-200'}
+                          ${isApproved && isActive ? 'hover:border-blue-400' : ''}
+                        `}
+                      >
+                        {/* Position Badge - Top Left */}
+                        <div className={`absolute -top-2 -left-2 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-lg z-20 border-2 border-white ${
+                          index === 0 ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
+                          index === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-500' :
+                          index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                          'bg-gradient-to-r from-blue-400 to-blue-600'
+                        }`}>
+                          {index < 3 ? (
+                            <span className="text-sm">
+                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                            </span>
                           ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4" />
-                              <span>Approve</span>
-                            </>
+                            <span className="text-xs font-bold">{index + 1}</span>
                           )}
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center space-y-4 lg:space-y-0 lg:space-x-6 pl-8">
-                      {/* Project Logo with better sizing */}
-                      <div className="animate-float-delay-1 relative flex-shrink-0">
-                        {projectLogo ? (
-                          <img 
-                            src={formatIpfsUrl(projectLogo)} 
-                            alt={`${project.name} logo`}
-                            className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              const fallback = target.nextSibling as HTMLElement;
-                              if (fallback) fallback.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div className={`w-20 h-20 lg:w-24 lg:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-2xl lg:text-3xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 group-hover:shadow-lg transition-all duration-300 ${projectLogo ? 'hidden' : 'flex'}`}>
-                          {project.name?.charAt(0) || ''}
                         </div>
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        {/* Enhanced Vote Display with better spacing */}
-                        <div className="relative mb-4">
-                          <div className="transform hover:scale-105 transition-transform duration-300">
-                            <ProjectVotes 
-                              campaignId={campaignId} 
-                              projectId={BigInt(project.id)} 
-                              onVoteCountReceived={updateProjectVoteCount}
-                            />
+
+                        {/* Approval Status - Top Right */}
+                        <div className="absolute top-2 right-2 z-20">
+                          <div className={`px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${
+                            isApproved 
+                              ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200' 
+                              : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
+                          }`}>
+                            {isApproved ? (
+                              <>
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Approved</span>
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="h-3 w-3" />
+                                <span>Pending</span>
+                              </>
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-gray-800 text-lg lg:text-xl truncate group-hover:text-blue-600 transition-colors duration-300 mb-2">
-                              {project.name || 'Untitled Project'}
-                            </h3>
-                            <p className="text-sm lg:text-base text-gray-600 line-clamp-2 leading-relaxed">{project.description}</p>
-                          </div>
-
-                          {/* Action Button with better positioning */}
-                          {isActive && isApproved && (
+                        {/* Admin Approve Button - Below Approval Status */}
+                        {isAdmin && !isApproved && project.id !== undefined && project.id !== null && (
+                          <div className="absolute top-12 right-2 z-20">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openVoteModal(project);
+                                handleApproveProject(BigInt(project.id));
                               }}
-                              className={`
-                                px-6 py-3 rounded-xl text-white font-medium shadow-lg transition-all duration-300 
-                                hover:shadow-xl hover:-translate-y-1 flex items-center space-x-2 text-base group/btn relative overflow-hidden
-                                bg-gradient-to-br from-blue-900/90 to-indigo-900/90 backdrop-blur-sm
-                                border border-blue-400/20 w-full lg:w-auto justify-center flex-shrink-0
-                              `}
+                              disabled={isApprovingProject}
+                              className="px-2 py-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium shadow-lg flex items-center space-x-1"
                             >
-                              <div className="relative z-10 flex items-center space-x-2">
-                                <Vote className="h-5 w-5 group-hover/btn:rotate-12 transition-transform duration-300" />
-                                <span>Cast Vote</span>
-                              </div>
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
-                              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                              {isApprovingProject ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  <span>Approving...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>Approve</span>
+                                </>
+                              )}
                             </button>
-                          )}
-                        </div>
-                        
-                        {/* Progress Bar with better spacing */}
-                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mt-4">
-                          <div 
-                            className={`h-full bg-gradient-to-r ${styling.bgGradient} transition-all duration-1000 rounded-full relative`}
-                            style={{ width: `${Math.min(75, (voteCount / (totalCampaignVotes || 1)) * 100)}%` }}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                          </div>
+                        )}
+
+                        {/* Project Content */}
+                        <div className="relative z-10 pt-6">
+                          {/* Project Logo - Centered and Bigger */}
+                          <div className="flex justify-center mb-4">
+                            <div className="relative">
+                              {projectLogo ? (
+                                <img 
+                                  src={formatIpfsUrl(projectLogo)} 
+                                  alt={`${project.name} logo`}
+                                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border-2 border-blue-200 shadow-md"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const fallback = target.nextSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div className={`w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-md border-2 border-blue-200 ${projectLogo ? 'hidden' : 'flex'}`}>
+                                {project.name?.charAt(0) || ''}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Project Info */}
+                          <div className="text-center mb-4">
+                            <h3 className="font-bold text-gray-800 text-base sm:text-lg truncate mb-2">
+                              {project.name || 'Untitled Project'}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3">
+                              {project.description}
+                            </p>
+                            
+                            {/* Vote Count Display */}
+                            <div className="mb-3">
+                              {project.id !== undefined && project.id !== null && (
+                                <ProjectVotes 
+                                  campaignId={campaignId} 
+                                  projectId={BigInt(project.id)} 
+                                  onVoteCountReceived={updateProjectVoteCount}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Vote Progress Bar */}
+                          <div className="mb-4">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs text-gray-500">Progress</span>
+                              <span className="text-xs text-gray-500">{voteProgress.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${voteProgress}%` }}
+                                transition={{ duration: 1, delay: index * 0.1 }}
+                                className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full relative"
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                              </motion.div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-col space-y-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (project?.id) {
+                                  navigate(`/explorer/project/${project.id}`);
+                                }
+                              }}
+                              className="w-full px-3 py-2 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 text-sm font-medium transition-all flex items-center justify-center space-x-2"
+                            >
+                              <Eye className="h-4 w-4" />
+                              <span>View Details</span>
+                            </button>
+
+                            {isActive && isApproved && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openVoteModal(project);
+                                }}
+                                className="w-full px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium shadow-lg transition-all flex items-center justify-center space-x-2"
+                              >
+                                <Vote className="h-4 w-4" />
+                                <span>Vote</span>
+                              </button>
+                            )}
                           </div>
                         </div>
-                      </div>
-
-                      {/* Explore Arrow Button with better positioning */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (project?.id) {
-                            navigate(`/explorer/project/${project.id}`);
-                          }
-                        }}
-                        className="absolute bottom-4 right-4 p-2 rounded-full bg-white/80 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-300 group/arrow shadow-md"
-                      >
-                        <ArrowLeft className="h-4 w-4 transform rotate-180 group-hover/arrow:translate-x-1 transition-transform duration-300" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                      </motion.div>
+                    );
+                  })}
+              </AnimatePresence>
+            </motion.div>
           </div>
 
           {/* Enhanced Empty State */}
@@ -1697,86 +1711,13 @@ export default function CampaignView() {
 
         {/* Add Projects Modal */}
         {showAddProjectModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddProjectModal(false)} />
-            <div className="relative bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                  Add Projects to Campaign
-                </h3>
-                <button
-                  onClick={() => setShowAddProjectModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-300"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-
-              {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Project List */}
-              <div className="space-y-4">
-                {allProjects?.filter(project => {
-                  const formatted = formatProjectForDisplay(project);
-                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-                }).map(project => {
-                  const formatted = formatProjectForDisplay(project);
-                  if (!formatted) return null;
-
-                  return (
-                    <div
-                      key={formatted.id}
-                      className="flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all duration-300"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold">
-                          {formatted.name?.charAt(0) || ''}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-gray-800">{formatted.name}</h4>
-                          <p className="text-sm text-gray-600 line-clamp-1">{formatted.description}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleAddToCampaign(BigInt(formatted.id))}
-                        disabled={isAddingProject}
-                        className={`px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 ${
-                          isAddingProject ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        {isAddingProject ? (
-                          <>
-                            <Loader2 className="h-4 animate-spin" />
-                            <span>Adding...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-4 w-4" />
-                            <span>Add</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
-
-                {allProjects?.filter(project => {
-                  const formatted = formatProjectForDisplay(project);
-                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-                }).length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">📋</div>
-                    <h4 className="text-lg font-bold text-gray-800 mb-2">No Available Projects</h4>
-                    <p className="text-gray-600 text-sm">All existing projects are already part of this campaign.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <AddProjectsToCampaignModal
+            isOpen={showAddProjectModal}
+            onClose={() => setShowAddProjectModal(false)}
+            campaignId={campaignId.toString()}
+            campaignName={campaign.name || 'Untitled Campaign'}
+            onSuccess={refetchAllData}
+          />
         )}
 
       {showVoteModal && selectedProject && (
