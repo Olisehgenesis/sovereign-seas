@@ -44,6 +44,7 @@ interface AddProjectsToCampaignModalProps {
   onClose: () => void;
   campaignId: string;
   campaignName: string;
+  onSuccess?: () => void;
 }
 
 interface ProjectCardProps {
@@ -52,12 +53,13 @@ interface ProjectCardProps {
   isLoading: boolean;
   isInCampaign?: boolean;
   status?: string;
+  disabled?: boolean;
 }
 
 const PARTICIPATION_FEE = '1.0'; // 1 CELO
 const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, onAdd, isLoading, isInCampaign = false, status }) => {
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onAdd, isLoading, isInCampaign = false, status, disabled }) => {
   const getProjectLogo = (project: any) => {
     try {
       if (project.additionalDataParsed?.logo) return project.additionalDataParsed.logo;
@@ -161,7 +163,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onAdd, isLoading, is
          <div className="flex gap-2">
            <button
              onClick={() => onAdd(project.id.toString())}
-             disabled={isLoading}
+             disabled={isLoading || disabled}
              className="flex-1 p-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group/btn relative overflow-hidden shadow-md hover:shadow-lg"
            >
              {isLoading ? (
@@ -191,51 +193,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onAdd, isLoading, is
  );
 };
 
-const FeeNotice: React.FC = () => (
- <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 mb-8">
-   <div className="flex items-start gap-4">
-     <div className="p-3 bg-amber-100 rounded-xl">
-       <DollarSign className="w-6 h-6 text-amber-600" />
-     </div>
-     <div className="flex-1">
-       <h4 className="font-bold text-amber-900 text-lg mb-2 flex items-center gap-2">
-         Project Addition Fee
-         <Info className="w-4 h-4 text-amber-600" />
-       </h4>
-       <p className="text-amber-800 mb-4 leading-relaxed">
-         Adding a project to a campaign requires a <span className="font-bold">{PARTICIPATION_FEE} CELO</span> fee to prevent spam and ensure serious participation.
-       </p>
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-         <div className="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-amber-100">
-           <Shield className="w-5 h-5 text-amber-600" />
-           <div>
-             <p className="font-semibold text-amber-900 text-sm">Quality Control</p>
-             <p className="text-amber-700 text-xs">Prevents spam submissions</p>
-           </div>
-         </div>
-         <div className="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-amber-100">
-           <Gift className="w-5 h-5 text-amber-600" />
-           <div>
-             <p className="font-semibold text-amber-900 text-sm">Boosts Prize Pool</p>
-             <p className="text-amber-700 text-xs">Fees contribute to rewards</p>
-           </div>
-         </div>
-       </div>
-     </div>
-   </div>
- </div>
-);
-
 const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({ 
  isOpen, 
  onClose, 
  campaignId, 
- campaignName 
+ campaignName, 
+ onSuccess 
 }) => {
  const { address, isConnected } = useAccount();
  const [error, setError] = useState<string | null>(null);
- const [searchTerm, setSearchTerm] = useState('');
- const [sortBy, setSortBy] = useState<'name' | 'created' | 'campaigns'>('name');
+ const [addingProjectId, setAddingProjectId] = useState<string | null>(null);
+ const [successProjectId, setSuccessProjectId] = useState<string | null>(null);
 
  // Hooks
  const { projects: allProjects, isLoading: isLoadingProjects } = useAllProjects(contractAddress);
@@ -243,61 +211,37 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
 
  // Get projects already in campaign (from campaign participation)
  const campaignProjects = useMemo(() => {
-   if (!allProjects) return [];
-   
+   if (!allProjects || !address) return [];
    return allProjects.filter(projectDetails => {
      const formatted = formatProjectForDisplay(projectDetails);
-     return formatted && projectDetails.project.campaignIds.some(cId => 
-       BigInt(cId) === BigInt(campaignId)
-     );
+     return formatted && 
+       projectDetails.project.owner.toLowerCase() === address.toLowerCase() &&
+       projectDetails.project.campaignIds.some(cId => 
+         BigInt(cId) === BigInt(campaignId)
+       );
    });
- }, [allProjects, campaignId]);
+ }, [allProjects, campaignId, address]);
 
  // Get available projects (not in campaign)
  const availableProjects = useMemo(() => {
-   if (!allProjects) return [];
-   
+   if (!allProjects || !address) return [];
    return allProjects.filter(projectDetails => {
      const formatted = formatProjectForDisplay(projectDetails);
-     return formatted && !projectDetails.project.campaignIds.some(cId => 
-       BigInt(cId) === BigInt(campaignId)
-     );
+     return formatted && 
+       projectDetails.project.owner.toLowerCase() === address.toLowerCase() &&
+       !projectDetails.project.campaignIds.some(cId => 
+         BigInt(cId) === BigInt(campaignId)
+       );
    });
- }, [allProjects, campaignId]);
-
- const filteredAndSortedAvailableProjects = useMemo(() => {
-   let filtered = availableProjects.map(formatProjectForDisplay).filter(Boolean);
-
-   // Apply search filter
-   if (searchTerm) {
-     filtered = filtered.filter(project => 
-       project?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       project?.description?.toLowerCase().includes(searchTerm.toLowerCase())
-     );
-   }
-
-   // Apply sorting
-   filtered.sort((a, b) => {
-     if (!a || !b) return 0;
-     
-     switch (sortBy) {
-       case 'name':
-         return (a.name || '').localeCompare(b.name || '');
-       case 'created':
-         return Number(b.createdAt || 0) - Number(a.createdAt || 0);
-       case 'campaigns':
-         return (b.campaignIds?.length || 0) - (a.campaignIds?.length || 0);
-       default:
-         return 0;
-     }
-   });
-
-   return filtered;
- }, [availableProjects, searchTerm, sortBy]);
+ }, [allProjects, campaignId, address]);
 
  const campaignProjectsFormatted = useMemo(() => {
    return campaignProjects.map(formatProjectForDisplay).filter(Boolean);
  }, [campaignProjects]);
+
+ const availableProjectsFormatted = useMemo(() => {
+   return availableProjects.map(formatProjectForDisplay).filter(Boolean);
+ }, [availableProjects]);
 
  // Handlers
  const handleAddProject = async (projectId: string) => {
@@ -305,12 +249,10 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
      setError('Please connect your wallet to add projects to campaigns.');
      return;
    }
-
    try {
      setError(null);
-     
+     setAddingProjectId(projectId);
      const feeTokenAddress = import.meta.env.VITE_CELO_TOKEN;
-     
      await addProjectToCampaign({
        campaignId: BigInt(campaignId),
        projectId: BigInt(projectId),
@@ -318,17 +260,22 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
        feeAmount: BigInt('1000000000000000000'), // 1 CELO in wei
        shouldPayFee: true
      });
-     
+     setSuccessProjectId(projectId);
+     setTimeout(() => {
+       setAddingProjectId(null);
+       setSuccessProjectId(null);
+       onClose();
+       if (onSuccess) {
+         onSuccess();
+       }
+     }, 1200);
    } catch (err: any) {
-     console.error('Error adding project to campaign:', err);
-     
      let errorMessage = 'Failed to add project to campaign. Please try again.';
-     
      if (err?.message) {
        if (err.message.includes('user rejected')) {
          errorMessage = 'Transaction was rejected. No fees were charged.';
        } else if (err.message.includes('insufficient funds')) {
-         errorMessage = `Insufficient CELO balance. You need at least ${PARTICIPATION_FEE} CELO to add a project.`;
+         errorMessage = `Insufficient CELO balance. You need at least 1.0 CELO to add a project.`;
        } else if (err.message.includes('Campaign has ended')) {
          errorMessage = 'This campaign has already ended.';
        } else if (err.message.includes('Project already in campaign')) {
@@ -337,8 +284,8 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
          errorMessage = err.message;
        }
      }
-     
      setError(errorMessage);
+     setAddingProjectId(null);
    }
  };
 
@@ -356,14 +303,6 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
        >
          <div className="fixed inset-0 bg-gradient-to-br from-blue-900/60 via-indigo-900/60 to-purple-900/60 backdrop-blur-sm" />
        </Transition.Child>
-
-       {/* Animated background elements */}
-       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-         <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-gradient-to-r from-blue-400/10 to-cyan-400/10 animate-pulse blur-3xl"></div>
-         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-indigo-400/10 to-purple-400/10 animate-pulse blur-3xl"></div>
-         <div className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full bg-gradient-to-r from-purple-400/10 to-pink-400/10 animate-pulse blur-3xl"></div>
-       </div>
-
        <div className="fixed inset-0 overflow-y-auto">
          <div className="flex min-h-full items-center justify-center p-4">
            <Transition.Child
@@ -375,57 +314,38 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
              leaveFrom="opacity-100 scale-100 translate-y-0"
              leaveTo="opacity-0 scale-95 -translate-y-10"
            >
-             <Dialog.Panel className="w-full max-w-6xl transform overflow-hidden rounded-3xl bg-white/95 backdrop-blur-xl text-left align-middle shadow-2xl transition-all border border-blue-200/50 relative max-h-[90vh] flex flex-col">
-               {/* Decorative elements */}
-               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-indigo-500 via-purple-500 to-pink-500"></div>
-               <div className="absolute top-2 left-6 w-4 h-4 bg-blue-400 rounded-full animate-pulse"></div>
-               <div className="absolute top-2 right-20 w-3 h-3 bg-purple-400 rounded-full animate-pulse delay-100"></div>
-               <div className="absolute top-4 right-32 w-2 h-2 bg-pink-400 rounded-full animate-pulse delay-200"></div>
-               
+             <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-3xl bg-white/95 backdrop-blur-xl text-left align-middle shadow-2xl transition-all border border-blue-200/50 relative max-h-[90vh] flex flex-col">
                {/* Close button */}
                <button
                  onClick={onClose}
                  className="absolute top-6 right-6 z-10 text-gray-400 hover:text-gray-600 hover:rotate-90 transition-all duration-300 p-2 rounded-full hover:bg-gray-100/80 backdrop-blur-sm"
+                 disabled={!!addingProjectId}
+                 aria-disabled={!!addingProjectId}
                >
                  <X className="h-6 w-6" />
                </button>
-
                {/* Header */}
-               <div className="p-8 pb-6">
-                 <Dialog.Title className="flex items-center gap-4 mb-4">
+               <div className="p-8 pb-4">
+                 <Dialog.Title className="flex items-center gap-4 mb-2">
                    <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
                      <Target className="h-8 w-8 text-white" />
                    </div>
                    <div>
-                     <h3 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                     <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
                        Add Projects to Campaign
                      </h3>
-                     <p className="text-gray-600 text-lg">
-                       Add projects to <span className="font-semibold text-blue-600">{campaignName}</span>
+                     <p className="text-gray-600 text-base">
+                       {campaignName}
                      </p>
                    </div>
                  </Dialog.Title>
                </div>
-
-               {/* Scrollable Content */}
                <div className="flex-1 overflow-y-auto px-8 pb-8">
-                 {/* Fee Notice */}
-                 <FeeNotice />
-
                  {/* Projects already in campaign */}
                  {campaignProjectsFormatted.length > 0 && (
-                   <div className="mb-10">
-                     <div className="flex items-center gap-3 mb-6">
-                       <div className="p-2 bg-emerald-100 rounded-lg">
-                         <CheckCircle className="h-5 w-5 text-emerald-600" />
-                       </div>
-                       <h4 className="text-2xl font-bold text-gray-900">Projects in Campaign</h4>
-                       <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                         {campaignProjectsFormatted.length} project{campaignProjectsFormatted.length !== 1 ? 's' : ''}
-                       </span>
-                     </div>
-                     
-                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                   <div className="mb-6">
+                     <h4 className="text-lg font-bold text-gray-900 mb-2">Projects in Campaign</h4>
+                     <div className="grid grid-cols-1 gap-4">
                        {campaignProjectsFormatted.map((project) => (
                          <ProjectCard
                            key={project?.id}
@@ -439,131 +359,84 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
                      </div>
                    </div>
                  )}
-
                  {/* Error Message */}
                  {error && (
-                   <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 rounded-2xl p-6 mb-8 shadow-sm">
-                     <div className="flex items-start gap-4">
-                       <div className="p-2 bg-red-100 rounded-lg">
-                         <AlertTriangle className="h-5 w-5 text-red-600" />
-                       </div>
+                   <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-4">
+                     <div className="flex items-start gap-2">
+                       <AlertTriangle className="h-5 w-5 text-red-600" />
                        <div>
-                         <p className="font-bold text-red-900 mb-2">Transaction Failed</p>
-                         <p className="text-red-700 leading-relaxed">{error}</p>
+                         <p className="font-bold text-red-900 mb-1">Transaction Failed</p>
+                         <p className="text-red-700 text-sm">{error}</p>
                        </div>
                      </div>
                    </div>
                  )}
-
                  {/* Loading State */}
                  {isLoadingProjects ? (
-                   <div className="flex flex-col items-center justify-center py-16">
-                     <div className="relative mb-6">
-                       <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                       <Ship className="h-8 w-8 text-blue-600 absolute inset-0 m-auto animate-pulse" />
-                     </div>
-                     <h4 className="text-xl font-bold text-gray-900 mb-2">Loading Projects</h4>
-                     <p className="text-gray-600">Discovering available projects...</p>
+                   <div className="flex flex-col items-center justify-center py-12">
+                     <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                     <h4 className="text-lg font-bold text-gray-900 mb-1">Loading Projects</h4>
                    </div>
-                 ) : availableProjects.length === 0 ? (
-                   <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-12 text-center border-2 border-gray-200">
-                     <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                       <Trophy className="h-12 w-12 text-blue-500" />
-                     </div>
-                     <h4 className="text-2xl font-bold text-gray-900 mb-4">
-                       All Projects Added!
+                 ) : !isConnected ? (
+                   <div className="bg-amber-50 rounded-2xl p-8 text-center border-2 border-amber-200">
+                     <h4 className="text-lg font-bold text-amber-900 mb-2">
+                       Wallet Not Connected
                      </h4>
-                     <p className="text-gray-600 mb-8 text-lg leading-relaxed max-w-md mx-auto">
-                       All available projects are already participating in this campaign.
+                     <p className="text-amber-800 mb-2 text-base">
+                       Please connect your wallet to add your projects to this campaign.
                      </p>
                    </div>
-                 ) : (
-                   <div className="space-y-8">
-                     {/* Search and Filters */}
-                     <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-sm">
-                       <div className="flex flex-col lg:flex-row gap-4">
-                         {/* Search */}
-                         <div className="flex-1">
-                           <div className="relative">
-                             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                             <input
-                               type="text"
-                               placeholder="Search projects..."
-                               value={searchTerm}
-                               onChange={(e) => setSearchTerm(e.target.value)}
-                               className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 bg-white/80"
-                             />
-                           </div>
-                         </div>
-                         
-                         {/* Sort */}
-                         <div className="relative">
-                           <select
-                             value={sortBy}
-                             onChange={(e) => setSortBy(e.target.value as 'name' | 'created' | 'campaigns')}
-                             className="appearance-none pl-4 pr-10 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 bg-white/80 font-medium"
-                           >
-                             <option value="name">Sort by Name</option>
-                             <option value="created">Sort by Created Date</option>
-                             <option value="campaigns">Sort by Campaign Count</option>
-                           </select>
-                           <SortDesc className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                         </div>
-                       </div>
-                     </div>
-
-                     {/* Available Projects Header */}
-                     <div className="flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                         <div className="p-2 bg-blue-100 rounded-lg">
-                           <Plus className="h-5 w-5 text-blue-600" />
-                         </div>
-                         <h4 className="text-2xl font-bold text-gray-900">Available Projects</h4>
-                       </div>
-                       <div className="flex items-center gap-2 text-sm text-gray-600">
-                         <BarChart3 className="h-4 w-4" />
-                         <span>{filteredAndSortedAvailableProjects.length} project{filteredAndSortedAvailableProjects.length !== 1 ? 's' : ''} available</span>
-                       </div>
-                     </div>
-                     
-                     {/* Project Grid */}
-                     {filteredAndSortedAvailableProjects.length === 0 ? (
-                       <div className="text-center py-12">
-                         <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                         <h5 className="text-lg font-semibold text-gray-600 mb-2">No projects match your criteria</h5>
-                         <p className="text-gray-500">Try adjusting your search terms</p>
-                       </div>
-                     ) : (
-                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                         {filteredAndSortedAvailableProjects.map((project) => (
-                           <ProjectCard
-                             key={project?.id}
-                             project={project}
-                             onAdd={handleAddProject}
-                             isLoading={isAddingProject}
-                           />
-                         ))}
-                       </div>
+                 ) : availableProjectsFormatted.length === 0 ? (
+                   <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-gray-200">
+                     <h4 className="text-lg font-bold text-gray-900 mb-2">
+                       {campaignProjectsFormatted.length > 0 ? 'All Your Projects Added!' : 'No Projects Found'}
+                     </h4>
+                     <p className="text-gray-600 mb-2 text-base">
+                       {campaignProjectsFormatted.length > 0 
+                         ? 'All your available projects are already participating in this campaign.'
+                         : 'You don\'t have any projects yet. Create a project first to add it to campaigns.'
+                       }
+                     </p>
+                     {campaignProjectsFormatted.length === 0 && (
+                       <a 
+                         href="/app/project/start" 
+                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all duration-300"
+                       >
+                         <Plus className="w-4 h-4" />
+                         Create Project
+                       </a>
                      )}
+                   </div>
+                 ) : (
+                   <div>
+                     <h4 className="text-lg font-bold text-gray-900 mb-2">Available Projects</h4>
+                     <div className="grid grid-cols-1 gap-4">
+                       {availableProjectsFormatted.map((project) => (
+                         <ProjectCard
+                           key={project?.id}
+                           project={project}
+                           onAdd={handleAddProject}
+                           isLoading={addingProjectId === project?.id}
+                           isInCampaign={false}
+                           status={successProjectId === project?.id ? 'Added!' : undefined}
+                           disabled={!!addingProjectId && addingProjectId !== project?.id}
+                         />
+                       ))}
+                     </div>
                    </div>
                  )}
                </div>
-
                {/* Footer */}
-               <div className="border-t border-gray-200 bg-gray-50/80 backdrop-blur-sm p-6">
-                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                     <Info className="h-4 w-4" />
-                     <span>Projects need approval from campaign admins before accepting votes</span>
-                   </div>
-                   <div className="flex items-center gap-3">
-                     <button
-                       onClick={onClose}
-                       className="px-6 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
-                     >
-                       Close
-                     </button>
-                   </div>
+               <div className="border-t border-gray-200 bg-gray-50/80 backdrop-blur-sm p-4">
+                 <div className="flex items-center justify-end">
+                   <button
+                     onClick={onClose}
+                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                     disabled={!!addingProjectId}
+                     aria-disabled={!!addingProjectId}
+                   >
+                     Close
+                   </button>
                  </div>
                </div>
              </Dialog.Panel>

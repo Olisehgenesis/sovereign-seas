@@ -43,8 +43,9 @@ import { type AbiFunction } from 'viem';
 
 import { useCampaignDetails, useApproveProject, useAddCampaignAdmin, useDistributeFunds, useIsCampaignAdmin, useSortedProjects, useParticipation } from '@/hooks/useCampaignMethods';
 import VoteModal from '@/components/voteModal';
+import AddProjectsToCampaignModal from '@/components/AddProjectsToCampaignModal';
 import { getProjectVotesByCampaignId } from './voteutils';
-import { useAllProjects, formatProjectForDisplay, useAddProjectToCampaign, useCanBypassFees } from '@/hooks/useProjectMethods';
+import { useAllProjects, formatProjectForDisplay, useCanBypassFees } from '@/hooks/useProjectMethods';
 import {
   useVote,
   useUserTotalVotesInCampaign,
@@ -252,9 +253,9 @@ export default function CampaignView() {
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'approved' | 'pending'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isVoting, setIsVoting] = useState(false);
   const [expandedDescription, setExpandedDescription] = useState(false);
+  const [approveError, setApproveError] = useState<string | null>(null);
+  const [showApproveHelp, setShowApproveHelp] = useState<string | null>(null);
   
   // Add update function for vote counts
   const updateProjectVoteCount = useCallback((projectId: string, voteCount: bigint) => {
@@ -318,7 +319,6 @@ export default function CampaignView() {
   );
 
   // FIXED: Always call project management hooks
-  const { addProjectToCampaign, isPending: isAddingProject } = useAddProjectToCampaign(contractAddress);
   const { isAdmin: canBypassFees } = useCanBypassFees(contractAddress, campaignId);
   const { approveProject, isPending: isApprovingProject } = useApproveProject(contractAddress);
 
@@ -644,68 +644,19 @@ export default function CampaignView() {
     return filtered;
   }, [sortedProjects, activeTab, searchTerm]);
 
-  // Add handler for adding project to campaign
-  const handleAddToCampaign = async (projectId: bigint) => {
-    if (!isConnected || !address) {
-      setError('Please connect your wallet to add projects to campaigns.');
-      return;
-    }
-
-    try {
-      setError(null);
-      
-      const feeToken = import.meta.env.VITE_CELO_TOKEN;
-      
-      await addProjectToCampaign({
-        campaignId,
-        projectId,
-        feeToken,
-        shouldPayFee: !canBypassFees
-      });
-      
-      setShowAddProjectModal(false);
-      // Refetch data after adding project
-      setTimeout(() => {
-        refetchAllData();
-      }, 2000);
-      
-    } catch (err: any) {
-      console.error('Error adding project to campaign:', err);
-      
-      let errorMessage = 'Failed to add project to campaign. Please try again.';
-      
-      if (err?.message) {
-        if (err.message.includes('user rejected')) {
-          errorMessage = 'Transaction was rejected. No fees were charged.';
-        } else if (err.message.includes('insufficient funds')) {
-          errorMessage = 'Insufficient CELO balance to pay the fee.';
-        } else if (err.message.includes('Campaign has ended')) {
-          errorMessage = 'This campaign has already ended.';
-        } else if (err.message.includes('Project already in campaign')) {
-          errorMessage = 'This project is already participating in this campaign.';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      setError(errorMessage);
-    }
-  };
-
   // Handle project approval with refetch
   const handleApproveProject = async (projectId: bigint) => {
+    setApproveError(null);
     try {
       await approveProject({
         campaignId,
         projectId
       });
-      
-      // Refetch data after approval
       setTimeout(() => {
         refetchAllData();
-      }, 2000); // Wait for transaction to be mined
-      
-    } catch (error) {
+      }, 2000);
+    } catch (error: any) {
+      setApproveError(projectId.toString());
       console.error('Error approving project:', error);
     }
   };
@@ -1439,26 +1390,55 @@ export default function CampaignView() {
 
                       {/* Admin Approve Button */}
                       {isAdmin && !isApproved && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleApproveProject(BigInt(project.id));
-                          }}
-                          disabled={isApprovingProject}
-                          className="px-3 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
-                        >
-                          {isApprovingProject ? (
-                            <>
-                              <Loader2 className="h-4 animate-spin" />
-                              <span>Approving...</span>
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4" />
-                              <span>Approve</span>
-                            </>
+                        <div className="flex flex-col items-end space-y-1">
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApproveProject(BigInt(project.id));
+                              }}
+                              disabled={isApprovingProject}
+                              className="px-3 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
+                            >
+                              {isApprovingProject ? (
+                                <>
+                                  <Loader2 className="h-4 animate-spin" />
+                                  <span>Approving...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span>Approve</span>
+                                </>
+                              )}
+                            </button>
+                            {/* Help icon */}
+                            <button
+                              type="button"
+                              className="ml-1 p-1 rounded-full bg-white border border-blue-200 hover:bg-blue-50 text-blue-500"
+                              title="Help: Approving from CeloScan"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowApproveHelp(project.id?.toString() === showApproveHelp ? null : project.id?.toString());
+                              }}
+                            >
+                              <span style={{fontWeight: 'bold', fontSize: '1.1em'}}>?</span>
+                            </button>
+                          </div>
+                          {/* Info message: show if error for this project or help icon is toggled */}
+                          {(approveError === project.id?.toString() || showApproveHelp === project.id?.toString()) && (
+                            <div className="mt-2 p-3 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-900 text-xs max-w-xs shadow">
+                              <div className="font-bold mb-1 flex items-center">
+                                <span className="mr-1">⚠️</span> Trouble Approving?
+                              </div>
+                              <div>
+                                If you encounter an error while approving, you can try approving the project directly from CeloScan.<br/>
+                                Go to the contract's Write page and use the <b>approveProject</b> function.<br/>
+                                <a href="https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#writeContract" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Open CeloScan</a>
+                              </div>
+                            </div>
                           )}
-                        </button>
+                        </div>
                       )}
                     </div>
 
@@ -1588,86 +1568,13 @@ export default function CampaignView() {
 
         {/* Add Projects Modal */}
         {showAddProjectModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddProjectModal(false)} />
-            <div className="relative bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                  Add Projects to Campaign
-                </h3>
-                <button
-                  onClick={() => setShowAddProjectModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-300"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-
-              {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Project List */}
-              <div className="space-y-4">
-                {allProjects?.filter(project => {
-                  const formatted = formatProjectForDisplay(project);
-                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-                }).map(project => {
-                  const formatted = formatProjectForDisplay(project);
-                  if (!formatted) return null;
-
-                  return (
-                    <div
-                      key={formatted.id}
-                      className="flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all duration-300"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold">
-                          {formatted.name?.charAt(0) || ''}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-gray-800">{formatted.name}</h4>
-                          <p className="text-sm text-gray-600 line-clamp-1">{formatted.description}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleAddToCampaign(BigInt(formatted.id))}
-                        disabled={isAddingProject}
-                        className={`px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 ${
-                          isAddingProject ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        {isAddingProject ? (
-                          <>
-                            <Loader2 className="h-4 animate-spin" />
-                            <span>Adding...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-4 w-4" />
-                            <span>Add</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
-
-                {allProjects?.filter(project => {
-                  const formatted = formatProjectForDisplay(project);
-                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
-                }).length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="text-4xl mb-4">📋</div>
-                    <h4 className="text-lg font-bold text-gray-800 mb-2">No Available Projects</h4>
-                    <p className="text-gray-600 text-sm">All existing projects are already part of this campaign.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <AddProjectsToCampaignModal
+            isOpen={showAddProjectModal}
+            onClose={() => setShowAddProjectModal(false)}
+            campaignId={campaignId.toString()}
+            campaignName={campaignDetails?.campaign?.name || 'Untitled Campaign'}
+            onSuccess={refetchAllData}
+          />
         )}
 
       {showVoteModal && selectedProject && (

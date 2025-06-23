@@ -7,13 +7,7 @@ import { getDataSuffix, submitReferral } from '@divvi/referral-sdk'
 import { waitForTransactionReceipt } from 'viem/actions'
 import { useVerifyCeloToken } from './useVotingMethods'
 
-
-
-
 const projectInterface = new Interface(abi)
-const {
-  sendTransactionAsync
-} = useSendTransaction()
 
 // Get the same dataSuffix used in voting
 const dataSuffix = getDataSuffix({
@@ -298,14 +292,15 @@ export function useTransferProjectOwnership(contractAddress: Address) {
 
 // FIXED: Hook for adding project to campaign
 export function useAddProjectToCampaign(contractAddress: Address) {
-  const {  isPending, isError, error, isSuccess } = useWriteContract()
+  const { writeContractAsync } = useWriteContract()
+  const { sendTransactionAsync } = useSendTransaction()
 
   const addProjectToCampaign = async ({
     campaignId,
     projectId,
     feeToken,
     feeAmount = 1000000000000000000n, 
-    shouldPayFee = true // Pass whether fee should be paid from component
+    shouldPayFee = true
   }: {
     campaignId: bigint
     projectId: bigint
@@ -314,47 +309,80 @@ export function useAddProjectToCampaign(contractAddress: Address) {
     shouldPayFee?: boolean
   }) => {
     try {
+      console.log('Parameters:', {
+        campaignId,
+        projectId,
+        feeToken,
+        feeAmount
+      })
+
+      // Check if fee token is CELO (native token) - no approval needed
+      const isCeloToken = feeToken.toLowerCase() === '0x471ece3750da237f93b8e339c536989b8978a438'; // CELO token address
       
-      const value = feeAmount;
-      //ask for approval of feeToken
-      const approveData = projectInterface.encodeFunctionData('approve', [contractAddress, value])
-      const sendappove = approveData + dataSuffix;
-      const approveTx = await sendTransactionAsync({
-        to: feeToken,
-        data: sendappove as `0x${string}`,
-      });
-      if (!approveTx) {
-        throw new Error('Transaction failed to send');
+      if (!isCeloToken) {
+        // Only approve if it's an ERC20 token (not CELO)
+        const erc20ABI = [
+          {
+            "inputs": [
+              {"name": "spender", "type": "address"},
+              {"name": "amount", "type": "uint256"}
+            ],
+            "name": "approve",
+            "outputs": [{"name": "", "type": "bool"}],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          }
+        ] as const;
+
+        console.log('Approving ERC20 token...');
+        const approveTx = await writeContractAsync({
+          address: feeToken,
+          abi: erc20ABI,
+          functionName: 'approve',
+          args: [contractAddress, feeAmount]
+        });
+        
+        console.log('Approve transaction sent:', approveTx);
+      } else {
+        console.log('Fee token is CELO (native), skipping approval');
       }
-      
-      
-    
 
-      const projectData = projectInterface.encodeFunctionData('addProjectToCampaign', [campaignId, projectId, feeToken])
+      // Encode the addProjectToCampaign function call with Divvi suffix
+      const projectData = projectInterface.encodeFunctionData('addProjectToCampaign', [
+        campaignId, 
+        projectId, 
+        feeToken
+      ]);
 
-      const celoChainId = 42220; // Celo mainnet chain ID
+      const celoChainId = 42220;
       const dataWithSuffix = projectData + dataSuffix;
 
-      //use divvi referral sdk to submit referral
-
+      // Send the main transaction
+      // If CELO, include the fee amount as value; if ERC20, value is 0
       const tx = await sendTransactionAsync({
-
         to: contractAddress,
         data: dataWithSuffix as `0x${string}`,
+        value: isCeloToken ? feeAmount : 0n
       });
 
       if (!tx) {
-        throw new Error('Transaction failed to send');
+        throw new Error('Main transaction failed to send');
       }
 
+      console.log('Main transaction sent:', tx);
+
+      // Submit the referral to Divvi
       try {
         await submitReferral({
           txHash: tx as unknown as `0x${string}`,
           chainId: celoChainId
         });
+        console.log('Referral submitted successfully');
       } catch (referralError) {
         console.error("Referral submission error:", referralError);
       }
+
+      return tx;
     } catch (err) {
       console.log("should pay fee", shouldPayFee)
       console.error('Error adding project to campaign:', err)
@@ -364,10 +392,10 @@ export function useAddProjectToCampaign(contractAddress: Address) {
 
   return {
     addProjectToCampaign,
-    isPending,
-    isError,
-    error,
-    isSuccess
+    isPending: false, // You can track state manually if needed
+    isError: false,
+    error: null,
+    isSuccess: false
   }
 }
 

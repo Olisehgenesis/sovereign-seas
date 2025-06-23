@@ -38,6 +38,7 @@ import { formatIpfsUrl } from '@/utils/imageUtils';
 
 // Real Self Protocol imports
 import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
+import { getUniversalLink } from '@selfxyz/core';
 import { v4 as uuidv4 } from 'uuid';
 
 // Get contract address from environment
@@ -942,76 +943,58 @@ useEffect(() => {
            <p className="text-sm text-gray-600 mb-6">
              Scan the QR code with the Self app to verify your identity. This will enable enhanced features and anti-Sybil protection in V3.
            </p>
-           
-           <div className="flex justify-center mb-6">
-             <SelfQRcodeWrapper
-               selfApp={new SelfAppBuilder({
-                 appName: "Sovereign Seas",
-                 scope: "sovereign-seas",
-                 endpoint: "https://auth.sovseas.xyz/api/verify",
-                 endpointType: "https",
-                 userId: userId || uuidv4(),
-                 disclosures: {
-                   name: true,
-                   date_of_birth: true,
-                   nationality: true,
-                   minimumAge: 18,
-                   ofac: true,
-                 }
-               }).build()}
-               onSuccess={async () => {
+
+           {/* Animated QR code container with deeplink button for Android */}
+           <DeeplinkQRCode userId={userId} address={address} onSuccess={async () => {
+             console.log('Verification successful');
+             setShowVerification(false);
+             setShowSuccessModal(true);
+             setVerificationStatus('loading');
+             
+             if (!address) {
+               setVerificationError('No wallet address found');
+               setVerificationStatus('error');
+               return;
+             }
+
+             try {
+               console.log('Starting verification process...');
+               const response = await fetch('https://auth.sovseas.xyz/api/verify-save', {
+                 method: 'POST',
+                 headers: {
+                   'Content-Type': 'application/json',
+                 },
+                 body: JSON.stringify({ 
+                   wallet: address,
+                   userId: userId,
+                   verificationStatus: true 
+                 }),
+               });
+
+               if (!response.ok) {
+                 throw new Error(`HTTP error! status: ${response.status}`);
+               }
+
+               const data = await response.json();
+               console.log('Verification response:', data);
+
+               if (data.success) {
                  console.log('Verification successful');
-                 setShowVerification(false);
-                 setShowSuccessModal(true);
-                 setVerificationStatus('loading');
-                 
-                 if (!address) {
-                   setVerificationError('No wallet address found');
-                   setVerificationStatus('error');
-                   return;
-                 }
-
-                 try {
-                   console.log('Starting verification process...');
-                   const response = await fetch('https://auth.sovseas.xyz/api/verify-save', {
-                     method: 'POST',
-                     headers: {
-                       'Content-Type': 'application/json',
-                     },
-                     body: JSON.stringify({ 
-                       wallet: address,
-                       userId: userId,
-                       verificationStatus: true 
-                     }),
-                   });
-
-                   if (!response.ok) {
-                     throw new Error(`HTTP error! status: ${response.status}`);
-                   }
-
-                   const data = await response.json();
-                   console.log('Verification response:', data);
-
-                   if (data.success) {
-                     console.log('Verification successful');
-                     setVerificationStatus('success');
-                     setVerificationError(null);
-                   } else {
-                     console.error('Verification failed:', data.error);
-                     setVerificationError(data.error || 'Verification failed. Please try again.');
-                     setVerificationStatus('error');
-                   }
-                 } catch (err) {
-                   console.error('Error during verification:', err);
-                   setVerificationError(err instanceof Error ? err.message : 'Failed to verify identity. Please try again.');
-                   setVerificationStatus('error');
-                 }
-               }}
-               size={250}
-             />
-           </div>
+                 setVerificationStatus('success');
+                 setVerificationError(null);
+               } else {
+                 console.error('Verification failed:', data.error);
+                 setVerificationError(data.error || 'Verification failed. Please try again.');
+                 setVerificationStatus('error');
+               }
+             } catch (err) {
+               console.error('Error during verification:', err);
+               setVerificationError(err instanceof Error ? err.message : 'Failed to verify identity. Please try again.');
+               setVerificationStatus('error');
+             }
+           }} />
            
-           <div className="text-center space-y-2">
+           <div className="text-center space-y-2 mt-4">
              <p className="text-xs text-gray-500">
                User ID: {userId.substring(0, 8)}...{userId.substring(userId.length - 6)}
              </p>
@@ -1027,4 +1010,55 @@ useEffect(() => {
    </div>
  </div>
 );
+}
+
+function DeeplinkQRCode({ userId, address, onSuccess }: { userId: string, address: string | undefined, onSuccess: () => void }) {
+  // Build the Self app and deeplink
+  const selfApp = useMemo(() => new SelfAppBuilder({
+    appName: "Sovereign Seas",
+    scope: "sovereign-seas",
+    endpoint: "https://auth.sovseas.xyz/api/verify",
+    endpointType: "https",
+    userId: userId,
+    disclosures: {
+      name: true,
+      date_of_birth: true,
+      nationality: true,
+      minimumAge: 18,
+      ofac: true,
+    }
+  }).build(), [userId]);
+
+  const deeplink = useMemo(() => getUniversalLink(selfApp), [selfApp]);
+
+  // Detect Android
+  const isAndroid = useMemo(() => typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent), []);
+
+  return (
+    <div className="flex flex-col items-center justify-center mb-6">
+      <div className="relative group transition-transform duration-300 hover:scale-105 focus-within:scale-105">
+        <div className="p-3 bg-gradient-to-br from-blue-100 via-white to-purple-100 rounded-2xl shadow-lg border border-blue-200 animate-pulse group-hover:animate-none transition-all">
+          <SelfQRcodeWrapper
+            selfApp={selfApp}
+            onSuccess={onSuccess}
+            size={250}
+          />
+        </div>
+        <div className="absolute -top-2 -right-2 animate-bounce">
+          <Shield className="h-6 w-6 text-blue-400 drop-shadow" />
+        </div>
+      </div>
+      {isAndroid && (
+        <a
+          href={deeplink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in"
+        >
+          <span role="img" aria-label="android" className="mr-2">🤖</span>
+          Click here to verify with Self app
+        </a>
+      )}
+    </div>
+  );
 }
