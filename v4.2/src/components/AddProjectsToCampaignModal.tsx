@@ -211,28 +211,32 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
 
  // Get projects already in campaign (from campaign participation)
  const campaignProjects = useMemo(() => {
-   if (!allProjects || !address) return [];
-   return allProjects.filter(projectDetails => {
-     const formatted = formatProjectForDisplay(projectDetails);
-     return formatted && 
-       projectDetails.project.owner.toLowerCase() === address.toLowerCase() &&
-       projectDetails.project.campaignIds.some(cId => 
-         BigInt(cId) === BigInt(campaignId)
-       );
-   });
+   // Always return an array, never early return
+   const projects = (allProjects && address) ?
+     allProjects.filter(projectDetails => {
+       const formatted = formatProjectForDisplay(projectDetails);
+       return formatted &&
+         projectDetails.project.owner.toLowerCase() === address.toLowerCase() &&
+         projectDetails.project.campaignIds.some(cId =>
+           BigInt(cId) === BigInt(campaignId)
+         );
+     }) : [];
+   return projects;
  }, [allProjects, campaignId, address]);
 
  // Get available projects (not in campaign)
  const availableProjects = useMemo(() => {
-   if (!allProjects || !address) return [];
-   return allProjects.filter(projectDetails => {
-     const formatted = formatProjectForDisplay(projectDetails);
-     return formatted && 
-       projectDetails.project.owner.toLowerCase() === address.toLowerCase() &&
-       !projectDetails.project.campaignIds.some(cId => 
-         BigInt(cId) === BigInt(campaignId)
-       );
-   });
+   // Always return an array, never early return
+   const projects = (allProjects && address) ?
+     allProjects.filter(projectDetails => {
+       const formatted = formatProjectForDisplay(projectDetails);
+       return formatted &&
+         projectDetails.project.owner.toLowerCase() === address.toLowerCase() &&
+         !projectDetails.project.campaignIds.some(cId =>
+           BigInt(cId) === BigInt(campaignId)
+         );
+     }) : [];
+   return projects;
  }, [allProjects, campaignId, address]);
 
  const campaignProjectsFormatted = useMemo(() => {

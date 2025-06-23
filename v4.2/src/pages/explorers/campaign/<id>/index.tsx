@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAccount, useReadContracts } from 'wagmi';
 import { formatEther, Address } from 'viem';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
   Trophy, 
@@ -37,15 +38,19 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
-  Calculator
+  Calculator,
+  TrendingUp,
+  Star,
+  Info,
+  Flame,
+  Activity
 } from 'lucide-react';
 import { type AbiFunction } from 'viem';
 
 import { useCampaignDetails, useApproveProject, useAddCampaignAdmin, useDistributeFunds, useIsCampaignAdmin, useSortedProjects, useParticipation } from '@/hooks/useCampaignMethods';
 import VoteModal from '@/components/voteModal';
-import AddProjectsToCampaignModal from '@/components/AddProjectsToCampaignModal';
 import { getProjectVotesByCampaignId } from './voteutils';
-import { useAllProjects, formatProjectForDisplay, useCanBypassFees } from '@/hooks/useProjectMethods';
+import { useAllProjects, formatProjectForDisplay, useAddProjectToCampaign, useCanBypassFees } from '@/hooks/useProjectMethods';
 import {
   useVote,
   useUserTotalVotesInCampaign,
@@ -253,9 +258,9 @@ export default function CampaignView() {
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'approved' | 'pending'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
   const [expandedDescription, setExpandedDescription] = useState(false);
-  const [approveError, setApproveError] = useState<string | null>(null);
-  const [showApproveHelp, setShowApproveHelp] = useState<string | null>(null);
   
   // Add update function for vote counts
   const updateProjectVoteCount = useCallback((projectId: string, voteCount: bigint) => {
@@ -319,6 +324,7 @@ export default function CampaignView() {
   );
 
   // FIXED: Always call project management hooks
+  const { addProjectToCampaign, isPending: isAddingProject } = useAddProjectToCampaign(contractAddress);
   const { isAdmin: canBypassFees } = useCanBypassFees(contractAddress, campaignId);
   const { approveProject, isPending: isApprovingProject } = useApproveProject(contractAddress);
 
@@ -644,19 +650,68 @@ export default function CampaignView() {
     return filtered;
   }, [sortedProjects, activeTab, searchTerm]);
 
+  // Add handler for adding project to campaign
+  const handleAddToCampaign = async (projectId: bigint) => {
+    if (!isConnected || !address) {
+      setError('Please connect your wallet to add projects to campaigns.');
+      return;
+    }
+
+    try {
+      setError(null);
+      
+      const feeToken = import.meta.env.VITE_CELO_TOKEN;
+      
+      await addProjectToCampaign({
+        campaignId,
+        projectId,
+        feeToken,
+        shouldPayFee: !canBypassFees
+      });
+      
+      setShowAddProjectModal(false);
+      // Refetch data after adding project
+      setTimeout(() => {
+        refetchAllData();
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error adding project to campaign:', err);
+      
+      let errorMessage = 'Failed to add project to campaign. Please try again.';
+      
+      if (err?.message) {
+        if (err.message.includes('user rejected')) {
+          errorMessage = 'Transaction was rejected. No fees were charged.';
+        } else if (err.message.includes('insufficient funds')) {
+          errorMessage = 'Insufficient CELO balance to pay the fee.';
+        } else if (err.message.includes('Campaign has ended')) {
+          errorMessage = 'This campaign has already ended.';
+        } else if (err.message.includes('Project already in campaign')) {
+          errorMessage = 'This project is already participating in this campaign.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
+    }
+  };
+
   // Handle project approval with refetch
   const handleApproveProject = async (projectId: bigint) => {
-    setApproveError(null);
     try {
       await approveProject({
         campaignId,
         projectId
       });
+      
+      // Refetch data after approval
       setTimeout(() => {
         refetchAllData();
-      }, 2000);
-    } catch (error: any) {
-      setApproveError(projectId.toString());
+      }, 2000); // Wait for transaction to be mined
+      
+    } catch (error) {
       console.error('Error approving project:', error);
     }
   };
@@ -690,27 +745,27 @@ export default function CampaignView() {
 
   if (!campaignDetails) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Animated background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/3 left-1/5 w-40 h-40 rounded-full bg-gradient-to-r from-blue-400/10 to-indigo-400/10 animate-float blur-3xl"></div>
-        </div>
-        
-        <div className="glass-morphism rounded-2xl p-8 shadow-xl max-w-md mx-auto text-center relative">
-          <div className="text-6xl mb-6 animate-wave">🌊</div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/80 backdrop-blur-lg rounded-2xl p-8 shadow-xl max-w-md mx-auto text-center border border-blue-100"
+        >
+          <div className="text-6xl mb-6">🌊</div>
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 mb-4">
             Campaign Not Found
           </h1>
-          <p className="text-gray-600 text-sm mb-6">This campaign doesn't exist in the Sovereign Seas.</p>
-          <button
+          <p className="text-gray-600 text-sm mb-6">This campaign doesn't exist in the voting arena.</p>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleBackToArena}
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium shadow-lg"
           >
-            <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
+            <ArrowLeft className="h-4 w-4 mr-2 inline" />
             Return to Arena
-            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </div>
     );
   }
@@ -1047,76 +1102,123 @@ export default function CampaignView() {
         {/* Main Content - Improved spacing and padding */}
         <div className="flex-1 p-4 lg:p-8 overflow-x-hidden">
           {/* Enhanced Header with better spacing */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center space-x-3 w-full sm:w-auto">
-              <button
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
+          >
+            <div className="flex items-center space-x-3">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleBackToArena}
-                className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+                className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-all"
               >
-                <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
-                <span className="hidden sm:inline">Return to Arena</span>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Back to Arena</span>
                 <span className="sm:hidden">Back</span>
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200 hover:shadow-lg transition-all gradient-border"
+                className="lg:hidden p-2 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200 shadow-sm"
               >
                 <Menu className="h-4 w-4 text-blue-600" />
-              </button>
+              </motion.button>
 
-              {/* Refresh Button */}
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={refetchAllData}
                 disabled={participationLoading || sortedProjectsLoading}
-                className="p-2 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200 hover:shadow-lg transition-all gradient-border flex items-center space-x-2"
+                className="p-2 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200 shadow-sm flex items-center space-x-2"
               >
-                <RotateCcw className={`h-4 w-4 text-blue-600 ${(participationLoading || sortedProjectsLoading) ? 'animate-spin' : ''}`} />
+                <motion.div
+                  animate={{ rotate: (participationLoading || sortedProjectsLoading) ? 360 : 0 }}
+                  transition={{ duration: 1, repeat: (participationLoading || sortedProjectsLoading) ? Infinity : 0, ease: "linear" }}
+                >
+                  <RotateCcw className="h-4 w-4 text-blue-600" />
+                </motion.div>
                 <span className="text-sm text-blue-600 hidden sm:inline">
                   {(participationLoading || sortedProjectsLoading) ? 'Refreshing...' : 'Refresh'}
                 </span>
-              </button>
+              </motion.button>
             </div>
             
-            <div className="flex items-center space-x-2 text-xs w-full sm:w-auto justify-between sm:justify-end">
-              <div className="flex items-center space-x-2 glass-morphism px-3 py-2 rounded-full shadow-sm animate-float">
+            <div className="flex items-center space-x-2 text-xs">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-xl shadow-sm border border-blue-100"
+              >
                 <Users className="h-3 w-3 text-blue-500" />
                 <span className="font-bold text-blue-600">{sortedProjects.length}</span>
                 <span className="text-gray-600 hidden sm:inline">Projects</span>
-              </div>
+              </motion.div>
               
-              <div className="flex items-center space-x-2 glass-morphism px-3 py-2 rounded-full shadow-sm animate-float-delay-1">
-                <Coins className="h-3 w-3 text-emerald-500" />
-                <span className="font-bold text-emerald-600">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-xl shadow-sm border border-green-100"
+              >
+                <Coins className="h-3 w-3 text-green-500" />
+                <span className="font-bold text-green-600">{parseFloat(formatEther(campaign.totalFunds)).toFixed(1)}</span>
                 <span className="text-gray-600 hidden sm:inline">CELO</span>
-              </div>
+              </motion.div>
 
-              {/* Admin indicator */}
               {isAdmin && (
-                <div className="flex items-center space-x-2 glass-morphism px-3 py-2 rounded-full shadow-sm animate-float-delay-2 bg-gradient-to-r from-purple-100 to-pink-100 border-purple-200">
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-pink-100 px-3 py-2 rounded-xl shadow-sm border border-purple-200"
+                >
                   <Shield className="h-3 w-3 text-purple-500" />
                   <span className="font-bold text-purple-600 hidden sm:inline">Admin</span>
-                </div>
+                </motion.div>
               )}
             </div>
-          </div>
+          </motion.div>
 
-          {/* Redesigned Campaign Header with better spacing and no cut-offs */}
-          <div className="glass-morphism rounded-xl p-4 sm:p-6 shadow-xl mb-6 sm:mb-8 relative overflow-hidden group hover:shadow-2xl transition-all hover:-translate-y-1 duration-500">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
-            
-            <div className="relative z-10">
-              {/* Top Row - Campaign Title and Status with improved mobile layout */}
-              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-6 flex-1 min-w-0">
-                  {/* Enhanced Campaign Logo - Mobile responsive sizing */}
-                  <div className="animate-float w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28 flex-shrink-0">
+          {/* COOL COMPACT CAMPAIGN HEADER */}
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="relative bg-gradient-to-r from-blue-400 via-blue-300 to-indigo-400 rounded-2xl shadow-2xl mb-8 overflow-hidden"
+          >
+            {/* Animated Background Pattern */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent"></div>
+              <motion.div 
+                animate={{ 
+                  backgroundPosition: ['0% 0%', '100% 100%'],
+                }}
+                transition={{ 
+                  duration: 20,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                  ease: 'linear'
+                }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
+                style={{
+                  backgroundSize: '200% 200%'
+                }}
+              />
+            </div>
+
+            <div className="relative z-10 p-6 lg:p-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-center space-x-4 lg:space-x-6 flex-1">
+                  {/* Glowing Campaign Logo */}
+                  <motion.div 
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="relative w-20 h-20 lg:w-24 lg:h-24 flex-shrink-0"
+                  >
+                    <div className="absolute inset-0 bg-white/20 rounded-2xl blur-xl animate-pulse"></div>
                     {campaignLogo ? (
                       <img 
                         src={formatIpfsUrl(campaignLogo)} 
                         alt={`${campaign.name} logo`}
-                        className="w-full h-full rounded-xl object-cover border-2 border-blue-200 shadow-md group-hover:border-blue-300 transition-colors duration-300"
+                        className="relative w-full h-full rounded-2xl object-cover border-2 border-white/30 shadow-2xl backdrop-blur-sm"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -1125,138 +1227,194 @@ export default function CampaignView() {
                         }}
                       />
                     ) : null}
-                    <div className={`w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl sm:text-2xl lg:text-3xl font-bold shadow-md border-2 border-blue-200 group-hover:border-blue-300 transition-colors duration-300 ${campaignLogo ? 'hidden' : 'flex'}`}>
-                      {campaign.name?.charAt(0) || ''}
+                    <div className={`relative w-full h-full bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white text-2xl lg:text-3xl font-bold shadow-2xl border-2 border-white/30 ${campaignLogo ? 'hidden' : 'flex'}`}>
+                      <motion.span
+                        animate={{ 
+                          textShadow: [
+                            '0 0 20px rgba(255,255,255,0.5)',
+                            '0 0 30px rgba(255,255,255,0.8)',
+                            '0 0 20px rgba(255,255,255,0.5)'
+                          ]
+                        }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        {campaign.name?.charAt(0) || '🚀'}
+                      </motion.span>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="flex-1 min-w-0 text-center sm:text-left">
-                    <div className="flex flex-col space-y-2 sm:space-y-3 mb-3">
-                      <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 truncate">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:gap-4 mb-3 lg:mb-4">
+                      {/* Glowing Campaign Title */}
+                      <motion.h1 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-2xl lg:text-3xl xl:text-4xl font-bold text-white truncate"
+                        style={{
+                          textShadow: '0 0 30px rgba(255,255,255,0.3)',
+                          fontSize: '1.5rem',
+                          lineHeight: '1.2',
+                          fontWeight: '700',
+                          letterSpacing: '-0.025em'
+                        }}
+                      >
                         {campaign.name || 'Untitled Campaign'}
-                      </h1>
+                      </motion.h1>
                       
-                      {/* Enhanced Add to Campaign Button - Responsive scaling */}
-                      {isActive && !hasEnded && (
-                        <button
-                          onClick={() => setShowAddProjectModal(true)}
-                          className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-4 md:py-2 lg:px-4 lg:py-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs sm:text-sm md:text-sm lg:text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-1 sm:space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center flex-shrink-0"
-                        >
-                          <Plus className="h-3 w-3 sm:h-4 sm:w-4 group-hover:rotate-90 transition-transform duration-300" />
-                          <span>Add Project</span>
-                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                        </button>
-                      )}
-
-                      {/* Admin Panel Button - Responsive scaling */}
-                      {isAdmin && (
-                        <button
-                          onClick={handleAdminPanel}
-                          className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-4 md:py-2 lg:px-4 lg:py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white text-xs sm:text-sm md:text-sm lg:text-sm font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-1 sm:space-x-2 group relative overflow-hidden w-full sm:w-auto justify-center flex-shrink-0"
-                        >
-                          <Settings className="h-3 w-3 sm:h-4 sm:w-4 group-hover:rotate-12 transition-transform duration-300" />
-                          <span>Admin Panel</span>
-                          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                        </button>
-                      )}
-                    </div>
-                    
-                    {/* Enhanced Description with better mobile spacing */}
-                    <div className="mb-4">
-                      <div className="relative">
-                        <p className={`text-sm lg:text-base text-gray-600 leading-relaxed ${!expandedDescription ? 'line-clamp-2' : ''}`}>
-                          {campaign.description}
-                        </p>
-                        {campaign.description && campaign.description.length > 100 && (
-                          <button
-                            onClick={() => setExpandedDescription(!expandedDescription)}
-                            className="text-blue-600 text-xs font-medium mt-2 hover:text-blue-700 transition-colors duration-300 flex items-center space-x-1"
+                      {/* Floating Action Buttons */}
+                      <div className="flex flex-row gap-3">
+                        {isActive && !hasEnded && (
+                          <motion.button
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowAddProjectModal(true)}
+                            className="px-4 py-2 lg:px-6 lg:py-3 rounded-xl bg-white/20 backdrop-blur-md text-white text-sm lg:text-base font-medium shadow-xl border border-white/30 flex items-center space-x-2 hover:bg-white/30 transition-all"
                           >
-                            <span>{expandedDescription ? 'Show Less' : 'Show More'}</span>
-                            {expandedDescription ? (
-                              <ChevronUp className="h-3 w-3" />
-                            ) : (
-                              <ChevronDown className="h-3 w-3" />
-                            )}
-                          </button>
+                            <Plus className="h-4 w-4 lg:h-5 lg:w-5" />
+                            <span>Add Project</span>
+                          </motion.button>
+                        )}
+
+                        {isAdmin && (
+                          <motion.button
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleAdminPanel}
+                            className="px-4 py-2 lg:px-6 lg:py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-md text-white text-sm lg:text-base font-medium shadow-xl border border-purple-300/30 flex items-center space-x-2 hover:from-purple-500/30 hover:to-pink-500/30 transition-all"
+                          >
+                            <Settings className="h-4 w-4 lg:h-5 lg:w-5" />
+                            <span>Admin</span>
+                          </motion.button>
                         )}
                       </div>
                     </div>
-                  </div>
-                </div>
+                    
+                    {/* Elegant Description Toggle */}
+                    {campaign.description && campaign.description.length > 0 && (
+                      <motion.div className="mb-3 lg:mb-4">
+                        <motion.button
+                          onClick={() => setExpandedDescription(!expandedDescription)}
+                          className="w-full text-left group"
+                          whileHover={{ scale: 1.01 }}
+                        >
+                          <p className={`text-sm lg:text-base text-white/90 leading-relaxed ${!expandedDescription ? 'line-clamp-1' : ''}`}>
+                            {campaign.description}
+                          </p>
+                          {campaign.description.length > 100 && (
+                            <div className="text-white/70 text-sm font-medium mt-2 flex items-center space-x-1 group-hover:text-white transition-colors">
+                              <span>{expandedDescription ? 'Show Less' : 'Show More'}</span>
+                              <motion.div
+                                animate={{ rotate: expandedDescription ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </motion.div>
+                            </div>
+                          )}
+                        </motion.button>
+                      </motion.div>
+                    )}
 
-                {/* Enhanced Status Badge - Mobile responsive positioning */}
-                <div className="flex-shrink-0 flex justify-center lg:justify-start">
-                  <span className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-bold flex items-center space-x-1 sm:space-x-2 justify-center lg:justify-start ${
-                    countdown.phase === 'active' ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 animate-pulse' : 
-                    countdown.phase === 'ended' ? 'bg-gray-100 text-gray-700' : 
-                    'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700'
-                  }`}>
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>
-                      {countdown.phase === 'ended' ? 'Voyage Complete' : 
-                       countdown.phase === 'active' ? 'LIVE VOYAGE' : 
-                       'Preparing Launch'}
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Middle Row - Compact Stats with mobile responsive spacing */}
-              <div className="flex flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 px-2 sm:px-3 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-blue-200/50 shadow-sm">
-                  <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span>Max {Number(campaign.maxWinners) || 'All'} Winners</span>
-                </div>
-                
-                <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 px-2 sm:px-3 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-purple-200/50 shadow-sm">
-                  <Target className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span>{campaign.useQuadraticDistribution ? 'Quadratic Flow' : 'Linear Tide'}</span>
-                </div>
-              </div>
-
-              {/* Enhanced Countdown Timer with mobile responsive design */}
-              {countdown.phase !== 'ended' && (
-                <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-blue-200/50">
-                  <div className="flex flex-col lg:flex-row items-center justify-center gap-3 sm:gap-4">
-                    <Timer className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 animate-wave" />
-                    <div className="flex items-center space-x-1 sm:space-x-2">
-                      <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md">
-                          {countdown.days.toString().padStart(2, '0')}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">D</div>
-                      </div>
-                      <div className="text-blue-500 font-bold text-sm sm:text-lg">:</div>
-                      <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md">
-                          {countdown.hours.toString().padStart(2, '0')}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">H</div>
-                      </div>
-                      <div className="text-blue-500 font-bold text-sm sm:text-lg">:</div>
-                      <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md">
-                          {countdown.minutes.toString().padStart(2, '0')}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">M</div>
-                      </div>
-                      <div className="text-blue-500 font-bold text-sm sm:text-lg">:</div>
-                      <div className="text-center">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-md font-mono text-sm sm:text-lg font-bold shadow-md animate-pulse">
-                          {countdown.seconds.toString().padStart(2, '0')}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">S</div>
-                      </div>
+                    {/* Glowing Campaign Stats */}
+                    <div className="flex flex-wrap gap-2 lg:gap-3">
+                      <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        className="flex items-center space-x-2 bg-white/10 backdrop-blur-md text-white/90 px-3 lg:px-4 py-2 lg:py-2.5 rounded-full text-sm lg:text-base font-medium border border-white/20 shadow-lg"
+                      >
+                        <Trophy className="h-4 w-4 lg:h-5 lg:w-5" />
+                        <span>Max {Number(campaign.maxWinners) || 'All'} Winners</span>
+                      </motion.div>
+                      
+                      <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        className="flex items-center space-x-2 bg-white/10 backdrop-blur-md text-white/90 px-3 lg:px-4 py-2 lg:py-2.5 rounded-full text-sm lg:text-base font-medium border border-white/20 shadow-lg"
+                      >
+                        <Target className="h-4 w-4 lg:h-5 lg:w-5" />
+                        <span>{campaign.useQuadraticDistribution ? 'Quadratic' : 'Linear'} Distribution</span>
+                      </motion.div>
                     </div>
-                    <span className="text-xs sm:text-sm font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 text-center">
-                      {countdown.phase === 'preparing' ? 'Until Launch' : 'Until Voyage Ends'}
-                    </span>
                   </div>
                 </div>
-              )}
+
+                {/* Status & Countdown Section */}
+                <div className="flex flex-col items-end space-y-3 lg:space-y-4">
+                  {/* Compact Live Countdown */}
+                  {countdown.phase !== 'ended' && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 lg:px-6 py-2 lg:py-3 rounded-xl border border-white/20 shadow-lg"
+                    >
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <Timer className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
+                      </motion.div>
+                      <div className="flex items-center space-x-1 text-sm lg:text-base">
+                        <motion.span 
+                          animate={{ 
+                            boxShadow: [
+                              '0 0 10px rgba(255,255,255,0.3)',
+                              '0 0 20px rgba(255,255,255,0.6)',
+                              '0 0 10px rgba(255,255,255,0.3)'
+                            ]
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                          className="bg-white/20 text-white px-2 lg:px-3 py-1 lg:py-1.5 rounded font-mono text-sm lg:text-base font-bold backdrop-blur-sm border border-white/30"
+                        >
+                          {countdown.days.toString().padStart(2, '0')}
+                        </motion.span>
+                        <span className="text-white/70 font-bold">:</span>
+                        <span className="bg-white/20 text-white px-2 lg:px-3 py-1 lg:py-1.5 rounded font-mono text-sm lg:text-base font-bold backdrop-blur-sm border border-white/30">
+                          {countdown.hours.toString().padStart(2, '0')}
+                        </span>
+                        <span className="text-white/70 font-bold">:</span>
+                        <span className="bg-white/20 text-white px-2 lg:px-3 py-1 lg:py-1.5 rounded font-mono text-sm lg:text-base font-bold backdrop-blur-sm border border-white/30">
+                          {countdown.minutes.toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="text-white/90 text-sm font-medium">
+                        {countdown.phase === 'preparing' ? 'until start' : 'remaining'}
+                      </span>
+                    </motion.div>
+                  )}
+
+                  {/* Glowing Status Badge */}
+                  <motion.div
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    whileHover={{ scale: 1.05 }}
+                    className={`px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-bold flex items-center space-x-2 backdrop-blur-md border shadow-lg ${
+                      countdown.phase === 'active' ? 'bg-green-500/20 text-green-100 border-green-400/30' : 
+                      countdown.phase === 'ended' ? 'bg-gray-500/20 text-gray-100 border-gray-400/30' : 
+                      'bg-amber-500/20 text-amber-100 border-amber-400/30'
+                    }`}
+                  >
+                    <motion.div
+                      animate={{ 
+                        scale: countdown.phase === 'active' ? [1, 1.2, 1] : 1,
+                        rotate: countdown.phase === 'active' ? [0, 10, -10, 0] : 0
+                      }}
+                      transition={{ 
+                        duration: countdown.phase === 'active' ? 2 : 0,
+                        repeat: countdown.phase === 'active' ? Infinity : 0
+                      }}
+                    >
+                      {countdown.phase === 'active' ? <Flame className="h-4 w-4 lg:h-5 lg:w-5" /> : 
+                       countdown.phase === 'ended' ? <Clock className="h-4 w-4 lg:h-5 lg:w-5" /> : 
+                       <Activity className="h-4 w-4 lg:h-5 lg:w-5" />}
+                    </motion.div>
+                    <span>
+                      {countdown.phase === 'ended' ? 'Campaign Ended' : 
+                       countdown.phase === 'active' ? 'LIVE NOW' : 
+                       'Starting Soon'}
+                    </span>
+                  </motion.div>
+                </div>
+              </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Enhanced Projects Leaderboard with better spacing */}
           <div className="space-y-6">
@@ -1390,55 +1548,26 @@ export default function CampaignView() {
 
                       {/* Admin Approve Button */}
                       {isAdmin && !isApproved && (
-                        <div className="flex flex-col items-end space-y-1">
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleApproveProject(BigInt(project.id));
-                              }}
-                              disabled={isApprovingProject}
-                              className="px-3 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
-                            >
-                              {isApprovingProject ? (
-                                <>
-                                  <Loader2 className="h-4 animate-spin" />
-                                  <span>Approving...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4" />
-                                  <span>Approve</span>
-                                </>
-                              )}
-                            </button>
-                            {/* Help icon */}
-                            <button
-                              type="button"
-                              className="ml-1 p-1 rounded-full bg-white border border-blue-200 hover:bg-blue-50 text-blue-500"
-                              title="Help: Approving from CeloScan"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowApproveHelp(project.id?.toString() === showApproveHelp ? null : project.id?.toString());
-                              }}
-                            >
-                              <span style={{fontWeight: 'bold', fontSize: '1.1em'}}>?</span>
-                            </button>
-                          </div>
-                          {/* Info message: show if error for this project or help icon is toggled */}
-                          {(approveError === project.id?.toString() || showApproveHelp === project.id?.toString()) && (
-                            <div className="mt-2 p-3 rounded-lg bg-yellow-50 border border-yellow-300 text-yellow-900 text-xs max-w-xs shadow">
-                              <div className="font-bold mb-1 flex items-center">
-                                <span className="mr-1">⚠️</span> Trouble Approving?
-                              </div>
-                              <div>
-                                If you encounter an error while approving, you can try approving the project directly from CeloScan.<br/>
-                                Go to the contract's Write page and use the <b>approveProject</b> function.<br/>
-                                <a href="https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#writeContract" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Open CeloScan</a>
-                              </div>
-                            </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveProject(BigInt(project.id));
+                          }}
+                          disabled={isApprovingProject}
+                          className="px-3 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
+                        >
+                          {isApprovingProject ? (
+                            <>
+                              <Loader2 className="h-4 animate-spin" />
+                              <span>Approving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Approve</span>
+                            </>
                           )}
-                        </div>
+                        </button>
                       )}
                     </div>
 
@@ -1568,13 +1697,86 @@ export default function CampaignView() {
 
         {/* Add Projects Modal */}
         {showAddProjectModal && (
-          <AddProjectsToCampaignModal
-            isOpen={showAddProjectModal}
-            onClose={() => setShowAddProjectModal(false)}
-            campaignId={campaignId.toString()}
-            campaignName={campaignDetails?.campaign?.name || 'Untitled Campaign'}
-            onSuccess={refetchAllData}
-          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddProjectModal(false)} />
+            <div className="relative bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                  Add Projects to Campaign
+                </h3>
+                <button
+                  onClick={() => setShowAddProjectModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-300"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Project List */}
+              <div className="space-y-4">
+                {allProjects?.filter(project => {
+                  const formatted = formatProjectForDisplay(project);
+                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
+                }).map(project => {
+                  const formatted = formatProjectForDisplay(project);
+                  if (!formatted) return null;
+
+                  return (
+                    <div
+                      key={formatted.id}
+                      className="flex items-center justify-between p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all duration-300"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold">
+                          {formatted.name?.charAt(0) || ''}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-800">{formatted.name}</h4>
+                          <p className="text-sm text-gray-600 line-clamp-1">{formatted.description}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddToCampaign(BigInt(formatted.id))}
+                        disabled={isAddingProject}
+                        className={`px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2 ${
+                          isAddingProject ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {isAddingProject ? (
+                          <>
+                            <Loader2 className="h-4 animate-spin" />
+                            <span>Adding...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4" />
+                            <span>Add</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {allProjects?.filter(project => {
+                  const formatted = formatProjectForDisplay(project);
+                  return formatted && !project.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
+                }).length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📋</div>
+                    <h4 className="text-lg font-bold text-gray-800 mb-2">No Available Projects</h4>
+                    <p className="text-gray-600 text-sm">All existing projects are already part of this campaign.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
       {showVoteModal && selectedProject && (
