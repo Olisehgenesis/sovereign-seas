@@ -341,6 +341,8 @@ export default function CampaignView() {
       const formatted = formatProjectForDisplay(projectDetails);
       const hasCampaign = projectDetails.project.campaignIds.some(cId => Number(cId) === Number(campaignId));
      
+     
+     
       return formatted && hasCampaign;
     }).map(formatProjectForDisplay).filter(Boolean) || [];
 
@@ -407,6 +409,8 @@ export default function CampaignView() {
 
     const projects = campaignProjectsBasic.map((project) => {
       const projectIdStr = project.id?.toString();
+      
+     
       
       // Get the correct participation data using project ID mapping
       const participationIndex = projectIdToParticipationIndex.get(projectIdStr);
@@ -497,6 +501,8 @@ export default function CampaignView() {
   };
 
   const openVoteModal = (project: Project) => {
+   
+    
     setSelectedProject(project);
     setShowVoteModal(true);
   };
@@ -609,9 +615,18 @@ export default function CampaignView() {
     return null;
   };
 
-  const handleVote = useCallback((projectId: bigint, token: string, amount: bigint) => {
-    return vote({ campaignId, projectId, token: token as `0x${string}`, amount });
-  }, [campaignId, vote]);
+  const handleVote = useCallback(
+    (projectId: bigint, token: string, amount: bigint) => {
+      return vote({
+        campaignId,
+        projectId: projectId.toString(), // <- as string
+        token: token as `0x${string}`,
+        amount
+      });
+    },
+    [campaignId, vote]
+  );
+  
 
   // FIXED: Filter projects based on active tab using the correct approval logic
   const filteredProjects = useMemo(() => {

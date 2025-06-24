@@ -441,6 +441,17 @@ export default function VoteModal({
       return;
     }
 
+    // Debug: Log the selectedProject object
+    console.log('Selected project for voting:', selectedProject);
+    console.log('Project ID:', selectedProject.id);
+    console.log('Project ID type:', typeof selectedProject.id);
+
+    // Validate project ID
+    if (!selectedProject.id.toString()) {
+      setError('Invalid project ID. Please try refreshing the page.');
+      return;
+    }
+
     // Validate amount
     const amountValue = parseFloat(voteAmount);
     if (amountValue <= 0) {
@@ -476,13 +487,13 @@ export default function VoteModal({
       if (isNativeCelo) {
         tx = await voteWithCelo({
           campaignId: campaignId,
-          projectId: BigInt(selectedProject.id),
+          projectId: selectedProject.id.toString(),
           amount: amount
         });
       } else {
         tx = await vote({
           campaignId: campaignId,
-          projectId: BigInt(selectedProject.id),
+          projectId: selectedProject.id.toString(),
           token: selectedToken as `0x${string}`,
           amount: amount
         });
