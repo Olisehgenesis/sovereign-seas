@@ -1031,9 +1031,6 @@ function DeeplinkQRCode({ userId, address, onSuccess }: { userId: string, addres
 
   const deeplink = useMemo(() => getUniversalLink(selfApp), [selfApp]);
 
-  // Detect Android
-  const isAndroid = useMemo(() => typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent), []);
-
   return (
     <div className="flex flex-col items-center justify-center mb-6">
       <div className="relative group transition-transform duration-300 hover:scale-105 focus-within:scale-105">
@@ -1048,17 +1045,15 @@ function DeeplinkQRCode({ userId, address, onSuccess }: { userId: string, addres
           <Shield className="h-6 w-6 text-blue-400 drop-shadow" />
         </div>
       </div>
-      {isAndroid && (
-        <a
-          href={deeplink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in"
-        >
-          <span role="img" aria-label="android" className="mr-2">🤖</span>
-          Click here to verify with Self app
-        </a>
-      )}
+      <a
+        href={deeplink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 w-full px-4 py-2 min-h-12 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in flex items-center justify-center gap-2"
+      >
+        <span role="img" aria-label="mobile" className="mr-2">📱</span>
+        On Mobile? Verify with Self app
+      </a>
     </div>
   );
 }
