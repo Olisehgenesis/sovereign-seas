@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Initialize and configure the verifier
       const selfBackendVerifier = new SelfBackendVerifier(
         'sovereign-seas', // Using a unique scope for this application
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/verify` // Using environment variable for the endpoint
+        'https://auth.sovseas.xyz/api/verify'
       );
 
       // Verify the proof
