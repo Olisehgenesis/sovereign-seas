@@ -1,4 +1,4 @@
-'use client';
+
 
 import { useState,  useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -70,7 +70,6 @@ import {
 import { useProjectDetails, useProjectCampaigns } from '@/hooks/useProjectMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import ProjectCampaignsModal from '@/components/ProjectCampaignsModal';
-import VoteModal from '@/components/voteModal';
 
 // ==================== TYPES ====================
 
@@ -482,9 +481,6 @@ export default function ProjectView() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
-  const [showVoteModal, setShowVoteModal] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [isVotePending, setIsVotePending] = useState(false);
   
   // Data
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -553,20 +549,12 @@ export default function ProjectView() {
 
   const isOwner = isConnected && address && project && address.toLowerCase() === project.owner?.toLowerCase();
 
-  const openVoteModal = (project: any) => {
-    setSelectedProject(project);
-    setShowVoteModal(true);
+  const openVoteModal = (campaignId: string) => {
+    navigate(`/explorer/campaign/${campaignId}`);
   };
 
-  const closeVoteModal = () => {
-    setShowVoteModal(false);
-    setSelectedProject(null);
-  };
+ 
 
-  const handleVoteSuccess = () => {
-    // Refresh project data or handle success
-    closeVoteModal();
-  };
 
   // Loading state
   if (isLoading) {
@@ -1044,11 +1032,11 @@ export default function ProjectView() {
                               </button>
                               {campaign.status === 'active' && (
                                 <button
-                                  onClick={() => openVoteModal(campaign)}
+                                  onClick={() => openVoteModal(campaign.id.toString())}
                                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
                                 >
-                                  <Vote className="h-4 w-4" />
-                                  Vote Now
+                                  <ChevronRight className="h-4 w-4" />
+                                  Go to Campaign
                                 </button>
                               )}
                             </div>
@@ -1640,16 +1628,7 @@ export default function ProjectView() {
        projectId={project?.id?.toString()}
      />
 
-     {showVoteModal && selectedProject && (
-       <VoteModal
-         isOpen={showVoteModal}
-         onClose={closeVoteModal}
-         selectedProject={selectedProject}
-         campaignId={selectedProject.campaignId}
-         isVoting={isVotePending}
-         onVoteSuccess={handleVoteSuccess}
-       />
-     )}
+     
 
      {/* Bottom Navigation for Mobile */}
      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-gray-200/50 shadow-lg flex justify-around items-center py-2 px-2 md:hidden">
