@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { 
@@ -134,6 +134,7 @@ const EditProjectPage = () => {
   const { projectId: projectIdParam } = useParams();
   const { address, isConnected } = useAccount();
   const [isMounted, setIsMounted] = useState(false);
+  const [isDataInitialized, setIsDataInitialized] = useState(false);
   
   // Convert projectId to BigInt safely
   const projectId = projectIdParam ? BigInt(projectIdParam) : 0n;
@@ -214,9 +215,9 @@ const EditProjectPage = () => {
   const isOwner = projectDetails?.project?.owner?.toLowerCase() === address?.toLowerCase();
   const canEdit = isOwner || isAdmin;
   
-  // Populate project data when loaded
+  // FIXED: Main data population effect - removed logoFile dependency and added initialization tracking
   useEffect(() => {
-    if (projectDetails?.project && projectDetails?.metadata && !logoFile) {
+    if (projectDetails?.project && projectDetails?.metadata && !isDataInitialized) {
       try {
         const { project: projectData, metadata } = projectDetails;
         
@@ -246,8 +247,8 @@ const EditProjectPage = () => {
           ...parsedAdditionalData,
         };
 
-        // Set logo preview if exists and no new file is selected
-        if (combinedData.logo && !logoFile) {
+        // Set logo preview if exists
+        if (combinedData.logo) {
           const formattedUrl = formatIpfsUrl(combinedData.logo);
           setLogoPreview(formattedUrl);
           setHasExistingLogo(true);
@@ -305,18 +306,20 @@ const EditProjectPage = () => {
           openSource: combinedData.openSource !== undefined ? combinedData.openSource : true,
           transferrable: projectData.transferrable !== undefined ? projectData.transferrable : true
         }));
+        
+        setIsDataInitialized(true);
       } catch (error) {
         console.error('Error processing project data:', error);
         setErrorMessage('Error loading project data');
       }
     }
-  }, [projectDetails, logoFile]);
+  }, [projectDetails?.project, projectDetails?.metadata, isDataInitialized]);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Handle update success
+  // FIXED: Success effect without refetch - prevents data reset
   useEffect(() => {
     if (isSuccess) {
       setSuccessMessage('Project updated successfully!');
@@ -328,10 +331,10 @@ const EditProjectPage = () => {
       
       setTimeout(() => {
         setSuccessMessage('');
-        refetch(); // This will reload the data and reset the states properly
+        // Don't refetch - keep user's current state
       }, 3000);
     }
-  }, [isSuccess, refetch]);
+  }, [isSuccess]);
 
   // Handle update error
   useEffect(() => {
@@ -341,25 +344,29 @@ const EditProjectPage = () => {
     }
   }, [updateError]);
 
-  // Add debugging useEffect
-  useEffect(() => {
-    console.log('=== LOGO STATE CHANGE ===');
-    console.log('logoFile:', logoFile?.name || 'null');
-    console.log('logoPreview:', logoPreview);
-    console.log('hasExistingLogo:', hasExistingLogo);
-    console.log('logoToDelete:', logoToDelete);
-    console.log('========================');
-  }, [logoFile, logoPreview, hasExistingLogo, logoToDelete]);
+  // Memoized callbacks to prevent re-renders
+  const updateArrayItem = useCallback((field: keyof ProjectState, index: number, value: string) => {
+    setProject(prev => {
+      const array = prev[field] as string[] || [];
+      if (array[index] === value) return prev; // Prevent unnecessary updates
+      
+      const updated = [...array];
+      updated[index] = value;
+      return {
+        ...prev,
+        [field]: updated
+      };
+    });
+  }, []);
 
-  // Helper functions for dynamic arrays
-  const addArrayItem = (field: keyof ProjectState, defaultValue = '') => {
+  const addArrayItem = useCallback((field: keyof ProjectState, defaultValue = '') => {
     setProject(prev => ({
       ...prev,
       [field]: [...(prev[field] as string[] || []), defaultValue]
     }));
-  };
+  }, []);
   
-  const removeArrayItem = (field: keyof ProjectState, index: number) => {
+  const removeArrayItem = useCallback((field: keyof ProjectState, index: number) => {
     setProject(prev => {
       const array = prev[field] as string[] || [];
       if (array.length <= 1) return prev;
@@ -371,19 +378,7 @@ const EditProjectPage = () => {
         [field]: updated
       };
     });
-  };
-  
-  const updateArrayItem = (field: keyof ProjectState, index: number, value: string) => {
-    setProject(prev => {
-      const array = prev[field] as string[] || [];
-      const updated = [...array];
-      updated[index] = value;
-      return {
-        ...prev,
-        [field]: updated
-      };
-    });
-  };
+  }, []);
 
   // Handle logo file change
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -567,24 +562,24 @@ const EditProjectPage = () => {
     }
   };
 
-  // Predefined options
-  const categories = [
+  // Memoize static data to prevent re-renders
+  const categories = useMemo(() => [
     'DeFi', 'NFT', 'Gaming', 'Infrastructure', 'DAO', 'Social', 'Identity', 
     'Privacy', 'Analytics', 'Developer Tools', 'Wallet', 'Exchange', 'Lending',
     'Insurance', 'Real Estate', 'Supply Chain', 'Healthcare', 'Education', 'Other'
-  ];
+  ], []);
   
-  const blockchains = [
+  const blockchains = useMemo(() => [
     'Celo', 'Ethereum', 'Polygon', 'Arbitrum', 'Optimism', 'Base', 'Avalanche',
     'Solana', 'Near', 'Cosmos', 'Polkadot', 'Cardano', 'Multi-chain', 'Other'
-  ];
+  ], []);
   
-  const techStackOptions = [
+  const techStackOptions = useMemo(() => [
     'React', 'Next.js', 'Vue.js', 'Angular', 'Svelte', 'Node.js', 'Python', 'Rust',
     'Solidity', 'Go', 'TypeScript', 'JavaScript', 'Web3.js', 'Ethers.js', 'Wagmi',
     'Hardhat', 'Foundry', 'Truffle', 'IPFS', 'PostgreSQL', 'MongoDB', 'Redis',
     'Docker', 'Kubernetes', 'AWS', 'Vercel', 'Netlify', 'Firebase'
-  ];
+  ], []);
 
   if (!isMounted) {
     return null;
