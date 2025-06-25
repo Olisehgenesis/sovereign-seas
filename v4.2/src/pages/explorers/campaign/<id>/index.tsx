@@ -1507,7 +1507,7 @@ export default function CampaignView() {
             {/* Project List with Grid Layout */}
             <motion.div 
               layout
-              className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
             >
               <AnimatePresence>
                 {filteredProjects
@@ -1517,69 +1517,150 @@ export default function CampaignView() {
                     const projectLogo = getProjectLogo(project);
                     const isApproved = project.participation?.approved === true;
                     const voteProgress = Math.min(100, (voteCount / 500) * 100);
+                    const styling = getPositionStyling(index);
 
                     return (
                       <motion.div
                         key={project.id}
                         layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -30, scale: 0.9 }}
+                        transition={{ 
+                          duration: 0.4, 
+                          delay: index * 0.08,
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 30
+                        }}
+                        whileHover={{ 
+                          y: -8, 
+                          scale: 1.02,
+                          rotateY: 2,
+                          transition: { duration: 0.3 }
+                        }}
                         onClick={() => isApproved && isActive ? openVoteModal(project) : null}
                         className={`
-                          relative bg-white/90 backdrop-blur-lg rounded-xl shadow-lg transition-all duration-300 p-4 cursor-pointer border-2 group overflow-hidden
-                          ${isApproved && isActive ? 'border-blue-300' : 'border-gray-200'}
-                          ${isApproved && isActive ? 'hover:border-blue-400' : ''}
+                          relative group cursor-pointer overflow-hidden rounded-2xl
+                          ${isApproved && isActive ? 'cursor-pointer' : 'cursor-default'}
                         `}
+                        style={{
+                          background: `linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%)`,
+                          backdropFilter: 'blur(20px)',
+                          border: `2px solid ${isApproved ? 'rgba(59, 130, 246, 0.3)' : 'rgba(156, 163, 175, 0.3)'}`,
+                          boxShadow: `0 10px 32px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.8)`,
+                        }}
                       >
-                        {/* Position Badge - Top Left */}
-                        <div className={`absolute -top-2 -left-2 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-lg z-20 border-2 border-white ${
-                          index === 0 ? 'bg-gradient-to-r from-yellow-400 to-amber-500' :
-                          index === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-500' :
-                          index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                          'bg-gradient-to-r from-blue-400 to-blue-600'
-                        }`}>
-                          {index < 3 ? (
-                            <span className="text-sm">
-                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-bold">{index + 1}</span>
-                          )}
-                        </div>
+                        {/* Animated Background Gradient */}
+                        <motion.div 
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                          style={{
+                            background: `linear-gradient(135deg, ${styling.bgGradient.replace('from-', 'rgba(').replace('via-', ', rgba(').replace('to-', ', rgba(').replace(/(\w+-\d+)/g, (match) => {
+                              // Simple color mapping for demonstration
+                              const colorMap: {[key: string]: string} = {
+                                'yellow-400': '250, 204, 21, 0.1',
+                                'yellow-500': '245, 158, 11, 0.1',
+                                'amber-500': '245, 158, 11, 0.1',
+                                'gray-300': '209, 213, 219, 0.1',
+                                'gray-400': '156, 163, 175, 0.1',
+                                'slate-500': '100, 116, 139, 0.1',
+                                'orange-400': '251, 146, 60, 0.1',
+                                'orange-500': '249, 115, 22, 0.1',
+                                'amber-600': '217, 119, 6, 0.1',
+                                'blue-50': '239, 246, 255, 0.1',
+                                'indigo-50': '238, 242, 255, 0.1'
+                              };
+                              return colorMap[match] || '59, 130, 246, 0.1';
+                            })}) 0%, rgba(255,255,255,0.05) 100%)`
+                          }}
+                        />
 
-                        {/* Approval Status - Top Right */}
-                        <div className="absolute top-2 right-2 z-20">
-                          <div className={`px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${
-                            isApproved 
-                              ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200' 
-                              : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border border-amber-200'
-                          }`}>
-                            {isApproved ? (
-                              <>
-                                <CheckCircle className="h-3 w-3" />
-                                <span>Approved</span>
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="h-3 w-3" />
-                                <span>Pending</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
+                        {/* Floating Rank Badge */}
+                        <motion.div 
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ delay: index * 0.1 + 0.3, type: "spring", stiffness: 500 }}
+                          className={`absolute -top-3 -left-3 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-2xl z-30 border-3 border-white ${
+                            index === 0 ? 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600' :
+                            index === 1 ? 'bg-gradient-to-br from-gray-300 via-gray-400 to-slate-500' :
+                            index === 2 ? 'bg-gradient-to-br from-orange-400 via-orange-500 to-amber-600' :
+                            'bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600'
+                          }`}
+                          style={{
+                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
+                          }}
+                        >
+                          <motion.span 
+                            animate={{ 
+                              scale: index < 3 ? [1, 1.2, 1] : 1,
+                              rotate: index === 0 ? [0, 5, -5, 0] : 0
+                            }}
+                            transition={{ 
+                              duration: 2, 
+                              repeat: index < 3 ? Infinity : 0,
+                              repeatType: "reverse"
+                            }}
+                            className="text-sm"
+                          >
+                            {index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : 
+                             <span className="text-xs font-bold">{index + 1}</span>}
+                          </motion.span>
+                        </motion.div>
 
-                        {/* Admin Approve Button - Below Approval Status */}
+                        {/* Enhanced Status Badge */}
+                        <motion.div 
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 + 0.2 }}
+                          className="absolute top-4 right-4 z-20"
+                        >
+                          <motion.div 
+                            whileHover={{ scale: 1.05 }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center space-x-1.5 backdrop-blur-md border shadow-lg ${
+                              isApproved 
+                                ? 'bg-gradient-to-r from-emerald-500/90 to-green-600/90 text-white border-emerald-300/50' 
+                                : 'bg-gradient-to-r from-amber-500/90 to-orange-600/90 text-white border-amber-300/50'
+                            }`}
+                            style={{
+                              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                            }}
+                          >
+                            <motion.div
+                              animate={{ 
+                                rotate: isApproved ? 0 : [0, 10, -10, 0],
+                                scale: isApproved ? 1 : [1, 1.1, 1]
+                              }}
+                              transition={{ 
+                                duration: 2, 
+                                repeat: isApproved ? 0 : Infinity 
+                              }}
+                            >
+                              {isApproved ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                            </motion.div>
+                            <span>{isApproved ? 'Approved' : 'Pending'}</span>
+                          </motion.div>
+                        </motion.div>
+
+                        {/* Admin Controls */}
                         {isAdmin && !isApproved && project.id !== undefined && project.id !== null && (
-                          <div className="absolute top-12 right-2 z-20">
-                            <button
+                          <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 + 0.4 }}
+                            className="absolute top-16 right-4 z-20"
+                          >
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleApproveProject(BigInt(project.id));
                               }}
                               disabled={isApprovingProject}
-                              className="px-2 py-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium shadow-lg flex items-center space-x-1"
+                              className="px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium shadow-lg flex items-center space-x-1.5 backdrop-blur-md border border-green-400/50"
+                              style={{
+                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                              }}
                             >
                               {isApprovingProject ? (
                                 <>
@@ -1592,102 +1673,221 @@ export default function CampaignView() {
                                   <span>Approve</span>
                                 </>
                               )}
-                            </button>
-                          </div>
+                            </motion.button>
+                          </motion.div>
                         )}
 
-                        {/* Project Content */}
-                        <div className="relative z-10 pt-6">
-                          {/* Project Logo - Centered and Bigger */}
-                          <div className="flex justify-center mb-4">
-                            <div className="relative">
-                              {projectLogo ? (
-                                <img 
-                                  src={formatIpfsUrl(projectLogo)} 
-                                  alt={`${project.name} logo`}
-                                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border-2 border-blue-200 shadow-md"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    const fallback = target.nextSibling as HTMLElement;
-                                    if (fallback) fallback.style.display = 'flex';
+                        {/* Main Content */}
+                        <div className="relative z-10 p-4 pt-6">
+                          {/* Project Avatar with Glow Effect - Reduced size */}
+                          <motion.div 
+                            className="flex justify-center mb-4"
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: index * 0.1 + 0.5, type: "spring", stiffness: 400 }}
+                          >
+                            <div className="relative group">
+                              {/* Glowing Ring */}
+                              <motion.div 
+                                animate={{ 
+                                  rotate: 360,
+                                  scale: [1, 1.05, 1]
+                                }}
+                                transition={{ 
+                                  rotate: { duration: 20, repeat: Infinity, ease: "linear" },
+                                  scale: { duration: 3, repeat: Infinity, repeatType: "reverse" }
+                                }}
+                                className={`absolute -inset-2 rounded-xl bg-gradient-to-r ${styling.bgGradient} opacity-0 group-hover:opacity-20 blur-lg transition-opacity duration-500`}
+                              />
+                              
+                              {/* Avatar Container - Smaller size */}
+                              <div className="relative">
+                                {projectLogo ? (
+                                  <motion.img 
+                                    whileHover={{ scale: 1.05, rotateY: 10 }}
+                                    src={formatIpfsUrl(projectLogo)} 
+                                    alt={`${project.name} logo`}
+                                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-white shadow-lg"
+                                    style={{
+                                      filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                                    }}
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextSibling as HTMLElement;
+                                      if (fallback) fallback.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <motion.div 
+                                  whileHover={{ scale: 1.05, rotateY: 10 }}
+                                  className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br ${styling.bgGradient} rounded-xl flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-lg border-2 border-white ${projectLogo ? 'hidden' : 'flex'}`}
+                                  style={{
+                                    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
                                   }}
-                                />
-                              ) : null}
-                              <div className={`w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-md border-2 border-blue-200 ${projectLogo ? 'hidden' : 'flex'}`}>
-                                {project.name?.charAt(0) || ''}
+                                >
+                                  <motion.span
+                                    animate={{ 
+                                      textShadow: [
+                                        '0 0 20px rgba(255,255,255,0.5)',
+                                        '0 0 30px rgba(255,255,255,0.8)',
+                                        '0 0 20px rgba(255,255,255,0.5)'
+                                      ]
+                                    }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                  >
+                                    {project.name?.charAt(0) || '🚀'}
+                                  </motion.span>
+                                </motion.div>
                               </div>
                             </div>
-                          </div>
+                          </motion.div>
 
-                          {/* Project Info */}
-                          <div className="text-center mb-4">
-                            <h3 className="font-bold text-gray-800 text-base sm:text-lg truncate mb-2">
+                          {/* Enhanced Project Info - Reduced spacing */}
+                          <motion.div 
+                            className="text-center mb-4"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 + 0.6 }}
+                          >
+                            <h3 className="font-bold text-gray-800 text-base sm:text-lg mb-2 leading-tight">
                               {project.name || 'Untitled Project'}
                             </h3>
-                            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3">
-                              {project.description}
+                            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3 min-h-[2.5rem]">
+                              {project.description || 'No description available for this project.'}
                             </p>
                             
-                            {/* Vote Count Display */}
-                            <div className="mb-3">
+                            {/* Vote Display and Action Buttons - Side by Side */}
+                            <motion.div 
+                              className="flex flex-row items-center space-x-3 mb-3"
+                              whileHover={{ scale: 1.02 }}
+                            >
+                              {/* Vote Display */}
                               {project.id !== undefined && project.id !== null && (
-                                <ProjectVotes 
-                                  campaignId={campaignId} 
-                                  projectId={BigInt(project.id)} 
-                                  onVoteCountReceived={updateProjectVoteCount}
-                                />
+                                <div className="flex-shrink-0">
+                                  <motion.div
+                                    animate={{ 
+                                      boxShadow: [
+                                        '0 0 20px rgba(59, 130, 246, 0.3)',
+                                        '0 0 30px rgba(59, 130, 246, 0.5)',
+                                        '0 0 20px rgba(59, 130, 246, 0.3)'
+                                      ]
+                                    }}
+                                    transition={{ duration: 3, repeat: Infinity }}
+                                    className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200"
+                                  >
+                                    <ProjectVotes 
+                                      campaignId={campaignId} 
+                                      projectId={BigInt(project.id)} 
+                                      onVoteCountReceived={updateProjectVoteCount}
+                                    />
+                                  </motion.div>
+                                </div>
                               )}
-                            </div>
-                          </div>
 
-                          {/* Vote Progress Bar */}
-                          <div className="mb-4">
+                              {/* Action Buttons - Responsive Row/Col */}
+                              <div className="flex flex-col md:flex-row md:space-x-2 space-y-2 md:space-y-0 ml-auto">
+                                <motion.button
+                                  whileHover={{ scale: 1.05, y: -1 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (project?.id) {
+                                      navigate(`/explorer/project/${project.id}`);
+                                    }
+                                  }}
+                                  className="px-3 py-2 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 text-gray-700 text-xs font-medium transition-all duration-300 flex items-center justify-center space-x-1 border border-gray-200 shadow-sm hover:shadow-md group whitespace-nowrap"
+                                >
+                                  <Eye className="h-3 w-3 group-hover:scale-110 transition-transform duration-200" />
+                                  <span>Details</span>
+                                </motion.button>
+
+                                {isActive && isApproved && (
+                                  <motion.button
+                                    whileHover={{ 
+                                      scale: 1.05, 
+                                      y: -2,
+                                      boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
+                                    }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openVoteModal(project);
+                                    }}
+                                    className="px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white text-xs font-medium shadow-lg transition-all duration-300 flex items-center justify-center space-x-1 border border-blue-400/50 group relative overflow-hidden whitespace-nowrap"
+                                  >
+                                    <motion.div
+                                      animate={{ 
+                                        x: ['-100%', '200%'],
+                                        opacity: [0, 0.5, 0]
+                                      }}
+                                      transition={{ 
+                                        duration: 2, 
+                                        repeat: Infinity, 
+                                        delay: index * 0.3,
+                                        ease: "easeInOut"
+                                      }}
+                                      className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
+                                    />
+                                    <Vote className="h-3 w-3 relative z-10 group-hover:scale-110 transition-transform duration-200" />
+                                    <span className="relative z-10">Vote</span>
+                                  </motion.button>
+                                )}
+
+                                {!isActive && (
+                                  <div className="px-3 py-2 rounded-lg bg-gray-100 text-gray-500 text-xs font-medium flex items-center justify-center space-x-1 border border-gray-200 whitespace-nowrap">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{hasEnded ? 'Ended' : 'Pending'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          </motion.div>
+
+                          {/* Enhanced Progress Bar - Compact */}
+                          <motion.div 
+                            className="mb-4"
+                            initial={{ opacity: 0, scaleX: 0 }}
+                            animate={{ opacity: 1, scaleX: 1 }}
+                            transition={{ delay: index * 0.1 + 0.7, duration: 0.5 }}
+                          >
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-xs text-gray-500">Progress</span>
-                              <span className="text-xs text-gray-500">{voteProgress.toFixed(1)}%</span>
+                              <span className="text-xs font-medium text-gray-500">Progress</span>
+                              <span className="text-xs font-bold text-blue-600">{voteProgress.toFixed(1)}%</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div className="relative w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
                               <motion.div 
                                 initial={{ width: 0 }}
                                 animate={{ width: `${voteProgress}%` }}
-                                transition={{ duration: 1, delay: index * 0.1 }}
-                                className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full relative"
+                                transition={{ duration: 1.5, delay: index * 0.1 + 0.8, ease: "easeOut" }}
+                                className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-600 rounded-full relative overflow-hidden"
                               >
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                                <motion.div 
+                                  animate={{ 
+                                    x: ['-100%', '200%'],
+                                    opacity: [0, 1, 0]
+                                  }}
+                                  transition={{ 
+                                    duration: 2, 
+                                    repeat: Infinity, 
+                                    delay: index * 0.2,
+                                    ease: "easeInOut"
+                                  }}
+                                  className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12"
+                                />
                               </motion.div>
                             </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex flex-col space-y-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (project?.id) {
-                                  navigate(`/explorer/project/${project.id}`);
-                                }
-                              }}
-                              className="w-full px-3 py-2 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 text-sm font-medium transition-all flex items-center justify-center space-x-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span>View Details</span>
-                            </button>
-
-                            {isActive && isApproved && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openVoteModal(project);
-                                }}
-                                className="w-full px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium shadow-lg transition-all flex items-center justify-center space-x-2"
-                              >
-                                <Vote className="h-4 w-4" />
-                                <span>Vote</span>
-                              </button>
-                            )}
-                          </div>
+                          </motion.div>
                         </div>
+
+                        {/* Subtle Hover Glow Effect */}
+                        <motion.div 
+                          className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                          style={{
+                            background: `linear-gradient(135deg, ${styling.bgGradient.replace('from-', 'rgba(').replace('via-', ', rgba(').replace('to-', ', rgba(').replace(/(\w+-\d+)/g, '59, 130, 246, 0.05')} 0%, rgba(255,255,255,0.02) 100%)`,
+                            filter: 'blur(1px)',
+                          }}
+                        />
                       </motion.div>
                     );
                   })}
