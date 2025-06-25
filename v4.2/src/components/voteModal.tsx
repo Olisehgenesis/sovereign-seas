@@ -36,6 +36,7 @@ interface VoteModalProps {
   allProjects?: any[];
   totalCampaignFunds?: number;
   onVoteSuccess?: () => void;
+  onVoteSubmitted?: () => void;
 }
 
 interface ProjectVoteSimulation {
@@ -106,7 +107,8 @@ export default function VoteModal({
   campaignId,
   allProjects = [],
   totalCampaignFunds = 0,
-  onVoteSuccess
+  onVoteSuccess,
+  onVoteSubmitted
 }: VoteModalProps) {
   const [voteAmount, setVoteAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('');
@@ -117,6 +119,7 @@ export default function VoteModal({
   const [autoCloseTimer, setAutoCloseTimer] = useState<NodeJS.Timeout | null>(null);
   const [transactionTimer, setTransactionTimer] = useState<NodeJS.Timeout | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState(0);
   const [showClaimFreeVote, setShowClaimFreeVote] = useState(false);
 
  
@@ -295,6 +298,26 @@ export default function VoteModal({
           console.error('Error in onVoteSuccess callback:', error);
         }
       }
+      
+      // Set auto-close timer for 3 seconds with countdown
+      setAutoCloseCountdown(3);
+      const countdownInterval = setInterval(() => {
+        setAutoCloseCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      const autoCloseTimer = setTimeout(() => {
+        console.log('Auto-closing vote modal after success');
+        clearInterval(countdownInterval);
+        handleClose();
+      }, 3000);
+      
+      setAutoCloseTimer(autoCloseTimer);
     }
   }, [isSuccess, voteSuccess, isProcessing, onVoteSuccess, transactionTimer]);
 
@@ -309,6 +332,7 @@ export default function VoteModal({
       setIsProcessing(false);
       setShowTokenDropdown(false);
       setCountdown(0);
+      setAutoCloseCountdown(0);
       setShowClaimFreeVote(false);
       
       // Reset claim state
@@ -501,6 +525,15 @@ export default function VoteModal({
 
       console.log('Vote transaction submitted:', tx);
       
+      // Notify parent that vote transaction has been submitted
+      if (onVoteSubmitted) {
+        try {
+          onVoteSubmitted();
+        } catch (error) {
+          console.error('Error in onVoteSubmitted callback:', error);
+        }
+      }
+      
       // Transaction submitted successfully - now wait for confirmation
       // The useEffect watching isSuccess will handle the success state
       
@@ -559,6 +592,7 @@ export default function VoteModal({
     setIsProcessing(false);
     setShowTokenDropdown(false);
     setCountdown(0);
+    setAutoCloseCountdown(0);
     setShowClaimFreeVote(false);
     
     // Reset claim state
@@ -823,7 +857,7 @@ export default function VoteModal({
                       Your vote has been registered for <span className="font-semibold">{selectedProject.name}</span>
                     </p>
                     <p className="text-xs text-gray-500 mb-6">
-                      This modal will close automatically in 3 seconds
+                      This modal will close automatically in {autoCloseCountdown} second{autoCloseCountdown !== 1 ? 's' : ''}
                     </p>
                   </div>
 

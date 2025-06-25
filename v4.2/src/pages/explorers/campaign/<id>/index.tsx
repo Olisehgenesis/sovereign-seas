@@ -494,6 +494,15 @@ export default function CampaignView() {
     await refetchAllData();
   };
 
+  const handleVoteSubmitted = () => {
+    // Close the modal immediately when vote transaction is submitted
+    console.log('Vote transaction submitted - closing modal');
+    setShowVoteModal(false);
+    setSelectedProject(null);
+    //reload the page
+    window.location.reload();
+  };
+
   const closeVoteModal = () => {
     setShowVoteModal(false);
     // Clear selected project immediately to prevent re-rendering
@@ -1946,6 +1955,7 @@ export default function CampaignView() {
           allProjects={sortedProjects}
           totalCampaignFunds={totalCampaignVotes}
           onVoteSuccess={handleVoteSuccess}
+          onVoteSubmitted={handleVoteSubmitted}
         />
       )}
 
