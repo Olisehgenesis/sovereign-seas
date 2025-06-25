@@ -17,6 +17,7 @@
     "@divvi/referral-sdk": "^1.0.0",
     "@fastify/cors": "^8.5.0",
     "@fastify/vite": "^4.0.0",
+    "@goodsdks/citizen-sdk": "^1.0.1",
     "@headlessui/react": "^2.2.4",
     "@privy-io/react-auth": "^2.13.3",
     "@privy-io/wagmi": "^1.0.3",

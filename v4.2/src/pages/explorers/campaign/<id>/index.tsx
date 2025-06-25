@@ -1278,7 +1278,7 @@ export default function CampaignView() {
                       
                       {/* Floating Action Buttons */}
                       <div className="flex flex-row gap-3">
-                        {isActive && !hasEnded && (
+                        {!hasEnded && (
                           <motion.button
                             whileHover={{ scale: 1.05, y: -2 }}
                             whileTap={{ scale: 0.95 }}

@@ -343,6 +343,23 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
                      </p>
                    </div>
                  </Dialog.Title>
+                 
+                 {/* Fee Information */}
+                 <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+                   <div className="flex items-center gap-3">
+                     <div className="p-2 bg-amber-100 rounded-lg">
+                       <Coins className="h-5 w-5 text-amber-600" />
+                     </div>
+                     <div className="flex-1">
+                       <p className="text-sm font-semibold text-amber-800 mb-1">
+                         1 CELO fee required to prevent spam
+                       </p>
+                       <p className="text-xs text-amber-700">
+                         Don't worry, this fee is added to the campaign's funding pool
+                       </p>
+                     </div>
+                   </div>
+                 </div>
                </div>
                <div className="flex-1 overflow-y-auto px-8 pb-8">
                  {/* Projects already in campaign */}

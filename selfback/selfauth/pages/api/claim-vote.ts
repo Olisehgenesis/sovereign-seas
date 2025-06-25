@@ -117,9 +117,7 @@ export default async function handler(
     // Return a sanitized error response
     return res.status(500).json({
       success: false,
-      error: testnetEnabled
-        ? `Internal server error: ${error.message}`
-        : 'An unexpected error occurred while processing your request'
+      error: `Internal server error: ${error.message}`
     });
   }
 }

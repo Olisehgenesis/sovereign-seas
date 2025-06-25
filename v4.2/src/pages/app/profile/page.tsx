@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance } from 'wagmi';
 import { 
- 
   FileCode,
   Vote,
   Coins,
@@ -27,7 +26,9 @@ import {
   Shield,
   UserCheck,
   X,
-  Star
+  Star,
+  User,
+  CreditCard
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -40,6 +41,9 @@ import { formatIpfsUrl } from '@/utils/imageUtils';
 import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
 import { getUniversalLink } from '@selfxyz/core';
 import { v4 as uuidv4 } from 'uuid';
+
+// GoodDollar imports
+import GoodDollarVerifyModal from '@/components/goodDollar';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -305,6 +309,8 @@ export default function ProfilePage() {
   const [sortBy, setSortBy] = useState('recent');
   const [isVerified, setIsVerified] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [showMethodSelection, setShowMethodSelection] = useState(false);
+  const [showGoodDollarVerification, setShowGoodDollarVerification] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [verificationError, setVerificationError] = useState<string | null>(null);
@@ -319,6 +325,57 @@ export default function ProfilePage() {
       console.log('Generated userId:', newUserId);
     }
   }, [userId]);
+
+  // Handle GoodDollar verification completion
+  const handleGoodDollarVerificationComplete = async (data: any) => {
+    console.log('GoodDollar verification complete:', data);
+    setShowGoodDollarVerification(false);
+    
+    if (!address) {
+      setVerificationError('No wallet address found');
+      return;
+    }
+
+    try {
+      console.log('Starting GoodDollar verification save...');
+      const response = await fetch('https://auth.sovseas.xyz/api/verify-save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          wallet: address,
+          userId: `gooddollar-${Date.now()}`,
+          verificationStatus: true,
+          provider: 'gooddollar',
+          root: data?.root || null
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('GoodDollar verification save response:', responseData);
+
+      if (responseData.success) {
+        console.log('GoodDollar verification saved successfully');
+        setIsVerified(true);
+        setShowSuccessModal(true);
+        setVerificationStatus('success');
+        setVerificationError(null);
+      } else {
+        console.error('GoodDollar verification save failed:', responseData.error);
+        setVerificationError(responseData.error || 'Failed to save GoodDollar verification. Please try again.');
+        setVerificationStatus('error');
+      }
+    } catch (err) {
+      console.error('Error during GoodDollar verification save:', err);
+      setVerificationError(err instanceof Error ? err.message : 'Failed to save GoodDollar verification. Please try again.');
+      setVerificationStatus('error');
+    }
+  };
 
   // Get user's CELO balance
   const { data: celoBalance } = useBalance({
@@ -420,7 +477,7 @@ useEffect(() => {
     });
   }, [userProjects, filter, sortBy]);
 
-  if (!isConnected) {
+  if (!address) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center max-w-sm mx-auto p-6 bg-white rounded-lg shadow-sm">
@@ -470,7 +527,7 @@ useEffect(() => {
                     </div>
                   ) : (
                     <button
-                      onClick={() => setShowVerification(true)}
+                      onClick={() => setShowMethodSelection(true)}
                       className="flex items-center gap-1 px-2 py-1 bg-yellow-50 hover:bg-yellow-100 rounded-full transition-colors"
                     >
                       <Shield className="h-4 w-4 text-yellow-600" />
@@ -819,7 +876,7 @@ useEffect(() => {
            <div className="space-y-4">
              {!isVerified ? (
                <button
-                 onClick={() => setShowVerification(true)}
+                 onClick={() => setShowMethodSelection(true)}
                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                >
                  <UserCheck className="h-5 w-5" />
@@ -854,6 +911,61 @@ useEffect(() => {
                  Build trust within the community with verified identity
                </p>
              </div>
+           </div>
+         </div>
+       </div>
+     )}
+
+     {/* Verification Method Selection Modal */}
+     {showMethodSelection && (
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div className="bg-white rounded-lg p-6 max-w-md w-full">
+           <div className="flex items-center justify-between mb-4">
+             <h3 className="text-lg font-bold text-gray-900">Choose Verification Method</h3>
+             <button
+               onClick={() => setShowMethodSelection(false)}
+               className="text-gray-400 hover:text-gray-600"
+             >
+               <X className="h-5 w-5" />
+             </button>
+           </div>
+           
+           <p className="text-sm text-gray-600 mb-6">
+             Select your preferred identity verification method:
+           </p>
+
+           <div className="space-y-3">
+             <button
+               onClick={() => {
+                 setShowMethodSelection(false);
+                 setShowVerification(true);
+               }}
+               className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-lg border border-blue-200 transition-all group"
+             >
+               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                 <User className="h-6 w-6" />
+               </div>
+               <div className="text-left">
+                 <h4 className="font-semibold text-gray-900">Self Protocol</h4>
+                 <p className="text-xs text-gray-600">Decentralized identity verification</p>
+               </div>
+             </button>
+             
+             <button
+               onClick={() => {
+                 setShowMethodSelection(false);
+                 setShowGoodDollarVerification(true);
+               }}
+               className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-lg border border-green-200 transition-all group"
+             >
+               <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                 <CreditCard className="h-6 w-6" />
+               </div>
+               <div className="text-left">
+                 <h4 className="font-semibold text-gray-900">Good Dollar</h4>
+                 <p className="text-xs text-gray-600">Universal basic income verification</p>
+               </div>
+             </button>
            </div>
          </div>
        </div>
@@ -1007,6 +1119,13 @@ useEffect(() => {
          </div>
        </div>
      )}
+
+     {/* GoodDollar Verification Modal */}
+     <GoodDollarVerifyModal 
+       isOpen={showGoodDollarVerification}
+       onClose={() => setShowGoodDollarVerification(false)}
+       onVerificationComplete={handleGoodDollarVerificationComplete}
+     />
    </div>
  </div>
 );
