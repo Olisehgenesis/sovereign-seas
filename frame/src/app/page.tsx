@@ -10,7 +10,7 @@ const appUrl = process.env.NEXT_PUBLIC_URL;
 const frame = {
   version: "next",
   // This is the image displayed when sharing the link.
-  imageUrl: `${appUrl}/tipme.png`,
+  imageUrl: `${appUrl}/logo.png`,
   // This is the button displayed when sharing the link.
   button: {
     title: "Vote & Support",
@@ -29,10 +29,10 @@ export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "Buy Hypercert",
+    title: "Sov Seas",
     openGraph: {
-      title: "Buy Hypercert",
-      description: "Tip your friends and favorite creators with crypto!",
+      title: "Sovseas",
+      description: "Support Your Favorite Project On seas!",
     },
     other: {
       "fc:frame": JSON.stringify(frame),

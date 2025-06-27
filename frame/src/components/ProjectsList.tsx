@@ -165,11 +165,21 @@ export default function ProjectsList({ contractAddress, onProjectSelect, viewMod
     });
   };
 
-  const handleShare = (project: EnhancedProject, e: React.MouseEvent) => {
+  const handleShare = (project: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/project/${project.id}`;
-    navigator.clipboard.writeText(url);
-    // You could add a toast notification here
+    
+    // Create the cast text with project details
+    const castText = `🚀 Check out this amazing project: ${project.name}!\n\n` +
+      `📍 ${project.metadata?.bio?.tagline || project.description || 'Amazing project on Sovereign Seas'}\n` +
+      `🔗 View on Sovereign Seas and support this project! 🌊\n\n` +
+      `#SovereignSeas #Funding #Celo #Web3`;
+    
+    // Create the Farcaster cast intent URL
+    const appUrl = `${window.location.origin}/project/${project.id}`;
+    const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(appUrl)}`;
+    
+    // Open the cast intent URL
+    window.open(castUrl, '_blank');
   };
 
   if (isLoading) {

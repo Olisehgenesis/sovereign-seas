@@ -94,7 +94,7 @@ export default function Demo(
   // Auto-connect logic for Farcaster Mini App users
   useEffect(() => {
     if (isSDKLoaded && isMiniApp && isInFarcaster && !isConnected) {
-      // Try to connect with Farcaster frame connector first
+      // Directly connect with Farcaster frame connector without showing modal
       const farcasterConnector = connectors.find((c) => c.id === 'farcasterFrame');
       if (farcasterConnector) {
         connect({ connector: farcasterConnector });
@@ -108,7 +108,7 @@ export default function Demo(
   // Handle wallet connection state
   useEffect(() => {
     if (isMiniApp && isInFarcaster) {
-      // In Farcaster Mini App, we don't show connect modal initially
+      // In Farcaster Mini App, never show connect modal - connect directly
       setShowConnectModal(false);
     } else if (!isConnected) {
       // Outside Farcaster or regular web, show connect modal if not connected
@@ -151,6 +151,7 @@ export default function Demo(
     
     try {
       if (isMiniApp && isInFarcaster) {
+        // Direct Farcaster connection - no modal, no QR codes
         const farcasterConnector = connectors.find((c) => c.id === 'farcasterFrame');
         console.log('Farcaster connector:', farcasterConnector);
         if (farcasterConnector) {
@@ -262,32 +263,8 @@ export default function Demo(
                       onClick={handleConnectWallet}
                       className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white py-3 sm:py-4 rounded-2xl font-bold hover:shadow-2xl transition-all mb-3"
                     >
-                      🎯 Connect in Farcaster
+                      🎯 Connect with Farcaster
                     </button>
-                    
-                    {connectors.length > 1 && (
-                      <button
-                        onClick={() => {
-                          connect({ connector: connectors.find((c) => c.name.includes('Coinbase')) || connectors[1] });
-                          setShowConnectModal(false);
-                        }}
-                        className="w-full bg-blue-500 text-white py-3 rounded-2xl font-bold hover:shadow-xl transition-all"
-                      >
-                        🔵 Coinbase Wallet
-                      </button>
-                    )}
-                    
-                    {connectors.length > 2 && (
-                      <button
-                        onClick={() => {
-                          connect({ connector: connectors.find((c) => c.name.includes('MetaMask')) || connectors[2] });
-                          setShowConnectModal(false);
-                        }}
-                        className="w-full bg-orange-500 text-white py-3 rounded-2xl font-bold hover:shadow-xl transition-all"
-                      >
-                        🦊 MetaMask
-                      </button>
-                    )}
                   </div>
                 ) : (
                   <div>
@@ -441,7 +418,12 @@ export default function Demo(
                   <button
                     onClick={() => {
                       console.log('Header connect button clicked');
-                      setShowConnectModal(true);
+                      if (isMiniApp && isInFarcaster) {
+                        // Direct Farcaster connection without modal
+                        handleConnectWallet();
+                      } else {
+                        setShowConnectModal(true);
+                      }
                     }}
                     className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 rounded-lg transition-all"
                   >
@@ -488,32 +470,6 @@ export default function Demo(
                 className="flex items-center space-x-3"
                 whileHover={{ scale: 1.05 }}
               >
-                <div className="relative">
-                  <motion.div 
-                    animate={{ 
-                      rotate: 360,
-                      scale: [1, 1.1, 1]
-                    }}
-                    transition={{ 
-                      rotate: { duration: 20, repeat: Infinity, ease: "linear" },
-                      scale: { duration: 2, repeat: Infinity, repeatType: "reverse" }
-                    }}
-                    className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center"
-                  >
-                    <Waves className="h-6 w-6 text-white" />
-                  </motion.div>
-                  <motion.div 
-                    animate={{ 
-                      boxShadow: [
-                        "0 0 20px rgba(59, 130, 246, 0.4)",
-                        "0 0 40px rgba(59, 130, 246, 0.8)",
-                        "0 0 20px rgba(59, 130, 246, 0.4)"
-                      ]
-                    }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 blur-lg opacity-50"
-                  />
-                </div>
                 <div>
                   <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
                     {title}
@@ -599,7 +555,12 @@ export default function Demo(
                   <button
                     onClick={() => {
                       console.log('Header connect button clicked');
-                      setShowConnectModal(true);
+                      if (isMiniApp && isInFarcaster) {
+                        // Direct Farcaster connection without modal
+                        handleConnectWallet();
+                      } else {
+                        setShowConnectModal(true);
+                      }
                     }}
                     className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 rounded-lg transition-all"
                   >
