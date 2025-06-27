@@ -11,6 +11,9 @@ importers:
       '@divvi/referral-sdk':
         specifier: ^1.0.0
         version: 1.0.0
+      '@farcaster/auth-client':
+        specifier: ^0.7.0
+        version: 0.7.0(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.25.67)
       '@farcaster/auth-kit':
         specifier: ^0.6.0
         version: 0.6.1(@types/react@18.3.23)(bufferutil@4.0.9)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(utf-8-validate@5.0.10)(viem@2.31.4(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.25.67))
@@ -194,6 +197,9 @@ packages:
     peerDependencies:
       ethers: 5.x || 6.x
       viem: 1.x || 2.x
+
+  '@farcaster/auth-client@0.7.0':
+    resolution: {integrity: sha512-WtQ/dNAlS8VXA73bMjlgdV49vuUJyoPJz6QfSj0rMbv3JFw3SrRDxP5d6fDQxFcYHiDsWCm6ZOe6X03DBNnbaA==}
 
   '@farcaster/auth-kit@0.6.1':
     resolution: {integrity: sha512-J7MXVIUnGAXsw38SdczPtLmf0DlEKQxD7mScdctWCUZnxNn3OS0pxtax1TFZ84HkY9004PEvmNCXPQr+jAKQkw==}
@@ -3930,6 +3936,16 @@ snapshots:
       neverthrow: 6.2.2
       siwe: 2.3.2(ethers@6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       viem: 2.31.4(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.25.67)
+
+  '@farcaster/auth-client@0.7.0(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.25.67)':
+    dependencies:
+      neverthrow: 6.2.2
+      viem: 2.31.4(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.25.67)
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
 
   '@farcaster/auth-kit@0.6.1(@types/react@18.3.23)(bufferutil@4.0.9)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(utf-8-validate@5.0.10)(viem@2.31.4(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)(zod@3.25.67))':
     dependencies:

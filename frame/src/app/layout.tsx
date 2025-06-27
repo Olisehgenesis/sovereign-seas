@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
-import { getSession } from "~/auth"
+import { getSession } from "./auth"
 import "~/app/globals.css";
 import { Providers } from "~/app/providers";
 
 export const metadata: Metadata = {
-  title: "Buy Hypercert",
-  description: "Buy Hypercert Frame",
+  title: "Sovereign Seas",
+  description: "Sovereign Seas",
 };
 
 export default async function RootLayout({

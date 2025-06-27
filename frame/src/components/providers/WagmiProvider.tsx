@@ -1,5 +1,5 @@
 import { createConfig, http, injected, WagmiProvider } from "wagmi";
-import { celo , celoAlfajores} from "wagmi/chains";
+import { celo } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { metaMask } from 'wagmi/connectors';
@@ -14,14 +14,15 @@ export const config = createConfig({
     [celo.id]: http(),
   },
   connectors: [
-    injected(),
-    farcasterFrame(),
     metaMask({
       dappMetadata: {
         name: "Sovseas",
         url: "https://sovseas.xyz",
       }
     }),
+    injected(),
+    farcasterFrame()
+    
   ],
 });
 

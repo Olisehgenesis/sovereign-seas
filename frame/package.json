@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@divvi/referral-sdk": "^1.0.0",
+    "@farcaster/auth-client": "^0.7.0",
     "@farcaster/auth-kit": "^0.6.0",
     "@farcaster/frame-core": "^0.0.22",
     "@farcaster/frame-node": "^0.0.7",

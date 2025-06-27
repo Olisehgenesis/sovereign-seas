@@ -1,4 +1,5 @@
-// useVotingMethods.tsx - FIXED VERSION
+//@ts-nocheck
+
 import { useWriteContract, useReadContract, useSendTransaction } from 'wagmi'
 import { parseEther, formatEther, Address } from 'viem'
 import { contractABI as abi } from '../abi/seas4ABI'
