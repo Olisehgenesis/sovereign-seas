@@ -1010,8 +1010,11 @@ export function useAllCampaigns(contractAddress: Address) {
 
   const { campaigns, isLoading: campaignsLoading, error, refetch } = useCampaigns(contractAddress, campaignIds)
 
+  // Sort campaigns by ID in descending order (newest first)
+  const sortedCampaigns = campaigns.sort((a, b) => Number(b.campaign.id) - Number(a.campaign.id))
+
   return {
-    campaigns,
+    campaigns: sortedCampaigns,
     isLoading: countLoading || campaignsLoading,
     error,
     refetch

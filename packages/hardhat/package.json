@@ -29,6 +29,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^5.3.0",
     "dotenv": "^16.4.5",
+    "ethers": "^6.14.4",
     "viem": "^2.30.0"
   },
   "scripts": {
@@ -41,6 +42,8 @@
     "deploygrants": "hardhat run scripts/deploy/deploySovGrants.ts ",
     "deployclaims": "ts-node scripts/deploy/deployclaims.ts ",
     "deploytips": "hardhat run scripts/deploy/deplottips.ts ",
+    "deploynft": "ts-node scripts/deploy/deployNFT.ts",
+    "deploynft:celo": "ts-node scripts/deploy/deployNFT.ts --network celo",
     "deploytips:celo": "ts-node scripts/deploy/deplottips.ts --network celo",
     "deploytips:alfajores": "ts-node scripts/deploy/deplottips.ts --network alfajores",
     "deploytips:sepolia": "ts-node scripts/deploy/deplottips.ts --network sepolia",
@@ -50,6 +53,8 @@
     "verify": "hardhat verify",
     "verify:seas": "hardhat run scripts/deploy/verifySov.ts --network alfajores",
     "verify:grants": "hardhat run scripts/deploy/verifyGrants.ts --network celo",
+    "verify:nft": "hardhat run scripts/deploy/verifyNFT.ts --network celo",
+    "verify:nft:celo": "hardhat run scripts/deploy/verifyNFT.ts --network celo",
     "vote": "hardhat run scripts/swapVote.ts ",
     "verifyclaims": "hardhat run scripts/deploy/verifyClaims.ts --network alfajores",
     "verifyclaims:celo": "hardhat run scripts/deploy/verifyClaims.ts --network celo",
@@ -70,6 +75,7 @@
     "clean": "hardhat clean",
     "run:node": "hardhat node",
     "test": "hardhat test",
+    "testnft": "hardhat run scripts/testNFT.ts --network celo",
     "prettier": "prettier --write 'contracts/**/*.sol' '**/*.ts'",
     "sync:abis": "node sync-abis.js"
   },

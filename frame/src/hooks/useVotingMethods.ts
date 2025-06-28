@@ -176,7 +176,7 @@ const voteWithCelo = async ({
   amount: bigint
   bypassCode?: string
 }) => {
-  if (!campaignId || !projectId || !amount) {
+  if (campaignId === undefined || campaignId === null || projectId === undefined || projectId === null || amount === undefined || amount === null) {
     throw new Error('Missing required parameters for CELO voting');
   }
 
