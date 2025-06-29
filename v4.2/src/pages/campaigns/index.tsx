@@ -21,6 +21,7 @@ import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import { useGeneralPageMetadata } from '@/hooks/usePageMetadata';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -356,6 +357,14 @@ export default function CampaignsPage() {
 
   // Get campaigns data
   const { campaigns, isLoading, error } = useAllCampaigns(CONTRACT_ADDRESS);
+
+  // Metadata management
+  useGeneralPageMetadata({
+    title: 'Campaigns | Sovereign Seas',
+    description: 'Browse and participate in funding campaigns. Support innovative blockchain projects through community voting and quadratic distribution.',
+    keywords: 'campaigns, funding, voting, blockchain, quadratic distribution, community, Sovereign Seas',
+    image: '/og-image.png'
+  });
 
   useEffect(() => {
     setIsMounted(true);

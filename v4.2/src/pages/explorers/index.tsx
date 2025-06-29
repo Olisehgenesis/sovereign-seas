@@ -37,6 +37,7 @@ import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import { useGeneralPageMetadata } from '@/hooks/usePageMetadata';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -114,6 +115,14 @@ export default function UnifiedExplorer() {
   // Use hooks for both projects and campaigns
   const { projects, isLoading: projectsLoading, error: projectsError } = useAllProjects(CONTRACT_ADDRESS);
   const { campaigns, isLoading: campaignsLoading, error: campaignsError } = useAllCampaigns(CONTRACT_ADDRESS);
+
+  // Metadata management
+  useGeneralPageMetadata({
+    title: 'Explore Projects & Campaigns | Sovereign Seas',
+    description: 'Discover and explore innovative blockchain projects and funding campaigns. Filter by category, tags, and status to find what interests you.',
+    keywords: 'explore, projects, campaigns, blockchain, funding, discovery, filter, search, Sovereign Seas',
+    image: '/og-image.png'
+  });
 
   // Categories for both projects and campaigns
   const projectCategories = [

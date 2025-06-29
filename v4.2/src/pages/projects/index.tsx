@@ -23,6 +23,7 @@ import {
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { Address } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import { useGeneralPageMetadata } from '@/hooks/usePageMetadata';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -291,6 +292,14 @@ export default function ProjectsPage() {
 
   // Get projects data
   const { projects, isLoading, error } = useAllProjects(CONTRACT_ADDRESS);
+
+  // Metadata management
+  useGeneralPageMetadata({
+    title: 'Projects | Sovereign Seas',
+    description: 'Discover innovative blockchain projects across DeFi, NFT, Gaming, Infrastructure, and more. Browse projects by category and find opportunities to support.',
+    keywords: 'projects, blockchain, DeFi, NFT, Gaming, Infrastructure, DAO, Social, Identity, Privacy, Analytics, Developer Tools, Sovereign Seas',
+    image: '/og-image.png'
+  });
 
   const categories = [
     'DeFi', 'NFT', 'Gaming', 'Infrastructure', 'DAO', 'Social', 'Identity', 

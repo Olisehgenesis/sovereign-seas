@@ -1,5 +1,3 @@
-
-
 import { useState,  useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAccount } from 'wagmi';
@@ -70,6 +68,8 @@ import {
 import { useProjectDetails, useProjectCampaigns } from '@/hooks/useProjectMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import ProjectCampaignsModal from '@/components/ProjectCampaignsModal';
+import { useProjectMetadata } from '@/hooks/usePageMetadata';
+import { type ProjectMetadata as MetadataProject } from '@/utils/metadataUtils';
 
 // ==================== TYPES ====================
 
@@ -486,6 +486,32 @@ export default function ProjectView() {
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
   const projectId = id ? BigInt(id) : BigInt(0);
   const { project, projectCampaigns, isLoading, error } = useProjectData(projectId, contractAddress);
+  
+  // Metadata management
+  const projectMetadata: MetadataProject | null = useMemo(() => {
+    if (!project) return null;
+    
+    return {
+      id: project.id.toString(),
+      name: project.name,
+      description: project.description,
+      tagline: project.metadata?.tagline,
+      category: project.metadata?.category,
+      logo: project.metadata?.logo,
+      coverImage: project.metadata?.coverImage,
+      website: project.metadata?.website,
+      blockchain: project.metadata?.blockchain,
+      techStack: project.metadata?.techStack,
+      tags: project.metadata?.tags,
+      location: project.metadata?.location,
+      teamMembers: project.metadata?.teamMembers?.map(member => ({
+        name: member.name,
+        role: member.role
+      }))
+    };
+  }, [project]);
+  
+  useProjectMetadata(projectMetadata);
   
   // Constants
   const tabs: Tab[] = [

@@ -7,6 +7,7 @@ import {
   FileText, Award, Globe, Heart, Star, GitBranch, Calendar, Wallet,
   ChevronRight, ChevronLeft, Home, Search, Bookmark, Share2
 } from 'lucide-react';
+import { useGeneralPageMetadata } from '@/hooks/usePageMetadata';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -61,6 +62,14 @@ export default function SovereignSeasGuide() {
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [calculatorInput, setCalculatorInput] = useState(100);
+
+  // Metadata management
+  useGeneralPageMetadata({
+    title: 'Documentation | Sovereign Seas',
+    description: 'Learn about Sovereign Seas platform, quadratic funding, token-weighted voting, and how to participate in community-driven funding campaigns.',
+    keywords: 'documentation, guide, quadratic funding, token voting, community funding, Sovereign Seas, CELO, blockchain',
+    image: '/og-image.png'
+  });
 
   useEffect(() => {
     setIsMounted(true);
