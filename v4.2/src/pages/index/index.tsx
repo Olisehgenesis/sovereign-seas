@@ -33,7 +33,6 @@ import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
-import { useGeneralPageMetadata } from '@/hooks/usePageMetadata';
 
 // ==================== TYPES ====================
 
@@ -662,14 +661,6 @@ export default function HomePage() {
   // Use hooks for data fetching
   const { projects, isLoading: projectsLoading, error: projectsError } = useAllProjects(CONTRACT_ADDRESS);
   const { campaigns, isLoading: campaignsLoading, error: campaignsError } = useAllCampaigns(CONTRACT_ADDRESS);
-
-  // Metadata management
-  useGeneralPageMetadata({
-    title: 'Sovereign Seas | Decentralized Funding Platform',
-    description: 'Discover innovative blockchain projects and participate in community-driven funding campaigns. Vote with CELO, cUSD, GS, and GLOdollar tokens.',
-    keywords: 'blockchain, funding, campaigns, decentralized, voting, projects, Celo, cUSD, GS, GLOdollar, quadratic distribution',
-    image: '/og-image.png'
-  });
 
   // Typing animation for tokens
   useEffect(() => {

@@ -1,17 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { Ship, Home, Anchor, Waves, Compass, ArrowLeft, Search, MapPin, Wind, Cloud } from 'lucide-react'
-import { useGeneralPageMetadata } from '@/hooks/usePageMetadata'
 
 const NotFound = () => {
   const navigate = useNavigate()
-
-  // Metadata management
-  useGeneralPageMetadata({
-    title: 'Page Not Found | Sovereign Seas',
-    description: 'The page you\'re looking for has drifted away with the tide. Navigate back to explore projects and campaigns.',
-    keywords: '404, page not found, Sovereign Seas, navigation',
-    image: '/og-image.png'
-  });
 
   return (
     <>

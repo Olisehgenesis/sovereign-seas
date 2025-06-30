@@ -58,8 +58,6 @@ import {
   useCampaignTokenAmount,
 } from '@/hooks/useVotingMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
-import { useCampaignMetadata } from '@/hooks/usePageMetadata';
-import { type CampaignMetadata as MetadataCampaign } from '@/utils/metadataUtils';
 
 interface Project {
   voteCount: bigint;
@@ -1103,28 +1101,6 @@ export default function CampaignView() {
       </div>
     );
   };
-
-  // Metadata management
-  const campaignMetadata: MetadataCampaign | null = useMemo(() => {
-    if (!campaignDetails) return null;
-    
-    // Find the first project to get project logo
-    const firstProject = campaignProjectsBasic[0];
-    const projectLogo = firstProject?.metadata?.logo || firstProject?.metadata?.coverImage;
-    
-    return {
-      id: campaignId.toString(),
-      title: campaignDetails.title,
-      description: campaignDetails.description,
-      projectName: firstProject?.name,
-      projectLogo,
-      fundingGoal: campaignDetails.fundingGoal ? formatEther(campaignDetails.fundingGoal) : undefined,
-      endDate: new Date(Number(campaignDetails.endTime) * 1000).toISOString(),
-      category: firstProject?.metadata?.category
-    };
-  }, [campaignDetails, campaignProjectsBasic, campaignId]);
-  
-  useCampaignMetadata(campaignMetadata);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 relative overflow-hidden">
