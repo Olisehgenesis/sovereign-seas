@@ -47,6 +47,7 @@ import {
 import { useCreateProject } from '@/hooks/useProjectMethods';
 import { uploadToIPFS } from '@/utils/imageUtils';
 import { LucideIcon } from 'lucide-react';
+import { publicClient } from '@/utils/clients';
 
 interface SectionProps {
   id: string;
@@ -493,12 +494,9 @@ export default function CreateProject() {
       let logoIpfsUrl = '';
       if (logoFile) {
         try {
-          console.log('Uploading logo to IPFS...');
           setUploadProgress(30);
           logoIpfsUrl = await uploadToIPFS(logoFile);
-          console.log('Logo uploaded to IPFS:', logoIpfsUrl);
         } catch (uploadError) {
-          console.error('Logo upload failed:', uploadError);
           throw new Error(`Failed to upload logo: ${uploadError}`);
         }
       }
@@ -591,10 +589,8 @@ export default function CreateProject() {
       
       setUploadProgress(90);
       
-      console.log('Creating project with contract...');
-      
       // Call the contract method
-      await createProject({
+      const tx = await createProject({
         name: cleanedProject.name,
         description: cleanedProject.description,
         bio: JSON.stringify(bioData),
@@ -608,6 +604,19 @@ export default function CreateProject() {
       
       setUploadProgress(100);
       
+      // Wait for transaction confirmation
+      if (tx) {
+        setSuccessMessage('Waiting for transaction confirmation...');
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
+        if (receipt.status === 'success') {
+          setSuccessMessage('Project created successfully! Redirecting...');
+          setTimeout(() => {
+            navigate('/explorer?tab=projects');
+          }, 3000);
+        } else {
+          setErrorMessage('Transaction failed');
+        }
+      }
     } catch (error: unknown) {
       console.error('Project creation error:', error);
       
@@ -639,9 +648,8 @@ export default function CreateProject() {
     if (isSuccess) {
       setLoading(false);
       setSuccessMessage('Project created successfully! Redirecting...');
-      
       setTimeout(() => {
-        navigate('/explorer');
+        navigate('/explorer?tab=projects');
       }, 3000);
     }
   }, [isSuccess, navigate]);
