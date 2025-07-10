@@ -1,6 +1,6 @@
 import { createWalletClient, http, parseEther, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { celo } from 'viem/chains';
+import { celo, celoAlfajores } from 'viem/chains';
 import * as dotenv from 'dotenv';
 import sovereignSeasNFTAbi from '../../artifacts/contracts/SovereignSeasNFT.sol/SovereignSeasNFT.json';
 import { readFileSync } from 'fs';
@@ -9,7 +9,12 @@ dotenv.config();
 
 // Read configuration from environment variables
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-const RPC_URL = process.env.CELO_RPC_URL || 'https://rpc.ankr.com/celo';
+const networkArg = process.argv.find(arg => arg.startsWith('--network='));
+const NETWORK = networkArg ? networkArg.split('=')[1] : (process.env.NETWORK || 'celo');
+const IS_ALFAJORES = NETWORK === 'alfajores';
+const CHAIN = IS_ALFAJORES ? celoAlfajores : celo;
+const DEFAULT_RPC = IS_ALFAJORES ? 'https://alfajores-forno.celo-testnet.org' : 'https://rpc.ankr.com/celo';
+const RPC_URL = process.env.CELO_RPC_URL || DEFAULT_RPC;
 const SOVEREIGN_SEAS_V4_ADDRESS = process.env.SOVEREIGN_SEAS_V4_ADDRESS;
 
 // NFT Contract Configuration
@@ -44,18 +49,18 @@ try {
 
 async function deploySovereignSeasNFT() {
   try {
-    console.log('Deploying SovereignSeasNFT contract to Celo mainnet...');
+    console.log(`Deploying SovereignSeasNFT contract to ${IS_ALFAJORES ? 'Celo Alfajores Testnet' : 'Celo Mainnet'}...`);
     
     // Create wallet client with private key
     const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     const walletClient = createWalletClient({
       account,
-      chain: celo,
+      chain: CHAIN,
       transport: http(RPC_URL)
     });
     
     const publicClient = createPublicClient({
-      chain: celo,
+      chain: CHAIN,
       transport: http(RPC_URL)
     });
     
@@ -63,7 +68,7 @@ async function deploySovereignSeasNFT() {
     console.log(`SovereignSeasV4 address: ${SOVEREIGN_SEAS_V4_ADDRESS}`);
     console.log(`NFT Name: ${NFT_NAME}`);
     console.log(`NFT Symbol: ${NFT_SYMBOL}`);
-    console.log(`Network: Celo Mainnet`);
+    console.log(`Network: ${IS_ALFAJORES ? 'Celo Alfajores Testnet' : 'Celo Mainnet'}`);
     
     let abi = sovereignSeasNFTAbi.abi;
     // Check if ABI is valid
@@ -102,7 +107,7 @@ async function deploySovereignSeasNFT() {
     console.log(`Contract address: ${receipt.contractAddress}`);
     console.log('');
     console.log('=== Deployment Summary ===');
-    console.log(`Network: Celo Mainnet`);
+    console.log(`Network: ${IS_ALFAJORES ? 'Celo Alfajores Testnet' : 'Celo Mainnet'}`);
     console.log(`Contract: SovereignSeasNFT`);
     console.log(`Address: ${receipt.contractAddress}`);
     console.log(`Transaction Hash: ${hash}`);
@@ -112,9 +117,9 @@ async function deploySovereignSeasNFT() {
     console.log('');
     console.log('=== Next Steps ===');
     console.log('1. Add SOVEREIGN_SEAS_NFT_ADDRESS to your .env file');
-    console.log('2. Run verification script: pnpm verify:nft:celo');
+    console.log(`2. Run verification script: pnpm ${IS_ALFAJORES ? 'verify:test' : 'verify:nft:celo'}`);
     console.log('3. Test minting functions');
-    console.log(`4. View on CeloScan: https://celoscan.io/address/${receipt.contractAddress}`);
+    console.log(`4. View on CeloScan: https://${IS_ALFAJORES ? 'alfajores.' : ''}celoscan.io/address/${receipt.contractAddress}`);
     
     return receipt.contractAddress;
     

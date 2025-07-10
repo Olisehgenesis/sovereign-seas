@@ -77,7 +77,9 @@
     "test": "hardhat test",
     "testnft": "hardhat run scripts/testNFT.ts --network celo",
     "prettier": "prettier --write 'contracts/**/*.sol' '**/*.ts'",
-    "sync:abis": "node sync-abis.js"
+    "sync:abis": "node sync-abis.js",
+    "deploy:test": "ts-node scripts/deploy/deployNFT.ts --network alfajores",
+    "verify:test": "hardhat run scripts/deploy/verifyNFT.ts --network alfajores"
   },
   "author": "olisehgenesis"
 }
