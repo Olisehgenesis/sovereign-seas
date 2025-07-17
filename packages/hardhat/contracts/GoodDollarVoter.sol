@@ -18,86 +18,51 @@ interface IUbeswapV2Router {
     
     function getAmountsOut(uint amountIn, address[] calldata path)
         external view returns (uint[] memory amounts);
-    
-    function factory() external pure returns (address);
-}
-
-// Interface for Ubeswap V2 Factory
-interface IUbeswapV2Factory {
-    function getPair(address tokenA, address tokenB) external view returns (address pair);
 }
 
 // Interface for Ubeswap V2 Pair
 interface IUbeswapV2Pair {
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLatch);
     function token0() external view returns (address);
     function token1() external view returns (address);
 }
 
-// Interface for the Uniswap V3 Pool (fallback)
-interface IUniswapV3Pool {
-    function swap(
-        address recipient,
-        bool zeroForOne,
-        int256 amountSpecified,
-        uint160 sqrtPriceLimitX96,
-        bytes calldata data
-    ) external returns (int256 amount0, int256 amount1);
-    
-    function token0() external view returns (address);
-    function token1() external view returns (address);
-    function slot0() external view returns (
-        uint160 sqrtPriceX96,
-        int24 tick,
-        uint16 observationIndex,
-        uint16 observationCardinality,
-        uint16 observationCardinalityNext,
-        uint8 feeProtocol,
-        bool unlocked
-    );
-}
-
-// Interface for SovereignSeas voting
+// Interface for SovereignSeas voting - FIXED to use voteWithCelo for CELO
 interface ISovereignSeas {
     function voteWithCelo(uint256 _campaignId, uint256 _projectId, bytes32 _bypassCode) external payable;
     function vote(uint256 _campaignId, uint256 _projectId, address _token, uint256 _amount, bytes32 _bypassCode) external;
 }
 
-// Uniswap V3 Swap Callback interface (for fallback)
-interface IUniswapV3SwapCallback {
-    function uniswapV3SwapCallback(
-        int256 amount0Delta,
-        int256 amount1Delta,
-        bytes calldata data
-    ) external;
-}
-
-contract GoodDollarVoter is IUniswapV3SwapCallback, ReentrancyGuard, Ownable {
+contract GoodDollarVoter is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
     // Contract addresses
-    address public constant GOOD_DOLLAR = 0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A; // GoodDollar token
-    address public constant CELO = 0x471EcE3750Da237f93B8E339c536989b8978a438; // CELO token
-    address public constant CUSD = 0x765DE816845861e75A25fCA122bb6898B8B1282a; // cUSD token
+    address public constant GOOD_DOLLAR = 0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A;
+    address public constant CELO = 0x471EcE3750Da237f93B8E339c536989b8978a438;
     
-    // Ubeswap V2 (primary route)
-    address public constant UBESWAP_V2_ROUTER = 0xE3D8bd6Aed4F159bc8000a9cD47CffDb95F96121; // Ubeswap V2 Router
-    address public constant UBESWAP_V2_GS_CELO_PAIR = 0x25878951ae130014e827e6f54fd3b4cca057a7e8; // GS/CELO Ubeswap V2 pair
-    
-    // Uniswap V3 (fallback route)
-    address public constant UNISWAP_V3_GS_CELO_POOL = 0x98287d4f15eede6517f215b3fcc10480c231e840; // GS/CELO Uniswap V3 pool
-    address public constant UNISWAP_V3_GS_CUSD_POOL = 0x11EeA4c62288186239241cE21F54034006C79B3F; // GS/cUSD Uniswap V3 pool
+    // Ubeswap V2 (working pool with good liquidity)
+    address public constant UBESWAP_V2_ROUTER = 0xE3D8bd6Aed4F159bc8000a9cD47CffDb95F96121;
+    address public constant DEFAULT_GS_CELO_PAIR = 0x25878951ae130014E827e6f54fd3B4CCa057a7e8;
     
     ISovereignSeas public immutable sovereignSeas;
     IUbeswapV2Router public immutable ubeswapRouter;
-    IUbeswapV2Factory public immutable ubeswapFactory;
     IERC20 public immutable goodDollar;
-    IERC20 public immutable celo;
-    IERC20 public immutable cusd;
+    
+    // Pool management for future expansion
+    struct Pool {
+        address pairAddress;
+        address tokenA;
+        address tokenB;
+        bool active;
+        string name;
+    }
+    
+    mapping(uint256 => Pool) public pools;
+    uint256 public poolCount;
+    uint256 public defaultPoolId;
     
     // Configuration
-    uint256 public constant MIN_LIQUIDITY_THRESHOLD = 100e18; // Minimum liquidity in CELO for Ubeswap V2
-    uint256 public slippageTolerance = 300; // 3% slippage tolerance (300 basis points)
+    uint256 public constant MIN_LIQUIDITY_THRESHOLD = 50e18; // 50 CELO minimum liquidity
     
     // Events
     event SwapAndVote(
@@ -105,54 +70,57 @@ contract GoodDollarVoter is IUniswapV3SwapCallback, ReentrancyGuard, Ownable {
         uint256 indexed campaignId,
         uint256 indexed projectId,
         uint256 gsAmount,
-        uint256 outputAmount,
-        address outputToken,
+        uint256 celoAmount,
+        uint256 poolId,
         string route
     );
     
-    event RouteUsed(string route, uint256 inputAmount, uint256 outputAmount, address outputToken);
-    
-    event EmergencyWithdraw(
-        address indexed token,
-        address indexed recipient,
-        uint256 amount
+    event PoolAdded(
+        uint256 indexed poolId,
+        address indexed pairAddress,
+        address indexed tokenA,
+        address tokenB,
+        string name
     );
-
-    // Struct to pass data to the Uniswap V3 swap callback
-    struct SwapCallbackData {
-        address tokenIn;
-        address tokenOut;
-        address payer;
-        uint256 amountIn;
-    }
+    
+    event PoolUpdated(
+        uint256 indexed poolId,
+        bool active
+    );
+    
+    event DefaultPoolChanged(
+        uint256 indexed oldPoolId,
+        uint256 indexed newPoolId
+    );
 
     constructor(address _sovereignSeas) Ownable(msg.sender) {
         require(_sovereignSeas != address(0), "Invalid SovereignSeas address");
         
         sovereignSeas = ISovereignSeas(_sovereignSeas);
         ubeswapRouter = IUbeswapV2Router(UBESWAP_V2_ROUTER);
-        ubeswapFactory = IUbeswapV2Factory(ubeswapRouter.factory());
         goodDollar = IERC20(GOOD_DOLLAR);
-        celo = IERC20(CELO);
-        cusd = IERC20(CUSD);
         
         // Approve tokens for Ubeswap router
         goodDollar.approve(UBESWAP_V2_ROUTER, type(uint256).max);
+        
+        // Add default pool (GS/CELO Ubeswap V2)
+        _addPool(DEFAULT_GS_CELO_PAIR, GOOD_DOLLAR, CELO, "UbeswapV2_GS_CELO");
+        defaultPoolId = 0;
     }
 
     /**
-     * @notice Swap GoodDollar and vote in SovereignSeas campaign with intelligent routing
+     * @notice Swap GoodDollar to CELO and vote using voteWithCelo
      * @param _campaignId Campaign ID to vote in
      * @param _projectId Project ID to vote for
      * @param _gsAmount Amount of GoodDollar to swap
-     * @param _minOutputAmount Minimum output to receive (slippage protection)
+     * @param _minCeloOut Minimum CELO to receive
      * @param _bypassCode Bypass code for voting (if any)
      */
     function swapAndVote(
         uint256 _campaignId,
         uint256 _projectId,
         uint256 _gsAmount,
-        uint256 _minOutputAmount,
+        uint256 _minCeloOut,
         bytes32 _bypassCode
     ) external nonReentrant {
         require(_gsAmount > 0, "Amount must be greater than 0");
@@ -160,78 +128,79 @@ contract GoodDollarVoter is IUniswapV3SwapCallback, ReentrancyGuard, Ownable {
         // Transfer GoodDollar from user
         goodDollar.safeTransferFrom(msg.sender, address(this), _gsAmount);
         
-        // Determine best route and execute swap
-        (uint256 outputAmount, address outputToken, string memory route) = _executeOptimalSwap(_gsAmount, _minOutputAmount);
+        // Swap GS → CELO using default pool
+        uint256 celoReceived = _swapGSToCELO(_gsAmount, _minCeloOut, defaultPoolId);
         
-        // Vote with the received tokens
-        if (outputToken == CELO) {
-            // Vote with CELO tokens (ERC20)
-            celo.approve(address(sovereignSeas), outputAmount);
-            sovereignSeas.vote(_campaignId, _projectId, CELO, outputAmount, _bypassCode);
-        } else if (outputToken == CUSD) {
-            // Vote with cUSD tokens
-            cusd.approve(address(sovereignSeas), outputAmount);
-            sovereignSeas.vote(_campaignId, _projectId, CUSD, outputAmount, _bypassCode);
-        }
+        // Vote with CELO using voteWithCelo (sends native CELO)
+        sovereignSeas.voteWithCelo{value: celoReceived}(_campaignId, _projectId, _bypassCode);
         
-        emit SwapAndVote(msg.sender, _campaignId, _projectId, _gsAmount, outputAmount, outputToken, route);
+        emit SwapAndVote(
+            msg.sender, 
+            _campaignId, 
+            _projectId, 
+            _gsAmount, 
+            celoReceived, 
+            defaultPoolId,
+            pools[defaultPoolId].name
+        );
     }
 
     /**
-     * @notice Execute optimal swap route based on liquidity and conditions
+     * @notice Swap GoodDollar to CELO using specified pool
+     * @param _campaignId Campaign ID to vote in
+     * @param _projectId Project ID to vote for
+     * @param _gsAmount Amount of GoodDollar to swap
+     * @param _minCeloOut Minimum CELO to receive
+     * @param _poolId Pool ID to use for swap
+     * @param _bypassCode Bypass code for voting (if any)
      */
-    function _executeOptimalSwap(uint256 _gsAmount, uint256 _minOutputAmount) 
-        internal 
-        returns (uint256 outputAmount, address outputToken, string memory route) 
-    {
-        // Try Ubeswap V2 GS → CELO first (primary route)
-        if (_checkUbeswapV2Liquidity()) {
-            try this._swapUbeswapV2(_gsAmount, _minOutputAmount) returns (uint256 amount) {
-                return (amount, CELO, "UbeswapV2_GS_CELO");
-            } catch {
-                // Ubeswap V2 failed, continue to fallback
-            }
-        }
+    function swapAndVoteWithPool(
+        uint256 _campaignId,
+        uint256 _projectId,
+        uint256 _gsAmount,
+        uint256 _minCeloOut,
+        uint256 _poolId,
+        bytes32 _bypassCode
+    ) external nonReentrant {
+        require(_gsAmount > 0, "Amount must be greater than 0");
+        require(_poolId < poolCount, "Invalid pool ID");
+        require(pools[_poolId].active, "Pool not active");
         
-        // Fallback 1: Uniswap V3 GS → CELO
-        try this._swapUniswapV3GSCELO(_gsAmount, _minOutputAmount) returns (uint256 amount) {
-            return (amount, CELO, "UniswapV3_GS_CELO");
-        } catch {
-            // Uniswap V3 GS→CELO failed, try GS→cUSD
-        }
+        // Transfer GoodDollar from user
+        goodDollar.safeTransferFrom(msg.sender, address(this), _gsAmount);
         
-        // Fallback 2: Uniswap V3 GS → cUSD (final fallback)
-        uint256 cusdAmount = _swapUniswapV3GStoUSD(_gsAmount, _minOutputAmount);
-        return (cusdAmount, CUSD, "UniswapV3_GS_cUSD");
+        // Swap GS → CELO using specified pool
+        uint256 celoReceived = _swapGSToCELO(_gsAmount, _minCeloOut, _poolId);
+        
+        // Vote with CELO using voteWithCelo (sends native CELO)
+        sovereignSeas.voteWithCelo{value: celoReceived}(_campaignId, _projectId, _bypassCode);
+        
+        emit SwapAndVote(
+            msg.sender, 
+            _campaignId, 
+            _projectId, 
+            _gsAmount, 
+            celoReceived, 
+            _poolId,
+            pools[_poolId].name
+        );
     }
 
     /**
-     * @notice Check if Ubeswap V2 has sufficient liquidity
+     * @notice Internal function to swap GS to CELO using Ubeswap V2
      */
-    function _checkUbeswapV2Liquidity() internal view returns (bool) {
-        try IUbeswapV2Pair(UBESWAP_V2_GS_CELO_PAIR).getReserves() returns (
-            uint112 reserve0, 
-            uint112 reserve1, 
-            uint32
-        ) {
-            // Check which token is CELO and ensure it has enough liquidity
-            address token0 = IUbeswapV2Pair(UBESWAP_V2_GS_CELO_PAIR).token0();
-            uint256 celoReserve = (token0 == CELO) ? reserve0 : reserve1;
-            return celoReserve >= MIN_LIQUIDITY_THRESHOLD;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * @notice Swap using Ubeswap V2 GS → CELO
-     */
-    function _swapUbeswapV2(uint256 _gsAmount, uint256 _minCeloOut) external returns (uint256) {
-        require(msg.sender == address(this), "Internal only");
+    function _swapGSToCELO(uint256 _gsAmount, uint256 _minCeloOut, uint256 _poolId) internal returns (uint256) {
+        Pool storage pool = pools[_poolId];
+        require(pool.active, "Pool not active");
+        
+        // Check liquidity
+        require(_checkPoolLiquidity(_poolId), "Insufficient pool liquidity");
         
         address[] memory path = new address[](2);
-        path[0] = GOOD_DOLLAR;
-        path[1] = CELO;
+        path[0] = pool.tokenA; // Should be GOOD_DOLLAR
+        path[1] = pool.tokenB; // Should be CELO
+        
+        require(path[0] == GOOD_DOLLAR && path[1] == CELO, "Invalid pool tokens");
         
         uint256[] memory amounts = ubeswapRouter.swapExactTokensForTokens(
             _gsAmount,
@@ -241,205 +210,197 @@ contract GoodDollarVoter is IUniswapV3SwapCallback, ReentrancyGuard, Ownable {
             block.timestamp + 300
         );
         
-        uint256 celoReceived = amounts[1];
-        emit RouteUsed("UbeswapV2_GS_CELO", _gsAmount, celoReceived, CELO);
-        return celoReceived;
+        return amounts[1]; // CELO received
     }
 
     /**
-     * @notice Swap using Uniswap V3 GS → CELO
+     * @notice Check if pool has sufficient liquidity
      */
-    function _swapUniswapV3GSCELO(uint256 _gsAmount, uint256 _minCeloOut) external returns (uint256) {
-        require(msg.sender == address(this), "Internal only");
+    function _checkPoolLiquidity(uint256 _poolId) internal view returns (bool) {
+        Pool storage pool = pools[_poolId];
         
-        IUniswapV3Pool pool = IUniswapV3Pool(UNISWAP_V3_GS_CELO_POOL);
-        
-        // Determine swap direction
-        address token0 = pool.token0();
-        bool zeroForOne = token0 == GOOD_DOLLAR;
-        
-        // Calculate price limit
-        uint160 sqrtPriceLimitX96 = zeroForOne 
-            ? 4295128739  // MIN_SQRT_RATIO + 1
-            : 1461446703485210103287273052203988822378723970341; // MAX_SQRT_RATIO - 1
-        
-        SwapCallbackData memory callbackData = SwapCallbackData({
-            tokenIn: GOOD_DOLLAR,
-            tokenOut: CELO,
-            payer: address(this),
-            amountIn: _gsAmount
-        });
-        
-        uint256 celoBalanceBefore = celo.balanceOf(address(this));
-        
-        pool.swap(
-            address(this),
-            zeroForOne,
-            int256(_gsAmount),
-            sqrtPriceLimitX96,
-            abi.encode(callbackData)
-        );
-        
-        uint256 celoReceived = celo.balanceOf(address(this)) - celoBalanceBefore;
-        require(celoReceived >= _minCeloOut, "Insufficient CELO received");
-        
-        emit RouteUsed("UniswapV3_GS_CELO", _gsAmount, celoReceived, CELO);
-        return celoReceived;
-    }
-
-    /**
-     * @notice Swap using Uniswap V3 GS → cUSD (final fallback)
-     */
-    function _swapUniswapV3GStoUSD(uint256 _gsAmount, uint256 _minCusdOut) internal returns (uint256) {
-        IUniswapV3Pool pool = IUniswapV3Pool(UNISWAP_V3_GS_CUSD_POOL);
-        
-        // Determine swap direction
-        address token0 = pool.token0();
-        bool zeroForOne = token0 == GOOD_DOLLAR;
-        
-        // Calculate price limit
-        uint160 sqrtPriceLimitX96 = zeroForOne 
-            ? 4295128739  // MIN_SQRT_RATIO + 1
-            : 1461446703485210103287273052203988822378723970341; // MAX_SQRT_RATIO - 1
-        
-        SwapCallbackData memory callbackData = SwapCallbackData({
-            tokenIn: GOOD_DOLLAR,
-            tokenOut: CUSD,
-            payer: address(this),
-            amountIn: _gsAmount
-        });
-        
-        uint256 cusdBalanceBefore = cusd.balanceOf(address(this));
-        
-        pool.swap(
-            address(this),
-            zeroForOne,
-            int256(_gsAmount),
-            sqrtPriceLimitX96,
-            abi.encode(callbackData)
-        );
-        
-        uint256 cusdReceived = cusd.balanceOf(address(this)) - cusdBalanceBefore;
-        require(cusdReceived >= _minCusdOut, "Insufficient cUSD received");
-        
-        emit RouteUsed("UniswapV3_GS_cUSD", _gsAmount, cusdReceived, CUSD);
-        return cusdReceived;
-    }
-
-    /**
-     * @notice Uniswap V3 swap callback
-     */
-    function uniswapV3SwapCallback(
-        int256 amount0Delta,
-        int256 amount1Delta,
-        bytes calldata data
-    ) external override {
-        require(
-            msg.sender == UNISWAP_V3_GS_CELO_POOL || msg.sender == UNISWAP_V3_GS_CUSD_POOL, 
-            "Invalid callback caller"
-        );
-        
-        SwapCallbackData memory callbackData = abi.decode(data, (SwapCallbackData));
-        
-        // Transfer the required input token
-        if (amount0Delta > 0) {
-            IERC20(IUniswapV3Pool(msg.sender).token0()).safeTransfer(msg.sender, uint256(amount0Delta));
-        }
-        if (amount1Delta > 0) {
-            IERC20(IUniswapV3Pool(msg.sender).token1()).safeTransfer(msg.sender, uint256(amount1Delta));
-        }
-    }
-
-    /**
-     * @notice Get quote for optimal route
-     */
-    function getOptimalQuote(uint256 _gsAmount) external view returns (
-        uint256 bestOutput,
-        address bestOutputToken,
-        string memory bestRoute
-    ) {
-        if (_gsAmount == 0) return (0, address(0), "");
-        
-        // Check Ubeswap V2 quote
-        if (_checkUbeswapV2Liquidity()) {
-            try this._getUbeswapV2Quote(_gsAmount) returns (uint256 celoOut) {
-                bestOutput = celoOut;
-                bestOutputToken = CELO;
-                bestRoute = "UbeswapV2_GS_CELO";
-            } catch {
-                // Continue to other options
-            }
-        }
-        
-        // Check Uniswap V3 GS→CELO quote
-        try this._getUniswapV3Quote(UNISWAP_V3_GS_CELO_POOL, _gsAmount) returns (uint256 celoOut) {
-            if (celoOut > bestOutput) {
-                bestOutput = celoOut;
-                bestOutputToken = CELO;
-                bestRoute = "UniswapV3_GS_CELO";
-            }
+        try IUbeswapV2Pair(pool.pairAddress).getReserves() returns (
+            uint112 reserve0, 
+            uint112 reserve1, 
+            uint32
+        ) {
+            // Check which token is CELO and ensure it has enough liquidity
+            address token0 = IUbeswapV2Pair(pool.pairAddress).token0();
+            uint256 celoReserve = (token0 == CELO) ? reserve0 : reserve1;
+            return celoReserve >= MIN_LIQUIDITY_THRESHOLD;
         } catch {
-            // Continue
-        }
-        
-        // Check Uniswap V3 GS→cUSD quote
-        try this._getUniswapV3Quote(UNISWAP_V3_GS_CUSD_POOL, _gsAmount) returns (uint256 cusdOut) {
-            if (cusdOut > bestOutput) {
-                bestOutput = cusdOut;
-                bestOutputToken = CUSD;
-                bestRoute = "UniswapV3_GS_cUSD";
-            }
-        } catch {
-            // Continue
+            return false;
         }
     }
 
     /**
-     * @notice Get Ubeswap V2 quote
+     * @notice Get quote for GS → CELO swap
      */
-    function _getUbeswapV2Quote(uint256 _gsAmount) external view returns (uint256) {
+    function getQuote(uint256 _gsAmount) external view returns (uint256 estimatedCelo) {
+        return getQuoteForPool(_gsAmount, defaultPoolId);
+    }
+
+    /**
+     * @notice Get quote for specific pool
+     */
+    function getQuoteForPool(uint256 _gsAmount, uint256 _poolId) public view returns (uint256 estimatedCelo) {
+        if (_gsAmount == 0 || _poolId >= poolCount || !pools[_poolId].active) return 0;
+        
+        Pool storage pool = pools[_poolId];
+        
+        try this._getUbeswapV2Quote(_gsAmount, pool.tokenA, pool.tokenB) returns (uint256 amount) {
+            return amount;
+        } catch {
+            return 0;
+        }
+    }
+
+    /**
+     * @notice External function for getting Ubeswap V2 quotes (for try/catch)
+     */
+    function _getUbeswapV2Quote(uint256 _gsAmount, address _tokenA, address _tokenB) external view returns (uint256) {
         require(msg.sender == address(this), "Internal only");
         
         address[] memory path = new address[](2);
-        path[0] = GOOD_DOLLAR;
-        path[1] = CELO;
+        path[0] = _tokenA;
+        path[1] = _tokenB;
         
         uint256[] memory amounts = ubeswapRouter.getAmountsOut(_gsAmount, path);
         return amounts[1];
     }
 
+    // === POOL MANAGEMENT FUNCTIONS ===
+
     /**
-     * @notice Get Uniswap V3 quote (simplified)
+     * @notice Add a new pool
+     * @param _pairAddress Uniswap/Ubeswap pair address
+     * @param _tokenA First token (should be GOOD_DOLLAR for input)
+     * @param _tokenB Second token (output token)
+     * @param _name Descriptive name for the pool
      */
-    function _getUniswapV3Quote(address poolAddress, uint256 _gsAmount) external view returns (uint256) {
-        require(msg.sender == address(this), "Internal only");
-        
-        IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
-        (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
-        
-        if (sqrtPriceX96 == 0) return 0;
-        
-        // Simple approximation - in production you'd use more sophisticated pricing
-        uint256 price = (uint256(sqrtPriceX96) * uint256(sqrtPriceX96)) >> 192;
-        return (_gsAmount * price) / 1e18;
+    function addPool(
+        address _pairAddress,
+        address _tokenA,
+        address _tokenB,
+        string memory _name
+    ) external onlyOwner returns (uint256 poolId) {
+        return _addPool(_pairAddress, _tokenA, _tokenB, _name);
     }
 
     /**
-     * @notice Update slippage tolerance (only owner)
+     * @notice Internal function to add pool
      */
-    function updateSlippageTolerance(uint256 _newSlippage) external onlyOwner {
-        require(_newSlippage <= 1000, "Slippage too high"); // Max 10%
-        slippageTolerance = _newSlippage;
+    function _addPool(
+        address _pairAddress,
+        address _tokenA,
+        address _tokenB,
+        string memory _name
+    ) internal returns (uint256 poolId) {
+        require(_pairAddress != address(0), "Invalid pair address");
+        require(_tokenA != address(0) && _tokenB != address(0), "Invalid token addresses");
+        
+        poolId = poolCount++;
+        pools[poolId] = Pool({
+            pairAddress: _pairAddress,
+            tokenA: _tokenA,
+            tokenB: _tokenB,
+            active: true,
+            name: _name
+        });
+        
+        // Approve tokens for router if needed
+        if (_tokenA != GOOD_DOLLAR) {
+            IERC20(_tokenA).approve(UBESWAP_V2_ROUTER, type(uint256).max);
+        }
+        
+        emit PoolAdded(poolId, _pairAddress, _tokenA, _tokenB, _name);
+        return poolId;
     }
 
     /**
-     * @notice Emergency function to withdraw tokens
+     * @notice Update pool status
      */
-    function emergencyWithdraw(
-        address _token,
-        address _recipient,
-        uint256 _amount
-    ) external onlyOwner {
+    function setPoolActive(uint256 _poolId, bool _active) external onlyOwner {
+        require(_poolId < poolCount, "Invalid pool ID");
+        pools[_poolId].active = _active;
+        emit PoolUpdated(_poolId, _active);
+    }
+
+    /**
+     * @notice Set default pool for swapAndVote
+     */
+    function setDefaultPool(uint256 _poolId) external onlyOwner {
+        require(_poolId < poolCount, "Invalid pool ID");
+        require(pools[_poolId].active, "Pool not active");
+        
+        uint256 oldPoolId = defaultPoolId;
+        defaultPoolId = _poolId;
+        emit DefaultPoolChanged(oldPoolId, _poolId);
+    }
+
+    // === VIEW FUNCTIONS ===
+
+    /**
+     * @notice Check if contract is operational (default pool has liquidity)
+     */
+    function isOperational() external view returns (bool) {
+        if (poolCount == 0) return false;
+        return _checkPoolLiquidity(defaultPoolId);
+    }
+
+    /**
+     * @notice Get pool information
+     */
+    function getPool(uint256 _poolId) external view returns (
+        address pairAddress,
+        address tokenA,
+        address tokenB,
+        bool active,
+        string memory name,
+        bool hasLiquidity
+    ) {
+        require(_poolId < poolCount, "Invalid pool ID");
+        Pool storage pool = pools[_poolId];
+        
+        return (
+            pool.pairAddress,
+            pool.tokenA,
+            pool.tokenB,
+            pool.active,
+            pool.name,
+            _checkPoolLiquidity(_poolId)
+        );
+    }
+
+    /**
+     * @notice Get all active pools
+     */
+    function getActivePools() external view returns (uint256[] memory activePoolIds) {
+        uint256 activeCount = 0;
+        
+        // Count active pools
+        for (uint256 i = 0; i < poolCount; i++) {
+            if (pools[i].active) activeCount++;
+        }
+        
+        // Create array of active pool IDs
+        activePoolIds = new uint256[](activeCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < poolCount; i++) {
+            if (pools[i].active) {
+                activePoolIds[index++] = i;
+            }
+        }
+        
+        return activePoolIds;
+    }
+
+    // === EMERGENCY FUNCTIONS ===
+
+    /**
+     * @notice Emergency withdrawal function
+     */
+    function emergencyWithdraw(address _token, address _recipient, uint256 _amount) external onlyOwner {
         require(_recipient != address(0), "Invalid recipient");
         
         if (_token == address(0)) {
@@ -456,17 +417,8 @@ contract GoodDollarVoter is IUniswapV3SwapCallback, ReentrancyGuard, Ownable {
             require(withdrawAmount <= balance, "Insufficient balance");
             token.safeTransfer(_recipient, withdrawAmount);
         }
-        
-        emit EmergencyWithdraw(_token, _recipient, _amount);
     }
 
-    /**
-     * @notice Check if the contract can perform swaps
-     */
-    function isOperational() external view returns (bool) {
-        return _checkUbeswapV2Liquidity();
-    }
-
-    // Allow contract to receive native CELO
+    // Allow contract to receive native CELO (needed for voteWithCelo)
     receive() external payable {}
 }

@@ -3,7 +3,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { celoAlfajores, celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
 import { getContract } from 'viem';
-import goodDollarVoterArtifact from '../artifacts/contracts/GoodDollarVoter.sol/GoodDollarVoter.json';
+import goodDollarVoterArtifact from '../../artifacts/contracts/GoodDollarVoter.sol/GoodDollarVoter.json';
 
 const goodDollarVoterAbi = goodDollarVoterArtifact.abi;
 
@@ -16,8 +16,8 @@ const GOOD_DOLLAR_ADDRESS = '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A'; // Goo
 
 const CAMPAIGN_ID = 1;
 const PROJECT_ID = 0;
-const AMOUNT = parseUnits('1', 18); // Start with 1 G$ for testing
-const MIN_CELO_OUT = parseUnits('0.001', 18); // Minimum CELO to receive (adjust based on current rates)
+const AMOUNT = parseUnits('1000', 18); // 1000 G$ for testing
+const MIN_CUSD_OUT = parseUnits('0.01', 18); // Minimum 0.01 cUSD to receive
 const BYPASS_CODE = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const ERC20_ABI = parseAbi([
@@ -36,9 +36,7 @@ const SOVEREIGN_SEAS_ABI = parseAbi([
 ]);
 
 const args = process.argv.slice(2);
-const isMainnet = args.includes('--network') && args[args.indexOf('--network') + 1] === 'celo' ||
-  RPC_URL.includes('rpc.ankr.com/celo') ||
-  process.env.NETWORK === 'celo';
+const isMainnet = true;
 const chain = isMainnet ? celo : celoAlfajores;
 
 if (!PRIVATE_KEY || !GOOD_DOLLAR_VOTER_ADDRESS) {
@@ -50,7 +48,7 @@ if (!PRIVATE_KEY || !GOOD_DOLLAR_VOTER_ADDRESS) {
 }
 
 async function testGoodDollarVoter() {
-  console.log('🚀 Testing GoodDollarVoter Contract...\n');
+  console.log('🚀 Testing GoodDollarVoter Contract (GS → cUSD → Vote)...\n');
 
   const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
   const walletClient = createWalletClient({
@@ -115,21 +113,18 @@ async function testGoodDollarVoter() {
     return;
   }
 
-  // Check GoodDollarVoter configuration
+  // Check GoodDollarVoter configuration (simplified contract)
   const voterContract = getContract({
     address: GOOD_DOLLAR_VOTER_ADDRESS as `0x${string}`,
     abi: goodDollarVoterAbi,
     client: publicClient
   });
 
-  let isOperational, sovereignSeas, pool, celo, goodDollar;
+  let isOperational, sovereignSeas;
   try {
-    [isOperational, sovereignSeas, pool, celo, goodDollar] = await Promise.all([
+    [isOperational, sovereignSeas] = await Promise.all([
       voterContract.read.isOperational(),
-      voterContract.read.sovereignSeas(),
-      voterContract.read.pool(),
-      voterContract.read.celo(),
-      voterContract.read.goodDollar()
+      voterContract.read.sovereignSeas()
     ]);
   } catch (error) {
     console.error('❌ Error reading GoodDollarVoter config:', error);
@@ -139,16 +134,14 @@ async function testGoodDollarVoter() {
   console.log('✅ GoodDollarVoter Configuration:');
   console.log(`- Operational: ${isOperational}`);
   console.log(`- SovereignSeas: ${sovereignSeas}`);
-  console.log(`- Uniswap Pool: ${pool}`);
-  console.log(`- CELO Token: ${celo}`);
-  console.log(`- GoodDollar Token: ${goodDollar}\n`);
+  console.log(`- Route: GS → cUSD (Uniswap V3) → SovereignSeas Vote\n`);
 
   if (!isOperational) {
     console.error('❌ Contract is not operational!');
     console.error('This could mean:');
-    console.error('- Uniswap pool is locked');
-    console.error('- Pool has no liquidity');
-    console.error('- Pool configuration issue');
+    console.error('- Uniswap V3 GS/cUSD pool is not available');
+    console.error('- Pool has insufficient liquidity');
+    console.error('- Pool is locked or misconfigured');
     return;
   }
 
@@ -188,16 +181,16 @@ async function testGoodDollarVoter() {
   try {
     console.log('📊 Getting swap quote...');
     const quote = await voterContract.read.getQuote([AMOUNT]);
-    console.log(`- Estimated CELO output: ${Number(quote) / 1e18} CELO`);
+    console.log(`- Estimated cUSD output: ${Number(quote) / 1e18} cUSD`);
     
     if (quote === 0n) {
       console.warn('⚠️ Quote returned 0 - this might indicate liquidity issues');
     }
     
-    // Adjust MIN_CELO_OUT based on quote if needed
-    if (quote > 0n && MIN_CELO_OUT > quote) {
-      console.warn(`⚠️ MIN_CELO_OUT (${Number(MIN_CELO_OUT) / 1e18}) is higher than quote (${Number(quote) / 1e18})`);
-      console.warn('Consider lowering MIN_CELO_OUT or increasing AMOUNT');
+    // Adjust MIN_CUSD_OUT based on quote if needed
+    if (quote > 0n && MIN_CUSD_OUT > quote) {
+      console.warn(`⚠️ MIN_CUSD_OUT (${Number(MIN_CUSD_OUT) / 1e18}) is higher than quote (${Number(quote) / 1e18})`);
+      console.warn('Consider lowering MIN_CUSD_OUT or increasing AMOUNT');
     }
     console.log('');
   } catch (error) {
@@ -227,11 +220,11 @@ async function testGoodDollarVoter() {
   }
 
   // Execute the swap and vote
-  console.log('🗳️ Executing GoodDollar → CELO → Vote...');
-  console.log('📋 Process: GS → Uniswap V3 → WCELO → SovereignSeas Vote\n');
+  console.log('🗳️ Executing GoodDollar → cUSD → Vote...');
+  console.log('📋 Process: GS → Uniswap V3 → cUSD → SovereignSeas Vote\n');
 
   try {
-    // Test simulation first (optional, comment out if causing issues)
+    // Test simulation first
     console.log('🧪 Simulating transaction...');
     await publicClient.simulateContract({
       account: account.address,
@@ -240,9 +233,9 @@ async function testGoodDollarVoter() {
       functionName: 'swapAndVote',
       args: [
         BigInt(CAMPAIGN_ID),
-        BigInt(PROJECT_ID), 
+        BigInt(PROJECT_ID),
         AMOUNT,
-        MIN_CELO_OUT,
+        MIN_CUSD_OUT,
         BYPASS_CODE as `0x${string}`
       ]
     });
@@ -257,10 +250,10 @@ async function testGoodDollarVoter() {
         BigInt(CAMPAIGN_ID),
         BigInt(PROJECT_ID),
         AMOUNT,
-        MIN_CELO_OUT,
+        MIN_CUSD_OUT,
         BYPASS_CODE as `0x${string}`
       ],
-      gas: 1500000n // Higher gas limit for complex transaction
+      gas: 1000000n // 1M gas limit should be sufficient
     });
 
     console.log(`🎉 Vote transaction submitted: ${voteHash}`);
@@ -273,11 +266,11 @@ async function testGoodDollarVoter() {
     });
     
     if (receipt.status === 'success') {
-      console.log('🎯 SUCCESS! GoodDollar → CELO → Vote completed!');
+      console.log('🎯 SUCCESS! GoodDollar → cUSD → Vote completed!');
       console.log(`⛽ Gas used: ${receipt.gasUsed.toLocaleString()}`);
       console.log(`📦 Block: ${receipt.blockNumber}`);
       
-      // Check for SwapAndVote event
+      // Check for events
       const logs = receipt.logs;
       console.log(`📊 Transaction generated ${logs.length} events`);
       
@@ -298,9 +291,42 @@ async function testGoodDollarVoter() {
       console.error(`Reason: ${error.cause.reason}`);
     }
     
-    console.error('🔧 Try:');
-    console.error('- Smaller amount (0.1 G$ instead of 1)');
-    console.error('- Check liquidity on Uniswap');
-    console.error('- Verify router is working');
+    if (error.message) {
+      console.error(`Error: ${error.message}`);
+    }
+    
+    console.error('\n🔧 Troubleshooting suggestions:');
+    console.error('- Try smaller amount (100 G$ instead of 1000)');
+    console.error('- Check liquidity on Uniswap V3 GS/cUSD pool');
+    console.error('- Verify pool is operational');
+    console.error('- Ensure campaign and project are active and approved');
+    console.error('- Check if pool has sufficient liquidity for large swaps');
   }
 }
+
+async function main() {
+  // Check if contract exists
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(RPC_URL)
+  });
+
+  const code = await publicClient.getBytecode({
+    address: GOOD_DOLLAR_VOTER_ADDRESS as `0x${string}`
+  });
+  
+  if (!code || code === '0x') {
+    console.error('❌ GoodDollarVoter contract not deployed at this address!');
+    console.error('Make sure you deployed it first: npm run deploy:good-dollar-voter');
+    console.error(`Expected address: ${GOOD_DOLLAR_VOTER_ADDRESS}`);
+    process.exit(1);
+  }
+  
+  console.log('✅ GoodDollarVoter contract found\n');
+  await testGoodDollarVoter();
+}
+
+main().catch((error) => {
+  console.error('💥 Fatal error in test:', error);
+  process.exit(1);
+});

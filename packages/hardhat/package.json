@@ -117,7 +117,7 @@
 
     "deploy:good-dollar-voter": "ts-node scripts/deploy/deploy-good-dollar-voter.ts",
     "verify:good-dollar-voter": "ts-node scripts/deploy/verify-good-dollar-voter.ts",
-    "test:good-dollar-voter": "ts-node scripts/deploy/test-good-dollar-voter.ts",
+    "test:good-dollar-voter": "ts-node --transpileOnly scripts/deploy/test-good-dollar-voter.ts",
 
 
     "deploy:sovseasvote:celo": "ts-node scripts/deploy/deploySovereignVotingGateway.ts --network celo",

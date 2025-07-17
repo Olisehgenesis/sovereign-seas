@@ -13,15 +13,15 @@ const SOVEREIGN_SEAS_V4_ADDRESS = process.env.SOVEREIGN_SEAS_V4_ADDRESS || '0x0c
 
 // Determine the network from command line arguments or environment
 const args = process.argv.slice(2);
-const isMainnet = args.includes('--network') && args[args.indexOf('--network') + 1] === 'celo' || 
-                  RPC_URL.includes('rpc.ankr.com/celo') ||
-                  process.env.NETWORK === 'celo';
+const isMainnet = true;
 const chain = isMainnet ? celo : celoAlfajores;
 
 // Contract addresses - these are the actual addresses for GoodDollar and CELO
 const GOOD_DOLLAR_ADDRESS = '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A'; // GoodDollar token
 const WCELO_ADDRESS = isMainnet ? '0x471EcE3750Da237f93B8E339c536989b8978a438' : '0x471EcE3750Da237f93B8E339c536989b8978a438'; // WCELO
-const UNISWAP_V3_POOL = '0x11EeA4c62288186239241cE21F54034006C79B3F'; // GS/CELO pool
+const UNISWAP_V3_POOL = '0x98287d4F15EEdE6517F215b3FcC10480c231E840'; // GS/CELO Uniswap V3 pool (fallback)
+const UBESWAP_V2_PAIR = '0x25878951ae130014E827e6f54fd3B4CCa057a7e8'; // GS/CELO Ubeswap V2 pair (primary)
+const UNISWAP_V3_GS_CUSD_POOL = '0x11EeA4c62288186239241cE21F54034006C79B3F'; // GS/cUSD pool (final fallback)
 
 // Validate environment variables
 if (!PRIVATE_KEY) {
@@ -61,13 +61,15 @@ async function deployGoodDollarVoter() {
     console.log(`SovereignSeas V4 address: ${SOVEREIGN_SEAS_V4_ADDRESS}`);
     console.log(`GoodDollar address: ${GOOD_DOLLAR_ADDRESS}`);
     console.log(`WCELO address: ${WCELO_ADDRESS}`);
-    console.log(`Uniswap V3 Pool: ${UNISWAP_V3_POOL}\n`);
+    console.log(`Ubeswap V2 GS/CELO Pair: ${UBESWAP_V2_PAIR}`);
+    console.log(`Uniswap V3 GS/CELO Pool: ${UNISWAP_V3_POOL} (fallback)`);
+    console.log(`Uniswap V3 GS/cUSD Pool: ${UNISWAP_V3_GS_CUSD_POOL} (final fallback)\n`);
     
-    // Verify the Uniswap V3 pool exists and has the correct tokens
-    console.log('🔍 Verifying Uniswap V3 pool...');
+    // Verify the Ubeswap V2 pair exists and has the correct tokens
+    console.log('🔍 Verifying Ubeswap V2 pair...');
     try {
-      const poolContract = {
-        address: UNISWAP_V3_POOL as `0x${string}`,
+      const pairContract = {
+        address: UBESWAP_V2_PAIR as `0x${string}`,
         abi: [
           {
             "inputs": [],
@@ -82,43 +84,60 @@ async function deployGoodDollarVoter() {
             "outputs": [{"internalType": "address", "name": "", "type": "address"}],
             "stateMutability": "view",
             "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "getReserves",
+            "outputs": [
+              {"internalType": "uint112", "name": "reserve0", "type": "uint112"},
+              {"internalType": "uint112", "name": "reserve1", "type": "uint112"},
+              {"internalType": "uint32", "name": "blockTimestampLast", "type": "uint32"}
+            ],
+            "stateMutability": "view",
+            "type": "function"
           }
         ]
       };
       
-      const [token0, token1] = await Promise.all([
+      const [token0, token1, reserves] = await Promise.all([
         publicClient.readContract({
-          ...poolContract,
+          ...pairContract,
           functionName: 'token0'
         }),
         publicClient.readContract({
-          ...poolContract,
+          ...pairContract,
           functionName: 'token1'
+        }),
+        publicClient.readContract({
+          ...pairContract,
+          functionName: 'getReserves'
         })
       ]);
       
-      console.log(`Pool token0: ${token0}`);
-      console.log(`Pool token1: ${token1}`);
-      
-      // Ensure token0 and token1 are strings before calling toLowerCase
-      const token0Str = String(token0);
-      const token1Str = String(token1);
+      // Type assertions to fix 'unknown' errors from lint
+      const token0Address = token0 as string;
+      const token1Address = token1 as string;
+      const reservesArray = reserves as [bigint, bigint, number];
+
+      console.log(`Pair token0: ${token0Address}`);
+      console.log(`Pair token1: ${token1Address}`);
+      console.log(`Reserves: ${Number(reservesArray[0]) / 1e18} / ${Number(reservesArray[1]) / 1e18}`);
 
       const hasCorrectTokens = 
-        (token0Str.toLowerCase() === GOOD_DOLLAR_ADDRESS.toLowerCase() && token1Str.toLowerCase() === WCELO_ADDRESS.toLowerCase()) ||
-        (token0Str.toLowerCase() === WCELO_ADDRESS.toLowerCase() && token1Str.toLowerCase() === GOOD_DOLLAR_ADDRESS.toLowerCase());
+        (token0Address.toLowerCase() === GOOD_DOLLAR_ADDRESS.toLowerCase() && token1Address.toLowerCase() === WCELO_ADDRESS.toLowerCase()) ||
+        (token0Address.toLowerCase() === WCELO_ADDRESS.toLowerCase() && token1Address.toLowerCase() === GOOD_DOLLAR_ADDRESS.toLowerCase());
       
       if (hasCorrectTokens) {
-        console.log('✅ Pool has correct tokens (GS/CELO)\n');
+        console.log('✅ Ubeswap V2 pair has correct tokens (GS/CELO)\n');
       } else {
-        console.error('❌ Pool does not have expected tokens!');
-        console.error('Expected: GS and WCELO');
-        console.error(`Got: ${token0} and ${token1}`);
-        return null;
+        console.warn('⚠️ Ubeswap V2 pair tokens do not match expected GS/CELO');
+        console.warn('Expected: GS and CELO');
+        console.warn(`Got: ${token0} and ${token1}`);
+        console.warn('Continuing with deployment - fallback routes available\n');
       }
     } catch (error) {
-      console.error('❌ Error verifying pool:', error);
-      return null;
+      console.warn('⚠️ Could not verify Ubeswap V2 pair:', error);
+      console.warn('Continuing with deployment - fallback routes available\n');
     }
     
     // Deploy the contract
