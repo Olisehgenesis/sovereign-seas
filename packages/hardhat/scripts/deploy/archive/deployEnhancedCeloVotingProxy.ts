@@ -2,7 +2,7 @@ import { createWalletClient, http, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { celoAlfajores, celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
-import enhancedCeloVotingProxyAbiV2 from '../../artifacts/contracts/EnhancedCeloVotingProxyV2.sol/EnhancedCeloVotingProxyV2.json';
+import enhancedCeloVotingProxyAbiV2 from '../../../artifacts/contracts/EnhancedCeloVotingProxyV2.sol/EnhancedCeloVotingProxyV2.json';
 
 dotenv.config();
 

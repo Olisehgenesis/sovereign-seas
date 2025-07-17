@@ -15,6 +15,7 @@ const cors = initMiddleware(
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Run the CORS middleware
   await cors(req, res);
+  console.log("req.body", req.body);
 
   if (req.method === 'POST') {
     try {
@@ -55,6 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } catch (error) {
       console.error('Error verifying proof:', error);
+      console.log("error", error);
       return res.status(500).json({
         status: 'error',
         result: false,

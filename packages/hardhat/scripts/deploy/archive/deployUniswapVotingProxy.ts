@@ -2,7 +2,7 @@ import { createWalletClient, http, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { celoAlfajores, celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
-import uniswapVotingProxyAbi from '../../artifacts/contracts/UniswapV2VotingProxy.sol/UniswapV2VotingProxy.json';
+import uniswapVotingProxyAbi from '../../../artifacts/contracts/UniswapV2VotingProxy.sol/UniswapV2VotingProxy.json';
 
 dotenv.config();
 

@@ -112,17 +112,35 @@
     "deploy:uniproxyV2:celo": "ts-node scripts/deploy/deployEnhancedCeloVotingProxy.ts --network celo",
     "verify:uniproxyV2:celo": "ts-node scripts/deploy/verifyEnhancedCeloVotingProxy.ts --network celo",
 
+    "test:vote": "ts-node scripts/testVoteWithToken.ts  --transpileOnly --network celo",
+    "test:vote:loose": "ts-node --transpileOnly scripts/testVoteWithToken.ts --network celo",
+
+    "deploy:good-dollar-voter": "ts-node scripts/deploy/deploy-good-dollar-voter.ts",
+    "verify:good-dollar-voter": "ts-node scripts/deploy/verify-good-dollar-voter.ts",
+    "test:good-dollar-voter": "ts-node scripts/deploy/test-good-dollar-voter.ts",
+
 
     "deploy:sovseasvote:celo": "ts-node scripts/deploy/deploySovereignVotingGateway.ts --network celo",
     "verify:sovseasvote:celo": "ts-node scripts/deploy/verifySovereignVotingGateway.ts --network celo",
 
     
+    "deploy:wproxy:celo": "ts-node scripts/deploy/deploy-working-proxy.ts --network celo",
+    "verify:wproxy:celo": "ts-node scripts/deploy/verify-enhanced-celo-voting-proxy --network celo",
+
+    
     "test:ubeswap-proxy": "ts-node scripts/testUbeswapVotingProxy.ts --network alfajores",
     "test:ubeswap-proxy:celo": "ts-node scripts/testUbeswapVotingProxy.ts --network celo",
     "check:celo-addresses": "ts-node scripts/checkCeloAddresses.ts",
+
+    "test:swap:loose": "ts-node --transpileOnly tests/testSwap.ts",
+
+
+
+
     "transpile": "npx tsc -p .",
     "transpile:watch": "npx tsc -p . --watch",
     "build:full": "yarn compile && yarn transpile"
   },
   "author": "olisehgenesis"
 }
+

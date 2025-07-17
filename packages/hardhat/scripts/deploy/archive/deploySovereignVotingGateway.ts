@@ -2,7 +2,7 @@ import { createWalletClient, http, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { celoAlfajores, celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
-import sovereignVotingGatewayAbi from '../../artifacts/contracts/SovereignVotingGateway.sol/SovereignVotingGateway.json';
+import sovereignVotingGatewayAbi from '../../../artifacts/contracts/SovereignVotingGateway.sol/SovereignVotingGateway.json';
 
 dotenv.config();
 

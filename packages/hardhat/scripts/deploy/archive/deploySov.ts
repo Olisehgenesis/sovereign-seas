@@ -2,7 +2,7 @@ import { createWalletClient, http, parseEther, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { celoAlfajores } from 'viem/chains';
 import * as dotenv from 'dotenv';
-import sovereignSeasV4Abi from '../../artifacts/contracts/SovereignSeasV4.sol/SovereignSeasV4.json';
+import sovereignSeasV4Abi from '../../../artifacts/contracts/SovereignSeasV4.sol/SovereignSeasV4.json';
 import { readFileSync } from 'fs';
 
 dotenv.config();
