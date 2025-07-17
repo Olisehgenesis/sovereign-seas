@@ -79,7 +79,17 @@
     "prettier": "prettier --write 'contracts/**/*.sol' '**/*.ts'",
     "sync:abis": "node sync-abis.js",
     "deploy:test": "ts-node scripts/deploy/deployNFT.ts --network alfajores",
-    "verify:test": "hardhat run scripts/deploy/verifyNFT.ts --network alfajores"
+    "verify:test": "hardhat run scripts/deploy/verifyNFT.ts --network alfajores",
+    "deploy:uniswap-proxy": "ts-node scripts/deploy/deployUniswapVotingProxy.ts --network alfajores",
+    "deploy:uniswap-proxy:celo": "ts-node scripts/deploy/deployUniswapVotingProxy.ts --network celo",
+    "verify:uniswap-proxy": "ts-node scripts/deploy/verifyUniswapVotingProxy.ts --network alfajores",
+    "verify:uniswap-proxy:celo": "ts-node scripts/deploy/verifyUniswapVotingProxy.ts --network celo",
+    "test:uniswap-proxy": "ts-node scripts/testUniswapVotingProxy.ts --network alfajores",
+    "test:uniswap-proxy:celo": "ts-node scripts/testUniswapVotingProxy.ts --network celo",
+    "check:celo-addresses": "ts-node scripts/checkCeloAddresses.ts",
+    "transpile": "npx tsc -p .",
+    "transpile:watch": "npx tsc -p . --watch",
+    "build:full": "yarn compile && yarn transpile"
   },
   "author": "olisehgenesis"
 }
