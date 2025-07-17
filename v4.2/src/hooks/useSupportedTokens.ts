@@ -14,6 +14,8 @@ if (!celoToken || !cusdToken) {
     throw new Error('CELO_TOKEN or CUSD_TOKEN is not defined');
 }
 
+const goodDollarToken = '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A';
+
 export const supportedTokens: SupportedToken[] = [
     {
         address: celoToken,
@@ -25,6 +27,12 @@ export const supportedTokens: SupportedToken[] = [
         address: cusdToken,
         name: "cUSD",
         symbol: "cUSD",
+        decimals: 18
+    },
+    {
+        address: goodDollarToken,
+        name: "GoodDollar",
+        symbol: "G$",
         decimals: 18
     }
 ];
