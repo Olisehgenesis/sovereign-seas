@@ -8,7 +8,7 @@ dotenv.config();
 // Read configuration from environment variables
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const RPC_URL = process.env.CELO_RPC_URL || 'https://alfajores-forno.celo-testnet.org';
-const UNISWAP_V3_VOTING_PROXY_ADDRESS = process.env.UNISWAP_V3_VOTING_PROXY_ADDRESS;
+const CELO_UNISWAP_V3_VOTING_PROXY_ADDRESS = process.env.CELO_UNISWAP_V3_VOTING_PROXY_ADDRESS;
 const TEST_TOKEN_ADDRESS = process.env.TEST_TOKEN_ADDRESS; // Optional: for testing with specific token
 
 // Determine the network from command line arguments or environment
@@ -24,14 +24,14 @@ if (!PRIVATE_KEY) {
   process.exit(1);
 }
 
-if (!UNISWAP_V3_VOTING_PROXY_ADDRESS) {
-  console.error('Error: UNISWAP_V3_VOTING_PROXY_ADDRESS environment variable is required');
+if (!CELO_UNISWAP_V3_VOTING_PROXY_ADDRESS) {
+  console.error('Error: CELO_UNISWAP_V3_VOTING_PROXY_ADDRESS environment variable is required');
   process.exit(1);
 }
 
 async function testUniswapV3VotingProxy() {
   try {
-    console.log('Testing UniswapV3VotingProxy contract...');
+    console.log('Testing CeloUniswapV3VotingProxy contract...');
     
     // Create wallet client with private key
     const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
@@ -48,23 +48,22 @@ async function testUniswapV3VotingProxy() {
     
     console.log(`Using account: ${account.address}`);
     console.log(`Network: ${isMainnet ? 'Celo Mainnet' : 'Alfajores Testnet'}`);
-    console.log(`Proxy contract address: ${UNISWAP_V3_VOTING_PROXY_ADDRESS}`);
+    console.log(`Proxy contract address: ${CELO_UNISWAP_V3_VOTING_PROXY_ADDRESS}`);
     
     // Contract ABI for testing
     const proxyAbi = [
       {
         "inputs": [],
         "name": "getConfiguration",
-        "outputs": [
-          {"internalType": "address", "name": "router", "type": "address"},
-          {"internalType": "address", "name": "quoterContract", "type": "address"},
-          {"internalType": "address", "name": "sovereignSeasContract", "type": "address"},
-          {"internalType": "address", "name": "celoToken", "type": "address"},
-          {"internalType": "address", "name": "weth9Token", "type": "address"},
-          {"internalType": "uint256", "name": "currentSlippage", "type": "uint256"},
-          {"internalType": "uint256", "name": "maxSlippage", "type": "uint256"},
-          {"internalType": "uint24[]", "name": "fees", "type": "uint24[]"}
-        ],
+                 "outputs": [
+           {"internalType": "address", "name": "router", "type": "address"},
+           {"internalType": "address", "name": "quoterContract", "type": "address"},
+           {"internalType": "address", "name": "sovereignSeasContract", "type": "address"},
+           {"internalType": "address", "name": "celoToken", "type": "address"},
+           {"internalType": "uint256", "name": "currentSlippage", "type": "uint256"},
+           {"internalType": "uint256", "name": "maxSlippage", "type": "uint256"},
+           {"internalType": "uint24[]", "name": "fees", "type": "uint24[]"}
+         ],
         "stateMutability": "view",
         "type": "function"
       },
@@ -114,7 +113,7 @@ async function testUniswapV3VotingProxy() {
     // Test 1: Get contract configuration
     console.log('\n=== Test 1: Getting Contract Configuration ===');
     const config = await publicClient.readContract({
-      address: UNISWAP_V3_VOTING_PROXY_ADDRESS as `0x${string}`,
+      address: CELO_UNISWAP_V3_VOTING_PROXY_ADDRESS as `0x${string}`,
       abi: proxyAbi,
       functionName: 'getConfiguration'
     });
@@ -124,10 +123,9 @@ async function testUniswapV3VotingProxy() {
     console.log(`- Uniswap V3 Quoter: ${config[1]}`);
     console.log(`- SovereignSeas Contract: ${config[2]}`);
     console.log(`- CELO Token: ${config[3]}`);
-    console.log(`- WETH9 Token: ${config[4]}`);
-    console.log(`- Current Slippage: ${config[5]} basis points (${Number(config[5]) / 100}%)`);
-    console.log(`- Max Slippage: ${config[6]} basis points (${Number(config[6]) / 100}%)`);
-    console.log(`- Preferred Fees: ${config[7].map(fee => `${fee} (${Number(fee) / 10000}%)`).join(', ')}`);
+    console.log(`- Current Slippage: ${config[4]} basis points (${Number(config[4]) / 100}%)`);
+    console.log(`- Max Slippage: ${config[5]} basis points (${Number(config[5]) / 100}%)`);
+    console.log(`- Preferred Fees: ${config[6].map(fee => `${fee} (${Number(fee) / 10000}%)`).join(', ')}`);
     
     // Test 2: Test ETH to CELO conversion estimation
     console.log('\n=== Test 2: ETH to CELO Conversion Estimation ===');
