@@ -109,12 +109,9 @@
     "verify:ubeswap-proxy": "ts-node scripts/deploy/verifyUbeswapVotingProxy.ts --network alfajores",
     "verify:ubeswap-proxy:celo": "ts-node scripts/deploy/verifyUbeswapVotingProxy.ts --network celo",
 
-    "deploy:enhanced-celo-proxy": "ts-node scripts/deploy/deployEnhancedCeloVotingProxy.ts --network alfajores",
-    "deploy:enhanced-celo-proxy:celo": "ts-node scripts/deploy/deployEnhancedCeloVotingProxy.ts --network celo",
-    "verify:enhanced-celo-proxy": "ts-node scripts/deploy/verifyEnhancedCeloVotingProxy.ts --network alfajores",
-    "verify:enhanced-celo-proxy:celo": "ts-node scripts/deploy/verifyEnhancedCeloVotingProxy.ts --network celo",
-    "test:enhanced-celo-proxy": "ts-node scripts/testEnhancedCeloVotingProxy.ts --network alfajores",
-    "test:enhanced-celo-proxy:celo": "ts-node scripts/testEnhancedCeloVotingProxy.ts --network celo",
+    "deploy:uniproxyV2:celo": "ts-node scripts/deploy/deployEnhancedCeloVotingProxy.ts --network celo",
+    "verify:uniproxyV2:celo": "ts-node scripts/deploy/verifyEnhancedCeloVotingProxy.ts --network celo",
+
 
     "deploy:sovseasvote:celo": "ts-node scripts/deploy/deploySovereignVotingGateway.ts --network celo",
     "verify:sovseasvote:celo": "ts-node scripts/deploy/verifySovereignVotingGateway.ts --network celo",

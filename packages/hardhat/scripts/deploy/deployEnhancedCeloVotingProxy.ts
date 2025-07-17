@@ -2,7 +2,7 @@ import { createWalletClient, http, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { celoAlfajores, celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
-import enhancedCeloVotingProxyAbi from '../../artifacts/contracts/EnhancedCeloVotingProxy.sol/EnhancedCeloVotingProxy.json';
+import enhancedCeloVotingProxyAbiV2 from '../../artifacts/contracts/EnhancedCeloVotingProxyV2.sol/EnhancedCeloVotingProxyV2.json';
 
 dotenv.config();
 
@@ -58,7 +58,7 @@ const publicClient = createPublicClient({
 // Read contract bytecode from file
 let contractBytecode: string;
 try {
-  contractBytecode = enhancedCeloVotingProxyAbi.bytecode;
+  contractBytecode = enhancedCeloVotingProxyAbiV2.bytecode;
   // Ensure bytecode starts with '0x'
   if (!contractBytecode.startsWith('0x')) {
     contractBytecode = '0x' + contractBytecode;
@@ -71,7 +71,7 @@ try {
 
 async function deployEnhancedCeloVotingProxy() {
   try {
-    console.log('Deploying EnhancedCeloVotingProxy contract...');
+    console.log('Deploying EnhancedCeloVotingProxyV2 contract...');
     
     // Check the wallet balance first
     const balance = await publicClient.getBalance({ address: account.address });
@@ -92,7 +92,7 @@ async function deployEnhancedCeloVotingProxy() {
     console.log(`SovereignSeas V4 address: ${SOVEREIGN_SEAS_V4_ADDRESS}`);
     console.log(`CELO token address: ${CELO_TOKEN_ADDRESS}`);
     
-    let abi = enhancedCeloVotingProxyAbi.abi;
+    let abi = enhancedCeloVotingProxyAbiV2.abi;
     // Check if ABI is valid
     if (!abi || typeof abi !== 'object') {
       throw new Error('Invalid ABI format');
@@ -106,7 +106,7 @@ async function deployEnhancedCeloVotingProxy() {
     // Deploy contract with constructor arguments
     console.log('Sending deployment transaction...');
     const hash = await walletClient.deployContract({
-      abi: enhancedCeloVotingProxyAbi.abi,
+      abi: enhancedCeloVotingProxyAbiV2.abi,
       bytecode: contractBytecode as `0x${string}`,
       args: [
         UNISWAP_V3_ROUTER_ADDRESS as `0x${string}`,

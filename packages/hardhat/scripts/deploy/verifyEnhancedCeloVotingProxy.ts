@@ -54,7 +54,7 @@ if (!ENHANCED_CELO_VOTING_PROXY_ADDRESS) {
 
 async function verifyContract() {
   try {
-    console.log('Verifying EnhancedCeloVotingProxy contract...');
+    console.log('Verifying EnhancedCeloVotingProxyV2 contract...');
     console.log(`Network: ${isMainnet ? 'Celo Mainnet' : 'Alfajores Testnet'}`);
     console.log(`Contract address: ${ENHANCED_CELO_VOTING_PROXY_ADDRESS}`);
     console.log(`Uniswap V3 Router address: ${UNISWAP_V3_ROUTER_ADDRESS}`);
