@@ -37,3 +37,6 @@ dist-ssr
 envs
 envs/
 .vercel
+
+/data
+

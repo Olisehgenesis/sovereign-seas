@@ -46,7 +46,7 @@ class ConfigStorage implements IConfigStorage {
 const selfBackendVerifier = new SelfBackendVerifier(
   'sovereign-seas',
   'https://auth.sovseas.xyz/api/verify',
-  true, // Use mock mode for testing
+  false, // Use mock mode for testing
   AllIds, // Accept all ID types like working example
   new ConfigStorage(),
   'uuid' // Use UUID format like working example
@@ -57,34 +57,88 @@ const selfBackendVerifier = new SelfBackendVerifier(
 // JSON file storage functions
 const PROFILES_FILE = path.join(process.cwd(), 'data', 'profiles.json');
 
+// Global initialization flag
+let isInitialized = false;
+
 async function ensureDataDirectory() {
   const dataDir = path.join(process.cwd(), 'data');
   try {
     await fs.access(dataDir);
-  } catch {
+    console.log(`Data directory exists: ${dataDir}`);
+  } catch (error) {
+    console.log(`Creating data directory: ${dataDir}`);
     await fs.mkdir(dataDir, { recursive: true });
+    console.log(`Data directory created successfully`);
+  }
+}
+
+// Initialize data file on app startup/API call
+async function initializeDataFile() {
+  if (isInitialized) {
+    return; // Already initialized
+  }
+  
+  try {
+    console.log(`=== INITIALIZING DATA FILE ===`);
+    console.log(`Current working directory: ${process.cwd()}`);
+    console.log(`Profiles file path: ${PROFILES_FILE}`);
+    
+    await ensureDataDirectory();
+    
+    // Check if profiles file exists
+    try {
+      await fs.access(PROFILES_FILE);
+      console.log(`Profiles file exists: ${PROFILES_FILE}`);
+    } catch (error) {
+      console.log(`Profiles file does not exist, creating it: ${PROFILES_FILE}`);
+      const emptyProfiles: any[] = [];
+      await fs.writeFile(PROFILES_FILE, JSON.stringify(emptyProfiles, null, 2));
+      console.log(`Created new profiles file with empty array`);
+    }
+    
+    isInitialized = true;
+    console.log(`=== DATA FILE INITIALIZATION COMPLETE ===`);
+  } catch (error) {
+    console.error(`=== DATA FILE INITIALIZATION ERROR ===`);
+    console.error('Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    // Don't throw error, just log it - app should still work
   }
 }
 
 async function loadProfiles() {
   try {
-    await ensureDataDirectory();
+    // Ensure data file is initialized
+    await initializeDataFile();
+    
+    console.log(`Attempting to read profiles from: ${PROFILES_FILE}`);
     const data = await fs.readFile(PROFILES_FILE, 'utf8');
-    return JSON.parse(data);
+    const profiles = JSON.parse(data);
+    console.log(`Loaded ${profiles.length} profiles from file`);
+    return profiles;
   } catch (error) {
-    // File doesn't exist or is empty, return empty array
+    console.error(`Error loading profiles: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.log(`Returning empty array for profiles`);
     return [];
   }
 }
 
 async function saveProfile(walletAddress: string, verificationData: any, provider: string = 'self') {
   try {
-    await ensureDataDirectory();
+    console.log(`=== SAVING PROFILE FOR WALLET: ${walletAddress} ===`);
+    console.log(`Provider: ${provider}`);
+    console.log(`Verification data keys:`, Object.keys(verificationData));
+    
+    // Ensure data file is initialized
+    await initializeDataFile();
     
     const profiles = await loadProfiles();
+    console.log(`Current profiles count: ${profiles.length}`);
     
     // Check if wallet already exists
     const existingIndex = profiles.findIndex((p: any) => p.walletAddress === walletAddress);
+    console.log(`Existing wallet index: ${existingIndex}`);
     
     const newVerification = {
       provider,
@@ -102,6 +156,8 @@ async function saveProfile(walletAddress: string, verificationData: any, provide
         verificationStatus: verificationData.verificationStatus || true
       })
     };
+    
+    console.log(`Created new verification object for provider: ${provider}`);
     
     if (existingIndex >= 0) {
       // Wallet exists - check if this provider verification already exists
@@ -139,12 +195,26 @@ async function saveProfile(walletAddress: string, verificationData: any, provide
       console.log(`Created new profile with ${provider} verification for wallet: ${walletAddress}`);
     }
     
-    await fs.writeFile(PROFILES_FILE, JSON.stringify(profiles, null, 2));
-    console.log(`Saved profile to ${PROFILES_FILE}`);
+    console.log(`Attempting to write ${profiles.length} profiles to: ${PROFILES_FILE}`);
+    const jsonData = JSON.stringify(profiles, null, 2);
+    console.log(`JSON data size: ${jsonData.length} characters`);
     
-    return profiles[existingIndex >= 0 ? existingIndex : profiles.length - 1];
+    await fs.writeFile(PROFILES_FILE, jsonData);
+    console.log(`Successfully saved profile to ${PROFILES_FILE}`);
+    
+    const savedProfile = profiles[existingIndex >= 0 ? existingIndex : profiles.length - 1];
+    console.log(`Returning saved profile for wallet: ${savedProfile.walletAddress}`);
+    
+    return savedProfile;
   } catch (error) {
-    console.error('Error saving profile:', error);
+    console.error('=== ERROR SAVING PROFILE ===');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Wallet address:', walletAddress);
+    console.error('Provider:', provider);
+    console.error('PROFILES_FILE path:', PROFILES_FILE);
+    console.error('Current working directory:', process.cwd());
     throw error;
   }
 }
@@ -177,6 +247,10 @@ async function getProfile(walletAddress: string) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await cors(req, res);
+  
+  // Initialize data file on every API call
+  await initializeDataFile();
+  
   console.log("=== VERIFICATION REQUEST START ===");
   console.log("Method:", req.method);
   console.log("Headers:", req.headers);
@@ -290,18 +364,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       if (result.isValidDetails.isValid) {
         let savedProfile = null;
+        let saveStatus = 'No wallet address to save';
         
         // Save to profiles.json if we have a wallet address
         if (walletAddress) {
           try {
+            console.log(`=== ATTEMPTING TO SAVE PROFILE ===`);
             savedProfile = await saveProfile(walletAddress, {
               discloseOutput: result.discloseOutput,
               userData: result.userData,
               attestationId,
               isValidDetails: result.isValidDetails
             }, 'self');
+            saveStatus = 'Profile saved successfully';
+            console.log(`=== PROFILE SAVE SUCCESS ===`);
           } catch (saveError) {
+            console.error('=== PROFILE SAVE ERROR ===');
             console.error('Error saving profile, but verification was successful:', saveError);
+            console.error('Error details:', saveError instanceof Error ? saveError.message : 'Unknown error');
+            saveStatus = `Profile save failed: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`;
             // Continue with successful response even if save failed
           }
         }
@@ -312,7 +393,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           credentialSubject: result.discloseOutput,
           userData: result.userData,
           walletAddress,
-          savedProfile: savedProfile ? 'Profile saved successfully' : 'No wallet address to save'
+          savedProfile: saveStatus,
+          saveSuccess: !!savedProfile
         });
       } else {
         return res.status(200).json({

@@ -316,13 +316,6 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
       disclosures: {
         // Only disclose nationality as per working example
         nationality: true,
-        // Don't disclose other personal info
-        issuing_state: false,
-        name: false,
-        date_of_birth: false,
-        passport_number: false,
-        gender: false,
-        expiry_date: false,
         // Verification rules
         minimumAge: 18,
         ofac: true,
