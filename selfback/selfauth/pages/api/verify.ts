@@ -17,7 +17,7 @@ const verifier = new SelfBackendVerifier(
   false, // Production mode (set to true for development)
   AllIds, // Accept all document types
   configStore,
-  'hex' // User ID type matches frontend (hex for wallet addresses)
+  'uuid' // User ID type matches frontend (hex for wallet addresses)
 );
 
 // Data storage structure
@@ -100,14 +100,14 @@ export async function POST(request: NextRequest) {
     
     console.log('Verification result:', {
       isValid: result.isValidDetails.isValid,
-      nationality: result.discloseOutput?.nationality,
-      userId: result.discloseOutput?.userId
+      nationality: result.discloseOutput?.nationality
     });
     
     if (result.isValidDetails.isValid) {
       // Parse user defined data to get wallet address
       const userDefinedData = parseUserDefinedData(userContextData.userDefinedData || '');
-      const walletAddress = userDefinedData?.connectedWallet || result.discloseOutput?.userId;
+      // 'userId' does not exist on type 'GenericDiscloseOutput', so only use connectedWallet
+      const walletAddress = userDefinedData?.connectedWallet || null;
       
       // Prepare verification data
       const verificationData: VerificationData = {

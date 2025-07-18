@@ -345,9 +345,7 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
       endpoint: "https://auth.sovseas.xyz/api/verify",
       endpointType: "https",
       logoBase64: "https://i.imgur.com/Rz8B3s7.png",
-      userId:address,
-      userIdType: "hex",
-
+      userId, // use the uuid-based userId
       disclosures: {
         ...disclosures,
         minimumAge: disclosures.minimumAge && disclosures.minimumAge > 0 ? disclosures.minimumAge : undefined,
