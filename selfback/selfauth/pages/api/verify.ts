@@ -3,6 +3,7 @@ import {
   SelfBackendVerifier, 
   IConfigStorage,
   VerificationConfig,
+  AllIds,
 } from '@selfxyz/core';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -24,6 +25,7 @@ const cors = initMiddleware(
 class ConfigStorage implements IConfigStorage {
   async getConfig(configId: string): Promise<VerificationConfig> {
     return {
+      minimumAge: 18,
       excludedCountries: ['IRN', 'PRK'],
       ofac: true
     };
@@ -35,32 +37,19 @@ class ConfigStorage implements IConfigStorage {
   }
   
   async getActionId(userIdentifier: string, userDefinedData: string): Promise<string> {
-    // Parse user defined data to get wallet address and other info
-    try {
-      const decodedData = Buffer.from(userDefinedData.replace('0x', ''), 'hex').toString();
-      const userData = JSON.parse(decodedData.replace(/\0/g, '')); // Remove null padding
-      console.log('Parsed user data:', userData);
-      
-      // You can use wallet address or other data to determine config
-      return userData.walletAddress ? 'wallet_verification' : 'default_config';
-    } catch (error) {
-      console.log('Could not parse user defined data, using default config');
-      return 'default_config';
-    }
+    // Use the userIdentifier directly as config ID (like working example)
+    return userIdentifier;
   }
 }
 
 // Initialize verifier
-const allowedIds = new Map();
-allowedIds.set(1, true); // Accept passports
-
 const selfBackendVerifier = new SelfBackendVerifier(
   'sovereign-seas',
   'https://auth.sovseas.xyz/api/verify',
-  true,
-  allowedIds,
+  true, // Use mock mode for testing
+  AllIds, // Accept all ID types like working example
   new ConfigStorage(),
-  'hex' // Use hex for wallet addresses
+  'uuid' // Use UUID format like working example
 );
 
 
@@ -218,19 +207,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      // Extract wallet address from user context data
+      // Extract wallet address from user context data (fallback method)
       let walletAddress: string | null = null;
       try {
-        console.log("=== EXTRACTING WALLET ADDRESS ===");
+        console.log("=== EXTRACTING WALLET ADDRESS FROM USER CONTEXT ===");
         console.log("userContextData:", userContextData);
         const decodedData = Buffer.from(userContextData.replace('0x', ''), 'hex').toString();
         console.log("decodedData:", decodedData);
         const userData = JSON.parse(decodedData.replace(/\0/g, ''));
         console.log("parsed userData:", userData);
         walletAddress = userData.walletAddress;
-        console.log("Extracted wallet address:", walletAddress);
+        console.log("Extracted wallet address from userContextData:", walletAddress);
       } catch (error) {
-        console.error('=== ERROR EXTRACTING WALLET ADDRESS ===');
+        console.error('=== ERROR EXTRACTING WALLET ADDRESS FROM USER CONTEXT ===');
         console.error('userContextData:', userContextData);
         console.error('Error:', error);
         console.log('Could not extract wallet address from user context data');
@@ -255,6 +244,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log("result.isValidDetails.isValid:", result.isValidDetails.isValid);
       console.log("result.userData:", result.userData);
       console.log("result.discloseOutput:", result.discloseOutput);
+      
+      // Extract wallet address from verification result (primary method)
+      if (!walletAddress && result.userData && result.userData.userIdentifier) {
+        console.log("=== EXTRACTING WALLET ADDRESS FROM VERIFICATION RESULT ===");
+        console.log("result.userData.userIdentifier:", result.userData.userIdentifier);
+        console.log("result.userData.userDefinedData:", result.userData.userDefinedData);
+        
+        // Convert UUID format back to wallet address (add 0x prefix)
+        const walletId = result.userData.userIdentifier;
+        if (walletId && walletId.length === 40) { // Ethereum address without 0x
+          walletAddress = '0x' + walletId;
+          console.log("Converted UUID format to wallet address:", walletAddress);
+        } else {
+          walletAddress = walletId;
+          console.log("Using userIdentifier as wallet address:", walletAddress);
+        }
+      }
+      
+      // If still no wallet address, try to extract from userDefinedData
+      if (!walletAddress && result.userData && result.userData.userDefinedData) {
+        console.log("=== EXTRACTING WALLET ADDRESS FROM USER DEFINED DATA ===");
+        try {
+          const decodedData = Buffer.from(result.userData.userDefinedData.replace('0x', ''), 'hex').toString();
+          const userData = JSON.parse(decodedData.replace(/\0/g, ''));
+          console.log("userDefinedData parsed:", userData);
+          if (userData.walletAddress) {
+            walletAddress = userData.walletAddress;
+            console.log("Extracted wallet address from userDefinedData:", walletAddress);
+          }
+        } catch (error) {
+          console.error("Error parsing userDefinedData:", error);
+        }
+      }
+      
+      // Final fallback - if no wallet address found, log warning
+      if (!walletAddress) {
+        console.warn("=== NO WALLET ADDRESS FOUND ===");
+        console.warn("Available data:");
+        console.warn("- result.userData:", result.userData);
+        console.warn("- result.discloseOutput:", result.discloseOutput);
+        console.warn("- attestationId:", attestationId);
+        console.warn("This verification will not be saved to profiles.json");
+      }
       
       if (result.isValidDetails.isValid) {
         let savedProfile = null;

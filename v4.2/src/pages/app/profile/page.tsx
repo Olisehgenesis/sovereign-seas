@@ -312,20 +312,28 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
       scope: "sovereign-seas",
       endpoint: "https://auth.sovseas.xyz/api/verify",
       endpointType: "https",
-      userIdType: "hex",
-      userId: address,
+      userId: userId, // Use the UUID format userId
       disclosures: {
-        name: true,
-        date_of_birth: true,
+        // Only disclose nationality as per working example
         nationality: true,
+        // Don't disclose other personal info
+        issuing_state: false,
+        name: false,
+        date_of_birth: false,
+        passport_number: false,
+        gender: false,
+        expiry_date: false,
+        // Verification rules
         minimumAge: 18,
         ofac: true,
         excludedCountries: ['IRN', 'PRK'],
       }
     }).build();
     console.log('[DeeplinkQRCode] Built selfApp:', app);
+    console.log('[DeeplinkQRCode] App userId:', app.userId);
+    console.log('[DeeplinkQRCode] App sessionId:', app.sessionId);
     return app;
-  }, [address]);
+  }, [userId]);
 
   // Note: deeplink generation removed due to type conflicts between packages
   // The QR code wrapper handles the deeplink internally
@@ -375,12 +383,13 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [verificationProviders, setVerificationProviders] = useState<string[]>([]);
 
-  // Use wallet address as userId for Self Protocol
+  // Use wallet address as userId for Self Protocol (trim 0x for UUID format)
   useEffect(() => {
     if (address && !userId) {
-      // Use wallet address as userId for blockchain apps
-      setUserId(address);
-      console.log('Using wallet address as userId:', address);
+      // Use wallet address without 0x prefix as userId (UUID format)
+      const walletId = address.replace('0x', '');
+      setUserId(walletId);
+      console.log('Using wallet address as userId (UUID format):', walletId);
     }
   }, [address, userId]);
 
