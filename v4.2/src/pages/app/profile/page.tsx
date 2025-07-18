@@ -299,10 +299,11 @@ const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
   );
 };
 
-function DeeplinkQRCode({ userId, address, onSuccess }: { 
+function DeeplinkQRCode({ userId, address, onSuccess, onError }: { 
   userId: string, 
   address: string | undefined, 
   onSuccess: () => void
+  onError?: (error: any) => void
 }) {
   // Build the Self app and deeplink
   const selfApp = useMemo(() => {
@@ -311,6 +312,7 @@ function DeeplinkQRCode({ userId, address, onSuccess }: {
       scope: "sovereign-seas",
       endpoint: "https://auth.sovseas.xyz/api/verify",
       endpointType: "https",
+      userIdType: "hex",
       userId: userId,
       disclosures: {
         name: true,
@@ -1153,7 +1155,28 @@ useEffect(() => {
                  
                  // Update local verification status
                  setIsVerified(true);
-               }} />
+               }} 
+               onError={(error) => {
+                 console.error('[ProfilePage] Self verification error:', error);
+                 const errorCode = error.error_code || 'Unknown';
+                 const reason = error.reason || 'Unknown error';
+                 
+                 // Show error in modal
+                 setVerificationError(`${errorCode}: ${reason}`);
+                 setVerificationStatus('error');
+                 setShowSuccessModal(true);
+                 
+                 // Log detailed error for debugging
+                 console.error('[ProfilePage] Verification failed:', {
+                   errorCode,
+                   reason,
+                   fullError: error,
+                   userId,
+                   address,
+                   timestamp: new Date().toISOString()
+                 });
+               }}
+               />
                <div className="text-center space-y-2 mt-4">
                  <p className="text-xs text-gray-500">
                    Wallet: {userId?.slice(0, 6)}...{userId?.slice(-4)}
