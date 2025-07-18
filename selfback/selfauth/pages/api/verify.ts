@@ -428,15 +428,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   else if (req.method === 'GET') {
     try {
       const { wallet } = req.query;
-      
+      await initializeDataFile(); // Ensure file exists
+
       if (wallet) {
         // Get specific wallet profile
         const profile = await getProfile(wallet as string);
-        return res.status(200).json({ profile });
+        if (profile) {
+          logger('info', `Profile found for wallet: ${wallet}`);
+          return res.status(200).json({ profile, message: 'Profile found' });
+        } else {
+          logger('info', `No profile found for wallet: ${wallet}`);
+          return res.status(200).json({ profile: null, message: 'No profile found for this wallet' });
+        }
       } else {
         // Get all profiles
         const profiles = await loadProfiles();
-        return res.status(200).json({ profiles });
+        logger('info', `Returning all profiles. Count: ${profiles.length}`);
+        return res.status(200).json({ profiles, message: 'All profiles returned' });
       }
     } catch (error) {
       logger('error', 'Error retrieving profiles:', error);
