@@ -352,7 +352,7 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
       },
       version: 2, 
       userDefinedData: "hello from sovereign seas",
-      devMode: false,
+      devMode: true,
     } as Partial<SelfApp>).build();
     return app;
   }, [userId, disclosures]); // disclosures is stable due to useMemo([])
