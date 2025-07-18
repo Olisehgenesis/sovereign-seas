@@ -4,7 +4,7 @@ import path from 'path';
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
+const PROFILES_FILE = path.join(process.cwd(), 'data', 'profiles.json');
 
 // Initialize CORS middleware
 const cors = initMiddleware(
@@ -34,7 +34,7 @@ export default async function handler(
 
   try {
     // Check if data file exists
-    if (!fs.existsSync(DATA_FILE)) {
+    if (!fs.existsSync(PROFILES_FILE)) {
       return res.status(200).json({ 
         verifiedUsers: [],
         total: 0,
@@ -42,16 +42,19 @@ export default async function handler(
       });
     }
 
-    const verifications = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    const profiles = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf-8'));
     
-    // Get only verified users (most recent verification for each user)
-    const verifiedUsers = verifications
-      .filter((v: any) => v.verificationStatus)
-      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      // Remove duplicates by keeping only the most recent verification for each wallet
-      .filter((v: any, index: number, self: any[]) => 
-        index === self.findIndex((t: any) => t.wallet.toLowerCase() === v.wallet.toLowerCase())
-      );
+    // Get only verified users and include country information
+    const verifiedUsers = profiles
+      .filter((p: any) => p.isValid)
+      .map((p: any) => ({
+        wallet: p.walletAddress,
+        verificationType: p.verificationType || 'self',
+        verifiedAt: p.verifiedAt,
+        country: p.disclosures?.nationality || 'Unknown',
+        timestamp: p.verifiedAt
+      }))
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return res.status(200).json({
       verifiedUsers,

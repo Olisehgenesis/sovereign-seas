@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@selfxyz/core": "^0.0.25",
+    "@selfxyz/core": "^1.0.6",
     "@selfxyz/qrcode": "^0.0.19",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

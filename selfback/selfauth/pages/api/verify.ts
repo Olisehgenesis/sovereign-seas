@@ -1,8 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getUserIdentifier, SelfBackendVerifier } from '@selfxyz/core';
+import { 
+  SelfBackendVerifier, 
+  IConfigStorage,
+  VerificationConfig,
+} from '@selfxyz/core';
+import { promises as fs } from 'fs';
+import path from 'path';
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
 import { originList } from '@/src/utils/origin';
+
+
 
 // Initialize CORS middleware
 const cors = initMiddleware(
@@ -12,58 +20,219 @@ const cors = initMiddleware(
   })
 );
 
+// Configuration storage implementation
+class ConfigStorage implements IConfigStorage {
+  async getConfig(configId: string): Promise<VerificationConfig> {
+    return {
+      excludedCountries: ['IRN', 'PRK'],
+      ofac: true
+    };
+  }
+  
+  async setConfig(configId: string, config: VerificationConfig): Promise<boolean> {
+    // Implementation for setting config (can be empty for this use case)
+    return true;
+  }
+  
+  async getActionId(userIdentifier: string, userDefinedData: string): Promise<string> {
+    return 'default_config';
+  }
+}
+
+// Initialize verifier
+const allowedIds = new Map();
+allowedIds.set(1, true); // Accept passports
+
+const selfBackendVerifier = new SelfBackendVerifier(
+  'sovereign-seas',
+  'https://auth.sovseas.xyz/api/verify',
+  false,
+  allowedIds,
+  new ConfigStorage(),
+  'uuid'
+);
+
+// JSON file storage functions
+const PROFILES_FILE = path.join(process.cwd(), 'data', 'profiles.json');
+
+async function ensureDataDirectory() {
+  const dataDir = path.join(process.cwd(), 'data');
+  try {
+    await fs.access(dataDir);
+  } catch {
+    await fs.mkdir(dataDir, { recursive: true });
+  }
+}
+
+async function loadProfiles() {
+  try {
+    await ensureDataDirectory();
+    const data = await fs.readFile(PROFILES_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    // File doesn't exist or is empty, return empty array
+    return [];
+  }
+}
+
+async function saveProfile(walletAddress: string, verificationData: any) {
+  try {
+    await ensureDataDirectory();
+    
+    const profiles = await loadProfiles();
+    
+    // Check if wallet already exists and update, otherwise add new
+    const existingIndex = profiles.findIndex((p: any) => p.walletAddress === walletAddress);
+    
+    const newProfile = {
+      walletAddress,
+      verificationType: 'self',
+      verifiedAt: new Date().toISOString(),
+      sessionId: verificationData.userData.userIdentifier,
+      disclosures: verificationData.discloseOutput,
+      attestationId: verificationData.attestationId,
+      isValid: verificationData.isValidDetails.isValid,
+      validationDetails: verificationData.isValidDetails
+    };
+    
+    if (existingIndex >= 0) {
+      // Update existing profile
+      profiles[existingIndex] = { ...profiles[existingIndex], ...newProfile };
+      console.log(`Updated existing profile for wallet: ${walletAddress}`);
+    } else {
+      // Add new profile
+      profiles.push(newProfile);
+      console.log(`Added new profile for wallet: ${walletAddress}`);
+    }
+    
+    await fs.writeFile(PROFILES_FILE, JSON.stringify(profiles, null, 2));
+    console.log(`Saved profile to ${PROFILES_FILE}`);
+    
+    return newProfile;
+  } catch (error) {
+    console.error('Error saving profile:', error);
+    throw error;
+  }
+}
+
+async function getProfile(walletAddress: string) {
+  try {
+    const profiles = await loadProfiles();
+    return profiles.find((p: any) => p.walletAddress === walletAddress);
+  } catch (error) {
+    console.error('Error loading profile:', error);
+    return null;
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Run the CORS middleware
   await cors(req, res);
   console.log("req.body", req.body);
 
   if (req.method === 'POST') {
     try {
-      const { proof, publicSignals } = req.body;
+      const { attestationId, proof, pubSignals, userContextData } = req.body;
 
-      if (!proof || !publicSignals) {
-        return res.status(400).json({ message: 'Proof and publicSignals are required' });
+      if (!attestationId || !proof || !pubSignals || !userContextData) {
+        return res.status(400).json({ 
+          message: 'Missing required fields: attestationId, proof, pubSignals, userContextData' 
+        });
       }
 
-      // Extract user ID from the proof
-      const userId = await getUserIdentifier(publicSignals);
-      console.log("Extracted userId:", userId);
-
-      // Initialize and configure the verifier
-      const selfBackendVerifier = new SelfBackendVerifier(
-        'sovereign-seas', // Using a unique scope for this application
-        'https://auth.sovseas.xyz/api/verify'
-      );
+      // Extract wallet address from user context data
+      let walletAddress: string | null = null;
+      try {
+        const decodedData = Buffer.from(userContextData.replace('0x', ''), 'hex').toString();
+        const userData = JSON.parse(decodedData.replace(/\0/g, ''));
+        walletAddress = userData.walletAddress;
+        console.log("Extracted wallet address:", walletAddress);
+      } catch (error) {
+        console.log('Could not extract wallet address from user context data');
+      }
 
       // Verify the proof
-      const result = await selfBackendVerifier.verify(proof, publicSignals);
+      const result = await selfBackendVerifier.verify(
+        attestationId,
+        proof,
+        pubSignals,
+        userContextData
+      );
       
-      if (result.isValid) {
-        // Return successful verification response
+      console.log("Verification result:", result);
+      
+      if (result.isValidDetails.isValid) {
+        let savedProfile = null;
+        
+        // Save to profiles.json if we have a wallet address
+        if (walletAddress) {
+          try {
+            savedProfile = await saveProfile(walletAddress, {
+              discloseOutput: result.discloseOutput,
+              userData: result.userData,
+              attestationId,
+              isValidDetails: result.isValidDetails
+            });
+          } catch (saveError) {
+            console.error('Error saving profile, but verification was successful:', saveError);
+            // Continue with successful response even if save failed
+          }
+        }
+
         return res.status(200).json({
           status: 'success',
           result: true,
-          credentialSubject: result.credentialSubject
+          credentialSubject: result.discloseOutput,
+          userData: result.userData,
+          walletAddress,
+          savedProfile: savedProfile ? 'Profile saved successfully' : 'No wallet address to save'
         });
       } else {
-        // Return failed verification response
-        return res.status(500).json({
+        return res.status(200).json({
           status: 'error',
           result: false,
-          message: 'Verification failed',
+          reason: 'Verification failed',
+          error_code: "VERIFICATION_FAILED",
           details: result.isValidDetails
         });
       }
     } catch (error) {
       console.error('Error verifying proof:', error);
-      console.log("error", error);
-      return res.status(500).json({
+
+
+      return res.status(200).json({
         status: 'error',
         result: false,
+        reason: 'Internal server error',
+        error_code: "INTERNAL_ERROR",
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-  } else {
+  } 
+  
+  // GET method to retrieve profiles (optional)
+  else if (req.method === 'GET') {
+    try {
+      const { wallet } = req.query;
+      
+      if (wallet) {
+        // Get specific wallet profile
+        const profile = await getProfile(wallet as string);
+        return res.status(200).json({ profile });
+      } else {
+        // Get all profiles
+        const profiles = await loadProfiles();
+        return res.status(200).json({ profiles });
+      }
+    } catch (error) {
+      console.error('Error retrieving profiles:', error);
+      return res.status(500).json({ 
+        error: 'Failed to retrieve profiles',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  } 
+  
+  else {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 } 
