@@ -312,7 +312,8 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
       scope: "sovereign-seas",
       endpoint: "https://auth.sovseas.xyz/api/verify",
       endpointType: "https",
-      userId: userId, // Use the UUID format userId
+      userId: address, // Use the UUID format userId
+      userIdType: "hex",
       disclosures: {
         // Only disclose nationality as per working example
         nationality: true,

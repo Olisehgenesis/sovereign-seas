@@ -10,6 +10,7 @@ import path from 'path';
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
 import { originList } from '@/src/utils/origin';
+import { logger } from '@/src/utils/logger';
 
 
 
@@ -64,11 +65,11 @@ async function ensureDataDirectory() {
   const dataDir = path.join(process.cwd(), 'data');
   try {
     await fs.access(dataDir);
-    console.log(`Data directory exists: ${dataDir}`);
+    logger('info', `Data directory exists: ${dataDir}`);
   } catch (error) {
-    console.log(`Creating data directory: ${dataDir}`);
+    logger('info', `Creating data directory: ${dataDir}`);
     await fs.mkdir(dataDir, { recursive: true });
-    console.log(`Data directory created successfully`);
+    logger('info', `Data directory created successfully`);
   }
 }
 
@@ -79,30 +80,30 @@ async function initializeDataFile() {
   }
   
   try {
-    console.log(`=== INITIALIZING DATA FILE ===`);
-    console.log(`Current working directory: ${process.cwd()}`);
-    console.log(`Profiles file path: ${PROFILES_FILE}`);
+    logger('info', `=== INITIALIZING DATA FILE ===`);
+    logger('info', `Current working directory: ${process.cwd()}`);
+    logger('info', `Profiles file path: ${PROFILES_FILE}`);
     
     await ensureDataDirectory();
     
     // Check if profiles file exists
     try {
       await fs.access(PROFILES_FILE);
-      console.log(`Profiles file exists: ${PROFILES_FILE}`);
+      logger('info', `Profiles file exists: ${PROFILES_FILE}`);
     } catch (error) {
-      console.log(`Profiles file does not exist, creating it: ${PROFILES_FILE}`);
+      logger('info', `Profiles file does not exist, creating it: ${PROFILES_FILE}`);
       const emptyProfiles: any[] = [];
       await fs.writeFile(PROFILES_FILE, JSON.stringify(emptyProfiles, null, 2));
-      console.log(`Created new profiles file with empty array`);
+      logger('info', `Created new profiles file with empty array`);
     }
     
     isInitialized = true;
-    console.log(`=== DATA FILE INITIALIZATION COMPLETE ===`);
+    logger('info', `=== DATA FILE INITIALIZATION COMPLETE ===`);
   } catch (error) {
-    console.error(`=== DATA FILE INITIALIZATION ERROR ===`);
-    console.error('Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
-    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    logger('error', `=== DATA FILE INITIALIZATION ERROR ===`);
+    logger('error', 'Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
+    logger('error', 'Error message:', error instanceof Error ? error.message : 'Unknown error');
+    logger('error', 'Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     // Don't throw error, just log it - app should still work
   }
 }
@@ -112,33 +113,33 @@ async function loadProfiles() {
     // Ensure data file is initialized
     await initializeDataFile();
     
-    console.log(`Attempting to read profiles from: ${PROFILES_FILE}`);
+    logger('info', `Attempting to read profiles from: ${PROFILES_FILE}`);
     const data = await fs.readFile(PROFILES_FILE, 'utf8');
     const profiles = JSON.parse(data);
-    console.log(`Loaded ${profiles.length} profiles from file`);
+    logger('info', `Loaded ${profiles.length} profiles from file`);
     return profiles;
   } catch (error) {
-    console.error(`Error loading profiles: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    console.log(`Returning empty array for profiles`);
+    logger('error', `Error loading profiles: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger('info', `Returning empty array for profiles`);
     return [];
   }
 }
 
 async function saveProfile(walletAddress: string, verificationData: any, provider: string = 'self') {
   try {
-    console.log(`=== SAVING PROFILE FOR WALLET: ${walletAddress} ===`);
-    console.log(`Provider: ${provider}`);
-    console.log(`Verification data keys:`, Object.keys(verificationData));
+    logger('info', `=== SAVING PROFILE FOR WALLET: ${walletAddress} ===`);
+    logger('info', `Provider: ${provider}`);
+    logger('info', `Verification data keys:`, Object.keys(verificationData));
     
     // Ensure data file is initialized
     await initializeDataFile();
     
     const profiles = await loadProfiles();
-    console.log(`Current profiles count: ${profiles.length}`);
+    logger('info', `Current profiles count: ${profiles.length}`);
     
     // Check if wallet already exists
     const existingIndex = profiles.findIndex((p: any) => p.walletAddress === walletAddress);
-    console.log(`Existing wallet index: ${existingIndex}`);
+    logger('info', `Existing wallet index: ${existingIndex}`);
     
     const newVerification = {
       provider,
@@ -157,7 +158,7 @@ async function saveProfile(walletAddress: string, verificationData: any, provide
       })
     };
     
-    console.log(`Created new verification object for provider: ${provider}`);
+    logger('info', `Created new verification object for provider: ${provider}`);
     
     if (existingIndex >= 0) {
       // Wallet exists - check if this provider verification already exists
@@ -170,11 +171,11 @@ async function saveProfile(walletAddress: string, verificationData: any, provide
       if (providerIndex >= 0) {
         // Update existing verification for this provider
         existingVerifications[providerIndex] = newVerification;
-        console.log(`Updated ${provider} verification for wallet: ${walletAddress}`);
+        logger('info', `Updated ${provider} verification for wallet: ${walletAddress}`);
       } else {
         // Add new verification for this provider
         existingVerifications.push(newVerification);
-        console.log(`Added new ${provider} verification for wallet: ${walletAddress}`);
+        logger('info', `Added new ${provider} verification for wallet: ${walletAddress}`);
       }
       
       // Update the profile with new verifications array
@@ -192,29 +193,29 @@ async function saveProfile(walletAddress: string, verificationData: any, provide
         lastUpdated: new Date().toISOString()
       };
       profiles.push(newProfile);
-      console.log(`Created new profile with ${provider} verification for wallet: ${walletAddress}`);
+      logger('info', `Created new profile with ${provider} verification for wallet: ${walletAddress}`);
     }
     
-    console.log(`Attempting to write ${profiles.length} profiles to: ${PROFILES_FILE}`);
+    logger('info', `Attempting to write ${profiles.length} profiles to: ${PROFILES_FILE}`);
     const jsonData = JSON.stringify(profiles, null, 2);
-    console.log(`JSON data size: ${jsonData.length} characters`);
+    logger('info', `JSON data size: ${jsonData.length} characters`);
     
     await fs.writeFile(PROFILES_FILE, jsonData);
-    console.log(`Successfully saved profile to ${PROFILES_FILE}`);
+    logger('info', `Successfully saved profile to ${PROFILES_FILE}`);
     
     const savedProfile = profiles[existingIndex >= 0 ? existingIndex : profiles.length - 1];
-    console.log(`Returning saved profile for wallet: ${savedProfile.walletAddress}`);
+    logger('info', `Returning saved profile for wallet: ${savedProfile.walletAddress}`);
     
     return savedProfile;
   } catch (error) {
-    console.error('=== ERROR SAVING PROFILE ===');
-    console.error('Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
-    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    console.error('Wallet address:', walletAddress);
-    console.error('Provider:', provider);
-    console.error('PROFILES_FILE path:', PROFILES_FILE);
-    console.error('Current working directory:', process.cwd());
+    logger('error', '=== ERROR SAVING PROFILE ===');
+    logger('error', 'Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
+    logger('error', 'Error message:', error instanceof Error ? error.message : 'Unknown error');
+    logger('error', 'Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    logger('error', 'Wallet address:', walletAddress);
+    logger('error', 'Provider:', provider);
+    logger('error', 'PROFILES_FILE path:', PROFILES_FILE);
+    logger('error', 'Current working directory:', process.cwd());
     throw error;
   }
 }
@@ -240,7 +241,7 @@ async function getProfile(walletAddress: string) {
       verificationCount: verifications.length
     };
   } catch (error) {
-    console.error('Error loading profile:', error);
+    logger('error', 'Error loading profile:', error);
     return null;
   }
 }
@@ -251,27 +252,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Initialize data file on every API call
   await initializeDataFile();
   
-  console.log("=== VERIFICATION REQUEST START ===");
-  console.log("Method:", req.method);
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
-  console.log("Query:", req.query);
-  console.log("Timestamp:", new Date().toISOString());
+  logger('info', "=== VERIFICATION REQUEST START ===");
+  logger('info', "Method:", req.method);
+  logger('info', "Headers:", req.headers);
+  logger('info', "Body:", req.body);
+  logger('info', "Query:", req.query);
+  logger('info', "Timestamp:", new Date().toISOString());
 
   if (req.method === 'POST') {
     try {
       const { attestationId, proof, pubSignals, userContextData } = req.body;
-      console.log("attestationId", attestationId);
-      console.log("proof", proof);
-      console.log("pubSignals", pubSignals);
-      console.log("userContextData", userContextData);
+      logger('info', "attestationId", attestationId);
+      logger('info', "proof", proof);
+      logger('info', "pubSignals", pubSignals);
+      logger('info', "userContextData", userContextData);
 
       if (!attestationId || !proof || !pubSignals || !userContextData) {
-        console.error("=== MISSING REQUIRED FIELDS ===");
-        console.error("attestationId:", !!attestationId, attestationId);
-        console.error("proof:", !!proof, proof ? "present" : "missing");
-        console.error("pubSignals:", !!pubSignals, pubSignals ? "present" : "missing");
-        console.error("userContextData:", !!userContextData, userContextData);
+        logger('error', "=== MISSING REQUIRED FIELDS ===");
+        logger('error', "attestationId:", !!attestationId, attestationId);
+        logger('error', "proof:", !!proof, proof ? "present" : "missing");
+        logger('error', "pubSignals:", !!pubSignals, pubSignals ? "present" : "missing");
+        logger('error', "userContextData:", !!userContextData, userContextData);
         return res.status(400).json({ 
           status: 'error',
           result: false,
@@ -284,27 +285,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Extract wallet address from user context data (fallback method)
       let walletAddress: string | null = null;
       try {
-        console.log("=== EXTRACTING WALLET ADDRESS FROM USER CONTEXT ===");
-        console.log("userContextData:", userContextData);
+        logger('info', "=== EXTRACTING WALLET ADDRESS FROM USER CONTEXT ===");
+        logger('info', "userContextData:", userContextData);
         const decodedData = Buffer.from(userContextData.replace('0x', ''), 'hex').toString();
-        console.log("decodedData:", decodedData);
+        logger('info', "decodedData:", decodedData);
         const userData = JSON.parse(decodedData.replace(/\0/g, ''));
-        console.log("parsed userData:", userData);
+        logger('info', "parsed userData:", userData);
         walletAddress = userData.walletAddress;
-        console.log("Extracted wallet address from userContextData:", walletAddress);
+        logger('info', "Extracted wallet address from userContextData:", walletAddress);
       } catch (error) {
-        console.error('=== ERROR EXTRACTING WALLET ADDRESS FROM USER CONTEXT ===');
-        console.error('userContextData:', userContextData);
-        console.error('Error:', error);
-        console.log('Could not extract wallet address from user context data');
+        logger('error', '=== ERROR EXTRACTING WALLET ADDRESS FROM USER CONTEXT ===');
+        logger('error', 'userContextData:', userContextData);
+        logger('error', 'Error:', error);
+        logger('warn', 'Could not extract wallet address from user context data');
       }
 
       // Verify the proof
-      console.log("=== STARTING VERIFICATION ===");
-      console.log("attestationId:", attestationId);
-      console.log("proof length:", proof ? Object.keys(proof).length : "no proof");
-      console.log("pubSignals length:", pubSignals ? pubSignals.length : "no pubSignals");
-      console.log("userContextData length:", userContextData ? userContextData.length : "no userContextData");
+      logger('info', "=== STARTING VERIFICATION ===");
+      logger('info', "attestationId:", attestationId);
+      logger('info', "proof length:", proof ? Object.keys(proof).length : "no proof");
+      logger('info', "pubSignals length:", pubSignals ? pubSignals.length : "no pubSignals");
+      logger('info', "userContextData length:", userContextData ? userContextData.length : "no userContextData");
       
       const result = await selfBackendVerifier.verify(
         attestationId,
@@ -313,53 +314,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         userContextData
       );
       
-      console.log("=== VERIFICATION RESULT ===");
-      console.log("result.isValidDetails:", result.isValidDetails);
-      console.log("result.isValidDetails.isValid:", result.isValidDetails.isValid);
-      console.log("result.userData:", result.userData);
-      console.log("result.discloseOutput:", result.discloseOutput);
+      logger('info', "=== VERIFICATION RESULT ===");
+      logger('info', "result.isValidDetails:", result.isValidDetails);
+      logger('info', "result.isValidDetails.isValid:", result.isValidDetails.isValid);
+      logger('info', "result.userData:", result.userData);
+      logger('info', "result.discloseOutput:", result.discloseOutput);
       
       // Extract wallet address from verification result (primary method)
       if (!walletAddress && result.userData && result.userData.userIdentifier) {
-        console.log("=== EXTRACTING WALLET ADDRESS FROM VERIFICATION RESULT ===");
-        console.log("result.userData.userIdentifier:", result.userData.userIdentifier);
-        console.log("result.userData.userDefinedData:", result.userData.userDefinedData);
+        logger('info', "=== EXTRACTING WALLET ADDRESS FROM VERIFICATION RESULT ===");
+        logger('info', "result.userData.userIdentifier:", result.userData.userIdentifier);
+        logger('info', "result.userData.userDefinedData:", result.userData.userDefinedData);
         
         // Convert UUID format back to wallet address (add 0x prefix)
         const walletId = result.userData.userIdentifier;
         if (walletId && walletId.length === 40) { // Ethereum address without 0x
           walletAddress = '0x' + walletId;
-          console.log("Converted UUID format to wallet address:", walletAddress);
+          logger('info', "Converted UUID format to wallet address:", walletAddress);
         } else {
           walletAddress = walletId;
-          console.log("Using userIdentifier as wallet address:", walletAddress);
+          logger('info', "Using userIdentifier as wallet address:", walletAddress);
         }
       }
       
       // If still no wallet address, try to extract from userDefinedData
       if (!walletAddress && result.userData && result.userData.userDefinedData) {
-        console.log("=== EXTRACTING WALLET ADDRESS FROM USER DEFINED DATA ===");
+        logger('info', "=== EXTRACTING WALLET ADDRESS FROM USER DEFINED DATA ===");
         try {
           const decodedData = Buffer.from(result.userData.userDefinedData.replace('0x', ''), 'hex').toString();
           const userData = JSON.parse(decodedData.replace(/\0/g, ''));
-          console.log("userDefinedData parsed:", userData);
+          logger('info', "userDefinedData parsed:", userData);
           if (userData.walletAddress) {
             walletAddress = userData.walletAddress;
-            console.log("Extracted wallet address from userDefinedData:", walletAddress);
+            logger('info', "Extracted wallet address from userDefinedData:", walletAddress);
           }
         } catch (error) {
-          console.error("Error parsing userDefinedData:", error);
+          logger('error', "Error parsing userDefinedData:", error);
         }
       }
       
       // Final fallback - if no wallet address found, log warning
       if (!walletAddress) {
-        console.warn("=== NO WALLET ADDRESS FOUND ===");
-        console.warn("Available data:");
-        console.warn("- result.userData:", result.userData);
-        console.warn("- result.discloseOutput:", result.discloseOutput);
-        console.warn("- attestationId:", attestationId);
-        console.warn("This verification will not be saved to profiles.json");
+        logger('warn', "=== NO WALLET ADDRESS FOUND ===");
+        logger('warn', "Available data:");
+        logger('warn', "- result.userData:", result.userData);
+        logger('warn', "- result.discloseOutput:", result.discloseOutput);
+        logger('warn', "- attestationId:", attestationId);
+        logger('warn', "This verification will not be saved to profiles.json");
       }
       
       if (result.isValidDetails.isValid) {
@@ -369,7 +370,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Save to profiles.json if we have a wallet address
         if (walletAddress) {
           try {
-            console.log(`=== ATTEMPTING TO SAVE PROFILE ===`);
+            logger('info', `=== ATTEMPTING TO SAVE PROFILE ===`);
             savedProfile = await saveProfile(walletAddress, {
               discloseOutput: result.discloseOutput,
               userData: result.userData,
@@ -377,11 +378,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               isValidDetails: result.isValidDetails
             }, 'self');
             saveStatus = 'Profile saved successfully';
-            console.log(`=== PROFILE SAVE SUCCESS ===`);
+            logger('info', `=== PROFILE SAVE SUCCESS ===`);
           } catch (saveError) {
-            console.error('=== PROFILE SAVE ERROR ===');
-            console.error('Error saving profile, but verification was successful:', saveError);
-            console.error('Error details:', saveError instanceof Error ? saveError.message : 'Unknown error');
+            logger('error', '=== PROFILE SAVE ERROR ===');
+            logger('error', 'Error saving profile, but verification was successful:', saveError);
+            logger('error', 'Error details:', saveError instanceof Error ? saveError.message : 'Unknown error');
             saveStatus = `Profile save failed: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`;
             // Continue with successful response even if save failed
           }
@@ -406,12 +407,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     } catch (error) {
-      console.error('=== VERIFICATION ERROR ===');
-      console.error('Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      console.error('Full error object:', error);
-      console.error('Timestamp:', new Date().toISOString());
+      logger('error', '=== VERIFICATION ERROR ===');
+      logger('error', 'Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
+      logger('error', 'Error message:', error instanceof Error ? error.message : 'Unknown error');
+      logger('error', 'Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      logger('error', 'Full error object:', error);
+      logger('error', 'Timestamp:', new Date().toISOString());
 
       return res.status(200).json({
         status: 'error',
@@ -438,7 +439,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ profiles });
       }
     } catch (error) {
-      console.error('Error retrieving profiles:', error);
+      logger('error', 'Error retrieving profiles:', error);
       return res.status(500).json({ 
         error: 'Failed to retrieve profiles',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -447,10 +448,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } 
   
   else {
-    console.log("=== METHOD NOT ALLOWED ===");
-    console.log("Method:", req.method);
+    logger('info', "=== METHOD NOT ALLOWED ===");
+    logger('info', "Method:", req.method);
     return res.status(405).json({ message: 'Method not allowed' });
   }
   
-  console.log("=== VERIFICATION REQUEST END ===");
+  logger('info', "=== VERIFICATION REQUEST END ===");
 } 
