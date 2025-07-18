@@ -57,7 +57,7 @@ allowedIds.set(1, true); // Accept passports
 const selfBackendVerifier = new SelfBackendVerifier(
   'sovereign-seas',
   'https://auth.sovseas.xyz/api/verify',
-  false,
+  true,
   allowedIds,
   new ConfigStorage(),
   'hex' // Use hex for wallet addresses

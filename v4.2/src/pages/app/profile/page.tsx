@@ -313,7 +313,7 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
       endpoint: "https://auth.sovseas.xyz/api/verify",
       endpointType: "https",
       userIdType: "hex",
-      userId: userId,
+      userId: address,
       disclosures: {
         name: true,
         date_of_birth: true,
@@ -325,7 +325,7 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
     }).build();
     console.log('[DeeplinkQRCode] Built selfApp:', app);
     return app;
-  }, [userId]);
+  }, [address]);
 
   // Note: deeplink generation removed due to type conflicts between packages
   // The QR code wrapper handles the deeplink internally
