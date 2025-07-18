@@ -75,40 +75,72 @@ async function loadProfiles() {
   }
 }
 
-async function saveProfile(walletAddress: string, verificationData: any) {
+async function saveProfile(walletAddress: string, verificationData: any, provider: string = 'self') {
   try {
     await ensureDataDirectory();
     
     const profiles = await loadProfiles();
     
-    // Check if wallet already exists and update, otherwise add new
+    // Check if wallet already exists
     const existingIndex = profiles.findIndex((p: any) => p.walletAddress === walletAddress);
     
-    const newProfile = {
-      walletAddress,
-      verificationType: 'self',
+    const newVerification = {
+      provider,
       verifiedAt: new Date().toISOString(),
-      sessionId: verificationData.userData.userIdentifier,
-      disclosures: verificationData.discloseOutput,
-      attestationId: verificationData.attestationId,
-      isValid: verificationData.isValidDetails.isValid,
-      validationDetails: verificationData.isValidDetails
+      isValid: verificationData.isValidDetails?.isValid || verificationData.isValid || true,
+      ...(provider === 'self' ? {
+        sessionId: verificationData.userData?.userIdentifier,
+        disclosures: verificationData.discloseOutput,
+        attestationId: verificationData.attestationId,
+        validationDetails: verificationData.isValidDetails
+      } : {
+        // GoodDollar specific fields
+        root: verificationData.root,
+        userId: verificationData.userId || `gooddollar-${Date.now()}`,
+        verificationStatus: verificationData.verificationStatus || true
+      })
     };
     
     if (existingIndex >= 0) {
-      // Update existing profile
-      profiles[existingIndex] = { ...profiles[existingIndex], ...newProfile };
-      console.log(`Updated existing profile for wallet: ${walletAddress}`);
+      // Wallet exists - check if this provider verification already exists
+      const existingProfile = profiles[existingIndex];
+      const existingVerifications = existingProfile.verifications || [];
+      
+      // Check if this provider verification already exists
+      const providerIndex = existingVerifications.findIndex((v: any) => v.provider === provider);
+      
+      if (providerIndex >= 0) {
+        // Update existing verification for this provider
+        existingVerifications[providerIndex] = newVerification;
+        console.log(`Updated ${provider} verification for wallet: ${walletAddress}`);
+      } else {
+        // Add new verification for this provider
+        existingVerifications.push(newVerification);
+        console.log(`Added new ${provider} verification for wallet: ${walletAddress}`);
+      }
+      
+      // Update the profile with new verifications array
+      profiles[existingIndex] = {
+        ...existingProfile,
+        verifications: existingVerifications,
+        lastUpdated: new Date().toISOString()
+      };
     } else {
-      // Add new profile
+      // Create new profile with first verification
+      const newProfile = {
+        walletAddress,
+        verifications: [newVerification],
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      };
       profiles.push(newProfile);
-      console.log(`Added new profile for wallet: ${walletAddress}`);
+      console.log(`Created new profile with ${provider} verification for wallet: ${walletAddress}`);
     }
     
     await fs.writeFile(PROFILES_FILE, JSON.stringify(profiles, null, 2));
     console.log(`Saved profile to ${PROFILES_FILE}`);
     
-    return newProfile;
+    return profiles[existingIndex >= 0 ? existingIndex : profiles.length - 1];
   } catch (error) {
     console.error('Error saving profile:', error);
     throw error;
@@ -118,7 +150,23 @@ async function saveProfile(walletAddress: string, verificationData: any) {
 async function getProfile(walletAddress: string) {
   try {
     const profiles = await loadProfiles();
-    return profiles.find((p: any) => p.walletAddress === walletAddress);
+    const profile = profiles.find((p: any) => p.walletAddress === walletAddress);
+    
+    if (!profile) {
+      return null;
+    }
+    
+    // Calculate overall verification status
+    const verifications = profile.verifications || [];
+    const isValid = verifications.some((v: any) => v.isValid);
+    const providers = verifications.map((v: any) => v.provider);
+    
+    return {
+      ...profile,
+      isValid,
+      providers,
+      verificationCount: verifications.length
+    };
   } catch (error) {
     console.error('Error loading profile:', error);
     return null;
@@ -171,7 +219,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               userData: result.userData,
               attestationId,
               isValidDetails: result.isValidDetails
-            });
+            }, 'self');
           } catch (saveError) {
             console.error('Error saving profile, but verification was successful:', saveError);
             // Continue with successful response even if save failed

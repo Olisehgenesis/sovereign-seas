@@ -380,6 +380,7 @@ export default function ProfilePage() {
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [verificationProviders, setVerificationProviders] = useState<string[]>([]);
 
   // Generate userId for Self Protocol using UUID
   useEffect(() => {
@@ -396,14 +397,53 @@ export default function ProfilePage() {
     console.log('GoodDollar verification complete:', data);
     setShowGoodDollarVerification(false);
     
-    // The GoodDollar verification is handled by the GoodDollar component
-    // and the backend will handle saving the verification data
-    console.log('GoodDollar verification successful - backend handles data saving');
-    
-    setIsVerified(true);
-    setShowSuccessModal(true);
-    setVerificationStatus('success');
-    setVerificationError(null);
+    if (!address) {
+      setVerificationError('No wallet address found');
+      setVerificationStatus('error');
+      setShowSuccessModal(true);
+      return;
+    }
+
+    try {
+      console.log('Starting GoodDollar verification save...');
+      const response = await fetch('https://auth.sovseas.xyz/api/verify-gooddollar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          wallet: address,
+          userId: `gooddollar-${Date.now()}`,
+          verificationStatus: true,
+          root: data?.root || null
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('GoodDollar verification save response:', responseData);
+
+      if (responseData.status === 'success') {
+        console.log('GoodDollar verification saved successfully');
+        setIsVerified(true);
+        setShowSuccessModal(true);
+        setVerificationStatus('success');
+        setVerificationError(null);
+      } else {
+        console.error('GoodDollar verification save failed:', responseData.reason);
+        setVerificationError(responseData.reason || 'Failed to save GoodDollar verification. Please try again.');
+        setVerificationStatus('error');
+        setShowSuccessModal(true);
+      }
+    } catch (err) {
+      console.error('Error during GoodDollar verification save:', err);
+      setVerificationError(err instanceof Error ? err.message : 'Failed to save GoodDollar verification. Please try again.');
+      setVerificationStatus('error');
+      setShowSuccessModal(true);
+    }
   };
 
   // Get user's CELO balance
@@ -433,9 +473,11 @@ useEffect(() => {
           
           if (data.profile && data.profile.isValid) {
             setIsVerified(true);
-            console.log('User is verified');
+            setVerificationProviders(data.profile.providers || []);
+            console.log('User is verified with providers:', data.profile.providers);
           } else {
             setIsVerified(false);
+            setVerificationProviders([]);
             console.log('User is not verified');
           }
         } else {
@@ -553,7 +595,9 @@ useEffect(() => {
                   {isVerified ? (
                     <div className="flex items-center gap-2 px-2 py-1 bg-green-50 rounded-full">
                       <Shield className="h-4 w-4 text-green-600" />
-                      <span className="text-xs font-medium text-green-700">Verified by Self Protocol</span>
+                      <span className="text-xs font-medium text-green-700">
+                        Verified by {verificationProviders.length > 1 ? 'Multiple Providers' : verificationProviders[0] || 'Self Protocol'}
+                      </span>
                     </div>
                   ) : (
                     <button
@@ -875,7 +919,9 @@ useEffect(() => {
              {isVerified && (
                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
                  <CheckCircle className="h-4 w-4 text-green-600" />
-                 <span className="text-sm font-medium text-green-700">Verified</span>
+                 <span className="text-sm font-medium text-green-700">
+                   Verified ({verificationProviders.join(', ')})
+                 </span>
                </div>
              )}
            </div>
@@ -921,6 +967,22 @@ useEffect(() => {
                      <p className="text-sm text-green-700">
                        Your account is verified and ready for V3 features
                      </p>
+                     {verificationProviders.length > 0 && (
+                       <div className="mt-2">
+                         <p className="text-xs text-green-600 font-medium">Verification Methods:</p>
+                         <div className="flex flex-wrap gap-1 mt-1">
+                           {verificationProviders.map((provider, index) => (
+                             <span 
+                               key={index}
+                               className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"
+                             >
+                               {provider === 'self' ? 'Self Protocol' : 
+                                provider === 'gooddollar' ? 'GoodDollar' : provider}
+                             </span>
+                           ))}
+                         </div>
+                       </div>
+                     )}
                    </div>
                  </div>
                </div>
