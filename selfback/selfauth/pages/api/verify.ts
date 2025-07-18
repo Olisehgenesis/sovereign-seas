@@ -12,7 +12,7 @@ const configStore = new DefaultConfigStore({
 
 const verifier = new SelfBackendVerifier(
   'sovereign-seas',
-  'https://auth.sovseatests.xyz/api/verify',
+  'https://auth.sovseas.xyz/api/verify',
   false, 
   AllIds,
   configStore,
