@@ -49,7 +49,7 @@ const selfBackendVerifier = new SelfBackendVerifier(
   false, // Use mock mode for testing
   AllIds, // Accept all ID types like working example
   new ConfigStorage(),
-  'uuid' // Use UUID format like working example
+  'hex' // Use UUID format like working example
 );
 
 
