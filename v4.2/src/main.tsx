@@ -24,6 +24,7 @@ import EditProjectPage from './pages/app/project/admin/<id>/page'
 import VerifyPage from './pages/app/verify/page'
 import VoteEmbed from './pages/embed/VoteEmbed'
 import CampaignEmbed from './pages/embed/campaign'
+import SovereignSeasApp from './pages/app/tests/verify'
 
 globalThis.Buffer = Buffer
 
@@ -54,6 +55,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             // Embed routes
             <Route path="/embed/:campaignid/:projectid" element={<VoteEmbed />} />
             <Route path="/embed/campaign/:campaignid" element={<CampaignEmbed />} />
+
+            //test
+            <Route path="/test/verify" element={<SovereignSeasApp />} />
 
             <Route path="*" element={<NotFound />} />
           </Route>
