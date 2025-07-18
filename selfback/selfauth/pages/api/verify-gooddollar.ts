@@ -50,7 +50,7 @@ async function saveGoodDollarVerification(walletAddress: string, verificationDat
       verifiedAt: new Date().toISOString(),
       isValid: verificationData.verificationStatus || true,
       root: verificationData.root,
-      userId: verificationData.userId || `gooddollar-${Date.now()}`,
+      userId: verificationData.userId || walletAddress, // Use wallet address as userId
       verificationStatus: verificationData.verificationStatus || true
     };
     

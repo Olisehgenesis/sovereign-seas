@@ -39,8 +39,6 @@ import { formatIpfsUrl } from '@/utils/imageUtils';
 
 // Real Self Protocol imports
 import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
-import { getUniversalLink } from '@selfxyz/core';
-import { v4 as uuidv4 } from 'uuid';
 
 // GoodDollar imports
 import GoodDollarVerifyModal from '@/components/goodDollar';
@@ -320,17 +318,15 @@ function DeeplinkQRCode({ userId, address, onSuccess }: {
         nationality: true,
         minimumAge: 18,
         ofac: true,
+        excludedCountries: ['IRN', 'PRK'],
       }
     }).build();
     console.log('[DeeplinkQRCode] Built selfApp:', app);
     return app;
   }, [userId]);
 
-  const deeplink = useMemo(() => {
-    const link = getUniversalLink(selfApp);
-    console.log('[DeeplinkQRCode] Generated deeplink:', link);
-    return link;
-  }, [selfApp]);
+  // Note: deeplink generation removed due to type conflicts between packages
+  // The QR code wrapper handles the deeplink internally
 
   useEffect(() => {
     console.log('[DeeplinkQRCode] Mounted with userId:', userId, 'address:', address);
@@ -353,15 +349,10 @@ function DeeplinkQRCode({ userId, address, onSuccess }: {
           <Shield className="h-6 w-6 text-blue-400 drop-shadow" />
         </div>
       </div>
-      <a
-        href={deeplink}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 w-full px-4 py-2 min-h-12 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in flex items-center justify-center gap-2"
-      >
+      <div className="mt-4 w-full px-4 py-2 min-h-12 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in flex items-center justify-center gap-2">
         <span role="img" aria-label="mobile" className="mr-2">📱</span>
-        On Mobile? Verify with Self app
-      </a>
+        Scan QR code with Self app
+      </div>
     </div>
   );
 }
@@ -382,15 +373,14 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [verificationProviders, setVerificationProviders] = useState<string[]>([]);
 
-  // Generate userId for Self Protocol using UUID
+  // Use wallet address as userId for Self Protocol
   useEffect(() => {
-    if (!userId) {
-      // Generate a proper UUID for Self Protocol
-      const newUserId = uuidv4();
-      setUserId(newUserId);
-      console.log('Generated userId:', newUserId);
+    if (address && !userId) {
+      // Use wallet address as userId for blockchain apps
+      setUserId(address);
+      console.log('Using wallet address as userId:', address);
     }
-  }, [userId]);
+  }, [address, userId]);
 
   // Handle GoodDollar verification completion
   const handleGoodDollarVerificationComplete = async (data: any) => {
@@ -413,7 +403,7 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({ 
           wallet: address,
-          userId: `gooddollar-${Date.now()}`,
+          userId: address, // Use wallet address as userId
           verificationStatus: true,
           root: data?.root || null
         }),
@@ -1166,7 +1156,7 @@ useEffect(() => {
                }} />
                <div className="text-center space-y-2 mt-4">
                  <p className="text-xs text-gray-500">
-                   User ID: {userId.substring(0, 8)}...{userId.substring(userId.length - 6)}
+                   Wallet: {userId?.slice(0, 6)}...{userId?.slice(-4)}
                  </p>
                  {verificationError && (
                    <div className="text-red-600 text-sm font-medium">

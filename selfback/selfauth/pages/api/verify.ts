@@ -35,7 +35,18 @@ class ConfigStorage implements IConfigStorage {
   }
   
   async getActionId(userIdentifier: string, userDefinedData: string): Promise<string> {
-    return 'default_config';
+    // Parse user defined data to get wallet address and other info
+    try {
+      const decodedData = Buffer.from(userDefinedData.replace('0x', ''), 'hex').toString();
+      const userData = JSON.parse(decodedData.replace(/\0/g, '')); // Remove null padding
+      console.log('Parsed user data:', userData);
+      
+      // You can use wallet address or other data to determine config
+      return userData.walletAddress ? 'wallet_verification' : 'default_config';
+    } catch (error) {
+      console.log('Could not parse user defined data, using default config');
+      return 'default_config';
+    }
   }
 }
 
@@ -49,7 +60,7 @@ const selfBackendVerifier = new SelfBackendVerifier(
   false,
   allowedIds,
   new ConfigStorage(),
-  'uuid'
+  'hex' // Use hex for wallet addresses
 );
 
 // JSON file storage functions
