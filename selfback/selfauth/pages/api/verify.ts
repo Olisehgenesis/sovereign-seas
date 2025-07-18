@@ -74,6 +74,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         hasPubSignals: !!pubSignals,
         hasUserContextData: !!userContextData
       });
+
+      // return  if any is not given
+      if (!attestationId || !proof || !pubSignals || !userContextData) {
+        res.status(400).json({
+          verified: false,
+          error: 'Missing required fields'
+        });
+        return;
+      }
       const result = await verifier.verify(
         attestationId,
         proof,

@@ -341,7 +341,7 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
     if (!userId) return null;
     const app = new SelfAppBuilder({
       appName: "Sovereign Seas",
-      scope: "sovereign-seas",
+      scope: "seasv2",
       endpoint: "https://auth.sovseas.xyz/api/verify",
       endpointType: "https",
       logoBase64: "https://i.imgur.com/Rz8B3s7.png",
