@@ -301,7 +301,11 @@ const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
   );
 };
 
-function DeeplinkQRCode({ userId, address, onSuccess }: { userId: string, address: string | undefined, onSuccess: () => void }) {
+function DeeplinkQRCode({ userId, address, onSuccess }: { 
+  userId: string, 
+  address: string | undefined, 
+  onSuccess: () => void
+}) {
   // Build the Self app and deeplink
   const selfApp = useMemo(() => {
     const app = new SelfAppBuilder({
@@ -336,7 +340,6 @@ function DeeplinkQRCode({ userId, address, onSuccess }: { userId: string, addres
     <div className="flex flex-col items-center justify-center mb-6">
       <div className="relative group transition-transform duration-300 hover:scale-105 focus-within:scale-105">
         <div className="p-3 bg-gradient-to-br from-blue-100 via-white to-purple-100 rounded-2xl shadow-lg border border-blue-200 animate-pulse group-hover:animate-none transition-all">
-          {console.log('[DeeplinkQRCode] Rendering SelfQRcodeWrapper')}
           <SelfQRcodeWrapper
             selfApp={selfApp}
             onSuccess={() => {
@@ -393,50 +396,14 @@ export default function ProfilePage() {
     console.log('GoodDollar verification complete:', data);
     setShowGoodDollarVerification(false);
     
-    if (!address) {
-      setVerificationError('No wallet address found');
-      return;
-    }
-
-    try {
-      console.log('Starting GoodDollar verification save...');
-      const response = await fetch('https://auth.sovseas.xyz/api/verify-save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          wallet: address,
-          userId: `gooddollar-${Date.now()}`,
-          verificationStatus: true,
-          provider: 'gooddollar',
-          root: data?.root || null
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      console.log('GoodDollar verification save response:', responseData);
-
-      if (responseData.success) {
-        console.log('GoodDollar verification saved successfully');
-        setIsVerified(true);
-        setShowSuccessModal(true);
-        setVerificationStatus('success');
-        setVerificationError(null);
-      } else {
-        console.error('GoodDollar verification save failed:', responseData.error);
-        setVerificationError(responseData.error || 'Failed to save GoodDollar verification. Please try again.');
-        setVerificationStatus('error');
-      }
-    } catch (err) {
-      console.error('Error during GoodDollar verification save:', err);
-      setVerificationError(err instanceof Error ? err.message : 'Failed to save GoodDollar verification. Please try again.');
-      setVerificationStatus('error');
-    }
+    // The GoodDollar verification is handled by the GoodDollar component
+    // and the backend will handle saving the verification data
+    console.log('GoodDollar verification successful - backend handles data saving');
+    
+    setIsVerified(true);
+    setShowSuccessModal(true);
+    setVerificationStatus('success');
+    setVerificationError(null);
   };
 
   // Get user's CELO balance
@@ -452,7 +419,8 @@ useEffect(() => {
       try {
         console.log('Checking verification status for wallet:', address);
         
-        const response = await fetch(`https://auth.sovseas.xyz/api/verify-details?wallet=${address}`, {
+        // Use the new backend endpoint that returns profile data
+        const response = await fetch(`https://auth.sovseas.xyz/api/verify?wallet=${address}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -463,7 +431,7 @@ useEffect(() => {
           const data = await response.json();
           console.log('Verification check response:', data);
           
-          if (data.verified) {
+          if (data.profile && data.profile.isValid) {
             setIsVerified(true);
             console.log('User is verified');
           } else {
@@ -1124,42 +1092,15 @@ useEffect(() => {
                  console.log('[ProfilePage] Self verification onSuccess triggered');
                  setShowVerification(false);
                  setShowSuccessModal(true);
-                 setVerificationStatus('loading');
-                 if (!address) {
-                   setVerificationError('No wallet address found');
-                   setVerificationStatus('error');
-                   return;
-                 }
-                 try {
-                   console.log('[ProfilePage] Starting verification process...');
-                   const response = await fetch('https://auth.sovseas.xyz/api/verify-save', {
-                     method: 'POST',
-                     headers: {
-                       'Content-Type': 'application/json',
-                     },
-                     body: JSON.stringify({ 
-                       wallet: address,
-                       userId: userId,
-                       verificationStatus: true 
-                     }),
-                   });
-                   console.log('[ProfilePage] Received response:', response);
-                   const data = await response.json();
-                   console.log('[ProfilePage] Verification response data:', data);
-                   if (data.success) {
-                     console.log('[ProfilePage] Verification successful');
-                     setVerificationStatus('success');
-                     setVerificationError(null);
-                   } else {
-                     console.error('[ProfilePage] Verification failed:', data.error);
-                     setVerificationError(data.error || 'Verification failed. Please try again.');
-                     setVerificationStatus('error');
-                   }
-                 } catch (err) {
-                   console.error('[ProfilePage] Error during verification:', err);
-                   setVerificationError(err instanceof Error ? err.message : 'Failed to verify identity. Please try again.');
-                   setVerificationStatus('error');
-                 }
+                 setVerificationStatus('success');
+                 setVerificationError(null);
+                 
+                 // The backend now automatically saves verification data
+                 // No need to call a separate save endpoint
+                 console.log('[ProfilePage] Verification successful - backend handles data saving');
+                 
+                 // Update local verification status
+                 setIsVerified(true);
                }} />
                <div className="text-center space-y-2 mt-4">
                  <p className="text-xs text-gray-500">
