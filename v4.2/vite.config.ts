@@ -35,5 +35,24 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'react-vendor';
+            if (id.includes('lucide-react')) return 'lucide-vendor';
+            if (id.includes('wagmi')) return 'wagmi-vendor';
+            if (id.includes('lottie-web')) return 'lottie-vendor';
+            if (id.includes('qrcode.react')) return 'qrcode-vendor';
+            if (id.includes('react-qr-code')) return 'react-qr-code-vendor';
+            if (id.includes('react-qr-reader')) return 'react-qr-reader-vendor';
+            if (id.includes('react-qr-scanner')) return 'react-qr-scanner-vendor';
+            if (id.includes('react-qr-scanner')) return 'react-qr-scanner-vendor';
+            return 'vendor';
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000 // (Optional) Increase warning limit to 1000kB
   }
 })
