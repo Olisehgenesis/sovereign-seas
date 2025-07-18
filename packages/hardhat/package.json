@@ -127,6 +127,9 @@
     "deploy:wproxy:celo": "ts-node scripts/deploy/deploy-working-proxy.ts --network celo",
     "verify:wproxy:celo": "ts-node scripts/deploy/verify-enhanced-celo-voting-proxy --network celo",
 
+    "deploy:tips:celo": "ts-node scripts/deploy/deploy-tips.ts --network celo",
+    "verify:tips:celo": "ts-node scripts/deploy/verify-tips.ts --network celo",
+
     
     "test:ubeswap-proxy": "ts-node scripts/testUbeswapVotingProxy.ts --network alfajores",
     "test:ubeswap-proxy:celo": "ts-node scripts/testUbeswapVotingProxy.ts --network celo",

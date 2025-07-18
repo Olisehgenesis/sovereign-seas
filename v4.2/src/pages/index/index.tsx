@@ -33,6 +33,8 @@ import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import LocationBadge from '@/components/LocationBadge';
+import { getNormalizedLocation } from '@/utils/locationUtils';
 
 // ==================== TYPES ====================
 
@@ -356,6 +358,7 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
   const navigate = useNavigate();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const location = getNormalizedLocation(project.metadata);
 
   return (
     <motion.div
@@ -367,7 +370,8 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
       onClick={() => navigate(`/explorer/project/${project.id}`)}
       className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500"
     >
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
+      {/* Location Badge (card style) */}
+      <LocationBadge location={location} variant="card" />
       
       {/* Project Image */}
       <div className="relative h-40 sm:h-48 bg-gradient-to-r from-blue-100 to-indigo-100 overflow-hidden">

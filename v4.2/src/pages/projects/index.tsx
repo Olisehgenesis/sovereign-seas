@@ -23,6 +23,8 @@ import {
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { Address } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import LocationBadge from '@/components/LocationBadge';
+import { getNormalizedLocation } from '@/utils/locationUtils';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -62,56 +64,69 @@ interface EnhancedProject {
 
 // Utility functions
 
+const safeJsonParse = (jsonString: string, fallback = {}) => {
+  try {
+    return jsonString ? JSON.parse(jsonString) : fallback;
+  } catch (e) {
+    console.warn('Failed to parse JSON:', e);
+    return fallback;
+  }
+};
 
 const parseProjectMetadata = (projectDetails: any): ProjectMetadata => {
-  let parsedMetadata: ProjectMetadata = {};
-  
-  try {
-    if (projectDetails.metadata?.bio) {
-      parsedMetadata.bio = projectDetails.metadata.bio;
-    }
+  const { metadata } = projectDetails;
+  const bioData = safeJsonParse(metadata?.bio || '{}');
+  const contractInfo = safeJsonParse(metadata?.contractInfo || '{}');
+  const additionalData = safeJsonParse(metadata?.additionalData || '{}');
 
-    if (projectDetails.metadata?.contractInfo) {
-      try {
-        const contractInfo = JSON.parse(projectDetails.metadata.contractInfo);
-        parsedMetadata = { ...parsedMetadata, ...contractInfo };
-      } catch (e) {
-        parsedMetadata.contractInfo = projectDetails.metadata.contractInfo;
-      }
-    }
+  return {
+    tagline: bioData.tagline || '',
+    category: bioData.category || '',
+    tags: bioData.tags || [],
+    location: bioData.location || '',
+    establishedDate: bioData.establishedDate || '',
+    website: bioData.website || '',
 
-    if (projectDetails.metadata?.additionalData) {
-      try {
-        const additionalData = JSON.parse(projectDetails.metadata.additionalData);
-        // Handle nested structures
-        if (additionalData.media) {
-          parsedMetadata.logo = additionalData.media.logo;
-          parsedMetadata.coverImage = additionalData.media.coverImage;
-        }
-        if (additionalData.links) {
-          parsedMetadata = { ...parsedMetadata, ...additionalData.links };
-        }
-        parsedMetadata = { ...parsedMetadata, ...additionalData };
-      } catch (e) {
-        parsedMetadata.additionalData = projectDetails.metadata.additionalData;
-      }
-    }
-  } catch (e) {
-    console.warn('Error parsing project metadata:', e);
-  }
+    blockchain: contractInfo.blockchain || '',
+    techStack: contractInfo.techStack || [],
+    license: contractInfo.license || '',
+    developmentStage: contractInfo.developmentStage || '',
+    openSource: contractInfo.openSource !== undefined ? contractInfo.openSource : true,
 
-  return parsedMetadata;
+    logo: additionalData.media?.logo || additionalData.logo || '',
+    coverImage: additionalData.media?.coverImage || additionalData.coverImage || '',
+    demoVideo: additionalData.media?.demoVideo || additionalData.demoVideo || '',
+
+    demoUrl: additionalData.links?.demoUrl || additionalData.demoUrl || '',
+    githubRepo: additionalData.links?.githubRepo || additionalData.githubRepo || '',
+    documentation: additionalData.links?.documentation || additionalData.documentation || '',
+    karmaGapProfile: additionalData.links?.karmaGapProfile || additionalData.karmaGapProfile || '',
+
+    twitter: additionalData.links?.twitter || additionalData.social?.twitter || additionalData.twitter || '',
+    linkedin: additionalData.links?.linkedin || additionalData.social?.linkedin || additionalData.linkedin || '',
+    discord: additionalData.links?.discord || additionalData.social?.discord || additionalData.discord || '',
+    telegram: additionalData.links?.telegram || additionalData.social?.telegram || additionalData.telegram || '',
+
+    teamMembers: additionalData.teamMembers || [],
+    contactEmail: additionalData.contactEmail || '',
+    keyFeatures: additionalData.keyFeatures || [],
+
+    bio: bioData.bio || metadata?.bio || ''
+  };
 };
 
 // Project Card Component
 const ProjectCard = ({ project }: { project: EnhancedProject }) => {
   const navigate = useNavigate();
+  const location = getNormalizedLocation(project.metadata);
 
   return (
     <div
       onClick={() => navigate(`/explorer/project/${project.id.toString()}`)}
       className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500"
     >
+      {/* Location Badge (card style, 55% down) */}
+      <LocationBadge location={location} variant="card" />
       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
       
       {/* Project Image */}

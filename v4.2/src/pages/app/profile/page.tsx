@@ -49,6 +49,8 @@ const SelfQRcodeWrapper = lazy(() => import('@selfxyz/qrcode'));
 
 // GoodDollar imports
 import GoodDollarVerifyModal from '@/components/goodDollar';
+import LocationBadge from '@/components/LocationBadge';
+import { getNormalizedLocation } from '@/utils/locationUtils';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -102,9 +104,12 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
   const parsedMetadata = project.metadata?.additionalData 
     ? JSON.parse(project.metadata.additionalData) 
     : {};
+  const location = getNormalizedLocation(parsedMetadata);
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all group">
+    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all group relative">
+      {/* Location Badge (card style) */}
+      <LocationBadge location={location} variant="card" />
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           {parsedMetadata.media?.logo ? (

@@ -37,6 +37,8 @@ import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import LocationBadge from '@/components/LocationBadge';
+import { getNormalizedLocation } from '@/utils/locationUtils';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -925,6 +927,8 @@ function ProjectCard({
  viewMode: 'grid' | 'list'; 
  onClick: () => void;
 }) {
+  const parsedMetadata = project.metadata?.additionalData ? JSON.parse(project.metadata.additionalData) : project.metadata || {};
+  const location = getNormalizedLocation(parsedMetadata);
  return (
    <div
      onClick={onClick}
@@ -932,7 +936,8 @@ function ProjectCard({
        viewMode === 'list' ? 'flex' : ''
      }`}
    >
-     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
+     {/* Location Badge (card style, 55% down) */}
+     <LocationBadge location={location} variant="card" />
      
      {/* Project Image */}
      <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : 'h-40 sm:h-48'} bg-gradient-to-r from-blue-100 to-indigo-100 overflow-hidden`}>

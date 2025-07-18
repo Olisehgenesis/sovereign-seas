@@ -2,467 +2,275 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// Interface for the deployed SovereignSeasV4 contract
-interface ISovereignSeas {
-    // Structs matching the deployed contract
-    struct ProjectMetadata { 
-        string bio; 
-        string contractInfo; 
-        string additionalData; 
-    }
-    
-    struct Project {
-        uint256 id;
-        address payable owner;
-        string name;
-        string description;
-        ProjectMetadata metadata;
-        address[] contracts;
-        bool transferrable;
-        uint256[] campaignIds;
-        bool active;
-        uint256 createdAt;
-    }
-
-    // View functions from deployed contract
-    function projects(uint256 projectId) external view returns (
-        uint256 id,
-        address owner,
-        string memory name,
-        string memory description,
-        bool transferrable,
-        bool active,
-        uint256 createdAt,
+interface ISovereignSeasV4 {
+    function getProject(uint256 _projectId) external view returns (
+        uint256 id, 
+        address owner, 
+        string memory name, 
+        string memory description, 
+        bool transferrable, 
+        bool active, 
+        uint256 createdAt, 
         uint256[] memory campaignIds
     );
     
     function getProjectMetadata(uint256 _projectId) external view returns (
-        string memory bio,
-        string memory contractInfo,
-        string memory additionalData,
+        string memory bio, 
+        string memory contractInfo, 
+        string memory additionalData, 
         address[] memory contracts
     );
     
-    function supportedTokens(address token) external view returns (bool);
-    function getSupportedTokens() external view returns (address[] memory);
-    function nextProjectId() external view returns (uint256);
-    function owner() external view returns (address);
+    function isTokenSupported(address _token) external view returns (bool);
+    function getProjectCount() external view returns (uint256);
     function celoToken() external view returns (address);
-    function mentoTokenBroker() external view returns (address);
-    function getTokenToCeloEquivalent(address token, uint256 amount) external view returns (uint256);
-    function collectedFees(address token) external view returns (uint256);
-    function superAdmins(address admin) external view returns (bool);
-    function cUSD() external view returns (address); // Add this to get cUSD from SovereignSeas
+    function getTokenToCeloEquivalent(address _token, uint256 _amount) external view returns (uint256);
 }
 
-/**
- * @title ProjectTipping
- * @dev Standalone contract for direct project tipping functionality
- * Users can tip projects with CELO, cUSD, or other supported tokens with optional messages
- * Tips can be general project tips or campaign-specific tips
- */
-contract ProjectTipping is ReentrancyGuard, Ownable {
+contract ProjectTipping is Ownable(msg.sender), ReentrancyGuard {
     using SafeERC20 for IERC20;
+
+    // State Variables
+    ISovereignSeasV4 public sovereignSeas;
+    IERC20 public celoToken;
     
-    // Reference to the main SovereignSeas contract
-    ISovereignSeas public immutable sovereignSeas;
-    IERC20 public immutable celoToken;
-    address public immutable broker;
-    address public immutable cUSD;
-    
-    // Tipping-specific storage
-    mapping(uint256 => mapping(address => uint256)) public projectTips; // projectId => token => total tips
-    mapping(uint256 => uint256) public projectTipCount; // projectId => number of tips received
-    mapping(uint256 => Tip[]) public projectTipHistory; // projectId => array of tips
-    mapping(address => Tip[]) public userTipHistory; // user => array of tips given
-    mapping(address => uint256) public userTotalTipped; // user => total CELO equivalent tipped
-    
-    // Campaign-specific tipping storage (using string campaign IDs)
-    mapping(string => mapping(uint256 => mapping(address => uint256))) public campaignProjectTips; // campaignId => projectId => token => amount
-    mapping(string => mapping(uint256 => uint256)) public campaignProjectTipCount; // campaignId => projectId => tip count
-    mapping(string => mapping(uint256 => Tip[])) public campaignProjectTipHistory; // campaignId => projectId => tips
-    mapping(string => mapping(address => uint256)) public campaignUserTips; // campaignId => user => total CELO equivalent
-    mapping(string => uint256) public campaignTotalTips; // campaignId => total tips in CELO equivalent
-    
-    // String campaign tracking
-    mapping(string => bool) public validCampaigns; // Track valid campaign IDs
-    string[] public campaignIdsList; // List of all campaign IDs that have received tips
-    mapping(string => bool) private campaignInList; // Track if campaign is in list
-    
-    // Global tipping statistics
-    uint256 public totalTipsAllTime; // Total tips in CELO equivalent
-    uint256 public totalTipTransactions; // Total number of tip transactions
-    mapping(address => uint256) public tokenTotalTips; // token => total tips in that token
-    mapping(address => uint256) public collectedFees; // Track platform fees collected
-    
-    uint256 public tippingFeePercentage = 2; // 2% platform fee on tips
+    uint256 public constant PLATFORM_FEE_PERCENTAGE = 2; // 2% platform fee
+    uint256 public minimumTipAmount = 0.01 * 1e18; // Minimum tip in CELO equivalent
     bool public tippingEnabled = true;
-    uint256 public minimumTipAmount = 0.01 ether; // Minimum tip amount (adjustable)
+    
+    // Mappings
+    mapping(uint256 => mapping(address => uint256)) public projectTipsByToken; // projectId -> token -> amount
+    mapping(uint256 => address[]) public projectTippedTokens; // projectId -> token addresses
+    mapping(uint256 => mapping(address => bool)) public isTokenTippedToProject; // projectId -> token -> bool
+    mapping(uint256 => uint256) public totalProjectTipsInCelo; // projectId -> total tips in CELO equivalent
+    mapping(address => mapping(uint256 => mapping(address => uint256))) public userTipsToProject; // user -> projectId -> token -> amount
+    mapping(address => uint256[]) public userTippedProjects; // user -> projectIds
+    mapping(address => mapping(uint256 => bool)) public hasUserTippedProject; // user -> projectId -> bool
+    mapping(uint256 => uint256) public projectTipperCount; // projectId -> number of unique tippers
+    mapping(uint256 => address[]) public projectTippers; // projectId -> tipper addresses
+    mapping(uint256 => mapping(address => bool)) public isProjectTipper; // projectId -> tipper -> bool
+    mapping(address => uint256) public collectedFees; // token -> collected fees
     
     // Structs
-    struct Tip {
+    struct TipInfo {
         address tipper;
         uint256 projectId;
-        string campaignId; // empty string if general project tip
         address token;
         uint256 amount;
         uint256 celoEquivalent;
-        string message;
         uint256 timestamp;
-        uint256 tipId;
-        bool isCampaignSpecific;
+        string message;
     }
     
-    struct TipSummary {
-        uint256 totalTips;
-        uint256 tipCount;
+    struct ProjectTipSummary {
+        uint256 projectId;
+        address projectOwner;
+        string projectName;
+        uint256 totalTipsInCelo;
+        uint256 tipperCount;
         address[] tippedTokens;
         uint256[] tokenAmounts;
-        uint256 campaignTips; // campaign-specific tips
-        uint256 generalTips; // general project tips
+        bool isActive;
     }
     
-    struct CampaignTipSummary {
-        uint256 totalTips;
-        uint256 tipCount;
-        uint256 projectCount; // number of projects tipped in campaign
-        address[] tippedTokens;
-        uint256[] tokenAmounts;
+    struct UserTipSummary {
+        address user;
+        uint256 totalTippedInCelo;
+        uint256 projectCount;
+        uint256[] tippedProjectIds;
+        TipInfo[] recentTips;
     }
     
-    struct UserTipStats {
-        uint256 totalTipped;
-        uint256 tipCount;
-        uint256 campaignTips;
-        uint256 projectTips;
-        address[] tippedTokens;
-        uint256[] tokenAmounts;
-    }
+    // Arrays
+    TipInfo[] public allTips;
+    uint256[] public tippedProjectIds;
+    mapping(uint256 => bool) public hasBeenTipped;
     
     // Events
-    event ProjectTipped(
+    event TipSent(
         address indexed tipper,
         uint256 indexed projectId,
-        string indexed campaignId, // empty string if general tip
-        address token,
+        address indexed token,
         uint256 amount,
         uint256 celoEquivalent,
-        string message,
-        uint256 tipId,
-        bool isCampaignSpecific
+        string message
     );
-    
-    event TippingFeeUpdated(uint256 previousFee, uint256 newFee);
-    event TippingStatusUpdated(bool enabled);
-    event MinimumTipAmountUpdated(uint256 previousAmount, uint256 newAmount);
-    event TipRefunded(address indexed tipper, uint256 indexed projectId, address token, uint256 amount, string reason);
-    event CampaignRegistered(string indexed campaignId, address indexed registeredBy);
-    event FeeCollected(address indexed token, uint256 amount, string feeType);
-    
+    event TipWithdrawn(
+        uint256 indexed projectId,
+        address indexed projectOwner,
+        address indexed token,
+        uint256 amount
+    );
+    event PlatformFeeCollected(address indexed token, uint256 amount);
+    event PlatformFeeWithdrawn(address indexed token, address indexed recipient, uint256 amount);
+    event TippingStatusChanged(bool enabled);
+    event MinimumTipAmountUpdated(uint256 oldAmount, uint256 newAmount);
+    event EmergencyWithdraw(address indexed token, address indexed recipient, uint256 amount);
+
     // Modifiers
-    modifier tippingActive() {
-        require(tippingEnabled, "Tipping is currently disabled");
+    modifier onlyProjectOwner(uint256 _projectId) {
+        (, address owner,,,,,,) = sovereignSeas.getProject(_projectId);
+        require(owner == msg.sender, "Only project owner can withdraw tips");
         _;
     }
     
-    modifier validTipAmount(uint256 _amount) {
-        require(_amount >= minimumTipAmount, "Tip amount below minimum");
-        _;
-    }
-    
-    modifier validCampaign(string memory _campaignId) {
-        if (bytes(_campaignId).length > 0) {
-            require(validCampaigns[_campaignId], "Campaign not registered");
-        }
-        _;
-    }
-    
-    modifier activeProject(uint256 _projectId) {
-        (, , , , , bool active, , ) = sovereignSeas.projects(_projectId);
+    modifier validProject(uint256 _projectId) {
+        require(_projectId < sovereignSeas.getProjectCount(), "Invalid project ID");
+        (,,,,,bool active,,) = sovereignSeas.getProject(_projectId);
         require(active, "Project is not active");
         _;
     }
     
-    modifier onlySuperAdmin() {
-        require(sovereignSeas.superAdmins(msg.sender) || msg.sender == owner(), "Only super admin can call this function");
+    modifier tippingIsEnabled() {
+        require(tippingEnabled, "Tipping is currently disabled");
         _;
     }
-    
-    modifier validAddress(address _addr) {
-        require(_addr != address(0), "Invalid address");
-        _;
-    }
-    
-    constructor(
-        address _sovereignSeasContract,
-        address _initialOwner
-    ) 
-        Ownable(_initialOwner)
-        validAddress(_sovereignSeasContract) 
-        validAddress(_initialOwner) 
-    {
-        sovereignSeas = ISovereignSeas(_sovereignSeasContract);
+
+    constructor(address _sovereignSeas) {
+        require(_sovereignSeas != address(0), "Invalid SovereignSeas address");
+        sovereignSeas = ISovereignSeasV4(_sovereignSeas);
         celoToken = IERC20(sovereignSeas.celoToken());
-        broker = sovereignSeas.mentoTokenBroker();
-        cUSD = sovereignSeas.cUSD();
     }
-    
-    // Campaign Management Functions
-    
-    /**
-     * @dev Register a campaign for tipping (only super admin)
-     */
-    function registerCampaign(string memory _campaignId) external onlySuperAdmin {
-        require(bytes(_campaignId).length > 0, "Invalid campaign ID");
-        require(!validCampaigns[_campaignId], "Campaign already registered");
-        
-        validCampaigns[_campaignId] = true;
-        
-        if (!campaignInList[_campaignId]) {
-            campaignIdsList.push(_campaignId);
-            campaignInList[_campaignId] = true;
-        }
-        
-        emit CampaignRegistered(_campaignId, msg.sender);
-    }
-    
-    /**
-     * @dev Register multiple campaigns at once
-     */
-    function registerCampaigns(string[] memory _campaignIds) external onlySuperAdmin {
-        for (uint256 i = 0; i < _campaignIds.length; i++) {
-            if (bytes(_campaignIds[i]).length > 0 && !validCampaigns[_campaignIds[i]]) {
-                validCampaigns[_campaignIds[i]] = true;
-                
-                if (!campaignInList[_campaignIds[i]]) {
-                    campaignIdsList.push(_campaignIds[i]);
-                    campaignInList[_campaignIds[i]] = true;
-                }
-                
-                emit CampaignRegistered(_campaignIds[i], msg.sender);
-            }
-        }
-    }
-    
-    /**
-     * @dev Deregister a campaign from tipping
-     */
-    function deregisterCampaign(string memory _campaignId) external onlySuperAdmin {
-        require(validCampaigns[_campaignId], "Campaign not registered");
-        validCampaigns[_campaignId] = false;
-    }
-    
-    /**
-     * @dev Check if project participates in a specific campaign
-     * For now, assumes all active projects can participate in registered campaigns
-     */
-    function projectParticipatesInCampaign(uint256 _projectId, string memory _campaignId) public view returns (bool) {
-        (, , , , , bool active, , ) = sovereignSeas.projects(_projectId);
-        require(active, "Project not active");
-        return validCampaigns[_campaignId];
-    }
-    
-    /**
-     * @dev Tip a project with CELO (native)
-     */
-    function tipProjectWithCelo(
-        uint256 _projectId,
-        string memory _campaignId,
-        string memory _message
-    ) external payable nonReentrant tippingActive validTipAmount(msg.value) activeProject(_projectId) validCampaign(_campaignId) {
-        if (bytes(_campaignId).length > 0) {
-            require(projectParticipatesInCampaign(_projectId, _campaignId), "Project not in specified campaign");
-        }
-        
-        uint256 celoEquivalent = msg.value; // CELO is 1:1 with itself
-        _processTip(_projectId, _campaignId, address(celoToken), msg.value, celoEquivalent, _message, true);
-    }
-    
-    /**
-     * @dev Tip a project with cUSD or other ERC20 tokens
-     */
+
+    // Tipping Functions
     function tipProject(
         uint256 _projectId,
-        string memory _campaignId,
         address _token,
         uint256 _amount,
         string memory _message
-    ) external nonReentrant tippingActive validTipAmount(_amount) activeProject(_projectId) validCampaign(_campaignId) {
+    ) external nonReentrant validProject(_projectId) tippingIsEnabled {
         require(_token != address(celoToken), "Use tipProjectWithCelo for CELO tips");
-        require(sovereignSeas.supportedTokens(_token), "Token not supported for tipping");
-        
-        if (bytes(_campaignId).length > 0) {
-            require(projectParticipatesInCampaign(_projectId, _campaignId), "Project not in specified campaign");
-        }
-        
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        require(_amount > 0, "Tip amount must be greater than 0");
+        require(sovereignSeas.isTokenSupported(_token), "Token not supported");
         
         uint256 celoEquivalent = sovereignSeas.getTokenToCeloEquivalent(_token, _amount);
-        _processTip(_projectId, _campaignId, _token, _amount, celoEquivalent, _message, false);
+        require(celoEquivalent >= minimumTipAmount, "Tip amount below minimum");
+        
+        // Transfer tokens
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        
+        _processTip(_projectId, _token, _amount, celoEquivalent, _message);
     }
     
-    /**
-     * @dev Internal function to process tips
-     */
+    function tipProjectWithCelo(
+        uint256 _projectId,
+        string memory _message
+    ) external payable nonReentrant validProject(_projectId) tippingIsEnabled {
+        require(msg.value > 0, "Must send CELO to tip");
+        require(msg.value >= minimumTipAmount, "Tip amount below minimum");
+        
+        address celoAddress = address(celoToken);
+        uint256 celoEquivalent = msg.value;
+        
+        _processTip(_projectId, celoAddress, msg.value, celoEquivalent, _message);
+    }
+    
     function _processTip(
         uint256 _projectId,
-        string memory _campaignId,
         address _token,
         uint256 _amount,
         uint256 _celoEquivalent,
-        string memory _message,
-        bool _isNativeCelo
+        string memory _message
     ) internal {
         // Calculate platform fee
-        uint256 platformFee = (_amount * tippingFeePercentage) / 100;
-        uint256 netAmount = _amount - platformFee;
-        uint256 netCeloEquivalent = _isNativeCelo ? netAmount : sovereignSeas.getTokenToCeloEquivalent(_token, netAmount);
+        uint256 platformFee = (_amount * PLATFORM_FEE_PERCENTAGE) / 100;
+        uint256 tipAmount = _amount - platformFee;
         
-        bool isCampaignSpecific = bytes(_campaignId).length > 0;
+        // Update tip data
+        projectTipsByToken[_projectId][_token] += tipAmount;
+        totalProjectTipsInCelo[_projectId] += _celoEquivalent;
+        userTipsToProject[msg.sender][_projectId][_token] += tipAmount;
+        collectedFees[_token] += platformFee;
         
-        // Update project tip data
-        projectTips[_projectId][_token] += netAmount;
-        projectTipCount[_projectId]++;
-        
-        // Update campaign-specific data if applicable
-        if (isCampaignSpecific) {
-            campaignProjectTips[_campaignId][_projectId][_token] += netAmount;
-            campaignProjectTipCount[_campaignId][_projectId]++;
-            campaignUserTips[_campaignId][msg.sender] += netCeloEquivalent;
-            campaignTotalTips[_campaignId] += netCeloEquivalent;
-            
-            if (!campaignInList[_campaignId]) {
-                campaignIdsList.push(_campaignId);
-                campaignInList[_campaignId] = true;
-            }
+        // Track tipped tokens for project
+        if (!isTokenTippedToProject[_projectId][_token]) {
+            projectTippedTokens[_projectId].push(_token);
+            isTokenTippedToProject[_projectId][_token] = true;
         }
         
-        // Update global statistics
-        userTotalTipped[msg.sender] += netCeloEquivalent;
-        tokenTotalTips[_token] += netAmount;
-        totalTipsAllTime += netCeloEquivalent;
-        totalTipTransactions++;
+        // Track user's tipped projects
+        if (!hasUserTippedProject[msg.sender][_projectId]) {
+            userTippedProjects[msg.sender].push(_projectId);
+            hasUserTippedProject[msg.sender][_projectId] = true;
+        }
         
-        // Create tip record
-        uint256 tipId = projectTipHistory[_projectId].length;
-        Tip memory newTip = Tip({
+        // Track project tippers
+        if (!isProjectTipper[_projectId][msg.sender]) {
+            projectTippers[_projectId].push(msg.sender);
+            isProjectTipper[_projectId][msg.sender] = true;
+            projectTipperCount[_projectId]++;
+        }
+        
+        // Track globally tipped projects
+        if (!hasBeenTipped[_projectId]) {
+            tippedProjectIds.push(_projectId);
+            hasBeenTipped[_projectId] = true;
+        }
+        
+        // Record tip
+        TipInfo memory newTip = TipInfo({
             tipper: msg.sender,
             projectId: _projectId,
-            campaignId: _campaignId,
             token: _token,
-            amount: netAmount,
-            celoEquivalent: netCeloEquivalent,
-            message: _message,
+            amount: tipAmount,
+            celoEquivalent: _celoEquivalent,
             timestamp: block.timestamp,
-            tipId: tipId,
-            isCampaignSpecific: isCampaignSpecific
+            message: _message
         });
+        allTips.push(newTip);
         
-        // Store tip in histories
-        projectTipHistory[_projectId].push(newTip);
-        userTipHistory[msg.sender].push(newTip);
-        
-        if (isCampaignSpecific) {
-            campaignProjectTipHistory[_campaignId][_projectId].push(newTip);
-        }
-        
-        // Get project owner from the main contract
-        (, address projectOwner, , , , , , ) = sovereignSeas.projects(_projectId);
-        
-        // Transfer net amount to project owner
-        if (_isNativeCelo) {
-            payable(projectOwner).transfer(netAmount);
-            if (platformFee > 0) {
-                payable(owner()).transfer(platformFee);
-            }
-        } else {
-            IERC20(_token).safeTransfer(projectOwner, netAmount);
-            if (platformFee > 0) {
-                IERC20(_token).safeTransfer(owner(), platformFee);
-            }
-        }
-        
-        // Track platform fee
-        if (platformFee > 0) {
-            collectedFees[_token] += platformFee;
-            emit FeeCollected(_token, platformFee, "tipping");
-        }
-        
-        emit ProjectTipped(
-            msg.sender,
-            _projectId,
-            _campaignId,
-            _token,
-            netAmount,
-            netCeloEquivalent,
-            _message,
-            tipId,
-            isCampaignSpecific
-        );
+        emit TipSent(msg.sender, _projectId, _token, tipAmount, _celoEquivalent, _message);
+        emit PlatformFeeCollected(_token, platformFee);
     }
-    
-    // Admin Functions
-    
-    /**
-     * @dev Update tipping fee percentage (only owner)
-     */
-    function updateTippingFee(uint256 _newFeePercentage) external onlyOwner {
-        require(_newFeePercentage <= 10, "Fee cannot exceed 10%");
-        uint256 previousFee = tippingFeePercentage;
-        tippingFeePercentage = _newFeePercentage;
-        emit TippingFeeUpdated(previousFee, _newFeePercentage);
-    }
-    
-    /**
-     * @dev Set minimum tip amount
-     */
-    function setMinimumTipAmount(uint256 _minimumAmount) external onlyOwner {
-        uint256 previousAmount = minimumTipAmount;
-        minimumTipAmount = _minimumAmount;
-        emit MinimumTipAmountUpdated(previousAmount, _minimumAmount);
-    }
-    
-    /**
-     * @dev Enable or disable tipping (only owner)
-     */
-    function setTippingStatus(bool _enabled) external onlyOwner {
-        tippingEnabled = _enabled;
-        emit TippingStatusUpdated(_enabled);
-    }
-    
-    /**
-     * @dev Emergency refund function (super admin only)
-     */
-    function emergencyRefund(
-        address _tipper,
-        uint256 _projectId,
-        address _token,
-        uint256 _amount,
-        string memory _reason
-    ) external onlySuperAdmin nonReentrant {
-        require(sovereignSeas.supportedTokens(_token), "Token not supported");
+
+    // Withdrawal Functions
+    function withdrawTips(uint256 _projectId, address _token) external nonReentrant onlyProjectOwner(_projectId) {
+        uint256 amount = projectTipsByToken[_projectId][_token];
+        require(amount > 0, "No tips to withdraw for this token");
+        
+        projectTipsByToken[_projectId][_token] = 0;
         
         if (_token == address(celoToken)) {
-            require(address(this).balance >= _amount, "Insufficient CELO balance");
-            payable(_tipper).transfer(_amount);
+            payable(msg.sender).transfer(amount);
         } else {
-            require(IERC20(_token).balanceOf(address(this)) >= _amount, "Insufficient token balance");
-            IERC20(_token).safeTransfer(_tipper, _amount);
+            IERC20(_token).safeTransfer(msg.sender, amount);
         }
         
-        emit TipRefunded(_tipper, _projectId, _token, _amount, _reason);
+        emit TipWithdrawn(_projectId, msg.sender, _token, amount);
     }
     
-    /**
-     * @dev Withdraw collected fees (only owner)
-     */
-    function withdrawFees(address _token, address _recipient, uint256 _amount) external onlyOwner validAddress(_recipient) {
+    function withdrawAllTips(uint256 _projectId) external nonReentrant onlyProjectOwner(_projectId) {
+        address[] memory tokens = projectTippedTokens[_projectId];
+        require(tokens.length > 0, "No tips to withdraw");
+        
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            uint256 amount = projectTipsByToken[_projectId][token];
+            
+            if (amount > 0) {
+                projectTipsByToken[_projectId][token] = 0;
+                
+                if (token == address(celoToken)) {
+                    payable(msg.sender).transfer(amount);
+                } else {
+                    IERC20(token).safeTransfer(msg.sender, amount);
+                }
+                
+                emit TipWithdrawn(_projectId, msg.sender, token, amount);
+            }
+        }
+    }
+
+    // Admin Functions
+    function withdrawPlatformFees(address _token, address _recipient, uint256 _amount) external onlyOwner {
+        require(_recipient != address(0), "Invalid recipient");
         uint256 feeBalance = collectedFees[_token];
-        require(feeBalance > 0, "No fees collected for this token");
+        require(feeBalance > 0, "No fees to withdraw");
+        
         uint256 amountToWithdraw = _amount == 0 ? feeBalance : _amount;
         require(amountToWithdraw <= feeBalance, "Insufficient fee balance");
         
@@ -473,150 +281,309 @@ contract ProjectTipping is ReentrancyGuard, Ownable {
         } else {
             IERC20(_token).safeTransfer(_recipient, amountToWithdraw);
         }
+        
+        emit PlatformFeeWithdrawn(_token, _recipient, amountToWithdraw);
     }
     
-    // View Functions
+    function toggleTipping() external onlyOwner {
+        tippingEnabled = !tippingEnabled;
+        emit TippingStatusChanged(tippingEnabled);
+    }
     
-    /**
-     * @dev Get comprehensive project tip summary
-     */
-    function getProjectTipSummary(uint256 _projectId) external view returns (TipSummary memory) {
-        address[] memory allTokens = sovereignSeas.getSupportedTokens();
-        uint256 tokenCount = 0;
+    function setMinimumTipAmount(uint256 _newMinimum) external onlyOwner {
+        uint256 oldMinimum = minimumTipAmount;
+        minimumTipAmount = _newMinimum;
+        emit MinimumTipAmountUpdated(oldMinimum, _newMinimum);
+    }
+    
+    function emergencyWithdraw(address _token, address _recipient, uint256 _amount) external onlyOwner {
+        require(_recipient != address(0), "Invalid recipient");
         
-        for (uint256 i = 0; i < allTokens.length; i++) {
-            if (projectTips[_projectId][allTokens[i]] > 0) {
-                tokenCount++;
-            }
+        if (_token == address(celoToken)) {
+            uint256 balance = address(this).balance;
+            uint256 amountToWithdraw = _amount == 0 ? balance : _amount;
+            require(amountToWithdraw <= balance, "Insufficient balance");
+            payable(_recipient).transfer(amountToWithdraw);
+        } else {
+            uint256 balance = IERC20(_token).balanceOf(address(this));
+            uint256 amountToWithdraw = _amount == 0 ? balance : _amount;
+            require(amountToWithdraw <= balance, "Insufficient balance");
+            IERC20(_token).safeTransfer(_recipient, amountToWithdraw);
         }
         
-        address[] memory tippedTokens = new address[](tokenCount);
-        uint256[] memory tokenAmounts = new uint256[](tokenCount);
-        uint256 index = 0;
-        uint256 totalCeloEquivalent = 0;
-        uint256 campaignTipsTotal = 0;
-        uint256 generalTipsTotal = 0;
+        emit EmergencyWithdraw(_token, _recipient, _amount);
+    }
+
+    // View Functions - Project Information
+    function getProjectTipSummary(uint256 _projectId) external view returns (ProjectTipSummary memory) {
+        (, address owner, string memory name,,,bool active,,) = sovereignSeas.getProject(_projectId);
         
-        for (uint256 i = 0; i < allTokens.length; i++) {
-            uint256 amount = projectTips[_projectId][allTokens[i]];
-            if (amount > 0) {
-                tippedTokens[index] = allTokens[i];
-                tokenAmounts[index] = amount;
-                totalCeloEquivalent += sovereignSeas.getTokenToCeloEquivalent(allTokens[i], amount);
-                index++;
-            }
+        address[] memory tokens = projectTippedTokens[_projectId];
+        uint256[] memory amounts = new uint256[](tokens.length);
+        
+        for (uint256 i = 0; i < tokens.length; i++) {
+            amounts[i] = projectTipsByToken[_projectId][tokens[i]];
         }
         
-        // Calculate campaign vs general tips
-        Tip[] memory tips = projectTipHistory[_projectId];
-        for (uint256 i = 0; i < tips.length; i++) {
-            if (tips[i].isCampaignSpecific) {
-                campaignTipsTotal += tips[i].celoEquivalent;
-            } else {
-                generalTipsTotal += tips[i].celoEquivalent;
-            }
-        }
-        
-        return TipSummary({
-            totalTips: totalCeloEquivalent,
-            tipCount: projectTipCount[_projectId],
-            tippedTokens: tippedTokens,
-            tokenAmounts: tokenAmounts,
-            campaignTips: campaignTipsTotal,
-            generalTips: generalTipsTotal
+        return ProjectTipSummary({
+            projectId: _projectId,
+            projectOwner: owner,
+            projectName: name,
+            totalTipsInCelo: totalProjectTipsInCelo[_projectId],
+            tipperCount: projectTipperCount[_projectId],
+            tippedTokens: tokens,
+            tokenAmounts: amounts,
+            isActive: active
         });
     }
     
-    /**
-     * @dev Get campaign-specific tip summary
-     */
-    function getCampaignTipSummary(string memory _campaignId) external view returns (CampaignTipSummary memory) {
-        require(bytes(_campaignId).length > 0, "Invalid campaign ID");
+    function getProjectTipsByToken(uint256 _projectId, address _token) external view returns (uint256) {
+        return projectTipsByToken[_projectId][_token];
+    }
+    
+    function getProjectTotalTipsInCelo(uint256 _projectId) external view returns (uint256) {
+        return totalProjectTipsInCelo[_projectId];
+    }
+    
+    function getProjectTippedTokens(uint256 _projectId) external view returns (address[] memory) {
+        return projectTippedTokens[_projectId];
+    }
+    
+    function getProjectTippers(uint256 _projectId) external view returns (address[] memory) {
+        return projectTippers[_projectId];
+    }
+    
+    function getProjectTipperCount(uint256 _projectId) external view returns (uint256) {
+        return projectTipperCount[_projectId];
+    }
+
+    // View Functions - User Information
+    function getUserTipSummary(address _user) external view returns (UserTipSummary memory) {
+        uint256[] memory projects = userTippedProjects[_user];
+        uint256 totalTippedInCelo = 0;
         
-        address[] memory allTokens = sovereignSeas.getSupportedTokens();
-        uint256 tokenCount = 0;
-        uint256 projectCount = 0;
-        uint256 nextProjectId = sovereignSeas.nextProjectId();
-        
-        // Count projects that received tips in this campaign
-        for (uint256 projectId = 0; projectId < nextProjectId; projectId++) {
-            if (campaignProjectTipCount[_campaignId][projectId] > 0) {
-                projectCount++;
-            }
-        }
-        
-        // Count tokens used for tipping in this campaign
-        for (uint256 i = 0; i < allTokens.length; i++) {
-            for (uint256 projectId = 0; projectId < nextProjectId; projectId++) {
-                if (campaignProjectTips[_campaignId][projectId][allTokens[i]] > 0) {
-                    tokenCount++;
-                    break;
+        // Calculate total tipped in CELO equivalent
+        for (uint256 i = 0; i < projects.length; i++) {
+            uint256 projectId = projects[i];
+            address[] memory tokens = projectTippedTokens[projectId];
+            
+            for (uint256 j = 0; j < tokens.length; j++) {
+                address token = tokens[j];
+                uint256 userTipAmount = userTipsToProject[_user][projectId][token];
+                if (userTipAmount > 0) {
+                    uint256 celoEquivalent = sovereignSeas.getTokenToCeloEquivalent(token, userTipAmount);
+                    totalTippedInCelo += celoEquivalent;
                 }
             }
         }
         
-        address[] memory tippedTokens = new address[](tokenCount);
-        uint256[] memory tokenAmounts = new uint256[](tokenCount);
+        // Get recent tips (last 10)
+        TipInfo[] memory recentTips = getUserRecentTips(_user, 10);
+        
+        return UserTipSummary({
+            user: _user,
+            totalTippedInCelo: totalTippedInCelo,
+            projectCount: projects.length,
+            tippedProjectIds: projects,
+            recentTips: recentTips
+        });
+    }
+    
+    function getUserTipsToProject(address _user, uint256 _projectId, address _token) external view returns (uint256) {
+        return userTipsToProject[_user][_projectId][_token];
+    }
+    
+    function getUserTippedProjects(address _user) external view returns (uint256[] memory) {
+        return userTippedProjects[_user];
+    }
+    
+    function getUserRecentTips(address _user, uint256 _limit) public view returns (TipInfo[] memory) {
+        uint256 userTipCount = 0;
+        
+        // Count user's tips
+        for (uint256 i = 0; i < allTips.length; i++) {
+            if (allTips[i].tipper == _user) {
+                userTipCount++;
+            }
+        }
+        
+        if (userTipCount == 0) {
+            return new TipInfo[](0);
+        }
+        
+        uint256 returnCount = userTipCount > _limit ? _limit : userTipCount;
+        TipInfo[] memory recentTips = new TipInfo[](returnCount);
         uint256 index = 0;
         
-        for (uint256 i = 0; i < allTokens.length; i++) {
-            uint256 totalForToken = 0;
-            for (uint256 projectId = 0; projectId < nextProjectId; projectId++) {
-                totalForToken += campaignProjectTips[_campaignId][projectId][allTokens[i]];
-            }
-            if (totalForToken > 0) {
-                tippedTokens[index] = allTokens[i];
-                tokenAmounts[index] = totalForToken;
+        // Get most recent tips (reverse order)
+        for (uint256 i = allTips.length; i > 0 && index < returnCount; i--) {
+            if (allTips[i-1].tipper == _user) {
+                recentTips[index] = allTips[i-1];
                 index++;
             }
         }
         
-        return CampaignTipSummary({
-            totalTips: campaignTotalTips[_campaignId],
-            tipCount: _getCampaignTotalTipCount(_campaignId),
-            projectCount: projectCount,
-            tippedTokens: tippedTokens,
-            tokenAmounts: tokenAmounts
-        });
+        return recentTips;
+    }
+
+    // View Functions - Global Information
+    function getAllTippedProjects() external view returns (uint256[] memory) {
+        return tippedProjectIds;
     }
     
-    // Helper functions
-    function _getCampaignTotalTipCount(string memory _campaignId) internal view returns (uint256) {
-        uint256 total = 0;
-        uint256 nextProjectId = sovereignSeas.nextProjectId();
-        for (uint256 projectId = 0; projectId < nextProjectId; projectId++) {
-            total += campaignProjectTipCount[_campaignId][projectId];
+    function getTopTippedProjects(uint256 _limit) external view returns (uint256[] memory projectIds, uint256[] memory tipAmounts) {
+        uint256[] memory tipped = tippedProjectIds;
+        uint256 returnCount = tipped.length > _limit ? _limit : tipped.length;
+        
+        // Create arrays for sorting
+        uint256[] memory sortedIds = new uint256[](tipped.length);
+        uint256[] memory sortedAmounts = new uint256[](tipped.length);
+        
+        for (uint256 i = 0; i < tipped.length; i++) {
+            sortedIds[i] = tipped[i];
+            sortedAmounts[i] = totalProjectTipsInCelo[tipped[i]];
         }
-        return total;
+        
+        // Bubble sort (descending order)
+        for (uint256 i = 0; i < sortedIds.length; i++) {
+            for (uint256 j = i + 1; j < sortedIds.length; j++) {
+                if (sortedAmounts[j] > sortedAmounts[i]) {
+                    // Swap amounts
+                    (sortedAmounts[i], sortedAmounts[j]) = (sortedAmounts[j], sortedAmounts[i]);
+                    // Swap ids
+                    (sortedIds[i], sortedIds[j]) = (sortedIds[j], sortedIds[i]);
+                }
+            }
+        }
+        
+        // Return top projects
+        uint256[] memory topIds = new uint256[](returnCount);
+        uint256[] memory topAmounts = new uint256[](returnCount);
+        
+        for (uint256 i = 0; i < returnCount; i++) {
+            topIds[i] = sortedIds[i];
+            topAmounts[i] = sortedAmounts[i];
+        }
+        
+        return (topIds, topAmounts);
     }
     
-    // Standard view functions
-    function getProjectTipHistory(uint256 _projectId) external view returns (Tip[] memory) {
-        return projectTipHistory[_projectId];
+    function getAllTips() external view returns (TipInfo[] memory) {
+        return allTips;
     }
     
-    function getCampaignProjectTipHistory(string memory _campaignId, uint256 _projectId) external view returns (Tip[] memory) {
-        return campaignProjectTipHistory[_campaignId][_projectId];
+    function getRecentTips(uint256 _limit) external view returns (TipInfo[] memory) {
+        uint256 returnCount = allTips.length > _limit ? _limit : allTips.length;
+        TipInfo[] memory recentTips = new TipInfo[](returnCount);
+        
+        for (uint256 i = 0; i < returnCount; i++) {
+            recentTips[i] = allTips[allTips.length - 1 - i];
+        }
+        
+        return recentTips;
     }
     
-    function getUserTipHistory(address _user) external view returns (Tip[] memory) {
-        return userTipHistory[_user];
+    function getTotalTipsCount() external view returns (uint256) {
+        return allTips.length;
     }
     
-    function getAllCampaignIds() external view returns (string[] memory) {
-        return campaignIdsList;
+    function getPlatformFeeBalance(address _token) external view returns (uint256) {
+        return collectedFees[_token];
     }
     
-    function isCampaignRegistered(string memory _campaignId) external view returns (bool) {
-        return validCampaigns[_campaignId];
+    function getContractStats() external view returns (
+        uint256 totalTips,
+        uint256 totalProjectsTipped,
+        uint256 totalUniqueUsers,
+        bool isEnabled,
+        uint256 minTipAmount
+    ) {
+        // Count unique users
+        address[] memory uniqueUsers = new address[](allTips.length);
+        uint256 uniqueCount = 0;
+        
+        for (uint256 i = 0; i < allTips.length; i++) {
+            address tipper = allTips[i].tipper;
+            bool isUnique = true;
+            
+            for (uint256 j = 0; j < uniqueCount; j++) {
+                if (uniqueUsers[j] == tipper) {
+                    isUnique = false;
+                    break;
+                }
+            }
+            
+            if (isUnique) {
+                uniqueUsers[uniqueCount] = tipper;
+                uniqueCount++;
+            }
+        }
+        
+        return (
+            allTips.length,
+            tippedProjectIds.length,
+            uniqueCount,
+            tippingEnabled,
+            minimumTipAmount
+        );
+    }
+
+    // Utility Functions
+    function canUserTipProject(address _user, uint256 _projectId, address _token, uint256 _amount) external view returns (bool canTip, string memory reason) {
+        if (!tippingEnabled) return (false, "Tipping is disabled");
+        if (_projectId >= sovereignSeas.getProjectCount()) return (false, "Invalid project ID");
+        if (!sovereignSeas.isTokenSupported(_token)) return (false, "Token not supported");
+        if (_amount == 0) return (false, "Amount must be greater than 0");
+        
+        (,,,,,bool active,,) = sovereignSeas.getProject(_projectId);
+        if (!active) return (false, "Project is not active");
+        
+        uint256 celoEquivalent;
+        if (_token == address(celoToken)) {
+            celoEquivalent = _amount;
+        } else {
+            celoEquivalent = sovereignSeas.getTokenToCeloEquivalent(_token, _amount);
+        }
+        
+        if (celoEquivalent < minimumTipAmount) return (false, "Amount below minimum tip");
+        
+        return (true, "");
     }
     
-    function getTippingConfig() external view returns (bool, uint256, address, uint256) {
-        return (tippingEnabled, tippingFeePercentage, cUSD, minimumTipAmount);
+    function getProjectWithTipInfo(uint256 _projectId) external view returns (
+        uint256 id,
+        address owner,
+        string memory name,
+        string memory description,
+        bool active,
+        uint256 totalTipsInCelo,
+        uint256 tipperCount,
+        address[] memory tippedTokens
+    ) {
+        (
+            uint256 id,
+            address owner,
+            string memory name,
+            string memory description,
+            ,
+            bool active,
+            ,
+            
+        ) = sovereignSeas.getProject(_projectId);
+        return (
+            id,
+            owner,
+            name,
+            description,
+            active,
+            totalProjectTipsInCelo[_projectId],
+            projectTipperCount[_projectId],
+            projectTippedTokens[_projectId]
+        );
     }
-    
+
     // Receive function to accept CELO
     receive() external payable {
-        // Contract can receive CELO for tipping
+        // Contract can receive CELO
     }
 }
