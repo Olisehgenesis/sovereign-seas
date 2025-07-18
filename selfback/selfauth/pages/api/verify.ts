@@ -258,11 +258,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'POST') {
     logger('info', 'Handling POST request');
     try {
-      const { attestationId, proof, pubSignals, userContextData } = req.body;
-      logger('info', 'POST body:', { attestationId, proof, pubSignals, userContextData });
+      const { attestationId, proof, publicSignals , userContextData } = req.body;
+      logger('info', 'POST body:', { attestationId, proof, publicSignals, userContextData });
 
-      if (!attestationId || !proof || !pubSignals || !userContextData) {
-        logger('error', 'Missing required POST fields', { attestationId, proof, pubSignals, userContextData });
+      if (!attestationId || !proof || !publicSignals || !userContextData) {
+        logger('error', 'Missing required POST fields', { attestationId, proof, publicSignals, userContextData });
         const response = { 
           status: 'error',
           result: false,
@@ -286,7 +286,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       logger('info', 'Calling selfBackendVerifier.verify');
-      const result = await selfBackendVerifier.verify(attestationId, proof, pubSignals, userContextData);
+      const result = await selfBackendVerifier.verify(attestationId, proof, publicSignals, userContextData);
       logger('info', 'Verification result:', result);
 
       if (!walletAddress && result.userData && result.userData.userIdentifier) {

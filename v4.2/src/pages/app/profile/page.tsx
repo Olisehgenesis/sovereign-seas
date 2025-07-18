@@ -36,9 +36,16 @@ import { useUserVoteHistory } from '@/hooks/useVotingMethods';
 import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import { v4 as uuidv4 } from 'uuid';
 
-// Real Self Protocol imports
-import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
+// Real Self Protocol imports - updated to match playground
+import { countryCodes, SelfAppDisclosureConfig, type Country3LetterCode } from '@selfxyz/common';
+import { countries, SelfAppBuilder } from '@selfxyz/qrcode';
+import type { SelfApp } from '@selfxyz/common';
+
+// Import the QR code component with SSR disabled to prevent document references during server rendering
+import React, { lazy, Suspense } from 'react';
+const SelfQRcodeWrapper = lazy(() => import('@selfxyz/qrcode'));
 
 // GoodDollar imports
 import GoodDollarVerifyModal from '@/components/goodDollar';
@@ -305,49 +312,76 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
   onSuccess: () => void
   onError?: (error: any) => void
 }) {
-  // Build the Self app and deeplink
+  // 1. Stabilize disclosures object
+  const disclosures = useMemo<SelfAppDisclosureConfig>(() => ({
+    issuing_state: false,
+    name: false,
+    nationality: true,
+    date_of_birth: false,
+    passport_number: false,
+    gender: false,
+    expiry_date: false,
+    minimumAge: 18,
+    excludedCountries: [
+      countries.IRAN,
+      countries.IRAQ,
+      countries.NORTH_KOREA,
+      countries.RUSSIA,
+      countries.SYRIAN_ARAB_REPUBLIC,
+      countries.VENEZUELA
+    ] as Country3LetterCode[],
+    ofac: true,
+  }), []);
+
+  // 2. Remove saveOptionsToServer and related useEffect
+  // (Removed)
+
+  // 3. Stabilize selfApp creation
   const selfApp = useMemo(() => {
+    if (!userId) return null;
     const app = new SelfAppBuilder({
       appName: "Sovereign Seas",
       scope: "sovereign-seas",
       endpoint: "https://auth.sovseas.xyz/api/verify",
       endpointType: "https",
-      userId: address, // Use the UUID format userId
+      logoBase64: "https://i.imgur.com/Rz8B3s7.png",
+      userId:address,
       userIdType: "hex",
-      disclosures: {
-        // Only disclose nationality as per working example
-        nationality: true,
-        // Verification rules
-        minimumAge: 18,
-        ofac: true,
-        excludedCountries: ['IRN', 'PRK'],
-      }
-    }).build();
-    console.log('[DeeplinkQRCode] Built selfApp:', app);
-    console.log('[DeeplinkQRCode] App userId:', app.userId);
-    console.log('[DeeplinkQRCode] App sessionId:', app.sessionId);
-    return app;
-  }, [userId]);
 
-  // Note: deeplink generation removed due to type conflicts between packages
-  // The QR code wrapper handles the deeplink internally
+      disclosures: {
+        ...disclosures,
+        minimumAge: disclosures.minimumAge && disclosures.minimumAge > 0 ? disclosures.minimumAge : undefined,
+      },
+      version: 2, 
+      userDefinedData: "hello from sovereign seas",
+      devMode: false,
+    } as Partial<SelfApp>).build();
+    return app;
+  }, [userId, disclosures]); // disclosures is stable due to useMemo([])
 
   useEffect(() => {
     console.log('[DeeplinkQRCode] Mounted with userId:', userId, 'address:', address);
   }, [userId, address]);
 
+  if (!selfApp) {
+    return <p className="text-center">Loading QR Code...</p>;
+  }
+
   return (
     <div className="flex flex-col items-center justify-center mb-6">
       <div className="relative group transition-transform duration-300 hover:scale-105 focus-within:scale-105">
         <div className="p-3 bg-gradient-to-br from-blue-100 via-white to-purple-100 rounded-2xl shadow-lg border border-blue-200 animate-pulse group-hover:animate-none transition-all">
-          <SelfQRcodeWrapper
-            selfApp={selfApp}
-            onSuccess={() => {
-              console.log('[DeeplinkQRCode] onSuccess called from SelfQRcodeWrapper');
-              onSuccess();
-            }}
-            size={250}
-          />
+          <Suspense fallback={<p className="text-center">Loading QR Code...</p>}>
+            <SelfQRcodeWrapper
+              key={userId} // Add this key to prevent unnecessary re-mounts
+              selfApp={selfApp}
+              onSuccess={() => {
+                console.log('[DeeplinkQRCode] onSuccess called from SelfQRcodeWrapper');
+                onSuccess();
+              }}
+              darkMode={false}
+            />
+          </Suspense>
         </div>
         <div className="absolute -top-2 -right-2 animate-bounce">
           <Shield className="h-6 w-6 text-blue-400 drop-shadow" />
@@ -357,6 +391,9 @@ function DeeplinkQRCode({ userId, address, onSuccess, onError }: {
         <span role="img" aria-label="mobile" className="mr-2">📱</span>
         Scan QR code with Self app
       </div>
+      <p className="mt-2 text-xs text-gray-500">
+        User ID: {userId.substring(0, 8)}...
+      </p>
     </div>
   );
 }
@@ -377,15 +414,14 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [verificationProviders, setVerificationProviders] = useState<string[]>([]);
 
-  // Use wallet address as userId for Self Protocol (trim 0x for UUID format)
+  // Generate userId using uuidv4 like playground
   useEffect(() => {
-    if (address && !userId) {
-      // Use wallet address without 0x prefix as userId (UUID format)
-      const walletId = address.replace('0x', '');
-      setUserId(walletId);
-      console.log('Using wallet address as userId (UUID format):', walletId);
+    if (!userId) {
+      const newUserId = uuidv4();
+      setUserId(newUserId);
+      console.log('Generated new userId:', newUserId);
     }
-  }, [address, userId]);
+  }, [userId]);
 
   // Handle GoodDollar verification completion
   const handleGoodDollarVerificationComplete = async (data: any) => {
@@ -448,51 +484,47 @@ export default function ProfilePage() {
   });
 
   // Check if user is verified when wallet connects
-useEffect(() => {
-  if (isConnected && address) {
-    const checkVerificationStatus = async () => {
-      try {
-        console.log('Checking verification status for wallet:', address);
-        
-        // Use the new backend endpoint that returns profile data
-        const response = await fetch(`https://auth.sovseas.xyz/api/verify?wallet=${address}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Verification check response:', data);
+  useEffect(() => {
+    if (isConnected && address) {
+      const checkVerificationStatus = async () => {
+        try {
+          console.log('Checking verification status for wallet:', address);
           
-          if (data.profile && data.profile.isValid) {
-            setIsVerified(true);
-            setVerificationProviders(data.profile.providers || []);
-            console.log('User is verified with providers:', data.profile.providers);
+          // Use the new backend endpoint that returns profile data
+          const response = await fetch(`https://auth.sovseas.xyz/api/verify?wallet=${address}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Verification check response:', data);
+            
+            if (data.profile && data.profile.isValid) {
+              setIsVerified(true);
+              setVerificationProviders(data.profile.providers || []);
+              console.log('User is verified with providers:', data.profile.providers);
+            } else {
+              setIsVerified(false);
+              setVerificationProviders([]);
+              console.log('User is not verified');
+            }
           } else {
+            // If 404 or other error, user is not verified
             setIsVerified(false);
-            setVerificationProviders([]);
-            console.log('User is not verified');
+            console.log('No verification found, user is not verified');
           }
-        } else {
-          // If 404 or other error, user is not verified
+        } catch (error) {
+          console.error('Error checking verification status:', error);
           setIsVerified(false);
-          console.log('No verification found, user is not verified');
         }
-      } catch (error) {
-        console.error('Error checking verification status:', error);
-        setIsVerified(false);
-      }
-    };
+      };
 
-    checkVerificationStatus();
-  }
-}, [isConnected, address]);
-
-  //check if user is verified
-
-
+      checkVerificationStatus();
+    }
+  }, [isConnected, address]);
 
   // Fetch user's data
   const { projects: allProjects, isLoading: projectsLoading } = useAllProjects(CONTRACT_ADDRESS);
@@ -1126,75 +1158,55 @@ useEffect(() => {
      )}
 
      {/* Verification Modal */}
-     {showVerification && userId && (() => {
-       console.log('[Self Modal] showVerification:', showVerification, 'userId:', userId);
-       return (
-         <>
-           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-             <div className="bg-white rounded-lg p-6 max-w-md w-full">
-               <div className="flex items-center justify-between mb-4">
-                 <h3 className="text-lg font-bold text-gray-900">Verify Identity</h3>
-                 <button
-                   onClick={() => setShowVerification(false)}
-                   className="text-gray-400 hover:text-gray-600"
-                 >
-                   <X className="h-5 w-5" />
-                 </button>
-               </div>
-               <p className="text-sm text-gray-600 mb-6">
-                 Scan the QR code with the Self app to verify your identity. This will enable enhanced features and anti-Sybil protection in V3.
-               </p>
-               {/* Animated QR code container with deeplink button for Android */}
-               <DeeplinkQRCode userId={userId} address={address} onSuccess={async () => {
-                 console.log('[ProfilePage] Self verification onSuccess triggered');
-                 setShowVerification(false);
-                 setShowSuccessModal(true);
-                 setVerificationStatus('success');
-                 setVerificationError(null);
-                 
-                 // The backend now automatically saves verification data
-                 // No need to call a separate save endpoint
-                 console.log('[ProfilePage] Verification successful - backend handles data saving');
-                 
-                 // Update local verification status
-                 setIsVerified(true);
-               }} 
-               onError={(error) => {
-                 console.error('[ProfilePage] Self verification error:', error);
-                 const errorCode = error.error_code || 'Unknown';
-                 const reason = error.reason || 'Unknown error';
-                 
-                 // Show error in modal
-                 setVerificationError(`${errorCode}: ${reason}`);
-                 setVerificationStatus('error');
-                 setShowSuccessModal(true);
-                 
-                 // Log detailed error for debugging
-                 console.error('[ProfilePage] Verification failed:', {
-                   errorCode,
-                   reason,
-                   fullError: error,
-                   userId,
-                   address,
-                   timestamp: new Date().toISOString()
-                 });
-               }}
-               />
-               <div className="text-center space-y-2 mt-4">
-                 <p className="text-xs text-gray-500">
-                   Wallet: {userId?.slice(0, 6)}...{userId?.slice(-4)}
-                 </p>
-                 {verificationError && (
-                   <div className="text-red-600 text-sm font-medium">
-                     ✗ {verificationError}
-                   </div>
-                 )}
-               </div>
-             </div>
+     {showVerification && userId && (
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div className="bg-white rounded-lg p-6 max-w-md w-full">
+           <div className="flex items-center justify-between mb-4">
+             <h3 className="text-lg font-bold text-gray-900">Verify Identity</h3>
+             <button
+               onClick={() => setShowVerification(false)}
+               className="text-gray-400 hover:text-gray-600"
+             >
+               <X className="h-5 w-5" />
+             </button>
            </div>
-         </>
-       );
-     })()}
+           <p className="text-sm text-gray-600 mb-6">
+             Scan the QR code with the Self app to verify your identity. This will enable enhanced features and anti-Sybil protection in V3.
+           </p>
+           
+           <DeeplinkQRCode 
+             userId={userId} 
+             address={address} 
+             onSuccess={async () => {
+               console.log('[ProfilePage] Self verification onSuccess triggered');
+               setShowVerification(false);
+               setShowSuccessModal(true);
+               setVerificationStatus('success');
+               setVerificationError(null);
+               setIsVerified(true);
+             }} 
+             onError={(error) => {
+               console.error('[ProfilePage] Self verification error:', error);
+               const errorCode = error.error_code || 'Unknown';
+               const reason = error.reason || 'Unknown error';
+               
+               setVerificationError(`${errorCode}: ${reason}`);
+               setVerificationStatus('error');
+               setShowSuccessModal(true);
+               
+               console.error('[ProfilePage] Verification failed:', {
+                 errorCode,
+                 reason,
+                 fullError: error,
+                 userId,
+                 address,
+                 timestamp: new Date().toISOString()
+               });
+             }}
+           />
+         </div>
+       </div>
+     )}
 
      {/* GoodDollar Verification Modal */}
      <GoodDollarVerifyModal 
