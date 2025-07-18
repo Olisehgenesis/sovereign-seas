@@ -14,7 +14,7 @@ const configStore = new DefaultConfigStore({
 const verifier = new SelfBackendVerifier(
   'sovereign-seas', // Same scope as frontend
   'https://auth.sovseatests.xyz/api/verify',
-  false, // Production mode (set to true for development)
+  true, // Production mode (set to true for development)
   AllIds, // Accept all document types
   configStore,
   'uuid' // User ID type matches frontend (hex for wallet addresses)
