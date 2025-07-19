@@ -106,25 +106,26 @@ export default function Header() {
     <div className="relative z-50">
       <Disclosure as="nav" className={`fixed w-full top-0 z-50 transition-all duration-300 ${
         isScrolled 
-          ? 'bg-white/90 backdrop-blur-md shadow-md border-b border-blue-200/50' 
-          : 'bg-white/80 backdrop-blur-sm border-b border-blue-200/30'
+          ? 'bg-gradient-to-r from-blue-50/95 via-indigo-50/95 to-purple-50/95 backdrop-blur-md shadow-md border-b border-blue-300/50' 
+          : 'bg-gradient-to-r from-blue-50/90 via-indigo-50/90 to-purple-50/90 backdrop-blur-sm border-b border-blue-300/40'
       }`}>
         {({ open, close }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 items-center justify-between">
                 
-                {/* Logo - following original design */}
+                {/* Logo - enhanced with more color */}
                 <Link to="/" className="flex items-center group">
                   <div className="relative h-8 w-8 mr-3">
-                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-sm group-hover:shadow-blue-400/30 transition-all duration-300 group-hover:scale-105 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 shadow-lg group-hover:shadow-blue-400/50 transition-all duration-300 group-hover:scale-105 flex items-center justify-center animate-pulse">
                       <Anchor className="h-4 w-4 text-white group-hover:rotate-12 transition-transform duration-300" />
                     </div>
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-400 to-pink-500 opacity-20 animate-ping"></div>
                   </div>
                   <span className="text-xl font-bold text-gray-800">
-                    Sovereign<span className="text-blue-600 relative">
+                    Sovereign<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative animate-pulse">
                       Seas
-                      <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-400 to-indigo-500"></span>
+                      <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 animate-pulse"></span>
                     </span>
                   </span>
                 </Link>
@@ -139,14 +140,19 @@ export default function Header() {
                       <Link
                         key={item.name}
                         to={item.href}
-                        className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
+                        className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative ${
                           isActive 
-                            ? 'bg-blue-100 text-blue-700 shadow-sm' 
-                            : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25' 
+                            : 'text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50'
                         }`}
                       >
-                        <NavIcon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                        {item.name}
+                        <NavIcon className={`h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`} />
+                        <span className={`font-semibold ${isActive ? 'text-white' : 'text-blue-600 group-hover:text-indigo-700'}`}>
+                          {item.name}
+                        </span>
+                        {isActive && (
+                          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full"></div>
+                        )}
                       </Link>
                     );
                   })}
@@ -155,15 +161,20 @@ export default function Header() {
                   <div className="relative">
                     <button
                       onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-                      className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
+                      className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative ${
                         showCreateDropdown 
-                          ? 'bg-blue-100 text-blue-700 shadow-sm' 
-                          : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/25' 
+                          : 'text-gray-600 hover:text-purple-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50'
                       }`}
                     >
-                      <PlusCircle className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-                      Create
+                      <PlusCircle className={`h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-300 ${showCreateDropdown ? 'text-white' : 'text-gray-500 group-hover:text-purple-600'}`} />
+                                              <span className={`font-semibold ${showCreateDropdown ? 'text-white' : 'text-purple-600 group-hover:text-pink-700'}`}>
+                          Create
+                        </span>
                       <ChevronDown className={`ml-1 h-3 w-3 transition-transform duration-200 ${showCreateDropdown ? 'rotate-180' : ''}`} />
+                      {showCreateDropdown && (
+                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-pink-400 to-red-500 rounded-full"></div>
+                      )}
                     </button>
                     
                     <Transition
@@ -213,8 +224,8 @@ export default function Header() {
                     <>
                       {/* Notifications */}
                       <button className="p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 relative transition-all duration-200 group">
-                        <Bell className="h-4 w-4 group-hover:animate-pulse" />
-                        <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                                              <Bell className="h-4 w-4 group-hover:animate-pulse" />
+                      <span className="absolute top-1 right-1 h-2 w-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-ping"></span>
                       </button>
 
                       {/* Wallet Button */}
@@ -223,7 +234,7 @@ export default function Header() {
                         className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 group"
                       >
                         <Wallet className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                        <span className="hidden sm:inline">
+                        <span className="hidden sm:inline font-semibold text-emerald-600 group-hover:text-teal-700">
                           {address ? abbreviateAddress(address) : 'Wallet'}
                         </span>
                       </button>
@@ -231,9 +242,10 @@ export default function Header() {
                       {/* Profile Button */}
                       <Link
                         to="/app/me"
-                        className="p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 group"
+                        className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 group"
                       >
-                        <User className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+                        <User className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+                        <span className="hidden sm:inline font-semibold text-indigo-600 group-hover:text-purple-700">Profile</span>
                       </Link>
 
                       {/* Logout Button */}
@@ -245,7 +257,7 @@ export default function Header() {
                         <svg className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
-                        <span className="hidden sm:inline">Logout</span>
+                        <span className="hidden sm:inline font-semibold text-rose-600 group-hover:text-red-700">Logout</span>
                       </button>
 
                       {/* Dashboard Dropdown */}
@@ -320,12 +332,12 @@ export default function Header() {
                     <button 
                       onClick={handleLogin}
                       disabled={!ready} 
-                      className="flex items-center justify-center px-3 sm:px-4 md:px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group min-w-[100px] sm:min-w-[120px] md:min-w-[140px] touch-manipulation"
+                      className="flex items-center justify-center px-3 sm:px-4 md:px-6 py-2.5 bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group min-w-[100px] sm:min-w-[120px] md:min-w-[140px] touch-manipulation"
                     >
                       <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 group-hover:scale-110 transition-transform duration-200" />
-                      <span className="hidden xs:inline">Connect</span>
-                      <span className="xs:hidden">Connect</span>
-                      <span className="hidden sm:inline ml-1">Wallet</span>
+                      <span className="hidden xs:inline font-bold text-white drop-shadow-sm">Connect</span>
+                      <span className="xs:hidden font-bold text-white drop-shadow-sm">Connect</span>
+                      <span className="hidden sm:inline ml-1 font-bold text-white drop-shadow-sm">Wallet</span>
                       <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                     </button>
                   )}
@@ -355,14 +367,19 @@ export default function Header() {
                       key={item.name}
                       to={item.href}
                       onClick={() => close()}
-                      className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative ${
                         isActive 
-                          ? 'bg-blue-100 text-blue-700 shadow-sm' 
-                          : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25' 
+                          : 'text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50'
                       }`}
                     >
-                      <NavIcon className="h-4 w-4 mr-3" />
-                      {item.name}
+                                              <NavIcon className={`h-4 w-4 mr-3 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+                        <span className={`font-semibold ${isActive ? 'text-white' : 'text-blue-600'}`}>
+                          {item.name}
+                        </span>
+                      {isActive && (
+                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full"></div>
+                      )}
                     </Link>
                   );
                 })}
@@ -461,7 +478,7 @@ export default function Header() {
                       className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-xl transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
                     >
                       <Wallet className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                      Connect Wallet
+                      <span className="font-bold text-white drop-shadow-sm">Connect Wallet</span>
                       <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                     </button>
                   </div>

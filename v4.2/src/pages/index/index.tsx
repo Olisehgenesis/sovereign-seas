@@ -46,6 +46,7 @@ import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
+import { getFlagBorderColor } from '@/utils/flagUtils';
 import TipModal from '@/components/TipModal';
 
 // ==================== TYPES ====================
@@ -254,6 +255,8 @@ const formatBigIntNumber = (value: bigint): string => {
   return Number(value).toLocaleString();
 };
 
+
+
 // Add this custom hook after the existing hooks
 const useCountUp = (end: number, duration: number = 2000) => {
   const [count, setCount] = useState(0);
@@ -292,40 +295,103 @@ const useCountUp = (end: number, duration: number = 2000) => {
 // ==================== COMPONENTS ====================
 
 const ScrollingText = ({ words, className = "" }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
-
-  useEffect(() => {
-    if (!words || words.length === 0) return;
-    
-    const interval = setInterval(() => {
-      // Fade out
-      setIsVisible(false);
-      
-      // Change text after fade out
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % words.length);
-        setIsVisible(true);
-      }, 300);
-      
-    }, 3000); // Change every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [words]);
+  const [hoveredWord, setHoveredWord] = useState<string | null>(null);
 
   if (!words || words.length === 0) {
     return <span className={className}>Loading...</span>;
   }
 
+  const renderText = () => {
+    const text = words[0];
+    const parts = text.split(/(Voting|Tipping|Fishing)/);
+    
+    return parts.map((part, index) => {
+      if (part === 'Voting') {
+        return (
+          <span
+            key={index}
+            className="text-green-600 font-bold cursor-pointer hover:text-green-500 transition-colors duration-300"
+            onMouseEnter={() => setHoveredWord('voting')}
+            onMouseLeave={() => setHoveredWord(null)}
+            style={{
+              textShadow: '0 0 8px rgba(34, 197, 94, 0.4)'
+            }}
+          >
+            {part}
+          </span>
+        );
+      } else if (part === 'Tipping') {
+        return (
+          <span
+            key={index}
+            className="text-orange-600 font-bold cursor-pointer hover:text-orange-500 transition-colors duration-300"
+            onMouseEnter={() => setHoveredWord('tipping')}
+            onMouseLeave={() => setHoveredWord(null)}
+            style={{
+              textShadow: '0 0 8px rgba(249, 115, 22, 0.4)'
+            }}
+          >
+            {part}
+          </span>
+        );
+      } else if (part === 'Fishing') {
+        return (
+          <span
+            key={index}
+            className="text-purple-600 font-bold cursor-pointer hover:text-purple-500 transition-colors duration-300"
+            onMouseEnter={() => setHoveredWord('fishing')}
+            onMouseLeave={() => setHoveredWord(null)}
+            style={{
+              textShadow: '0 0 8px rgba(147, 51, 234, 0.4)'
+            }}
+          >
+            {part}
+          </span>
+        );
+      } else {
+        return (
+          <span
+            key={index}
+            className="text-blue-600 font-semibold"
+            style={{
+              textShadow: '0 0 10px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.2)'
+            }}
+          >
+            {part}
+          </span>
+        );
+      }
+    });
+  };
+
+  const getDefinition = () => {
+    switch (hoveredWord) {
+      case 'voting':
+        return "Transparent, immutable voting system with multi-token support for fair governance decisions";
+      case 'tipping':
+        return "Support projects directly with instant, borderless tips using any ERC20 token";
+      case 'fishing':
+        return "Discover new projects, buy their supporter cards & earn exclusive benefits";
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className={`relative ${className}`}>
-      <div
-        className={`text-blue-600 font-semibold transition-opacity duration-300 ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        {words[currentIndex]}
+      <div className="text-lg drop-shadow-lg">
+        {renderText()}
       </div>
+      {hoveredWord && (
+        <div className="absolute -bottom-12 left-0 right-0 text-xs text-gray-600 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 z-10">
+          <div className="font-medium text-gray-800 mb-1">
+            {hoveredWord === 'voting' && '🗳️ Onchain Voting'}
+            {hoveredWord === 'tipping' && '💝 Project Tipping'}
+            {hoveredWord === 'fishing' && '🎣 Project Fishing'}
+          </div>
+          <div>{getDefinition()}</div>
+        </div>
+      )}
     </div>
   );
 };
@@ -364,7 +430,7 @@ const ScrollAnimationWrapper = ({ children, delay = 0, direction = 'up' }) => {
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, trend = null }) => {
+const StatCard = ({ icon: Icon, label, value, trend = null, color = "blue" }) => {
   const numericValue = typeof value === 'string' ? parseInt(value.replace(/[^0-9]/g, '')) : Number(value);
   const { count, ref } = useCountUp(numericValue);
   
@@ -374,31 +440,44 @@ const StatCard = ({ icon: Icon, label, value, trend = null }) => {
     ? `${count} CELO`
     : count.toString();
 
+  const colorClasses = {
+    blue: "from-blue-500 to-indigo-600 border-blue-200 text-blue-600",
+    green: "from-emerald-500 to-teal-600 border-emerald-200 text-emerald-600", 
+    purple: "from-purple-500 to-pink-600 border-purple-200 text-purple-600",
+    orange: "from-orange-500 to-red-600 border-orange-200 text-orange-600"
+  };
+
+  const bgClasses = {
+    blue: "from-blue-50/50 to-indigo-50/50",
+    green: "from-emerald-50/50 to-teal-50/50",
+    purple: "from-purple-50/50 to-pink-50/50", 
+    orange: "from-orange-50/50 to-red-50/50"
+  };
+
   return (
     <motion.div
       ref={ref}
-      whileHover={{ scale: 1.02, y: -5 }}
-      className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-blue-100/50 relative overflow-hidden group"
+      whileHover={{ scale: 1.02, y: -3 }}
+      className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg border relative overflow-hidden group"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <div className={`absolute inset-0 bg-gradient-to-br ${bgClasses[color]} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-            <Icon className="h-6 w-6" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg bg-gradient-to-br ${colorClasses[color]} text-white`}>
+              <Icon className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-xl font-bold text-gray-900">{formattedValue}</div>
+              <div className="text-xs text-gray-600">{label}</div>
+            </div>
           </div>
           {trend && (
-            <div className="flex items-center text-emerald-600 text-sm font-medium">
-              <TrendingUp className="h-4 w-4 mr-1" />
+            <div className={`flex items-center ${colorClasses[color].split(' ')[2]} text-xs font-medium`}>
+              <TrendingUp className="h-3 w-3 mr-1" />
               {trend}
             </div>
           )}
-        </div>
-        <div className="mb-2">
-          <div className="text-3xl font-bold text-gray-900 mb-1">{formattedValue}</div>
-          <div className="text-sm text-gray-600">{label}</div>
-        </div>
-        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transform transition-all duration-1000 ease-out" style={{ width: "75%" }}></div>
         </div>
       </div>
     </motion.div>
@@ -447,7 +526,7 @@ const ProjectCard = ({ project }) => {
         transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
         whileHover={{ scale: 1.02, y: -8 }}
         onClick={() => navigate(`/explorer/project/${project.id}`)}
-        className="group bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-blue-100/50 overflow-hidden cursor-pointer relative hover:shadow-2xl transition-all duration-500"
+        className={`group bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border-2 ${getFlagBorderColor(location)} overflow-hidden cursor-pointer relative hover:shadow-2xl transition-all duration-500`}
       >
         <LocationBadge location={location} variant="card" />
         
@@ -463,21 +542,15 @@ const ProjectCard = ({ project }) => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
           
           <div className="absolute top-4 right-4">
-            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
-              project.active 
-                ? 'bg-emerald-500/90 text-white' 
-                : 'bg-gray-500/90 text-white'
-            }`}>
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                project.active ? 'bg-white animate-pulse' : 'bg-gray-300'
-              }`} />
-              {project.active ? 'Active' : 'Inactive'}
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm bg-purple-500/90 text-white shadow-lg">
+              <Code className="h-3 w-3 mr-1.5" />
+              Project
             </span>
           </div>
 
           {project.metadata.category && (
             <div className="absolute bottom-4 left-4">
-              <span className="inline-flex items-center px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
+              <span className="inline-flex items-center px-3 py-1.5 bg-black/80 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-lg border border-white/10">
                 {project.metadata.category}
               </span>
             </div>
@@ -485,12 +558,12 @@ const ProjectCard = ({ project }) => {
 
           {project.campaignIds.length > 0 && (
             <div className="absolute top-4 left-4">
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2">
-                <div className="flex items-center gap-1">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg border border-white/20">
+                <div className="flex items-center gap-1.5">
                   <Trophy className="h-4 w-4 text-purple-600" />
                   <span className="text-sm font-bold text-gray-900">{project.campaignIds.length}</span>
                 </div>
-                <p className="text-xs text-gray-600">Campaigns</p>
+                <p className="text-xs text-gray-600 font-medium">Campaigns</p>
               </div>
             </div>
           )}
@@ -501,51 +574,57 @@ const ProjectCard = ({ project }) => {
         </div>
 
         <div className="p-6">
-          <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.metadata.bio?.tagline || project.description?.tagline}</p>
+          <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
+            {project.metadata.bio?.tagline || project.description?.tagline || project.description}
+          </p>
 
           <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-4">
             {project.metadata.location && (
-              <div className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                <span>{project.metadata.location}</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg">
+                <MapPin className="h-3 w-3 text-gray-400" />
+                <span className="text-xs font-medium">{project.metadata.location}</span>
               </div>
             )}
             {project.contracts && project.contracts.length > 0 && (
-              <div className="flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                <span>{project.contracts.length} contract{project.contracts.length !== 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg">
+                <Shield className="h-3 w-3 text-gray-400" />
+                <span className="text-xs font-medium">{project.contracts.length} contract{project.contracts.length !== 1 ? 's' : ''}</span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between">
+          <div>
             {project.metadata.tags && project.metadata.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {project.metadata.tags.slice(0, 2).map((tag, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full"
+                    className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200/50"
                   >
                     #{tag}
                   </span>
                 ))}
                 {project.metadata.tags.length > 2 && (
-                  <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                  <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
                     +{project.metadata.tags.length - 2}
                   </span>
                 )}
               </div>
             )}
-            
-            <button
-              onClick={handleTipClick}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-medium rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105"
-            >
-              <Gift className="h-4 w-4" />
-              Tip
-            </button>
           </div>
         </div>
+        
+        {/* Tip Button - Bottom Right Corner */}
+        <button
+          onClick={handleTipClick}
+          className="absolute bottom-4 right-4 w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-full hover:shadow-lg transition-all duration-300 transform hover:scale-110 shadow-md border border-orange-400/30 group overflow-hidden flex items-center justify-center z-20"
+          style={{
+            boxShadow: '0 0 20px rgba(249, 115, 22, 0.3), 0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+          <Gift className="h-5 w-5 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+        </button>
       </motion.div>
 
       {showTipModal && (
@@ -621,9 +700,17 @@ const CampaignCard = ({ campaign, index }) => {
       transition={{ duration: 0.8, delay: index * 0.1, ease: [0.25, 0.1, 0.25, 1] }}
       whileHover={{ scale: 1.02, y: -8 }}
       onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
-      className="group relative bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl border border-blue-100/50 hover:shadow-2xl transition-all duration-500 cursor-pointer"
+      className="group relative bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl border-2 border-blue-300 hover:shadow-2xl transition-all duration-500 cursor-pointer"
     >
       <div className="h-48 bg-gradient-to-br from-blue-50 to-indigo-50 relative overflow-hidden">
+          {/* Colored Header Bar */}
+          <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center px-4 z-10">
+            <div className="flex items-center gap-2">
+              <Rocket className="h-5 w-5 text-white" />
+              <span className="text-white text-sm font-semibold tracking-wide">CAMPAIGN</span>
+            </div>
+          </div>
+          
         {campaign.metadata.logo ? (
           <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${formatIpfsUrl(campaign.metadata.logo)})`, opacity: 0.9 }}></div>
         ) : (
@@ -634,9 +721,16 @@ const CampaignCard = ({ campaign, index }) => {
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         
-        <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-medium flex items-center shadow-lg backdrop-blur-sm ${statusClass}`}>
+          {/* Global Flag Badge for Campaigns */}
+          <div className="absolute right-3 top-[55%] z-20 flex items-center justify-center w-9 h-9 rounded-lg bg-white shadow-lg shadow-blue-300/40 border border-blue-200 text-xs font-semibold text-blue-700 backdrop-blur-md transform rotate-3 scale-105 hover:scale-110 transition-all duration-300">
+            <Globe className="w-5 h-5 drop-shadow" />
+          </div>
+        
+                  <div className="absolute top-16 right-4 flex flex-col gap-2">
+            <div className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center shadow-lg backdrop-blur-sm ${statusClass}`}>
           <StatusIcon className="h-3 w-3 mr-1.5" />
           {statusText}
+            </div>
         </div>
         
         <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -654,7 +748,7 @@ const CampaignCard = ({ campaign, index }) => {
         </div>
         
         {!hasStarted && (
-          <div className="absolute top-4 left-4 px-3 py-1.5 bg-blue-500/80 text-white text-xs rounded-full backdrop-blur-sm flex items-center">
+          <div className="absolute top-16 left-4 px-3 py-1.5 bg-blue-500/80 text-white text-xs rounded-full backdrop-blur-sm flex items-center">
             <Timer className="h-3 w-3 mr-1.5 animate-pulse" /> 
             <span className="font-bold">{timeLeft}</span>
           </div>
@@ -662,7 +756,15 @@ const CampaignCard = ({ campaign, index }) => {
       </div>
       
       <div className="p-6">
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{campaign.metadata.bio?.tagline}</p>
+        {/* Campaign Header */}
+        <div className="mb-4">
+          <h4 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
+            {campaign.name}
+          </h4>
+          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+            {campaign.metadata.bio?.tagline || campaign.description || 'No description available'}
+          </p>
+        </div>
         
         <div className="flex items-center justify-between">
           <div className="flex -space-x-2">
@@ -704,53 +806,21 @@ const EcosystemShowcase = () => {
       content: (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-green-100 to-green-200 rounded-xl text-green-800 font-medium border border-green-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300">
-              <div className="w-5 h-5 rounded-full bg-green-500 mr-2 flex items-center justify-center">
-                <Trophy className="text-white text-xs" />
-              </div>
+            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-green-100 to-green-200 rounded-lg text-green-800 font-medium border border-green-300/50 shadow-sm">
+              <Trophy className="h-4 w-4 mr-2 text-green-600" />
               <span className="text-sm">Join Campaigns</span>
             </div>
-            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl text-blue-800 font-medium border border-blue-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300">
-              <div className="w-5 h-5 rounded-full bg-blue-500 mr-2 flex items-center justify-center">
-                <Vote className="text-white text-xs" />
-              </div>
+            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg text-blue-800 font-medium border border-blue-300/50 shadow-sm">
+              <Vote className="h-4 w-4 mr-2 text-blue-600" />
               <span className="text-sm">Get Voted</span>
             </div>
-            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl text-purple-800 font-medium border border-purple-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300">
-              <div className="w-5 h-5 rounded-full bg-purple-500 mr-2 flex items-center justify-center">
-                <Coins className="text-white text-xs" />
-              </div>
+            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-purple-100 to-purple-200 rounded-lg text-purple-800 font-medium border border-purple-300/50 shadow-sm">
+              <Coins className="h-4 w-4 mr-2 text-purple-600" />
               <span className="text-sm">Receive Funding</span>
             </div>
-            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-xl text-yellow-800 font-medium border border-yellow-300/50 shadow-sm transform hover:scale-105 transition-transform duration-300">
-              <div className="w-5 h-5 rounded-full bg-yellow-500 mr-2 flex items-center justify-center">
-                <TrendingUp className="text-white text-xs" />
-              </div>
+            <div className="flex items-center px-3 py-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-800 font-medium border border-yellow-300/50 shadow-sm">
+              <TrendingUp className="h-4 w-4 mr-2 text-yellow-600" />
               <span className="text-sm">Grow Project</span>
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-200">
-              <span className="text-xs font-medium text-emerald-700">Active Campaigns</span>
-              <div className="flex items-center">
-                <Activity className="h-4 w-4 text-emerald-600 mr-1" />
-                <span className="text-xs font-bold text-emerald-600">12</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
-              <span className="text-xs font-medium text-blue-700">Projects Funded</span>
-              <div className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-blue-600 mr-1" />
-                <span className="text-xs font-bold text-blue-600">89</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-              <span className="text-xs font-medium text-purple-700">Total Funding</span>
-              <div className="flex items-center">
-                <DollarSign className="h-4 w-4 text-purple-600 mr-1" />
-                <span className="text-xs font-bold text-purple-600">2.4M CELO</span>
-              </div>
             </div>
           </div>
         </div>
@@ -765,28 +835,28 @@ const EcosystemShowcase = () => {
         <div className="space-y-4">
           <div className="flex justify-center">
             <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg animate-pulse">
-                <CheckCircle className="h-8 w-8 text-white" />
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg animate-pulse">
+                <CheckCircle className="h-6 w-6 text-white" />
               </div>
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center animate-bounce">
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center animate-bounce">
                 <span className="text-white text-xs font-bold">✗</span>
               </div>
-              <div className="absolute -bottom-1 -left-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-bounce" style={{ animationDelay: '0.5s' }}>
+              <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center animate-bounce" style={{ animationDelay: '0.5s' }}>
                 <span className="text-white text-xs font-bold">✓</span>
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="text-lg font-bold text-green-600">98%</div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center p-2 bg-green-50 rounded-lg border border-green-200">
+              <div className="text-sm font-bold text-green-600">98%</div>
               <div className="text-xs text-green-700">Transparency</div>
             </div>
-            <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-lg font-bold text-blue-600">100%</div>
+            <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-sm font-bold text-blue-600">100%</div>
               <div className="text-xs text-blue-700">Immutable</div>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="text-lg font-bold text-purple-600">24/7</div>
+            <div className="text-center p-2 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="text-sm font-bold text-purple-600">24/7</div>
               <div className="text-xs text-purple-700">Available</div>
             </div>
           </div>
@@ -802,35 +872,35 @@ const EcosystemShowcase = () => {
         <div className="space-y-4">
           <div className="flex justify-center">
             <div className="relative">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center shadow-lg animate-bounce">
-                <Gift className="h-7 w-7 text-white" />
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center shadow-lg animate-bounce">
+                <Gift className="h-6 w-6 text-white" />
               </div>
-              <div className="absolute -top-3 -right-3 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center animate-ping">
+              <div className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center animate-ping">
                 <Coins className="h-3 w-3 text-yellow-800" />
               </div>
-              <div className="absolute -bottom-3 -left-3 w-5 h-5 bg-green-400 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '0.3s' }}>
+              <div className="absolute -bottom-2 -left-2 w-5 h-5 bg-green-400 rounded-full flex items-center justify-center animate-ping" style={{ animationDelay: '0.3s' }}>
                 <Coins className="h-3 w-3 text-green-800" />
               </div>
             </div>
           </div>
-          <div className="flex justify-center space-x-3">
+          <div className="flex justify-center space-x-4">
             <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mb-1">
-                <span className="text-white text-sm font-bold">$</span>
+              <div className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center mb-1 border-2 border-yellow-200">
+                <img src="/images/celo.png" alt="CELO" className="w-6 h-6" />
               </div>
-              <span className="text-xs text-gray-600">CELO</span>
+              <span className="text-xs text-gray-600 font-medium">CELO</span>
             </div>
             <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full flex items-center justify-center mb-1">
-                <span className="text-white text-sm font-bold">$</span>
+              <div className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center mb-1 border-2 border-blue-200">
+                <img src="/images/cusd.png" alt="cUSD" className="w-6 h-6" />
               </div>
-              <span className="text-xs text-gray-600">cUSD</span>
+              <span className="text-xs text-gray-600 font-medium">cUSD</span>
             </div>
             <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mb-1">
-                <span className="text-white text-sm font-bold">$</span>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 shadow-lg flex items-center justify-center mb-1">
+                <span className="text-white text-xs font-bold">$</span>
               </div>
-              <span className="text-xs text-gray-600">Any Token</span>
+              <span className="text-xs text-gray-600 font-medium">Any Token</span>
             </div>
           </div>
         </div>
@@ -874,30 +944,48 @@ const EcosystemShowcase = () => {
       description: "Digital proof of support with NFT-based cards that showcase your contribution history",
       icon: CreditCard,
       content: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex justify-center">
             <div className="relative">
-              <div className="w-16 h-12 bg-gradient-to-br from-orange-400 to-red-600 rounded-lg shadow-lg transform rotate-6 transition-transform duration-500 hover:rotate-0">
-                <div className="p-1.5">
-                  <div className="w-3 h-3 bg-white/20 rounded-full mb-1"></div>
-                  <div className="text-white text-xs font-bold">SUPPORTER</div>
-                  <div className="text-white/80 text-xs">NFT #1234</div>
+              <div className="w-24 h-16 bg-gradient-to-br from-orange-400 to-red-600 rounded-xl shadow-xl transform rotate-6 transition-transform duration-500 hover:rotate-0 border-2 border-white/20">
+                <div className="p-3">
+                  <div className="w-5 h-5 bg-white/30 rounded-full mb-2 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <div className="text-white text-base font-bold tracking-wide drop-shadow-sm">SUPPORTER</div>
+                  <div className="text-white/90 text-xs font-medium tracking-wide">NFT #1234</div>
                 </div>
               </div>
-              <div className="absolute -top-1 -right-1 w-12 h-9 bg-gradient-to-br from-purple-400 to-pink-600 rounded-lg shadow-lg transform -rotate-6 transition-transform duration-500 hover:rotate-0" style={{ animationDelay: '0.2s' }}>
-                <div className="p-1.5">
-                  <div className="w-2 h-2 bg-white/20 rounded-full mb-1"></div>
-                  <div className="text-white text-xs font-bold">VIP</div>
-                  <div className="text-white/80 text-xs">NFT #5678</div>
+              <div className="absolute -top-3 -right-3 w-20 h-14 bg-gradient-to-br from-purple-400 to-pink-600 rounded-xl shadow-xl transform -rotate-6 transition-transform duration-500 hover:rotate-0 border-2 border-white/20" style={{ animationDelay: '0.2s' }}>
+                <div className="p-3">
+                  <div className="w-4 h-4 bg-white/30 rounded-full mb-2 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                  </div>
+                  <div className="text-white text-sm font-bold tracking-wide drop-shadow-sm">VIP</div>
+                  <div className="text-white/90 text-xs font-medium tracking-wide">NFT #5678</div>
                 </div>
               </div>
-              <CreditCard className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-5 w-5 text-white z-10" />
+              <CreditCard className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-7 w-7 text-white z-10 drop-shadow-lg" />
             </div>
           </div>
-          <div className="text-center">
-            <div className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 rounded-full text-xs font-medium">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Unique NFT Cards
+          
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="inline-flex items-center px-5 py-3 bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 rounded-full text-sm font-semibold shadow-sm border border-orange-200">
+                <Sparkles className="h-4 w-4 mr-2 text-orange-600" />
+                Unique NFT Cards
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="text-sm font-bold text-orange-600">Digital Proof</div>
+                <div className="text-xs text-orange-700">of Support</div>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="text-sm font-bold text-purple-600">Exclusive</div>
+                <div className="text-xs text-purple-700">Benefits</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1069,7 +1157,7 @@ const EcosystemShowcase = () => {
         </button>
 
         {/* Slide Content */}
-        <div className="relative h-72 flex items-center justify-center">
+        <div className="relative h-80 flex items-center justify-center px-4">
           <motion.div
             key={currentSlide}
             initial={{ opacity: 0, x: 50 }}
@@ -1078,25 +1166,18 @@ const EcosystemShowcase = () => {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="text-center w-full"
           >
-            {/* Icon */}
-            <div className="flex justify-center mb-5">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
-                <IconComponent className="h-7 w-7 text-white" />
-              </div>
-            </div>
-            
             {/* Title */}
-            <h4 className="text-lg font-bold text-gray-900 mb-3">
+            <h4 className="text-xl font-bold text-gray-900 mb-4">
               {currentSlideData.title.replace(/^[^\s]*\s/, '')}
             </h4>
             
             {/* Description */}
-            <p className="text-gray-600 mb-5 max-w-sm mx-auto text-sm">
+            <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm leading-relaxed">
               {currentSlideData.description}
             </p>
             
             {/* Content */}
-            <div className="max-w-xs mx-auto">
+            <div className="max-w-sm mx-auto">
               {currentSlideData.content}
             </div>
           </motion.div>
@@ -1133,7 +1214,6 @@ export default function HomePage() {
   const [isMounted, setIsMounted] = useState(false);
   const [featuredProjects, setFeaturedProjects] = useState<EnhancedProject[]>([]);
   const [featuredCampaigns, setFeaturedCampaigns] = useState<EnhancedCampaign[]>([]);
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'projects'>('campaigns');
 
   const { projects, isLoading: projectsLoading, error: projectsError } = useAllProjects(CONTRACT_ADDRESS);
   const { campaigns, isLoading: campaignsLoading, error: campaignsError } = useAllCampaigns(CONTRACT_ADDRESS);
@@ -1163,7 +1243,7 @@ export default function HomePage() {
     });
 
     const featured = enhanced
-     .filter(p => p.active && p.campaignIds.length > 0)
+     .filter(p => p.active && p.campaignIds.length > 0 && (p.metadata.logo || p.metadata.coverImage))
      .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
      .slice(0, 6);
 
@@ -1255,11 +1335,7 @@ export default function HomePage() {
  const totalFunds = featuredCampaigns.reduce((sum, c) => sum + parseFloat(formatEther(c.totalFunds)), 0);
 
  const scrollingWords = [
-   "Funding for Projects with Onchain Voting",
-   "Funding for Projects with Project Tipping", 
-   "Funding for Projects with Campaign Pools (Coming Soon)",
-   "Funding for Projects with Project Supporter Cards",
-   "Funding for Projects with Track Projects Progress"
+   "Funding Projects Onchain via Voting, Tipping and Fishing"
  ];
 
  return (
@@ -1368,106 +1444,91 @@ export default function HomePage() {
      <ScrollAnimationWrapper>
        <section className="py-20 px-4 sm:px-6 lg:px-8">
          <div className="max-w-7xl mx-auto">
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
              <StatCard 
                icon={Activity} 
                label="Active Campaigns" 
                value="3"
                trend="+12%"
+               color="green"
              />
              <StatCard 
                icon={Lightbulb} 
                label="Total Projects" 
                value="36"
                trend="+8%"
+               color="blue"
              />
              <StatCard 
                icon={Users} 
                label="Community Members" 
                value="1,247"
                trend="+24%"
+               color="purple"
              />
              <StatCard 
                icon={Coins} 
                label="Total Value Locked" 
                value="16K"
                trend="+15%"
+               color="orange"
              />
            </div>
          </div>
        </section>
      </ScrollAnimationWrapper>
 
-     {/* Campaigns & Projects Tabs Section */}
+     {/* Featured Campaigns & Projects Section */}
      <ScrollAnimationWrapper>
        <section className="py-20 px-4 sm:px-6 lg:px-8">
          <div className="max-w-7xl mx-auto">
-           <div className="text-center mb-12">
-             <motion.div
-               initial={{ opacity: 0, y: 30 }}
-               whileInView={{ opacity: 1, y: 0 }}
-               transition={{ duration: 0.8 }}
-               viewport={{ once: true }}
-             >
-               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                 Explore Campaigns & Projects
-               </h2>
-               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                 Discover active funding opportunities and innovative projects
-               </p>
-             </motion.div>
-           </div>
 
-           {/* Tabs */}
-           <div className="flex justify-center mb-8">
-             <div className="flex bg-gray-100 rounded-2xl p-1">
-               <button
-                 onClick={() => setActiveTab('campaigns')}
-                 className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
-                   activeTab === 'campaigns'
-                     ? 'bg-blue-500 text-white shadow-lg'
-                     : 'text-gray-600 hover:text-gray-900'
-                 }`}
-               >
-                 Campaigns
-               </button>
-               <button
-                 onClick={() => setActiveTab('projects')}
-                 className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
-                   activeTab === 'projects'
-                     ? 'bg-blue-500 text-white shadow-lg'
-                     : 'text-gray-600 hover:text-gray-900'
-                 }`}
-               >
-                 Projects
-               </button>
+
+           {/* Combined Grid */}
+           <div className="mb-8">
+             <div className="flex items-center justify-between mb-8">
+               <h3 className="text-2xl font-bold text-gray-900 flex items-center">
+                 <Rocket className="h-6 w-6 text-blue-500 mr-2" />
+                 Campaigns & Projects
+               </h3>
+               <div className="flex gap-4">
+                 <button 
+                   onClick={() => navigate('/campaigns')}
+                   className="text-blue-600 hover:text-blue-700 font-medium flex items-center group"
+                 >
+                   View All Campaigns
+                   <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+                 </button>
+                 <button 
+                   onClick={() => navigate('/projects')}
+                   className="text-purple-600 hover:text-purple-700 font-medium flex items-center group"
+                 >
+                   View All Projects
+                   <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+                 </button>
+               </div>
              </div>
-           </div>
-
-           {/* Content */}
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {activeTab === 'campaigns' ? (
-               // Show 1-2 campaigns max
-               featuredCampaigns.slice(0, Math.min(2, featuredCampaigns.length)).map((campaign, index) => (
-                 <CampaignCard key={campaign.id.toString()} campaign={campaign} index={index} />
-               ))
-             ) : (
-               // Show 2-3 projects based on active campaigns
-               featuredProjects.slice(0, Math.min(3, featuredProjects.length)).map(project => (
-                 <ProjectCard key={project.id} project={project} />
-               ))
-             )}
-           </div>
-
-           {/* View All Button */}
-           <div className="text-center mt-12">
-             <button 
-               onClick={() => navigate(activeTab === 'campaigns' ? '/campaigns' : '/projects')}
-               className="px-8 py-3 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors flex items-center mx-auto group"
-             >
-               View All {activeTab === 'campaigns' ? 'Campaigns' : 'Projects'}
-               <ChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
-             </button>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               {/* Show campaigns first, then projects to fill remaining slots */}
+               {(() => {
+                 const campaignCount = Math.min(2, featuredCampaigns.length);
+                 const projectCount = campaignCount === 1 ? 3 : 4 - campaignCount;
+                 
+                 const campaigns = featuredCampaigns.slice(0, campaignCount);
+                 const projects = featuredProjects.slice(0, projectCount);
+                 
+                 return [...campaigns, ...projects];
+               })().map((item, index) => {
+                 // Check if item is a campaign or project
+                 const isCampaign = 'startTime' in item;
+                 
+                 if (isCampaign) {
+                   return <CampaignCard key={`campaign-${item.id}`} campaign={item} index={index} />;
+                 } else {
+                   return <ProjectCard key={`project-${item.id}`} project={item} />;
+                 }
+               })}
+             </div>
            </div>
          </div>
        </section>
