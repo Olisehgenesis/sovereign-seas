@@ -15,7 +15,7 @@
       },
       {
         "internalType": "uint32",
-        "name": "blockTimestampLast",
+        "name": "blockTimestampLatch",
         "type": "uint32"
       }
     ],

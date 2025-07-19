@@ -42,7 +42,7 @@ contract ProjectTipping is Ownable(msg.sender), ReentrancyGuard {
     uint256 public minimumTipAmount = 0.01 * 1e18; // Minimum tip in CELO equivalent
     bool public tippingEnabled = true;
     
-    // Mappings
+    // Core Mappings
     mapping(uint256 => mapping(address => uint256)) public projectTipsByToken; // projectId -> token -> amount
     mapping(uint256 => address[]) public projectTippedTokens; // projectId -> token addresses
     mapping(uint256 => mapping(address => bool)) public isTokenTippedToProject; // projectId -> token -> bool
@@ -560,16 +560,7 @@ contract ProjectTipping is Ownable(msg.sender), ReentrancyGuard {
         uint256 tipperCount,
         address[] memory tippedTokens
     ) {
-        (
-            uint256 id,
-            address owner,
-            string memory name,
-            string memory description,
-            ,
-            bool active,
-            ,
-            
-        ) = sovereignSeas.getProject(_projectId);
+        (id, owner, name, description,, active,,) = sovereignSeas.getProject(_projectId);
         return (
             id,
             owner,

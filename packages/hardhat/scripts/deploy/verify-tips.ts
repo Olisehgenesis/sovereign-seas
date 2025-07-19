@@ -8,9 +8,7 @@ const SOVEREIGN_SEAS_V4_ADDRESS = process.env.SOVEREIGN_SEAS_V4_ADDRESS || '0x0c
 
 // Determine network from environment
 const args = process.argv.slice(2);
-const isMainnet = args.includes('--network') && args[args.indexOf('--network') + 1] === 'celo' || 
-                  process.env.NETWORK === 'celo' ||
-                  process.env.CELO_RPC_URL?.includes('rpc.ankr.com/celo');
+const isMainnet = true;
 
 const network = isMainnet ? 'celo' : 'alfajores';
 

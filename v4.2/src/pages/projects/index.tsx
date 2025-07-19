@@ -15,6 +15,7 @@ import {
   Network,
   ExternalLink,
   ArrowUpRight,
+  Gift,
 
   BarChart,
   Shield,
@@ -25,6 +26,7 @@ import { Address } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
+import TipModal from '@/components/TipModal';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -116,9 +118,14 @@ const parseProjectMetadata = (projectDetails: any): ProjectMetadata => {
 };
 
 // Project Card Component
-const ProjectCard = ({ project }: { project: EnhancedProject }) => {
+const ProjectCard = ({ project, onTip }: { project: EnhancedProject, onTip: () => void }) => {
   const navigate = useNavigate();
   const location = getNormalizedLocation(project.metadata);
+
+  const handleTipClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onTip();
+  };
 
   return (
     <div
@@ -189,7 +196,7 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
 
       {/* Project Info */}
       <div className="p-4 relative z-10">
-        <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2 ">{project.metadata?.bio?.tagline || project.description}</p>
+        <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata.bio?.tagline || project.description?.tagline}</p>
 
         {/* Project Meta */}
         <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
@@ -197,12 +204,6 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
             <div className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
               <span>{project.metadata.location}</span>
-            </div>
-          )}
-          {project.metadata.blockchain && (
-            <div className="flex items-center gap-1">
-              <Network className="h-3 w-3" />
-              <span>{project.metadata.blockchain}</span>
             </div>
           )}
           {project.contracts && project.contracts.length > 0 && (
@@ -213,32 +214,13 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
           )}
         </div>
 
-        {/* Tech Stack */}
-        {project.metadata.techStack && project.metadata.techStack.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {project.metadata.techStack.slice(0, 3).map((tech, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
-              >
-                {tech}
-              </span>
-            ))}
-            {project.metadata.techStack.length > 3 && (
-              <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
-                +{project.metadata.techStack.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Tags */}
         {project.metadata.tags && project.metadata.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {project.metadata.tags.slice(0, 3).map((tag, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-lg"
+                className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
               >
                 #{tag}
               </span>
@@ -251,45 +233,20 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
           </div>
         )}
 
-        {/* Action Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <Eye className="h-4 w-4" />
-            <span>View Project</span>
+        <div className="flex items-center justify-between">
+          {/* Tip Button */}
+          <button
+            onClick={handleTipClick}
+            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-medium rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+          >
+            <Gift className="h-3 w-3" />
+            Tip Project
+          </button>
+
+          {/* Arrow Icon */}
+          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
+            <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
           </div>
-          <div className="flex items-center gap-2">
-            {project.metadata.githubRepo && (
-              <a
-                href={project.metadata.githubRepo}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
-              >
-                <Github className="h-4 w-4" />
-              </a>
-            )}
-            {project.metadata.website && (
-              <a 
-                href={project.metadata.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            )}
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
-              <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
-            </div>
-          </div>
-        </div>
-        
-        {/* Voting tokens for this project */}
-        <div className="flex -space-x-1.5 mt-4">
-          <div className="w-6 h-6 rounded-full bg-green-100 ring-2 ring-white flex items-center justify-center text-green-500 text-xs font-bold">C</div>
-          <div className="w-6 h-6 rounded-full bg-blue-100 ring-2 ring-white flex items-center justify-center text-blue-500 text-xs font-bold">$</div>
         </div>
       </div>
     </div>
@@ -303,6 +260,8 @@ export default function ProjectsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [processedProjects, setProcessedProjects] = useState<EnhancedProject[]>([]);
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<EnhancedProject | null>(null);
 
   // Get projects data
   const { projects, isLoading, error } = useAllProjects(CONTRACT_ADDRESS);
@@ -481,7 +440,11 @@ export default function ProjectsPage() {
         ) : processedProjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {processedProjects.map((project) => (
-              <ProjectCard key={project.id.toString()} project={project} />
+              <ProjectCard
+                key={project.id.toString()}
+                project={project}
+                onTip={() => { setSelectedProject(project); setShowTipModal(true); }}
+              />
             ))}
           </div>
         ) : (
@@ -523,6 +486,19 @@ export default function ProjectsPage() {
           </div>
         )}
       </div>
+      {selectedProject && (
+        <TipModal
+          isOpen={showTipModal}
+          onClose={() => { setShowTipModal(false); setSelectedProject(null); }}
+          project={{
+            id: selectedProject.id,
+            name: selectedProject.name,
+            owner: selectedProject.owner,
+            contractAddress: CONTRACT_ADDRESS,
+          }}
+          onTipSuccess={() => { setShowTipModal(false); setSelectedProject(null); }}
+        />
+      )}
     </div>
   );
 }

@@ -26,7 +26,8 @@ import {
   DollarSign,
   ArrowUpRight,
   Zap,
-  CreditCard
+  CreditCard,
+  Gift
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -35,6 +36,7 @@ import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
+import TipModal from '@/components/TipModal';
 
 // ==================== TYPES ====================
 
@@ -359,132 +361,156 @@ const ProjectCard = ({ project }: { project: EnhancedProject }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const location = getNormalizedLocation(project.metadata);
+  const [showTipModal, setShowTipModal] = useState(false);
+
+  const handleTipClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowTipModal(true);
+  };
 
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-      transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-      whileHover={{ scale: 1.02 }}
-      onClick={() => navigate(`/explorer/project/${project.id}`)}
-      className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500"
-    >
-      {/* Location Badge (card style) */}
-      <LocationBadge location={location} variant="card" />
-      
-      {/* Project Image */}
-      <div className="relative h-40 sm:h-48 bg-gradient-to-r from-blue-100 to-indigo-100 overflow-hidden">
-        {project.metadata.logo || project.metadata.coverImage ? (
-          <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${formatIpfsUrl(project.metadata.logo ?? project.metadata.coverImage ?? '')})`, opacity: 0.9 }}></div>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center opacity-30">
-            <Code className="h-16 w-16 text-blue-500" />
-          </div>
-        )}
+    <>
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 50 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+        transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+        whileHover={{ scale: 1.02 }}
+        onClick={() => navigate(`/explorer/project/${project.id}`)}
+        className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500"
+      >
+        {/* Location Badge (card style) */}
+        <LocationBadge location={location} variant="card" />
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-        
-        {/* Status Badge */}
-        <div className="absolute top-3 right-3">
-          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
-            project.active 
-              ? 'bg-emerald-500/90 text-white' 
-              : 'bg-gray-500/90 text-white'
-          }`}>
-            <div className={`w-2 h-2 rounded-full mr-2 ${
-              project.active ? 'bg-white animate-pulse' : 'bg-gray-300'
-            }`} />
-            {project.active ? 'Active' : 'Inactive'}
-          </span>
-        </div>
-
-        {/* Category Badge */}
-        {project.metadata.category && (
-          <div className="absolute bottom-4 left-4">
-            <span className="inline-flex items-center px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
-              {project.metadata.category}
-            </span>
-          </div>
-        )}
-
-        {/* Campaigns Count */}
-        {project.campaignIds.length > 0 && (
-          <div className="absolute top-3 left-3">
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2">
-              <div className="flex items-center gap-1">
-                <Trophy className="h-4 w-4 text-purple-600" />
-                <span className="text-sm font-bold text-gray-900">{project.campaignIds.length}</span>
-              </div>
-              <p className="text-xs text-gray-600">Campaigns</p>
-            </div>
-          </div>
-        )}
-
-        {/* Project name overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-10">
-          <div className="flex justify-between items-start">
-            <div className="flex-1 pr-4">
-              <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-100 transition-colors line-clamp-2">{project.name}</h3>
-            </div>
-            <div className="flex flex-col items-end text-white/90 text-sm font-medium">
-              <div className="flex items-center">
-                <BarChart className="h-3.5 w-3.5 mr-1.5" />
-                {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Project Info */}
-      <div className="p-4 relative z-10">
-        <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata.tagline || project.metadata.bio || project.description}</p>
-
-        {/* Project Meta */}
-        <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
-          {project.metadata.location && (
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <span>{project.metadata.location}</span>
-            </div>
-          )}
-          {project.metadata.blockchain && (
-            <div className="flex items-center gap-1">
-              <Network className="h-3 w-3" />
-              <span>{project.metadata.blockchain}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Tags and Action Button in one line */}
-        <div className="flex items-center justify-between">
-          {/* Tags */}
-          {project.metadata.tags && project.metadata.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {project.metadata.tags.slice(0, 3).map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
-                >
-                  #{tag}
-                </span>
-              ))}
-              {project.metadata.tags.length > 3 && (
-                <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
-                  +{project.metadata.tags.length - 3}
-                </span>
-              )}
+        {/* Project Image */}
+        <div className="relative h-40 sm:h-48 bg-gradient-to-r from-blue-100 to-indigo-100 overflow-hidden">
+          {project.metadata.logo || project.metadata.coverImage ? (
+            <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${formatIpfsUrl(project.metadata.logo ?? project.metadata.coverImage ?? '')})`, opacity: 0.9 }}></div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center opacity-30">
+              <Code className="h-16 w-16 text-blue-500" />
             </div>
           )}
           
-          {/* Action Button */}
-          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
-            <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+          
+          {/* Status Badge */}
+          <div className="absolute top-3 right-3">
+            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
+              project.active 
+                ? 'bg-emerald-500/90 text-white' 
+                : 'bg-gray-500/90 text-white'
+            }`}>
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                project.active ? 'bg-white animate-pulse' : 'bg-gray-300'
+              }`} />
+              {project.active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+
+          {/* Category Badge */}
+          {project.metadata.category && (
+            <div className="absolute bottom-4 left-4">
+              <span className="inline-flex items-center px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
+                {project.metadata.category}
+              </span>
+            </div>
+          )}
+
+          {/* Campaigns Count */}
+          {project.campaignIds.length > 0 && (
+            <div className="absolute top-3 left-3">
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2">
+                <div className="flex items-center gap-1">
+                  <Trophy className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-bold text-gray-900">{project.campaignIds.length}</span>
+                </div>
+                <p className="text-xs text-gray-600">Campaigns</p>
+              </div>
+            </div>
+          )}
+
+          {/* Project name overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-10">
+            <div className="flex justify-between items-start">
+              <div className="flex-1 pr-4">
+                <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-100 transition-colors line-clamp-2">{project.name}</h3>
+              </div>
+              <div className="flex flex-col items-end text-white/90 text-sm font-medium">
+                <div className="flex items-center">
+                  <BarChart className="h-3.5 w-3.5 mr-1.5" />
+                  {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+
+        {/* Project Info */}
+        <div className="p-4 relative z-10">
+          <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata.bio?.tagline || project.description?.tagline}</p>
+
+          {/* Project Meta */}
+          <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
+            {project.metadata.location && (
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span>{project.metadata.location}</span>
+              </div>
+            )}
+            {project.contracts && project.contracts.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                <span>{project.contracts.length} contract{project.contracts.length !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            {/* Tags */}
+            {project.metadata.tags && project.metadata.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {project.metadata.tags.slice(0, 3).map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+                {project.metadata.tags.length > 3 && (
+                  <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
+                    +{project.metadata.tags.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {/* Tip Button */}
+            <button
+              onClick={handleTipClick}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-medium rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+            >
+              <Gift className="h-3 w-3" />
+              Tip
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Tip Modal */}
+      {showTipModal && (
+        <TipModal
+          project={project}
+          isOpen={showTipModal}
+          onClose={() => setShowTipModal(false)}
+          onTipSuccess={() => {
+            setShowTipModal(false);
+            // Optionally refresh data or show success message
+          }}
+        />
+      )}
+    </>
   );
 };
 

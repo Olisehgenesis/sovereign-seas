@@ -3,12 +3,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_sovereignSeasContract",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_initialOwner",
+        "name": "_sovereignSeas",
         "type": "address"
       }
     ],
@@ -58,27 +53,14 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "string",
-        "name": "campaignId",
-        "type": "string"
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "registeredBy",
-        "type": "address"
-      }
-    ],
-    "name": "CampaignRegistered",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "token",
+        "name": "recipient",
         "type": "address"
       },
       {
@@ -86,15 +68,9 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "feeType",
-        "type": "string"
       }
     ],
-    "name": "FeeCollected",
+    "name": "EmergencyWithdraw",
     "type": "event"
   },
   {
@@ -103,7 +79,7 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "previousAmount",
+        "name": "oldAmount",
         "type": "uint256"
       },
       {
@@ -141,6 +117,50 @@
       {
         "indexed": true,
         "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PlatformFeeCollected",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PlatformFeeWithdrawn",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "tipper",
         "type": "address"
       },
@@ -152,12 +172,6 @@
       },
       {
         "indexed": true,
-        "internalType": "string",
-        "name": "campaignId",
-        "type": "string"
-      },
-      {
-        "indexed": false,
         "internalType": "address",
         "name": "token",
         "type": "address"
@@ -179,21 +193,9 @@
         "internalType": "string",
         "name": "message",
         "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "tipId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "isCampaignSpecific",
-        "type": "bool"
       }
     ],
-    "name": "ProjectTipped",
+    "name": "TipSent",
     "type": "event"
   },
   {
@@ -201,18 +203,18 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "tipper",
-        "type": "address"
-      },
-      {
-        "indexed": true,
         "internalType": "uint256",
         "name": "projectId",
         "type": "uint256"
       },
       {
-        "indexed": false,
+        "indexed": true,
+        "internalType": "address",
+        "name": "projectOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "token",
         "type": "address"
@@ -222,34 +224,9 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "reason",
-        "type": "string"
       }
     ],
-    "name": "TipRefunded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "previousFee",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newFee",
-        "type": "uint256"
-      }
-    ],
-    "name": "TippingFeeUpdated",
+    "name": "TipWithdrawn",
     "type": "event"
   },
   {
@@ -262,68 +239,12 @@
         "type": "bool"
       }
     ],
-    "name": "TippingStatusUpdated",
+    "name": "TippingStatusChanged",
     "type": "event"
   },
   {
     "inputs": [],
-    "name": "broker",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "cUSD",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "campaignIdsList",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "campaignProjectTipCount",
+    "name": "PLATFORM_FEE_PERCENTAGE",
     "outputs": [
       {
         "internalType": "uint256",
@@ -337,22 +258,12 @@
   {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
       }
     ],
-    "name": "campaignProjectTipHistory",
+    "name": "allTips",
     "outputs": [
       {
         "internalType": "address",
@@ -363,11 +274,6 @@
         "internalType": "uint256",
         "name": "projectId",
         "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "campaignId",
-        "type": "string"
       },
       {
         "internalType": "address",
@@ -385,96 +291,53 @@
         "type": "uint256"
       },
       {
-        "internalType": "string",
-        "name": "message",
-        "type": "string"
-      },
-      {
         "internalType": "uint256",
         "name": "timestamp",
         "type": "uint256"
       },
       {
+        "internalType": "string",
+        "name": "message",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      },
+      {
         "internalType": "uint256",
-        "name": "tipId",
+        "name": "_projectId",
         "type": "uint256"
       },
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "canUserTipProject",
+    "outputs": [
       {
         "internalType": "bool",
-        "name": "isCampaignSpecific",
+        "name": "canTip",
         "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
       },
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "campaignProjectTips",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "string",
-        "name": "",
+        "name": "reason",
         "type": "string"
-      }
-    ],
-    "name": "campaignTotalTips",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "campaignUserTips",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -515,250 +378,136 @@
   {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
-      }
-    ],
-    "name": "deregisterCampaign",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
-        "name": "_tipper",
+        "name": "_token",
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "_projectId",
-        "type": "uint256"
-      },
-      {
         "internalType": "address",
-        "name": "_token",
+        "name": "_recipient",
         "type": "address"
       },
       {
         "internalType": "uint256",
         "name": "_amount",
         "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_reason",
-        "type": "string"
       }
     ],
-    "name": "emergencyRefund",
+    "name": "emergencyWithdraw",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getAllCampaignIds",
+    "name": "getAllTippedProjects",
     "outputs": [
       {
-        "internalType": "string[]",
+        "internalType": "uint256[]",
         "name": "",
-        "type": "string[]"
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "getAllTips",
+    "outputs": [
       {
-        "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
+        "components": [
+          {
+            "internalType": "address",
+            "name": "tipper",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "projectId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "celoEquivalent",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "message",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct ProjectTipping.TipInfo[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getContractStats",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalTips",
+        "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "_projectId",
+        "name": "totalProjectsTipped",
         "type": "uint256"
-      }
-    ],
-    "name": "getCampaignProjectTipHistory",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "tipper",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "projectId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "campaignId",
-            "type": "string"
-          },
-          {
-            "internalType": "address",
-            "name": "token",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "celoEquivalent",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "message",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tipId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isCampaignSpecific",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ProjectTipping.Tip[]",
-        "name": "",
-        "type": "tuple[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
-      }
-    ],
-    "name": "getCampaignTipSummary",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "totalTips",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tipCount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "projectCount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address[]",
-            "name": "tippedTokens",
-            "type": "address[]"
-          },
-          {
-            "internalType": "uint256[]",
-            "name": "tokenAmounts",
-            "type": "uint256[]"
-          }
-        ],
-        "internalType": "struct ProjectTipping.CampaignTipSummary",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
+      },
       {
         "internalType": "uint256",
-        "name": "_projectId",
+        "name": "totalUniqueUsers",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isEnabled",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minTipAmount",
         "type": "uint256"
       }
     ],
-    "name": "getProjectTipHistory",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      }
+    ],
+    "name": "getPlatformFeeBalance",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "tipper",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "projectId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "campaignId",
-            "type": "string"
-          },
-          {
-            "internalType": "address",
-            "name": "token",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "celoEquivalent",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "message",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tipId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isCampaignSpecific",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ProjectTipping.Tip[]",
+        "internalType": "uint256",
         "name": "",
-        "type": "tuple[]"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -778,12 +527,27 @@
         "components": [
           {
             "internalType": "uint256",
-            "name": "totalTips",
+            "name": "projectId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "projectOwner",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "projectName",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalTipsInCelo",
             "type": "uint256"
           },
           {
             "internalType": "uint256",
-            "name": "tipCount",
+            "name": "tipperCount",
             "type": "uint256"
           },
           {
@@ -797,17 +561,12 @@
             "type": "uint256[]"
           },
           {
-            "internalType": "uint256",
-            "name": "campaignTips",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "generalTips",
-            "type": "uint256"
+            "internalType": "bool",
+            "name": "isActive",
+            "type": "bool"
           }
         ],
-        "internalType": "struct ProjectTipping.TipSummary",
+        "internalType": "struct ProjectTipping.ProjectTipSummary",
         "name": "",
         "type": "tuple"
       }
@@ -816,24 +575,34 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getTippingConfig",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      },
+    "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "_projectId",
         "type": "uint256"
-      },
+      }
+    ],
+    "name": "getProjectTippedTokens",
+    "outputs": [
       {
-        "internalType": "address",
+        "internalType": "address[]",
         "name": "",
-        "type": "address"
-      },
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getProjectTipperCount",
+    "outputs": [
       {
         "internalType": "uint256",
         "name": "",
@@ -846,12 +615,128 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getProjectTippers",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      },
+      {
         "internalType": "address",
-        "name": "_user",
+        "name": "_token",
         "type": "address"
       }
     ],
-    "name": "getUserTipHistory",
+    "name": "getProjectTipsByToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getProjectTotalTipsInCelo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getProjectWithTipInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalTipsInCelo",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tipperCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address[]",
+        "name": "tippedTokens",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRecentTips",
     "outputs": [
       {
         "components": [
@@ -864,11 +749,6 @@
             "internalType": "uint256",
             "name": "projectId",
             "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "campaignId",
-            "type": "string"
           },
           {
             "internalType": "address",
@@ -886,27 +766,17 @@
             "type": "uint256"
           },
           {
-            "internalType": "string",
-            "name": "message",
-            "type": "string"
-          },
-          {
             "internalType": "uint256",
             "name": "timestamp",
             "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "tipId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isCampaignSpecific",
-            "type": "bool"
+            "internalType": "string",
+            "name": "message",
+            "type": "string"
           }
         ],
-        "internalType": "struct ProjectTipping.Tip[]",
+        "internalType": "struct ProjectTipping.TipInfo[]",
         "name": "",
         "type": "tuple[]"
       }
@@ -917,12 +787,313 @@
   {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
+        "internalType": "uint256",
+        "name": "_limit",
+        "type": "uint256"
       }
     ],
-    "name": "isCampaignRegistered",
+    "name": "getTopTippedProjects",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "projectIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "tipAmounts",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTotalTipsCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "getUserRecentTips",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "tipper",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "projectId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "celoEquivalent",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "message",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct ProjectTipping.TipInfo[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserTipSummary",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalTippedInCelo",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "projectCount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "tippedProjectIds",
+            "type": "uint256[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "tipper",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "projectId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "celoEquivalent",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+              },
+              {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct ProjectTipping.TipInfo[]",
+            "name": "recentTips",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct ProjectTipping.UserTipSummary",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserTippedProjects",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      }
+    ],
+    "name": "getUserTipsToProject",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "hasBeenTipped",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "hasUserTippedProject",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "isProjectTipper",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "isTokenTippedToProject",
     "outputs": [
       {
         "internalType": "bool",
@@ -963,21 +1134,21 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_projectId",
+        "name": "",
         "type": "uint256"
       },
       {
-        "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
-    "name": "projectParticipatesInCampaign",
+    "name": "projectTippedTokens",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "address",
         "name": "",
-        "type": "bool"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -991,7 +1162,7 @@
         "type": "uint256"
       }
     ],
-    "name": "projectTipCount",
+    "name": "projectTipperCount",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1015,57 +1186,12 @@
         "type": "uint256"
       }
     ],
-    "name": "projectTipHistory",
+    "name": "projectTippers",
     "outputs": [
       {
         "internalType": "address",
-        "name": "tipper",
+        "name": "",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "projectId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "campaignId",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "celoEquivalent",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "message",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tipId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "isCampaignSpecific",
-        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -1084,7 +1210,7 @@
         "type": "address"
       }
     ],
-    "name": "projectTips",
+    "name": "projectTipsByToken",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1093,32 +1219,6 @@
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
-      }
-    ],
-    "name": "registerCampaign",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string[]",
-        "name": "_campaignIds",
-        "type": "string[]"
-      }
-    ],
-    "name": "registerCampaigns",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1132,7 +1232,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_minimumAmount",
+        "name": "_newMinimum",
         "type": "uint256"
       }
     ],
@@ -1142,24 +1242,11 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "bool",
-        "name": "_enabled",
-        "type": "bool"
-      }
-    ],
-    "name": "setTippingStatus",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "sovereignSeas",
     "outputs": [
       {
-        "internalType": "contract ISovereignSeas",
+        "internalType": "contract ISovereignSeasV4",
         "name": "",
         "type": "address"
       }
@@ -1173,11 +1260,6 @@
         "internalType": "uint256",
         "name": "_projectId",
         "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
       },
       {
         "internalType": "address",
@@ -1209,11 +1291,6 @@
       },
       {
         "internalType": "string",
-        "name": "_campaignId",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
         "name": "_message",
         "type": "string"
       }
@@ -1221,6 +1298,25 @@
     "name": "tipProjectWithCelo",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "tippedProjectIds",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1238,52 +1334,20 @@
   },
   {
     "inputs": [],
-    "name": "tippingFeePercentage",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
+    "name": "toggleTipping",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "tokenTotalTips",
-    "outputs": [
-      {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalTipTransactions",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalTipsAllTime",
+    "name": "totalProjectTipsInCelo",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1310,121 +1374,67 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
         "internalType": "uint256",
-        "name": "_newFeePercentage",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "updateTippingFee",
+    "name": "userTippedProjects",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "userTipsToProject",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawAllTips",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "userTipHistory",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "tipper",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "projectId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "campaignId",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "celoEquivalent",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "message",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tipId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "isCampaignSpecific",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "userTotalTipped",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "name": "validCampaigns",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1445,7 +1455,25 @@
         "type": "uint256"
       }
     ],
-    "name": "withdrawFees",
+    "name": "withdrawPlatformFees",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      }
+    ],
+    "name": "withdrawTips",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

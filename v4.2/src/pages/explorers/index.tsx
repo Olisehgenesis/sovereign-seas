@@ -30,7 +30,8 @@ import {
   BarChart,
   ArrowUpRight,
   AlertTriangle,
-  Timer
+  Timer,
+  Gift
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -39,6 +40,7 @@ import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
+import TipModal from '@/components/TipModal';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -929,129 +931,164 @@ function ProjectCard({
 }) {
   const parsedMetadata = project.metadata?.additionalData ? JSON.parse(project.metadata.additionalData) : project.metadata || {};
   const location = getNormalizedLocation(parsedMetadata);
- return (
-   <div
-     onClick={onClick}
-     className={`group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500 ${
-       viewMode === 'list' ? 'flex' : ''
-     }`}
-   >
-     {/* Location Badge (card style, 55% down) */}
-     <LocationBadge location={location} variant="card" />
-     
-     {/* Project Image */}
-     <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : 'h-40 sm:h-48'} bg-gradient-to-r from-blue-100 to-indigo-100 overflow-hidden`}>
-       {project.metadata?.logo || project.metadata?.coverImage ? (
-         <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${formatIpfsUrl(project.metadata?.logo || project.metadata?.coverImage || '')})`, opacity: 0.9 }}></div>
-       ) : (
-         <div className="absolute inset-0 flex items-center justify-center opacity-30">
-           <Code className="h-16 w-16 text-blue-500" />
-         </div>
-       )}
-       
-       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-       
-       {/* Status Badge */}
-       <div className="absolute top-3 right-3">
-         <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
-           project.active 
-             ? 'bg-emerald-500/90 text-white' 
-             : 'bg-gray-500/90 text-white'
-         }`}>
-           <div className={`w-2 h-2 rounded-full mr-2 ${
-             project.active ? 'bg-white animate-pulse' : 'bg-gray-300'
-           }`} />
-           {project.active ? 'Active' : 'Inactive'}
-         </span>
-       </div>
+  const [showTipModal, setShowTipModal] = useState(false);
 
-       {/* Category Badge */}
-       {project.metadata?.category && (
-         <div className="absolute bottom-4 left-4">
-           <span className="inline-flex items-center px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
-             {project.metadata.category}
-           </span>
-         </div>
-       )}
+  const handleTipClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowTipModal(true);
+  };
 
-       {/* Campaigns Count */}
-       {project.campaignIds && project.campaignIds.length > 0 && (
-         <div className="absolute top-3 left-3">
-           <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2">
-             <div className="flex items-center gap-1">
-               <Trophy className="h-4 w-4 text-purple-600" />
-               <span className="text-sm font-bold text-gray-900">{project.campaignIds.length}</span>
-             </div>
-             <p className="text-xs text-gray-600">Campaigns</p>
-           </div>
-         </div>
-       )}
+  return (
+    <>
+      <div
+        onClick={onClick}
+        className={`group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-blue-100 overflow-hidden cursor-pointer relative hover:shadow-xl hover:-translate-y-3 transition-all duration-500 ${
+          viewMode === 'list' ? 'flex' : ''
+        }`}
+      >
+        {/* Location Badge (card style, 55% down) */}
+        <LocationBadge location={location} variant="card" />
+        
+        {/* Project Image */}
+        <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : 'h-40 sm:h-48'} bg-gradient-to-r from-blue-100 to-indigo-100 overflow-hidden`}>
+          {project.metadata?.logo || project.metadata?.coverImage ? (
+            <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${formatIpfsUrl(project.metadata?.logo || project.metadata?.coverImage || '')})`, opacity: 0.9 }}></div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center opacity-30">
+              <Code className="h-16 w-16 text-blue-500" />
+            </div>
+          )}
+          
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+          
+          {/* Status Badge */}
+          <div className="absolute top-3 right-3">
+            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
+              project.active 
+                ? 'bg-emerald-500/90 text-white' 
+                : 'bg-gray-500/90 text-white'
+            }`}>
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                project.active ? 'bg-white animate-pulse' : 'bg-gray-300'
+              }`} />
+              {project.active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
 
-       {/* Project name overlay */}
-       <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-         <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-1">{project.name}</h3>
-         <div className="flex items-center text-white/80 text-sm">
-           <BarChart className="h-3.5 w-3.5 mr-1.5" />
-           {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}
-         </div>
-       </div>
-     </div>
+          {/* Category Badge */}
+          {project.metadata?.category && (
+            <div className="absolute bottom-4 left-4">
+              <span className="inline-flex items-center px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
+                {project.metadata.category}
+              </span>
+            </div>
+          )}
 
-     {/* Project Info */}
-     <div className={`p-4 relative z-10 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-       <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata?.bio["tagline"] || project.description?.tagline}</p>
+          {/* Campaigns Count */}
+          {project.campaignIds && project.campaignIds.length > 0 && (
+            <div className="absolute top-3 left-3">
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2">
+                <div className="flex items-center gap-1">
+                  <Trophy className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-bold text-gray-900">{project.campaignIds.length}</span>
+                </div>
+                <p className="text-xs text-gray-600">Campaigns</p>
+              </div>
+            </div>
+          )}
 
-       {/* Project Meta */}
-       <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
-         {project.metadata?.location && (
-           <div className="flex items-center gap-1">
-             <MapPin className="h-3 w-3" />
-             <span>{project.metadata.location}</span>
-           </div>
-         )}
-         {project.contracts && project.contracts.length > 0 && (
-           <div className="flex items-center gap-1">
-             <Shield className="h-3 w-3" />
-             <span>{project.contracts.length} contract{project.contracts.length !== 1 ? 's' : ''}</span>
-           </div>
-         )}
-       </div>
+          {/* Project name overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+            <h3 className="text-base sm:text-lg font-bold text-white mb-1 group-hover:text-blue-200 transition-colors line-clamp-1">{project.name}</h3>
+            <div className="flex items-center text-white/80 text-sm">
+              <BarChart className="h-3.5 w-3.5 mr-1.5" />
+              {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}
+            </div>
+          </div>
+        </div>
 
-       {/* Tags */}
-       {project.metadata?.tags && Array.isArray(project.metadata.tags) && project.metadata.tags.length > 0 && (
-         <div className="flex flex-wrap gap-2 mb-4">
-           {project.metadata.tags.slice(0, 3).map((tag, idx) => (
-             <span
-               key={idx}
-               className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
-             >
-               #{tag}
-             </span>
-           ))}
-           {project.metadata.tags.length > 3 && (
-             <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
-               +{project.metadata.tags.length - 3}
-             </span>
-           )}
-         </div>
-       )}
+        {/* Project Info */}
+        <div className={`p-4 relative z-10 ${viewMode === 'list' ? 'flex-1' : ''}`}>
+          <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{project.metadata?.bio["tagline"] || project.description?.tagline}</p>
 
-       <div className="absolute bottom-4 right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
-         <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
-       </div>
-       
-       {/* Voting tokens for this project */}
-       <div className="flex -space-x-1.5">
-         <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
-           <img src="/images/celo.png" alt="CELO" className="w-full h-full object-cover" />
-         </div>
-         <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
-           <img src="/images/cusd.png" alt="cUSD" className="w-full h-full object-cover" />
-         </div>
-       </div>
-     </div>
-   </div>
- );
+          {/* Project Meta */}
+          <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
+            {project.metadata?.location && (
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span>{project.metadata.location}</span>
+              </div>
+            )}
+            {project.contracts && project.contracts.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                <span>{project.contracts.length} contract{project.contracts.length !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Tags */}
+          {project.metadata?.tags && Array.isArray(project.metadata.tags) && project.metadata.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {project.metadata.tags.slice(0, 3).map((tag, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg"
+                >
+                  #{tag}
+                </span>
+              ))}
+              {project.metadata.tags.length > 3 && (
+                <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg">
+                  +{project.metadata.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            {/* Tip Button */}
+            <button
+              onClick={handleTipClick}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-medium rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+            >
+              <Gift className="h-3 w-3" />
+              Tip Project
+            </button>
+
+            {/* Arrow Icon */}
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md transform group-hover:rotate-45 transition-transform duration-500">
+              <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            </div>
+          </div>
+          
+          {/* Voting tokens for this project */}
+          <div className="flex -space-x-1.5 mt-4">
+            <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+              <img src="/images/celo.png" alt="CELO" className="w-full h-full object-cover" />
+            </div>
+            <div className="w-6 h-6 rounded-full bg-white ring-2 ring-white flex items-center justify-center overflow-hidden">
+              <img src="/images/cusd.png" alt="cUSD" className="w-full h-full object-cover" />
+            </div>
+            <div className="w-6 h-6 rounded-full bg-purple-100 ring-2 ring-white flex items-center justify-center text-purple-500 text-xs font-bold">G</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tip Modal */}
+      {showTipModal && (
+        <TipModal
+          project={project}
+          isOpen={showTipModal}
+          onClose={() => setShowTipModal(false)}
+          onTipSuccess={() => {
+            setShowTipModal(false);
+            // Optionally refresh data or show success message
+          }}
+        />
+      )}
+    </>
+  );
 }
 
 // Campaign Card Component - following original design
