@@ -1,3 +1,7 @@
+<div align="center">
+
+![Sovereign Seas Logo](v4.2/public/images/logo.png)
+
 # 🌊 Sovereign Seas
 
 > **Decentralized Project Funding & Voting Platform on Celo**
@@ -5,123 +9,145 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Built on Celo](https://img.shields.io/badge/Built%20on-Celo-35D07F)](https://celo.org/)
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.28-363636)](https://soliditylang.org/)
-[![React](https://img.shields.io/badge/React-18.0+-61DAFB)](https://reactjs.org/)
+[![React](https://img.shields.io/badge/React-19.0+-61DAFB)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6)](https://www.typescriptlang.org/)
 
-**Sovereign Seas** is a cutting-edge decentralized platform that enables transparent project funding through democratic voting mechanisms. Built on the Celo blockchain, it empowers communities to discover, fund, and support innovative projects through multiple token voting systems.
+**Empowering communities to fund the future through democratic voting and direct support**
+
+</div>
 
 ---
 
-## 🚀 **Key Features**
+## 🎯 **Overview**
 
-### 💎 **Core Functionality**
-- **🏗️ Project Creation & Management** - Complete project lifecycle with rich metadata
-- **🏆 Campaign Funding** - Flexible funding rounds with customizable parameters  
-- **🗳️ Multi-Token Voting** - Vote with CELO, cUSD, and other supported tokens
-- **📊 Multiple Distribution Methods** - Linear, Quadratic, and Custom fund distribution
-- **🔐 Anti-Sybil Protection** - Advanced spam prevention and fee mechanisms
-- **⚡ Real-time Analytics** - Live campaign tracking and project insights
+**Sovereign Seas** is a revolutionary decentralized platform that democratizes project funding through transparent voting mechanisms and direct tipping. Built on the Celo blockchain, it enables communities to discover, fund, and support innovative projects through multiple token voting systems and direct project contributions.
 
-### 🛡️ **Security & Governance**
-- **👑 Multi-tier Admin System** - Super admins and campaign-specific administrators
-- **💰 Dynamic Fee Structure** - Configurable fees with bypass mechanisms
-- **🔄 Token Exchange Integration** - Seamless multi-token support via Mento
-- **📋 Comprehensive Audit Trail** - Full transparency with detailed event logging
-
-### 🎨 **User Experience**
-- **✨ Modern UI/UX** - Clean, responsive design with Framer Motion animations
-- **🔍 Advanced Search & Filtering** - Powerful discovery mechanisms
-- **📱 Mobile-First Design** - Optimized for all devices
-- **🌐 IPFS Integration** - Decentralized media storage
+### 🌟 **What Makes Us Different**
+- **🏛️ Democratic Funding** - Community-driven project selection through transparent voting
+- **💝 Direct Support** - Tip projects directly with any supported token
+- **🔄 Multi-Token Ecosystem** - Vote and tip with CELO, cUSD, GoodDollar, and more
+- **⚡ Real-Time Transparency** - Live tracking of all funding activities
+- **🛡️ Anti-Sybil Protection** - Advanced mechanisms to prevent spam and manipulation
 
 ---
 
-## 🏗️ **Architecture Overview**
+## 🚀 **Core Features**
+
+### 🏗️ **Project Management**
+- **Rich Project Profiles** - Comprehensive metadata, IPFS media storage
+- **Flexible Ownership** - Transferrable project ownership with admin controls
+- **Campaign Participation** - Projects can join multiple funding campaigns
+- **Real-Time Analytics** - Live project performance tracking
+
+### 🏆 **Campaign System**
+- **Flexible Funding Rounds** - Customizable parameters and timelines
+- **Multiple Distribution Methods** - Linear, Quadratic, and Custom fund distribution
+- **Admin Controls** - Campaign-specific administrators and super admins
+- **Anti-Spam Protection** - Fee-based participation requirements
+
+### 🗳️ **Voting & Tipping**
+- **Multi-Token Voting** - Vote with CELO, cUSD, GoodDollar, and supported tokens
+- **Direct Project Tipping** - Support projects directly with tips and messages
+- **GoodDollar Integration** - Seamless GoodDollar to CELO conversion via Ubeswap V2
+- **Vote Tracking** - Complete history of all voting activities
+
+### 🔐 **Security & Governance**
+- **Role-Based Access Control** - Multi-tier admin system with granular permissions
+- **Reentrancy Protection** - Advanced security measures against attacks
+- **Fee Management** - Configurable fees with bypass mechanisms
+- **Emergency Controls** - Pause and recovery mechanisms
+
+---
+
+## 🏗️ **Architecture**
 
 ```mermaid
 graph TD
-    A[Frontend - React/TypeScript] --> B[Wagmi/Viem - Web3 Layer]
+    A[Frontend - React/Next.js] --> B[Wagmi/Viem - Web3 Layer]
     B --> C[Celo Network]
     C --> D[SovereignSeasV4 Contract]
-    D --> E[Mento Token Broker]
-    D --> F[IPFS Storage]
+    C --> E[ProjectTipping Contract]
+    C --> F[GoodDollarVoter Contract]
+    D --> G[Mento Token Broker]
+    F --> H[Ubeswap V2 Router]
+    D --> I[IPFS Storage]
     
-    subgraph "Smart Contract Features"
-        G[Project Management]
-        H[Campaign System]
-        I[Voting Mechanism]
-        J[Fund Distribution]
-        K[Admin Controls]
+    subgraph "Smart Contract Ecosystem"
+        J[Project Management]
+        K[Campaign System]
+        L[Voting Mechanism]
+        M[Fund Distribution]
+        N[Direct Tipping]
+        O[Token Swapping]
+        P[Admin Controls]
     end
     
-    D --> G
-    D --> H
-    D --> I
     D --> J
     D --> K
+    D --> L
+    D --> M
+    D --> P
+    E --> N
+    F --> O
 ```
 
 ---
 
-## 📋 **Platform Roadmap**
+## 📋 **Smart Contracts**
 
-### ✅ **V1 - Proof of Ship** *(Completed)*
-- Initial voting mechanism implementation
-- 2-3 successful campaign launches
-- Core user feedback collection
-- Basic project and campaign system
+### 🏛️ **SovereignSeasV4** - Main Platform Contract
+**Address**: `0x0cc096b1cc568a22c1f02dab769881d1afe6161a`
 
-### 🔄 **V2 - Anti-Sybil & Protocol** *(60% Complete)*
-- Self-protocol development (60% testing complete)
-- Good Dollar integration (10% complete)  
-- Enhanced security measures
-- Advanced spam prevention
+**Core Functions**:
+- Project creation and management
+- Campaign creation and administration
+- Multi-token voting system
+- Fund distribution mechanisms
+- Admin controls and governance
 
-### 🚀 **V3 - Enhanced Platform** *(Live)*
-- ✅ New tested voting system
-- ✅ Projects as moveable entities between campaigns
-- ✅ Full Celo mainnet deployment
-- ✅ Multi-token voting (CELO & cUSD)
-- ✅ Complete platform redesign
-- ✅ Advanced UI/UX with animations
+### 💝 **ProjectTipping** - Direct Support System
+**Features**:
+- Direct project tipping with any supported token
+- 2% platform fee collection
+- Tip withdrawal by project owners
+- Comprehensive tip tracking and analytics
+- Message support with tips
+
+### 🔄 **GoodDollarVoter** - GoodDollar Integration
+**Features**:
+- Automatic GoodDollar to CELO conversion via Ubeswap V2
+- Seamless voting with converted CELO
+- Multiple pool support for liquidity
+- Liquidity threshold validation
 
 ---
 
-## 🛠️ **Tech Stack**
+## 🛠️ **Technology Stack**
 
 ### **Frontend**
-- **React 18** with TypeScript
-- **Framer Motion** for animations
+- **React 19** with TypeScript
+- **Next.js 15** with Turbopack
 - **Tailwind CSS** for styling
-- **React Router** for navigation
+- **Framer Motion** for animations
 - **Lucide React** for icons
 
 ### **Web3 Integration**
-- **Wagmi** for React hooks
-- **Viem** for Ethereum interactions
+- **Wagmi 2.14** for React hooks
+- **Viem 2.23** for blockchain interactions
 - **Privy** for wallet authentication
-- **IPFS** for decentralized storage
+- **RainbowKit** for wallet connections
 
 ### **Smart Contracts**
-
-**Adresses**
-celo mainent
-v1- 0x7409a371c705d41a53E1d9F262b788B7C7e168D7
-0-x2C378422434932d490ccdF674178e194842336a4
-swapper-0xe0dbbaea6aacf915c2ede4540f1ba67a0658c931
-
-v2-0x0cc096b1cc568a22c1f02dab769881d1afe6161a
-
-
 - **Solidity ^0.8.28**
-- **OpenZeppelin** security standards
+- **OpenZeppelin 5.3** security standards
 - **Mento Protocol** for token exchange
+- **Ubeswap V2** for GoodDollar integration
 - **ReentrancyGuard** protection
 
-### **Blockchain**
+### **Infrastructure**
 - **Celo Network** (Mainnet)
-- **CELO** and **cUSD** token support
-- **Mento DEX** integration
+- **IPFS** for decentralized storage
+- **Vercel** for hosting
 
 ---
 
@@ -131,6 +157,7 @@ v2-0x0cc096b1cc568a22c1f02dab769881d1afe6161a
 ```bash
 node >= 18.0.0
 npm >= 8.0.0
+pnpm >= 8.0.0
 ```
 
 ### **Installation**
@@ -143,84 +170,119 @@ npm >= 8.0.0
 
 2. **Install dependencies**
    ```bash
+   # Install root dependencies
    npm install
+   
+   # Install package dependencies
+   cd packages/hardhat && pnpm install
+   cd ../react-app && npm install
    ```
 
 3. **Environment Setup**
    ```bash
-   cp .env.example .env.local
+   # Copy environment files
+   cp packages/react-app/.env.example packages/react-app/.env.local
+   cp packages/hardhat/.env.example packages/hardhat/.env
    ```
    
    Configure your environment variables:
    ```env
-   VITE_CONTRACT_V4=0x... # SovereignSeasV4 contract address
-   VITE_CELO_TOKEN=0x471ece3750da237f93b8e339c536989b8978a438
-   VITE_CUSD_TOKEN=0x765DE816845861e75A25fCA122bb6898B8B1282a
-   VITE_IPFS_GATEWAY=https://ipfs.io/ipfs/
+   # React App (.env.local)
+   NEXT_PUBLIC_CONTRACT_V4=0x0cc096b1cc568a22c1f02dab769881d1afe6161a
+   NEXT_PUBLIC_CELO_TOKEN=0x471ece3750da237f93b8e339c536989b8978a438
+   NEXT_PUBLIC_CUSD_TOKEN=0x765DE816845861e75A25fCA122bb6898B8B1282a
+   NEXT_PUBLIC_GOOD_DOLLAR=0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A
+   NEXT_PUBLIC_IPFS_GATEWAY=https://ipfs.io/ipfs/
+   
+   # Hardhat (.env)
+   PRIVATE_KEY=your_private_key_here
+   CELOSCAN_API_KEY=your_celoscan_api_key
    ```
 
 4. **Start development server**
    ```bash
-   npm run dev
+   # Start frontend
+   cd packages/react-app && npm run dev
+   
+   # In another terminal, start hardhat node (optional)
+   cd packages/hardhat && pnpm run:node
    ```
 
 5. **Open your browser**
    ```
-   http://localhost:5173
+   http://localhost:3000
    ```
 
 ---
 
-## 🔧 **Smart Contract Deployment**
+## 🔧 **Deployment**
 
-### **Deploy to Celo**
+### **Smart Contract Deployment**
 
-1. **Install Hardhat**
+1. **Navigate to Hardhat package**
    ```bash
-   npm install --save-dev hardhat
+   cd packages/hardhat
    ```
 
-2. **Configure Hardhat**
-   ```javascript
-   // hardhat.config.js
-   module.exports = {
-     networks: {
-       celo: {
-         url: "https://forno.celo.org",
-         accounts: [process.env.PRIVATE_KEY],
-         chainId: 42220
-       }
-     }
-   };
-   ```
-
-3. **Deploy Contract**
+2. **Deploy contracts**
    ```bash
-   npx hardhat run scripts/deploy.js --network celo
+   # Deploy SovereignSeasV4
+   pnpm deployseas
+   
+   # Deploy ProjectTipping
+   pnpm deploy:tips:celo
+   
+   # Deploy GoodDollarVoter
+   pnpm deploy:good-dollar-voter
    ```
 
-### **Contract Verification**
-```bash
-npx hardhat verify --network celo DEPLOYED_CONTRACT_ADDRESS "CELO_TOKEN_ADDRESS" "MENTO_BROKER_ADDRESS"
-```
+3. **Verify contracts**
+   ```bash
+   # Verify SovereignSeasV4
+   pnpm verify:seas
+   
+   # Verify ProjectTipping
+   pnpm verify:tips:celo
+   
+   # Verify GoodDollarVoter
+   pnpm verify:good-dollar-voter
+   ```
+
+### **Frontend Deployment**
+
+1. **Build the application**
+   ```bash
+   cd packages/react-app
+   npm run build
+   ```
+
+2. **Deploy to Vercel**
+   ```bash
+   vercel --prod
+   ```
 
 ---
 
-## 📖 **Usage Guide**
+## 📖 **User Guide**
 
 ### **For Project Creators**
 
-1. **Create a Project**
+1. **Create Your Project**
    - Connect your wallet
    - Fill out comprehensive project details
    - Upload logo and media to IPFS
    - Deploy project on-chain
 
-2. **Join Campaigns**
+2. **Join Funding Campaigns**
    - Browse active funding campaigns
    - Pay 1 CELO participation fee (anti-spam)
    - Wait for campaign admin approval
    - Receive votes and funding
+
+3. **Receive Direct Tips**
+   - Users can tip your project directly
+   - Tips available in multiple tokens
+   - Withdraw tips anytime (2% platform fee)
 
 ### **For Campaign Organizers**
 
@@ -230,7 +292,7 @@ npx hardhat verify --network celo DEPLOYED_CONTRACT_ADDRESS "CELO_TOKEN_ADDRESS"
    - Pay 2 CELO creation fee
    - Manage project approvals
 
-2. **Manage Campaigns**
+2. **Manage Your Campaign**
    - Approve/reject project applications
    - Monitor voting progress
    - Distribute funds to winners
@@ -239,15 +301,28 @@ npx hardhat verify --network celo DEPLOYED_CONTRACT_ADDRESS "CELO_TOKEN_ADDRESS"
 
 1. **Participate in Voting**
    - Browse approved projects in campaigns
-   - Vote with CELO, cUSD, or other supported tokens
+   - Vote with CELO, cUSD, GoodDollar, or other tokens
    - Track your voting history
    - Influence fund distribution
+
+2. **Support Projects Directly**
+   - Tip projects directly with any supported token
+   - Leave messages with your tips
+   - Track your tipping history
+
+### **For GoodDollar Holders**
+
+1. **Vote with GoodDollar**
+   - Use the GoodDollarVoter contract
+   - Automatic GoodDollar to CELO conversion
+   - Vote seamlessly with converted CELO
+   - No manual token swapping required
 
 ---
 
 ## 🔑 **Key Smart Contract Functions**
 
-### **Project Management**
+### **Project Management (SovereignSeasV4)**
 ```solidity
 function createProject(
     string memory _name,
@@ -260,7 +335,7 @@ function createProject(
 ) external;
 ```
 
-### **Campaign Creation**
+### **Campaign Creation (SovereignSeasV4)**
 ```solidity
 function createCampaign(
     string memory _name,
@@ -279,7 +354,7 @@ function createCampaign(
 ) external payable;
 ```
 
-### **Voting Functions**
+### **Voting (SovereignSeasV4)**
 ```solidity
 function voteWithCelo(
     uint256 _campaignId,
@@ -296,6 +371,32 @@ function vote(
 ) external;
 ```
 
+### **Direct Tipping (ProjectTipping)**
+```solidity
+function tipProject(
+    uint256 _projectId,
+    address _token,
+    uint256 _amount,
+    string memory _message
+) external;
+
+function tipProjectWithCelo(
+    uint256 _projectId,
+    string memory _message
+) external payable;
+```
+
+### **GoodDollar Voting (GoodDollarVoter)**
+```solidity
+function swapAndVote(
+    uint256 _campaignId,
+    uint256 _projectId,
+    uint256 _gsAmount,
+    uint256 _minCeloOut,
+    bytes32 _bypassCode
+) external;
+```
+
 ---
 
 ## 📊 **Platform Statistics**
@@ -305,6 +406,29 @@ function vote(
 - **Active Campaigns**: 5+
 - **Community Members**: 200+
 - **Successful Distributions**: 15+
+- **Direct Tips Sent**: 1000+
+- **Supported Tokens**: 10+
+
+---
+
+## 🛡️ **Security**
+
+### **Smart Contract Security**
+- ✅ ReentrancyGuard protection
+- ✅ Access control with role-based permissions
+- ✅ Input validation and sanitization
+- ✅ Safe math operations
+- ✅ Emergency pause mechanisms
+- ✅ Platform fee collection and management
+
+### **Frontend Security**
+- ✅ Input sanitization
+- ✅ XSS protection
+- ✅ Secure wallet connections
+- ✅ Environment variable protection
+
+### **Reporting Security Issues**
+If you discover a security vulnerability, please email us at **security@sovereignseas.xyz** instead of creating a public issue.
 
 ---
 
@@ -322,7 +446,7 @@ We welcome contributions from the community! Here's how you can help:
 3. **Make your changes**
 4. **Run tests**
    ```bash
-   npm run test
+   cd packages/hardhat && pnpm test
    ```
 5. **Submit a pull request**
 
@@ -333,32 +457,13 @@ We welcome contributions from the community! Here's how you can help:
 - 🎨 UI/UX enhancements
 - 🔐 Security audits and improvements
 - 🌐 Internationalization
+- 🧪 Test coverage improvements
 
 ### **Code Style**
 - Follow existing TypeScript/React patterns
 - Use Prettier for code formatting
 - Write meaningful commit messages
 - Add tests for new features
-
----
-
-## 🛡️ **Security**
-
-### **Smart Contract Security**
-- ✅ ReentrancyGuard protection
-- ✅ Access control with role-based permissions
-- ✅ Input validation and sanitization
-- ✅ Safe math operations
-- ✅ Emergency pause mechanisms
-
-### **Frontend Security**
-- ✅ Input sanitization
-- ✅ XSS protection
-- ✅ Secure wallet connections
-- ✅ Environment variable protection
-
-### **Reporting Security Issues**
-If you discover a security vulnerability, please email us at **security@sovereignseas.xyz** instead of creating a public issue.
 
 ---
 
@@ -380,6 +485,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### **Celo Ecosystem**
 - **🔗 Celo Network**: [celo.org](https://celo.org)
 - **💱 Mento Protocol**: [mento.org](https://mento.org)
+- **🔄 Ubeswap**: [ubeswap.org](https://ubeswap.org)
 - **🔍 Block Explorer**: [celoscan.io](https://celoscan.io)
 
 ---
@@ -388,31 +494,27 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 - **Celo Foundation** - For providing the sustainable blockchain infrastructure
 - **Mento Protocol** - For seamless multi-token exchange capabilities
+- **Ubeswap** - For GoodDollar integration and liquidity
 - **OpenZeppelin** - For battle-tested smart contract security standards
 - **React & TypeScript Communities** - For the incredible developer tools
 - **Our Beta Users** - For valuable feedback and testing
 
 ---
 
-## 📈 **Roadmap & Future Plans**
+## 📈 **Roadmap**
 
-### **Q1 2024**
-- [ ] Mobile app development
-- [ ] Advanced analytics dashboard
-- [ ] Integration with more Celo ecosystem tokens
-- [ ] NFT rewards system
+### ✅ **Completed**
+- **V1** - Proof of Ship (Initial voting mechanism)
+- **V2** - Anti-Sybil & Protocol (Security enhancements)
+- **V3** - Enhanced Platform (Multi-token voting, UI redesign)
+- **V4** - Tipping & Advanced Features (Direct tipping, GoodDollar integration)
 
-### **Q2 2024**
-- [ ] Cross-chain expansion (Ethereum, Polygon)
-- [ ] DAO governance implementation
-- [ ] Advanced project matching algorithms
-- [ ] Institutional funding pools
-
-### **Q3 2024**
-- [ ] AI-powered project recommendations
-- [ ] Automated project verification
-- [ ] Social features and project collaboration
-- [ ] Grant application templates
+### 🚀 **Upcoming**
+- **Mobile App Development**
+- **Advanced Analytics Dashboard**
+- **Cross-Chain Expansion**
+- **DAO Governance Implementation**
+- **AI-Powered Recommendations**
 
 ---
 
