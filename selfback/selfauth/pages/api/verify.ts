@@ -1,32 +1,41 @@
 // pages/api/verify.ts (Pages Router API route)
-import { SelfBackendVerifier, DefaultConfigStore, AllIds } from '@selfxyz/core';
+import {
+  SelfBackendVerifier,
+  AllIds,
+  DefaultConfigStore,
+  VerificationConfig
+} from '@selfxyz/core';
 import fs from 'fs';
 import path from 'path';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Configure the Self backend verifier
-const configStore = new DefaultConfigStore({
-  excludedCountries: [],
-  ofac: false
-});
-
-const verifier = new SelfBackendVerifier(
-  'sovereign-seas',
-  'https://auth.sovseas.xyz/api/verify',
-  false, 
-  AllIds,
-  configStore,
-  'uuid'
-);
-
-interface VerificationData {
+// Add VerificationData interface
+type VerificationData = {
   timestamp: string;
-  walletAddress: string;
+  walletAddress: string | null;
   nationality: string;
   attestationId: string;
   userDefinedData: any;
   verified: boolean;
-}
+};
+
+// Configure the Self backend verifier
+const verification_config = {
+  minimumAge: 18,
+  nationality: true,
+};
+
+const configStore = new DefaultConfigStore(verification_config);
+
+const selfBackendVerifier = new SelfBackendVerifier(
+  "seasv2",                           
+  "https://auth.sovseas.xyz/api/verify", 
+  false,                                       
+  AllIds,                                     
+  configStore,                                
+  "hex"                                       
+);
+
 
 const saveVerificationData = async (data: VerificationData) => {
   const dataDir = path.join(process.cwd(), 'data');
@@ -67,62 +76,43 @@ const parseUserDefinedData = (hexData: string) => {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const { attestationId, proof, pubSignals, userContextData } = req.body;
-      console.log('Received verification request:', {
-        attestationId,
-        hasProof: !!proof,
-        hasPubSignals: !!pubSignals,
-        hasUserContextData: !!userContextData
-      });
-
-      // return  if any is not given
-      if (!attestationId || !proof || !pubSignals || !userContextData) {
-        res.status(400).json({
-          verified: false,
-          error: 'Missing required fields'
+      // Extract data from the request
+      const { attestationId, proof, publicSignals, userContextData } = req.body;
+      // Validate required fields
+      if (!proof || !publicSignals || !attestationId || !userContextData) {
+        return res.status(400).json({
+          message: "Proof, publicSignals, attestationId and userContextData are required",
         });
-        return;
       }
-      const result = await verifier.verify(
-        attestationId,
-        proof,
-        pubSignals,
-        userContextData
+      // Verify the proof
+      const result = await selfBackendVerifier.verify(
+        attestationId,    // Document type (1 = passport, 2 = EU ID card)
+        proof,            // The zero-knowledge proof
+        publicSignals,    // Public signals array
+        userContextData   // User context data
       );
-      console.log('Verification result:', {
-        isValid: result.isValidDetails.isValid,
-        nationality: result.discloseOutput?.nationality
-      });
+      // Check if verification was successful
       if (result.isValidDetails.isValid) {
-        const userDefinedData = parseUserDefinedData(userContextData.userDefinedData || '');
-        const walletAddress = userDefinedData?.connectedWallet || null;
-        const verificationData: VerificationData = {
-          timestamp: new Date().toISOString(),
-          walletAddress: walletAddress,
-          nationality: result.discloseOutput?.nationality || 'Unknown',
-          attestationId: attestationId,
-          userDefinedData: userDefinedData,
-          verified: true
-        };
-        await saveVerificationData(verificationData);
-        res.status(200).json({
-          verified: true,
-          nationality: result.discloseOutput?.nationality,
-          walletAddress: walletAddress,
-          timestamp: verificationData.timestamp
+        // Verification successful - process the result
+        return res.status(200).json({
+          status: "success",
+          result: true,
+          credentialSubject: result.discloseOutput,
         });
       } else {
-        console.log('Verification failed:', result.isValidDetails);
-        res.status(400).json({
-          verified: false,
-          error: 'Verification failed'
+        // Verification failed
+        return res.status(500).json({
+          status: "error",
+          result: false,
+          message: "Verification failed",
+          details: result.isValidDetails,
         });
       }
     } catch (error) {
-      console.error('Verification error:', error);
-      res.status(500).json({
-        verified: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+      return res.status(500).json({
+        status: "error",
+        result: false,
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
   } else if (req.method === 'GET') {

@@ -37,15 +37,9 @@ import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import { v4 as uuidv4 } from 'uuid';
+import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
 
-// Real Self Protocol imports - updated to match playground
-import { countryCodes, SelfAppDisclosureConfig, type Country3LetterCode } from '@selfxyz/common';
-import { countries, SelfAppBuilder } from '@selfxyz/qrcode';
-import type { SelfApp } from '@selfxyz/common';
-
-// Import the QR code component with SSR disabled to prevent document references during server rendering
-import React, { lazy, Suspense } from 'react';
-const SelfQRcodeWrapper = lazy(() => import('@selfxyz/qrcode'));
+import { getUniversalLink } from "@selfxyz/core";
 
 // GoodDollar imports
 import GoodDollarVerifyModal from '@/components/goodDollar';
@@ -64,6 +58,43 @@ interface StatCardProps {
   trend?: number | null;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
+
+function VerificationComponent() {
+  const { address } = useAccount();
+  if (!address) return null;
+  const selfApp = new SelfAppBuilder({
+    appName: "Sovereign Seas",
+    scope: "seasv2",
+    endpoint: "https://auth.sovseas.xyz/api/verify",
+    logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
+    userId: address,
+    userIdType: "hex",
+    endpointType: "staging_https",
+    disclosures: {
+      nationality: true,
+      minimumAge: 18,
+    },
+  }).build();
+  return (
+    <SelfQRcodeWrapper
+      selfApp={selfApp}
+      onSuccess={async () => {
+        console.log('[ProfilePage] Self verification onSuccess triggered');
+        //setShowVerification(false);
+        //setShowSuccessModal(true);
+        //setVerificationStatus('success');
+        //setVerificationError(null);
+        //setIsVerified(true);
+      }} 
+      //onError={() => {
+      //  console.error('Failed to verify identity');
+      //}}
+    />
+  );
+}
+
+
+
 
 const StatCard = ({ icon: Icon, label, value, color = 'blue', trend = null, onClick }: StatCardProps) => (
   <div 
@@ -311,95 +342,39 @@ const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
   );
 };
 
-function DeeplinkQRCode({ userId, address, onSuccess, onError }: { 
-  userId: string, 
-  address: string | undefined, 
-  onSuccess: () => void
-  onError?: (error: any) => void
-}) {
-  // 1. Stabilize disclosures object
-  const disclosures = useMemo<SelfAppDisclosureConfig>(() => ({
-    issuing_state: false,
-    name: false,
-    nationality: true,
-    date_of_birth: false,
-    passport_number: false,
-    gender: false,
-    expiry_date: false,
-    minimumAge: 18,
-    excludedCountries: [
-      countries.IRAN,
-      countries.IRAQ,
-      countries.NORTH_KOREA,
-      countries.RUSSIA,
-      countries.SYRIAN_ARAB_REPUBLIC,
-      countries.VENEZUELA
-    ] as Country3LetterCode[],
-    ofac: true,
-  }), []);
+  
 
-  // 2. Remove saveOptionsToServer and related useEffect
-  // (Removed)
-
-  // 3. Stabilize selfApp creation
-  const selfApp = useMemo(() => {
-    if (!userId) return null;
-    const app = new SelfAppBuilder({
-      appName: "Sovereign Seas",
-      scope: "seasv2",
-      endpoint: "https://auth.sovseas.xyz/api/verify",
-      endpointType: "https",
-      logoBase64: "https://i.imgur.com/Rz8B3s7.png",
-      userId, // use the uuid-based userId
-      disclosures: {
-        ...disclosures,
-        minimumAge: disclosures.minimumAge && disclosures.minimumAge > 0 ? disclosures.minimumAge : undefined,
-      },
-      version: 2, 
-      userDefinedData: "hello from sovereign seas",
-      devMode: true,
-    } as Partial<SelfApp>).build();
-    return app;
-  }, [userId, disclosures]); // disclosures is stable due to useMemo([])
-
-  useEffect(() => {
-    console.log('[DeeplinkQRCode] Mounted with userId:', userId, 'address:', address);
-  }, [userId, address]);
-
-  if (!selfApp) {
-    return <p className="text-center">Loading QR Code...</p>;
-  }
-
-  return (
-    <div className="flex flex-col items-center justify-center mb-6">
-      <div className="relative group transition-transform duration-300 hover:scale-105 focus-within:scale-105">
-        <div className="p-3 bg-gradient-to-br from-blue-100 via-white to-purple-100 rounded-2xl shadow-lg border border-blue-200 animate-pulse group-hover:animate-none transition-all">
-          <Suspense fallback={<p className="text-center">Loading QR Code...</p>}>
-            <SelfQRcodeWrapper
-              key={userId} // Add this key to prevent unnecessary re-mounts
-              selfApp={selfApp}
-              onSuccess={() => {
-                console.log('[DeeplinkQRCode] onSuccess called from SelfQRcodeWrapper');
-                onSuccess();
-              }}
-              darkMode={false}
-            />
-          </Suspense>
-        </div>
-        <div className="absolute -top-2 -right-2 animate-bounce">
-          <Shield className="h-6 w-6 text-blue-400 drop-shadow" />
-        </div>
-      </div>
-      <div className="mt-4 w-full px-4 py-2 min-h-12 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in flex items-center justify-center gap-2">
-        <span role="img" aria-label="mobile" className="mr-2">📱</span>
-        Scan QR code with Self app
-      </div>
-      <p className="mt-2 text-xs text-gray-500">
-        User ID: {userId.substring(0, 8)}...
-      </p>
-    </div>
-  );
-}
+//   return (
+//     <div className="flex flex-col items-center justify-center mb-6">
+//       <div className="relative group transition-transform duration-300 hover:scale-105 focus-within:scale-105">
+//         <div className="p-3 bg-gradient-to-br from-blue-100 via-white to-purple-100 rounded-2xl shadow-lg border border-blue-200 animate-pulse group-hover:animate-none transition-all">
+//           <Suspense fallback={<p className="text-center">Loading QR Code...</p>}>
+//             <VerificationComponent />
+//           </Suspense>
+//         </div>
+//         <div className="absolute -top-2 -right-2 animate-bounce">
+//           <Shield className="h-6 w-6 text-blue-400 drop-shadow" />
+//         </div>
+//       </div>
+//       <div className="mt-4 w-full px-4 py-2 min-h-12 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in flex items-center justify-center gap-2">
+//         <span role="img" aria-label="mobile" className="mr-2">📱</span>
+//         Scan QR code with Self app
+//       </div>
+//       <p className="mt-2 text-xs text-gray-500">
+//         User ID: {address?.substring(0, 8)}...
+//       </p>
+//       {/* Universal Link button for mobile */}
+//       {universalLink && (
+//         <button
+//           className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+//           onClick={() => window.open(universalLink, "_blank")}
+//         >
+//           Open Self App
+//         </button>
+//       )}
+//     </div>
+//   );
+// }
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -1177,36 +1152,8 @@ export default function ProfilePage() {
              Scan the QR code with the Self app to verify your identity. This will enable enhanced features and anti-Sybil protection in V3.
            </p>
            
-           <DeeplinkQRCode 
-             userId={userId} 
-             address={address} 
-             onSuccess={async () => {
-               console.log('[ProfilePage] Self verification onSuccess triggered');
-               setShowVerification(false);
-               setShowSuccessModal(true);
-               setVerificationStatus('success');
-               setVerificationError(null);
-               setIsVerified(true);
-             }} 
-             onError={(error) => {
-               console.error('[ProfilePage] Self verification error:', error);
-               const errorCode = error.error_code || 'Unknown';
-               const reason = error.reason || 'Unknown error';
-               
-               setVerificationError(`${errorCode}: ${reason}`);
-               setVerificationStatus('error');
-               setShowSuccessModal(true);
-               
-               console.error('[ProfilePage] Verification failed:', {
-                 errorCode,
-                 reason,
-                 fullError: error,
-                 userId,
-                 address,
-                 timestamp: new Date().toISOString()
-               });
-             }}
-           />
+           <VerificationComponent /> 
+            
          </div>
        </div>
      )}
