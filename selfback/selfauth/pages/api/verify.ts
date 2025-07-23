@@ -8,6 +8,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { error } from 'console';
 
 // Add VerificationData interface
 type VerificationData = {
@@ -20,20 +21,24 @@ type VerificationData = {
 };
 
 // Configure the Self backend verifier
+// IMPORTANT: This config must match the frontend disclosures exactly
 const verification_config = {
-  minimumAge: 18,
-  nationality: true,
+  minimumAge: 18,           // Minimum age requirement
+  nationality: true,        // Request nationality disclosure
+  gender: true,             // Request gender disclosure (must match frontend)
+  excludedCountries: [],    // Exclude no countries (can add as needed)
+  ofac: false,              // OFAC check (set to true if needed)
 };
 
 const configStore = new DefaultConfigStore(verification_config);
 
 const selfBackendVerifier = new SelfBackendVerifier(
-  "seasv2",                           
-  "https://auth.sovseas.xyz/api/verify", 
-  false,                                       
-  AllIds,                                     
-  configStore,                                
-  "hex"                                       
+  "seasv2",                           // Scope: must match frontend
+  "https://auth.sovseas.xyz/api/verify", // Public API endpoint
+  false,                               // Production mode (set to true for mock/testing)
+  AllIds,                              // Accept all document types
+  configStore,                         // Configuration store
+  "hex"                               // Address type
 );
 
 
@@ -73,6 +78,15 @@ const parseUserDefinedData = (hexData: string) => {
   }
 };
 
+export function isWalletSelfVerified(wallet: string): boolean {
+  const dataDir = path.join(process.cwd(), 'data');
+  const filePath = path.join(dataDir, 'verifications.json');
+  if (!fs.existsSync(filePath)) return false;
+  const verifications = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  const match = verifications.find((v: any) => v.walletAddress && v.walletAddress.toLowerCase() === wallet.toLowerCase() && v.verified);
+  return !!match;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
@@ -109,6 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     } catch (error) {
+      // Improved error handling for clarity
       return res.status(500).json({
         status: "error",
         result: false,

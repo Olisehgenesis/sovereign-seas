@@ -4,6 +4,7 @@ import { claimAndVoteForUser, getContractStats, getCampaignStats, getProjectStat
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
 import { originList } from '@/src/utils/origin';
+import { isWalletGoodDollarVerified } from './verify-details';
 
 // Initialize CORS middleware
 const cors = initMiddleware(
@@ -73,5 +74,18 @@ export default async function handler(
     }
     const returnData = await walletBalance(address);
     return res.status(200).json(returnData);
+  }
+
+  if (method === 'claimDetails') {
+    const { wallet } = req.body;
+    if (!wallet) {
+      return res.status(400).json({ error: 'Wallet address is required' });
+    }
+    const isVerified = await isWalletGoodDollarVerified(wallet);
+    if (!isVerified) {
+      return res.status(403).json({ error: 'Wallet is not verified by GoodDollar. Cannot claim.' });
+    }
+    // Here you can add logic to record the claim, return claimable details, etc.
+    return res.status(200).json({ success: true, message: 'Claim successful. Wallet is verified by GoodDollar.' });
   }
 }

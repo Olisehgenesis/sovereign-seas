@@ -49,7 +49,7 @@ async function saveGoodDollarVerification(walletAddress: string, verificationDat
       provider: 'gooddollar',
       verifiedAt: new Date().toISOString(),
       isValid: verificationData.verificationStatus || true,
-      root: verificationData.root,
+      root: verificationData.root || false,
       userId: verificationData.userId || walletAddress, // Use wallet address as userId
       verificationStatus: verificationData.verificationStatus || true
     };

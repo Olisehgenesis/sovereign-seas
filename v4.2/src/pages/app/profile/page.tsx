@@ -69,7 +69,6 @@ function VerificationComponent() {
     logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
     userId: address,
     userIdType: "hex",
-    endpointType: "staging_https",
     disclosures: {
       nationality: true,
       minimumAge: 18,
@@ -446,12 +445,14 @@ export default function ProfilePage() {
         setVerificationError(responseData.reason || 'Failed to save GoodDollar verification. Please try again.');
         setVerificationStatus('error');
         setShowSuccessModal(true);
+        window.alert(responseData.reason || 'Failed to save GoodDollar verification. Please try again.');
       }
     } catch (err) {
       console.error('Error during GoodDollar verification save:', err);
       setVerificationError(err instanceof Error ? err.message : 'Failed to save GoodDollar verification. Please try again.');
       setVerificationStatus('error');
       setShowSuccessModal(true);
+      window.alert(err instanceof Error ? err.message : 'Failed to save GoodDollar verification. Please try again.');
     }
   };
 
@@ -492,11 +493,14 @@ export default function ProfilePage() {
           } else {
             // If 404 or other error, user is not verified
             setIsVerified(false);
+            setVerificationProviders([]);
             console.log('No verification found, user is not verified');
+            window.alert('No verification found, user is not verified');
           }
         } catch (error) {
           console.error('Error checking verification status:', error);
           setIsVerified(false);
+          window.alert(error instanceof Error ? error.message : 'Error checking verification status.');
         }
       };
 

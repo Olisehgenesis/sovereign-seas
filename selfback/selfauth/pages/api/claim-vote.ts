@@ -7,6 +7,10 @@ import { initMiddleware } from '../../lib/init-middleware';
 import fs from 'fs';
 import path from 'path';
 import { originList } from '@/src/utils/origin';
+import { createPublicClient, createWalletClient, http} from 'viem';
+import { PublicClient, WalletClient } from "viem";
+import { celo } from 'viem/chains';
+import { isWalletGoodDollarVerified } from './verify-details';
 
 // Initialize CORS middleware
 const cors = initMiddleware(
@@ -18,6 +22,16 @@ const cors = initMiddleware(
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
 const testnetEnabled = process.env.TESTNET_ENABLED === 'true';
+
+const publicClient = createPublicClient({
+  chain: celo,
+  transport: http(),
+});
+const walletClient = createWalletClient({
+  chain: celo,
+  transport: http(),
+  // ...add your wallet config if needed
+});
 
 // Helper function to check if a wallet is verified
 async function isWalletVerified(wallet: string): Promise<boolean> {
@@ -72,12 +86,16 @@ export default async function handler(
       });
     }
 
-    // Check if beneficiary is verified
-    const isVerified = await isWalletVerified(beneficiaryAddress);
+    // Check if beneficiary is verified (self or GoodDollar)
+    const isSelfVerified = await isWalletVerified(beneficiaryAddress);
+    let isVerified = isSelfVerified;
+    if (!isSelfVerified) {
+      isVerified = await isWalletGoodDollarVerified(beneficiaryAddress);
+    }
     if (!isVerified) {
       return res.status(403).json({
         success: false,
-        error: 'Beneficiary wallet is not verified. Please verify your wallet before claiming.'
+        error: 'Beneficiary wallet is not verified (self or GoodDollar). Please verify your wallet before claiming.'
       });
     }
 
