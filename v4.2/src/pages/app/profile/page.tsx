@@ -514,7 +514,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (isConnected && address) {
       setVerificationLoading(true);
-      fetch(`https://auth.sovseas.xyz/api/verify-details?wallet=${address}`)
+      fetch(`https://selfauth.vercel.app/api/verify-details?wallet=${address}`)
       //log the response
       .then(res => {
         console.log('Verification details response:', res);
