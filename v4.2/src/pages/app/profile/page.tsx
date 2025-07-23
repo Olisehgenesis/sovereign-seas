@@ -45,6 +45,8 @@ import { getUniversalLink } from "@selfxyz/core";
 import GoodDollarVerifyModal from '@/components/goodDollar';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
+// Add GoodDollar logo import (add the image to public/images/gooddollar.png if not present)
+// import goodDollarLogo from '/public/images/good.png';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -390,6 +392,8 @@ export default function ProfilePage() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [verificationProviders, setVerificationProviders] = useState<string[]>([]);
+  const [verificationDetails, setVerificationDetails] = useState<any>(null);
+  const [verificationLoading, setVerificationLoading] = useState(false);
 
   // Generate userId using uuidv4 like playground
   useEffect(() => {
@@ -468,7 +472,6 @@ export default function ProfilePage() {
       const checkVerificationStatus = async () => {
         try {
           console.log('Checking verification status for wallet:', address);
-          
           // Use the new backend endpoint that returns profile data
           const response = await fetch(`https://auth.sovseas.xyz/api/verify?wallet=${address}`, {
             method: 'GET',
@@ -480,7 +483,6 @@ export default function ProfilePage() {
           if (response.ok) {
             const data = await response.json();
             console.log('Verification check response:', data);
-            
             if (data.profile && data.profile.isValid) {
               setIsVerified(true);
               setVerificationProviders(data.profile.providers || []);
@@ -500,11 +502,25 @@ export default function ProfilePage() {
         } catch (error) {
           console.error('Error checking verification status:', error);
           setIsVerified(false);
-          window.alert(error instanceof Error ? error.message : 'Error checking verification status.');
+          // Log error instead of alerting
+          console.error(error instanceof Error ? error.message : 'Error checking verification status.');
         }
       };
-
       checkVerificationStatus();
+    }
+  }, [isConnected, address]);
+
+  // Fetch verification details from new API
+  useEffect(() => {
+    if (isConnected && address) {
+      setVerificationLoading(true);
+      fetch(`https://auth.sovseas.xyz/api/verify-details?wallet=${address}`)
+        .then(res => res.json())
+        .then(data => {
+          setVerificationDetails(data);
+          setVerificationLoading(false);
+        })
+        .catch(() => setVerificationLoading(false));
     }
   }, [isConnected, address]);
 
@@ -592,6 +608,43 @@ export default function ProfilePage() {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-lg">
                   {address?.slice(2, 4).toUpperCase()}
                 </div>
+                {/* Badges Row */}
+                <div className="flex gap-2 absolute left-full top-1/2 -translate-y-1/2 ml-4">
+                  {/* GoodDollar Badge */}
+                  {verificationDetails?.gooddollar && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-full text-xs font-medium text-green-700 shadow">
+                      {verificationDetails.gooddollar.isVerified ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <img src="/images/good.png" alt="GoodDollar" className="h-4 w-4" />
+                          <span>GoodDollar</span>
+                        </>
+                      ) : (
+                        <>
+                          <img src="/images/good.png" alt="GoodDollar" className="h-4 w-4 opacity-50" />
+                          <span className="text-gray-400">GoodDollar</span>
+                          <button
+                            className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-200"
+                            onClick={() => setShowGoodDollarVerification(true)}
+                          >
+                            Verify
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {/* Self Badge */}
+                  {verificationDetails?.self && verificationDetails.self.isVerified && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700 shadow">
+                      <Shield className="h-4 w-4 text-blue-600" />
+                      <span>Self</span>
+                      {verificationDetails.self.nationality && (
+                        <span className="ml-1">{verificationDetails.self.nationality}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* End Badges Row */}
                 {isVerified && (
                   <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
                     <CheckCircle className="h-4 w-4 text-white" />

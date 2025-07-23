@@ -9,6 +9,9 @@ import fs from 'fs';
 import path from 'path';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { error } from 'console';
+import Cors from 'cors';
+import { initMiddleware } from '../../lib/init-middleware';
+import { originList } from '@/src/utils/origin';
 
 // Add VerificationData interface
 type VerificationData = {
@@ -87,7 +90,17 @@ export function isWalletSelfVerified(wallet: string): boolean {
   return !!match;
 }
 
+// Initialize CORS middleware
+const cors = initMiddleware(
+  Cors({
+    origin: originList,
+    methods: ['GET', 'POST', 'OPTIONS'],
+  })
+);
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Run the CORS middleware
+  await cors(req, res);
   if (req.method === 'POST') {
     try {
       // Extract data from the request
