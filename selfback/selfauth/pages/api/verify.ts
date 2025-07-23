@@ -146,22 +146,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'GET') {
     try {
       const walletAddress = req.query.wallet;
-      // Ensure walletAddress is a string
       const walletAddressStr = Array.isArray(walletAddress) ? walletAddress[0] : walletAddress;
       const dataDir = path.join(process.cwd(), 'data');
       const filePath = path.join(dataDir, 'verifications.json');
-      if (!fs.existsSync(filePath)) {
-        res.status(200).json({ verifications: [] });
-        return;
+      let selfDetails = { isVerified: false };
+      let providers: string[] = [];
+      let isValid = false;
+      let verified = false;
+      if (!fs.existsSync(filePath) || !walletAddressStr) {
+        return res.status(200).json({
+          profile: { isValid: false, providers: [] },
+          verified: false,
+          gooddollar: { isVerified: false },
+          self: selfDetails
+        });
       }
       const fileContent = fs.readFileSync(filePath, 'utf8');
       const verifications: VerificationData[] = JSON.parse(fileContent);
-      const filteredVerifications = walletAddressStr
-        ? verifications.filter(v => v.walletAddress && v.walletAddress.toLowerCase() === walletAddressStr.toLowerCase())
-        : verifications;
-      res.status(200).json({
-        verifications: filteredVerifications,
-        total: filteredVerifications.length
+      const filteredVerifications = verifications.filter(v => v.walletAddress && v.walletAddress.toLowerCase() === walletAddressStr.toLowerCase());
+      if (filteredVerifications.length > 0) {
+        const latest = filteredVerifications[0];
+        if (latest.verified) {
+          selfDetails = { isVerified: true };
+          providers.push('Self');
+          isValid = true;
+          verified = true;
+        }
+      }
+      return res.status(200).json({
+        profile: { isValid, providers },
+        verified,
+        gooddollar: { isVerified: false },
+        self: selfDetails
       });
     } catch (error) {
       console.error('Error retrieving verification data:', error);
