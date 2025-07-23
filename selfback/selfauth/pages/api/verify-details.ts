@@ -53,7 +53,7 @@ export default async function handler(
   res: NextApiResponse
 ) {
   // Run the CORS middleware
-  await cors(req, res);
+  // await cors(req, res);
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });

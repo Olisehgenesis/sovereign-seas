@@ -515,6 +515,11 @@ export default function ProfilePage() {
     if (isConnected && address) {
       setVerificationLoading(true);
       fetch(`https://auth.sovseas.xyz/api/verify-details?wallet=${address}`)
+      //log the response
+      .then(res => {
+        console.log('Verification details response:', res);
+        return res.json();
+      })
         .then(res => res.json())
         .then(data => {
           setVerificationDetails(data);
