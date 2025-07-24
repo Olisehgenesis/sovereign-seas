@@ -28,7 +28,8 @@ import {
   X,
   Star,
   User,
-  CreditCard
+  CreditCard,
+  Smartphone
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
@@ -64,6 +65,7 @@ interface StatCardProps {
 
 function VerificationComponent() {
   const { address } = useAccount();
+  const [universalLink, setUniversalLink] = useState<string | null>(null);
   if (!address) return null;
   const selfApp = new SelfAppBuilder({
     appName: "Sovereign Seas",
@@ -75,23 +77,44 @@ function VerificationComponent() {
     disclosures: {
       nationality: true,
       minimumAge: 18,
+      gender: true,
+      excludedCountries: [],
+      ofac: false,
     },
   }).build();
+
+  useEffect(() => {
+    setUniversalLink(getUniversalLink(selfApp as any));
+  }, [address]);
+
   return (
-    <SelfQRcodeWrapper
-      selfApp={selfApp}
-      onSuccess={async () => {
-        console.log('[ProfilePage] Self verification onSuccess triggered');
-        //setShowVerification(false);
-        //setShowSuccessModal(true);
-        //setVerificationStatus('success');
-        //setVerificationError(null);
-        //setIsVerified(true);
-      }} 
-      //onError={() => {
-      //  console.error('Failed to verify identity');
-      //}}
-    />
+    <div>
+      {/* Show deep link button on mobile */}
+      <div className="md:hidden flex flex-col items-center gap-2 mb-4">
+        <button
+          onClick={() => universalLink && window.open(universalLink, '_blank')}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium"
+        >
+          <Smartphone className="h-5 w-5" />
+          Open Self App
+        </button>
+        <p className="text-xs text-gray-500">Tap to open the Self app directly</p>
+      </div>
+      {/* Show QR code on desktop */}
+      <div className="hidden md:flex justify-center">
+        <SelfQRcodeWrapper
+          selfApp={selfApp}
+          onSuccess={async () => {
+            console.log('[ProfilePage] Self verification onSuccess triggered');
+            //setShowVerification(false);
+            //setShowSuccessModal(true);
+            //setVerificationStatus('success');
+            //setVerificationError(null);
+            //setIsVerified(true);
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
