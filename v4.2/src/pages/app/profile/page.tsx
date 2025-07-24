@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useWalletClient } from 'wagmi';
 import { 
   FileCode,
   Vote,
@@ -40,6 +40,7 @@ import { v4 as uuidv4 } from 'uuid';
 import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
 
 import { getUniversalLink } from "@selfxyz/core";
+import { getGoodLink } from '@/utils/get-good-link';
 
 // GoodDollar imports
 import GoodDollarVerifyModal from '@/components/goodDollar';
@@ -67,7 +68,7 @@ function VerificationComponent() {
   const selfApp = new SelfAppBuilder({
     appName: "Sovereign Seas",
     scope: "seasv2",
-    endpoint: "https://auth.sovseas.xyz/api/verify",
+    endpoint: "https://selfauth.vercel.app/api/verify",
     logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
     userId: address,
     userIdType: "hex",
@@ -394,6 +395,9 @@ export default function ProfilePage() {
   const [verificationProviders, setVerificationProviders] = useState<string[]>([]);
   const [verificationDetails, setVerificationDetails] = useState<any>(null);
   const [verificationLoading, setVerificationLoading] = useState(false);
+  const [showGoodDollarPopup, setShowGoodDollarPopup] = useState(false);
+  const [goodDollarLink, setGoodDollarLink] = useState<string | null>(null);
+  const { data: walletClient } = useWalletClient();
 
   // Generate userId using uuidv4 like playground
   useEffect(() => {
@@ -418,7 +422,7 @@ export default function ProfilePage() {
 
     try {
       console.log('Starting GoodDollar verification save...');
-      const response = await fetch('https://auth.sovseas.xyz/api/verify-gooddollar', {
+      const response = await fetch('https://selfauth.vercel.app/api/verify-gooddollar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -460,72 +464,62 @@ export default function ProfilePage() {
     }
   };
 
+  // Handler for GoodDollar Verify button
+  const handleGoodDollarVerifyClick = async () => {
+    if (!address) return;
+    setShowGoodDollarPopup(true);
+    setGoodDollarLink(null);
+    try {
+      if (!walletClient) {
+        setGoodDollarLink(null);
+        window.alert('Wallet client not available. Please connect your wallet.');
+        return;
+      }
+      const link = await getGoodLink({
+        address,
+        walletClient,
+        popupMode: true,
+        callbackUrl: window.location.href,
+        chainId: undefined
+      });
+      setGoodDollarLink(link);
+    } catch (e) {
+      setGoodDollarLink(null);
+      window.alert('Failed to generate GoodDollar verification link.');
+    }
+  };
+
   // Get user's CELO balance
   const { data: celoBalance } = useBalance({
     address,
     token: CELO_TOKEN,
   });
 
-  // Check if user is verified when wallet connects
-  useEffect(() => {
-    if (isConnected && address) {
-      const checkVerificationStatus = async () => {
-        try {
-          console.log('Checking verification status for wallet:', address);
-          // Use the new backend endpoint that returns profile data
-          const response = await fetch(`https://auth.sovseas.xyz/api/verify?wallet=${address}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Verification check response:', data);
-            if (data.profile && data.profile.isValid) {
-              setIsVerified(true);
-              setVerificationProviders(data.profile.providers || []);
-              console.log('User is verified with providers:', data.profile.providers);
-            } else {
-              setIsVerified(false);
-              setVerificationProviders([]);
-              console.log('User is not verified');
-            }
-          } else {
-            // If 404 or other error, user is not verified
-            setIsVerified(false);
-            setVerificationProviders([]);
-            console.log('No verification found, user is not verified');
-            window.alert('No verification found, user is not verified');
-          }
-        } catch (error) {
-          console.error('Error checking verification status:', error);
-          setIsVerified(false);
-          // Log error instead of alerting
-          console.error(error instanceof Error ? error.message : 'Error checking verification status.');
-        }
-      };
-      checkVerificationStatus();
-    }
-  }, [isConnected, address]);
-
-  // Fetch verification details from new API
+  // Check if user is verified when wallet connects (single API call for all verification info)
   useEffect(() => {
     if (isConnected && address) {
       setVerificationLoading(true);
       fetch(`https://selfauth.vercel.app/api/verify-details?wallet=${address}`)
-      //log the response
-      .then(res => {
-        console.log('Verification details response:', res);
-        return res.json();
-      })
-        .then(res => res.json())
-        .then(data => {
-          setVerificationDetails(data);
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Failed to fetch verification');
+          const data = await response.json();
+          // Set all state from the single response
+          setIsVerified(!!data.verified);
+          setVerificationProviders(data.profile?.providers || []);
+          setVerificationDetails({
+            gooddollar: data.gooddollar,
+            self: data.self,
+          });
+          console.log('Verification details:', { gooddollar: data.gooddollar, self: data.self });
           setVerificationLoading(false);
         })
-        .catch(() => setVerificationLoading(false));
+        .catch((error) => {
+          setIsVerified(false);
+          setVerificationProviders([]);
+          setVerificationDetails(null);
+          setVerificationLoading(false);
+          console.error('Error checking verification status:', error);
+        });
     }
   }, [isConnected, address]);
 
@@ -613,41 +607,52 @@ export default function ProfilePage() {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-lg">
                   {address?.slice(2, 4).toUpperCase()}
                 </div>
-                {/* Badges Row */}
-                <div className="flex gap-2 absolute left-full top-1/2 -translate-y-1/2 ml-4">
-                  {/* GoodDollar Badge */}
-                  {verificationDetails?.gooddollar && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-full text-xs font-medium text-green-700 shadow">
-                      {verificationDetails.gooddollar.isVerified ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <img src="/images/good.png" alt="GoodDollar" className="h-4 w-4" />
-                          <span>GoodDollar</span>
-                        </>
-                      ) : (
-                        <>
-                          <img src="/images/good.png" alt="GoodDollar" className="h-4 w-4 opacity-50" />
-                          <span className="text-gray-400">GoodDollar</span>
-                          <button
-                            className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-200"
-                            onClick={() => setShowGoodDollarVerification(true)}
-                          >
-                            Verify
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {/* Self Badge */}
-                  {verificationDetails?.self && verificationDetails.self.isVerified && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700 shadow">
-                      <Shield className="h-4 w-4 text-blue-600" />
-                      <span>Self</span>
-                      {verificationDetails.self.nationality && (
-                        <span className="ml-1">{verificationDetails.self.nationality}</span>
-                      )}
-                    </div>
-                  )}
+                {/* Badges Row - Show as smaller stacked cards */}
+                <div className="flex flex-col gap-3 mt-4 w-48">
+                  {/* GoodDollar Badge Card */}
+                  <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.gooddollar?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <img src="/images/good.png" alt="GoodDollar" className={`h-5 w-5 mb-1 ${verificationDetails?.gooddollar?.isVerified ? '' : 'opacity-50'}`} />
+                    <span className="text-base font-bold mb-0.5">GoodDollar</span>
+                    {verificationDetails?.gooddollar?.isVerified ? (
+                      <div className="flex items-center gap-1 mb-1">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-green-700 font-semibold text-xs">Verified</span>
+                      </div>
+                    ) : (
+                      <button
+                        className="mt-1 px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+                        onClick={handleGoodDollarVerifyClick}
+                      >
+                        Verify with GoodDollar
+                      </button>
+                    )}
+                    {/* Show expiry if available */}
+                    {verificationDetails?.gooddollar?.isVerified && verificationDetails.gooddollar.expiry?.expiryDate && (
+                      <span className="mt-1 text-[10px] text-gray-500">exp. {new Date(verificationDetails.gooddollar.expiry.expiryDate).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                  {/* Self Badge Card */}
+                  <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.self?.isVerified ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <Shield className={`h-5 w-5 mb-1 ${verificationDetails?.self?.isVerified ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <span className="text-base font-bold mb-0.5">Self Protocol</span>
+                    {verificationDetails?.self?.isVerified ? (
+                      <div className="flex items-center gap-1 mb-1">
+                        <CheckCircle className="h-4 w-4 text-blue-600" />
+                        <span className="text-blue-700 font-semibold text-xs">Verified</span>
+                      </div>
+                    ) : (
+                      <button
+                        className="mt-1 px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+                        onClick={() => { setShowVerification(true); setShowMethodSelection(false); }}
+                      >
+                        Verify with Self Protocol
+                      </button>
+                    )}
+                    {/* Show nationality if available */}
+                    {verificationDetails?.self?.isVerified && verificationDetails.self.nationality && (
+                      <span className="mt-1 text-[10px] text-gray-500">{verificationDetails.self.nationality}</span>
+                    )}
+                  </div>
                 </div>
                 {/* End Badges Row */}
                 {isVerified && (
@@ -1226,6 +1231,36 @@ export default function ProfilePage() {
        onClose={() => setShowGoodDollarVerification(false)}
        onVerificationComplete={handleGoodDollarVerificationComplete}
      />
+
+     {/* GoodDollar Face Verification Popup */}
+     {showGoodDollarPopup && (
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+         <div className="bg-white rounded-lg p-6 max-w-md w-full relative">
+           <button
+             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+             onClick={() => setShowGoodDollarPopup(false)}
+           >
+             <X className="h-5 w-5" />
+           </button>
+           <h3 className="text-lg font-bold text-gray-900 mb-4">GoodDollar Face Verification</h3>
+           <p className="text-sm text-gray-600 mb-4">To verify with GoodDollar, click the button below to start the face verification process.</p>
+           {goodDollarLink ? (
+             <a
+               href={goodDollarLink}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="block w-full px-4 py-2 bg-green-600 text-white rounded-lg text-center font-medium hover:bg-green-700 transition-colors mb-2"
+             >
+               Start GoodDollar Verification
+             </a>
+           ) : (
+             <div className="flex items-center justify-center py-6">
+               <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
+             </div>
+           )}
+         </div>
+       </div>
+     )}
    </div>
  </div>
 );

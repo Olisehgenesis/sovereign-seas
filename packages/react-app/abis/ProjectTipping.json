@@ -325,6 +325,11 @@
         "internalType": "uint256",
         "name": "_amount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_celoEquivalent",
+        "type": "uint256"
       }
     ],
     "name": "canUserTipProject",
@@ -1269,6 +1274,11 @@
       {
         "internalType": "uint256",
         "name": "_amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_celoEquivalent",
         "type": "uint256"
       },
       {

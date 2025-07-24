@@ -141,19 +141,17 @@ contract ProjectTipping is Ownable(msg.sender), ReentrancyGuard {
         uint256 _projectId,
         address _token,
         uint256 _amount,
+        uint256 _celoEquivalent,
         string memory _message
     ) external nonReentrant validProject(_projectId) tippingIsEnabled {
         require(_token != address(celoToken), "Use tipProjectWithCelo for CELO tips");
         require(_amount > 0, "Tip amount must be greater than 0");
-        require(sovereignSeas.isTokenSupported(_token), "Token not supported");
-        
-        uint256 celoEquivalent = sovereignSeas.getTokenToCeloEquivalent(_token, _amount);
-        require(celoEquivalent >= minimumTipAmount, "Tip amount below minimum");
+        require(_celoEquivalent >= minimumTipAmount, "Tip amount below minimum");
         
         // Transfer tokens
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
         
-        _processTip(_projectId, _token, _amount, celoEquivalent, _message);
+        _processTip(_projectId, _token, _amount, _celoEquivalent, _message);
     }
     
     function tipProjectWithCelo(
@@ -362,18 +360,10 @@ contract ProjectTipping is Ownable(msg.sender), ReentrancyGuard {
         uint256[] memory projects = userTippedProjects[_user];
         uint256 totalTippedInCelo = 0;
         
-        // Calculate total tipped in CELO equivalent
-        for (uint256 i = 0; i < projects.length; i++) {
-            uint256 projectId = projects[i];
-            address[] memory tokens = projectTippedTokens[projectId];
-            
-            for (uint256 j = 0; j < tokens.length; j++) {
-                address token = tokens[j];
-                uint256 userTipAmount = userTipsToProject[_user][projectId][token];
-                if (userTipAmount > 0) {
-                    uint256 celoEquivalent = sovereignSeas.getTokenToCeloEquivalent(token, userTipAmount);
-                    totalTippedInCelo += celoEquivalent;
-                }
+        // Calculate total tipped in CELO equivalent by going through all user's tips
+        for (uint256 i = 0; i < allTips.length; i++) {
+            if (allTips[i].tipper == _user) {
+                totalTippedInCelo += allTips[i].celoEquivalent;
             }
         }
         
@@ -529,23 +519,15 @@ contract ProjectTipping is Ownable(msg.sender), ReentrancyGuard {
     }
 
     // Utility Functions
-    function canUserTipProject(address _user, uint256 _projectId, address _token, uint256 _amount) external view returns (bool canTip, string memory reason) {
+    function canUserTipProject(address _user, uint256 _projectId, address _token, uint256 _amount, uint256 _celoEquivalent) external view returns (bool canTip, string memory reason) {
         if (!tippingEnabled) return (false, "Tipping is disabled");
         if (_projectId >= sovereignSeas.getProjectCount()) return (false, "Invalid project ID");
-        if (!sovereignSeas.isTokenSupported(_token)) return (false, "Token not supported");
         if (_amount == 0) return (false, "Amount must be greater than 0");
         
         (,,,,,bool active,,) = sovereignSeas.getProject(_projectId);
         if (!active) return (false, "Project is not active");
         
-        uint256 celoEquivalent;
-        if (_token == address(celoToken)) {
-            celoEquivalent = _amount;
-        } else {
-            celoEquivalent = sovereignSeas.getTokenToCeloEquivalent(_token, _amount);
-        }
-        
-        if (celoEquivalent < minimumTipAmount) return (false, "Amount below minimum tip");
+        if (_celoEquivalent < minimumTipAmount) return (false, "Amount below minimum tip");
         
         return (true, "");
     }

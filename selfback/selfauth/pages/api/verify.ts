@@ -153,9 +153,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let providers: string[] = [];
       let isValid = false;
       let verified = false;
+      let profileIcons: { [provider: string]: string } = { GoodDollar: '❌', Self: '❌' };
       if (!fs.existsSync(filePath) || !walletAddressStr) {
         return res.status(200).json({
-          profile: { isValid: false, providers: [] },
+          profile: {
+            isValid: false,
+            providers: [],
+            icons: profileIcons
+          },
           verified: false,
           gooddollar: { isVerified: false },
           self: selfDetails
@@ -171,10 +176,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           providers.push('Self');
           isValid = true;
           verified = true;
+          profileIcons.Self = '✅';
         }
       }
+      // GoodDollar always ❌ in this endpoint (no on-chain check)
       return res.status(200).json({
-        profile: { isValid, providers },
+        profile: {
+          isValid,
+          providers,
+          icons: profileIcons
+        },
         verified,
         gooddollar: { isVerified: false },
         self: selfDetails

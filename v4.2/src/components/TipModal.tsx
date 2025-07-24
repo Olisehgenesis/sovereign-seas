@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Loader2, Wallet, Check, Gift, TrendingUp, Info, PlusCircle, ChevronDown, Coins, Heart, DollarSign, Sparkles } from 'lucide-react';
-import { useAccount, useBalance, useReadContract } from 'wagmi';
-import { parseEther, formatEther, Address } from 'viem';
+import { useAccount, useBalance, useReadContract, useWriteContract } from 'wagmi';
+import { parseEther, formatEther, Address, encodeFunctionData, Hash } from 'viem';
 import { 
   useProjectTipping, 
   useTipProject, 
   useTipProjectWithCelo, 
   useProjectTipSummary,
   useMinimumTipAmount,
-  usePlatformFeePercentage 
+  usePlatformFeePercentage,
+  useCanUserTipProject,
+  useApproveToken
 } from '@/hooks/useProjectTipping';
 import { erc20ABI } from '@/abi/erc20ABI';
 import { useProjectDetails } from '@/hooks/useProjectMethods';
@@ -34,8 +36,17 @@ const isValidTokenAddress = (address: string) => /^0x[a-fA-F0-9]{40}$/.test(addr
 const LOCALSTORAGE_KEY = 'sovseas_custom_tokens';
 const TIPPING_CONTRACT = import.meta.env.VITE_TIP_CONTRACT_V4 as Address;
 
+// Add Step component for stepper UI
+const Step = ({ active, label }: { active: boolean; label: string }) => (
+  <div className="flex flex-col items-center">
+    <div className={`w-4 h-4 rounded-full ${active ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+    <span className={`text-xs mt-1 ${active ? 'text-blue-700 font-bold' : 'text-gray-400'}`}>{label}</span>
+  </div>
+);
+
 const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSuccess }) => {
   const { address: userAddress } = useAccount();
+  const { writeContract } = useWriteContract();
 
   // Project details (use project.contractAddress)
   const { projectDetails, isLoading: projectLoading } = useProjectDetails(project.contractAddress as Address, project.id);
@@ -54,8 +65,9 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   const { minimumTipAmount, minimumTipAmountFormatted, isLoading: minTipLoading } = useMinimumTipAmount(TIPPING_CONTRACT);
   const { platformFeePercentage, isLoading: feeLoading } = usePlatformFeePercentage(TIPPING_CONTRACT);
   const { formatTipAmount, calculatePlatformFee, getNetTipAmount } = useProjectTipping(TIPPING_CONTRACT);
-  const { tipProject, isPending: isPendingERC20 } = useTipProject(TIPPING_CONTRACT);
-  const { tipProjectWithCelo, isPending: isPendingCelo } = useTipProjectWithCelo(TIPPING_CONTRACT);
+  const { tipProject, data: tipData, isSuccess: tipSuccess } = useTipProject(TIPPING_CONTRACT);
+  const { tipProjectWithCelo, data: tipCeloData, isSuccess: tipCeloSuccess } = useTipProjectWithCelo(TIPPING_CONTRACT);
+  const { approveToken, isPending: isApproving, error: approveError, data: approveData, isSuccess: approveSuccess } = useApproveToken();
 
   // State
   const [currentView, setCurrentView] = useState<'tip' | 'success'>('tip');
@@ -67,6 +79,10 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [tokenDropdownOpen, setTokenDropdownOpen] = useState(false);
+  // Add stepper state
+  const [tipStep, setTipStep] = useState<'idle' | 'approving' | 'tipping' | 'done'>('idle');
+  const [waitingForApproval, setWaitingForApproval] = useState(false);
+  const [waitingForTip, setWaitingForTip] = useState(false);
 
   // Load custom tokens from localStorage
   useEffect(() => {
@@ -214,6 +230,23 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   const platformFee = useMemo(() => calculatePlatformFee(parsedTipAmount), [parsedTipAmount, calculatePlatformFee]);
   const netTip = useMemo(() => getNetTipAmount(parsedTipAmount), [parsedTipAmount, getNetTipAmount]);
 
+  const celoEquivalent = useMemo(() => {
+    if (isCelo) {
+      return parsedTipAmount;
+    }
+    return parsedTipAmount;
+  }, [parsedTipAmount, isCelo]);
+
+  // Use validation hook
+  const { canTip, reason: validationReason, isLoading: validationLoading } = useCanUserTipProject(
+    TIPPING_CONTRACT,
+    userAddress as Address,
+    project.id,
+    selectedToken?.address as Address,
+    parsedTipAmount,
+    celoEquivalent as bigint
+  );
+
   // Add helper for formatting balances to 3 decimal places
   const formatBalance3 = (balance: bigint) => {
     try {
@@ -240,6 +273,12 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   // Handle tip
   const handleTip = async () => {
     setError('');
+    
+    // Basic validations
+    if (!userAddress) {
+      setError('Please connect your wallet');
+      return;
+    }
     if (!tipAmount || !selectedToken) {
       setError('Please select a token and enter an amount');
       return;
@@ -249,66 +288,132 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       return;
     }
     if (parsedTipAmount < minTip) {
-      setError(`Minimum tip is ${formatTipAmount(minTip)} ${isCelo ? 'CELO' : selectedToken.symbol}`);
+      setError(`Minimum tip is ${formatTipAmount(minTip)} CELO equivalent`);
       return;
     }
     if (selectedTokenBalance < parsedTipAmount) {
       setError('Insufficient balance');
       return;
     }
+
+    // Check contract validation
+    if (!validationLoading && !canTip && validationReason) {
+      setError(validationReason);
+      return;
+    }
+
     setIsProcessing(true);
+    setTipStep('approving');
+
     try {
-      let txResult: any;
-      let txHash = '';
       if (isCelo) {
-        txResult = await tipProjectWithCelo({
+        setTipStep('tipping');
+        setWaitingForTip(true);
+        await tipProjectWithCelo({
+          userAddress: userAddress as `0x${string}`,
           projectId: project.id,
           amount: parsedTipAmount,
           message,
         });
       } else {
-        // 1. Approve the tipping contract for the token and amount
+        // For ERC20 tokens, first approve then tip
         setError('');
-        // Send approval transaction
-        const approveTx = await walletClient.writeContract({
-          account: userAddress as `0x${string}`,
-          address: selectedToken.address as Address,
-          abi: erc20ABI,
-          functionName: 'approve',
-          args: [TIPPING_CONTRACT, parsedTipAmount],
-        });
-        // Wait for approval confirmation
-        if (approveTx && typeof approveTx === 'string' && approveTx.startsWith('0x') && approveTx.length === 66) {
-          await publicClient.waitForTransactionReceipt({ hash: approveTx as `0x${string}` });
+        setTipStep('approving');
+        setWaitingForApproval(true);
+        
+        // Step 1: Approve token spending
+        try {
+          await approveToken({
+            tokenAddress: selectedToken.address as Address,
+            spender: TIPPING_CONTRACT,
+            amount: parsedTipAmount,
+            account: userAddress as Address,
+          });
+        } catch (approvalErr: any) {
+          console.error('Approval error:', approvalErr);
+          setError('Approval failed: ' + (approvalErr?.message || 'Unknown error'));
+          setWaitingForApproval(false);
+          return;
         }
-        // 2. Now send the tip transaction
-        txResult = await tipProject({
+
+        // Step 2: Send tip with CELO equivalent
+        if (!project.id || !selectedToken.address || !parsedTipAmount || !celoEquivalent) {
+          setError('Missing required parameters for tipping');
+          setWaitingForApproval(false);
+          return;
+        }
+        
+        setWaitingForTip(true);
+        await tipProject({
           projectId: project.id,
-          token: selectedToken.address as Address,
+          token: selectedToken.address,
           amount: parsedTipAmount,
+          celoEquivalent: celoEquivalent,
           message,
         });
       }
-      // Try to get the hash from the result
-      if (typeof txResult === 'string') {
-        txHash = txResult;
-      } else if (txResult && typeof txResult === 'object' && ('hash' in txResult || 'transactionHash' in txResult)) {
-        txHash = txResult.hash || txResult.transactionHash || '';
-      }
-      // Only wait if txHash looks like a hash
-      if (typeof txHash === 'string' && txHash.startsWith('0x') && txHash.length === 66) {
-        await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
-      }
-      // Refetch tip summary after confirmation
-      await refetchTipSummary();
-      setCurrentView('success');
-      onTipSuccess?.();
     } catch (err: any) {
-      setError(err?.message || 'Failed to tip.');
+      console.error('Tip error:', err);
+      let errorMessage = 'Failed to tip.';
+      
+      if (err?.shortMessage) {
+        errorMessage = err.shortMessage;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      setError(errorMessage);
+      setTipStep('idle');
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // Watch for approval transaction completion
+  useEffect(() => {
+    if (waitingForApproval && approveData) {
+      const handleApprovalCompletion = async () => {
+        try {
+          await publicClient.waitForTransactionReceipt({ hash: approveData as Hash });
+          setWaitingForApproval(false);
+          setTipStep('tipping');
+        } catch (err) {
+          console.error('Error waiting for approval transaction:', err);
+          setError('Approval transaction failed to confirm');
+          setWaitingForApproval(false);
+          setTipStep('idle');
+        }
+      };
+      
+      handleApprovalCompletion();
+    }
+  }, [approveData, waitingForApproval]);
+
+  // Watch for tip transaction completion
+  useEffect(() => {
+    if (waitingForTip && (tipData || tipCeloData)) {
+      const handleTipCompletion = async () => {
+        try {
+          const hash = tipData || tipCeloData;
+          if (hash) {
+            await publicClient.waitForTransactionReceipt({ hash: hash as Hash });
+          }
+          setWaitingForTip(false);
+          setTipStep('done');
+          onClose();
+        } catch (err) {
+          console.error('Error waiting for tip transaction:', err);
+          setError('Transaction failed to confirm');
+          setWaitingForTip(false);
+          setTipStep('idle');
+        }
+      };
+      
+      handleTipCompletion();
+    }
+  }, [tipData, tipCeloData, waitingForTip, onClose]);
 
   // Reset modal on close
   useEffect(() => {
@@ -320,6 +425,9 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       setIsProcessing(false);
       setTokenDropdownOpen(false);
       setCustomTokenInput('');
+      setTipStep('idle');
+      setWaitingForApproval(false);
+      setWaitingForTip(false);
     }
   }, [isOpen]);
 
@@ -337,6 +445,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
         <div className="absolute left-4 top-4 z-30">
           <LocationBadge location={location} variant="card" />
         </div>
+
         {/* Left: Project Info & Stats */}
         <div className="flex-1 min-w-[252px] max-w-md bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] text-gray-900 p-7 flex flex-col justify-between relative">
           <button
@@ -346,6 +455,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
           >
             <X className="h-5 w-5" />
           </button>
+
           <div className="flex flex-col items-center gap-3">
             <div className="relative group mb-1">
               {projectLogo ? (
@@ -362,14 +472,17 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
               )}
               <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-yellow-300 animate-pulse group-hover:scale-110 transition-transform duration-300" />
             </div>
+
             <h2 className="text-xl font-bold text-center mb-1">{project.name}</h2>
             <p className="text-purple-900/80 text-center text-xs mb-2 line-clamp-2">
               {projectDetails?.project?.description || ''}
             </p>
+
             <div className="flex items-center gap-2 mb-3">
               <Wallet className="h-4 w-4 text-emerald-400 animate-bounce" />
               <span className="text-xs font-mono">{project.owner?.slice(0, 6)}...{project.owner?.slice(-4)}</span>
             </div>
+
             {/* Tip Summary */}
             <div className="w-full bg-white/30 rounded-xl p-3 flex flex-col gap-2 mb-2">
               {tipSummaryLoading ? (
@@ -399,6 +512,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                       {tipSummary.tippedTokens?.length || 0}
                     </span>
                   </div>
+
                   {/* ERC20 Tipped Tokens Table */}
                   {tipSummary.tippedTokens && tipSummary.tippedTokens.length > 0 && (
                     <div className="mt-3">
@@ -422,7 +536,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                                 <tr key={tokenAddr} className="border-t border-blue-100">
                                   <td className="px-2 py-1 font-semibold">{symbol}</td>
                                   <td className="px-2 py-1 font-mono text-gray-500">{shortAddr}</td>
-                                  <td className="px-2 py-1">{amount.toString()}</td>
+                                  <td className="px-2 py-1">{formatTipAmount(amount)}</td>
                                 </tr>
                               );
                             })}
@@ -437,6 +551,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
               )}
             </div>
           </div>
+
           <div className="mt-auto pt-4">
             <div className="text-xs text-purple-700/80 text-center">
               Powered by Sovereign Seas Tipping
@@ -534,109 +649,156 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* Amount Input */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-gray-800">Tip Amount</label>
-                  {selectedToken && (
-                    <span className="text-xs text-gray-500 font-mono">
-                      Balance: {formatBalance3(selectedTokenBalance)} {selectedToken.symbol}
-                    </span>
-                  )}
+
                 </div>
-                <input
-                  type="number"
-                  value={tipAmount}
-                  onChange={e => setTipAmount(e.target.value)}
-                  placeholder="0.00"
-                  disabled={isProcessing || isPendingERC20 || isPendingCelo}
-                  className={`w-full px-3 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base font-semibold ${(isProcessing || isPendingERC20 || isPendingCelo) ? 'cursor-not-allowed opacity-60' : ''}`}
-                  step="0.0001"
-                  min="0"
-                />
-                {minTipLoading ? (
-                  <div className="mt-1 text-xs text-gray-600 flex items-center bg-gray-50 rounded-lg p-2">
-                    <Loader2 className="h-3 w-3 animate-spin mr-2" />Loading minimum tip...
-                  </div>
-                ) : minimumTipAmount ? (
-                  <div className="mt-1 text-xs text-gray-600 flex items-center bg-gray-50 rounded-lg p-2">
-                    <TrendingUp className="h-3 w-3 mr-2" />
-                    <span>Min tip: {formatTipAmount(minimumTipAmount)} {isCelo ? 'CELO' : selectedToken?.symbol}</span>
-                  </div>
-                ) : null}
-              </div>
 
-              {/* Message Input */}
-              <div>
-                <label className="text-xs font-semibold text-gray-800 mb-1 block">Message (optional)</label>
-                <input
-                  type="text"
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  placeholder="Say something nice..."
-                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm font-normal"
-                  maxLength={120}
-                />
-              </div>
+             {/* Amount Input */}
+             <div>
+               <div className="flex items-center justify-between mb-1">
+                 <label className="text-xs font-semibold text-gray-800">Tip Amount</label>
+                 {selectedToken && (
+                   <span className="text-xs text-gray-500 font-mono">
+                     Balance: {formatBalance3(selectedTokenBalance)} {selectedToken.symbol}
+                   </span>
+                 )}
+               </div>
+               <input
+                 type="number"
+                 value={tipAmount}
+                 onChange={e => setTipAmount(e.target.value)}
+                 placeholder="0.00"
+                 disabled={isProcessing || isApproving}
+                 className={`w-full px-3 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base font-semibold ${(isProcessing || isApproving) ? 'cursor-not-allowed opacity-60' : ''}`}
+                 step="0.0001"
+                 min="0"
+               />
+               {minTipLoading ? (
+                 <div className="mt-1 text-xs text-gray-600 flex items-center bg-gray-50 rounded-lg p-2">
+                   <Loader2 className="h-3 w-3 animate-spin mr-2" />Loading minimum tip...
+                 </div>
+               ) : minimumTipAmount ? (
+                 <div className="mt-1 text-xs text-gray-600 flex items-center bg-gray-50 rounded-lg p-2">
+                   <TrendingUp className="h-3 w-3 mr-2" />
+                   <span>Min tip: {formatTipAmount(minimumTipAmount)} CELO equivalent</span>
+                 </div>
+               ) : null}
+               
+               {/* CELO Equivalent Display */}
+               {!isCelo && tipAmount && (
+                 <div className="mt-1 text-xs text-blue-600 flex items-center bg-blue-50 rounded-lg p-2">
+                   <Coins className="h-3 w-3 mr-2" />
+                   <span>CELO equivalent: ~{formatTipAmount(celoEquivalent)} CELO</span>
+                 </div>
+               )}
+             </div>
 
-              {/* Platform Fee Info */}
-              <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-2">
-                <DollarSign className="h-3 w-3 text-amber-400" />
-                <span>Platform fee: {platformFeePercentage?.toString() || '0'}%</span>
-                {tipAmount && (
-                  <span className="ml-auto">
-                    Fee: {formatTipAmount(platformFee)} {selectedToken?.symbol} | 
-                    Net: {formatTipAmount(netTip)} {selectedToken?.symbol}
-                  </span>
-                )}
-              </div>
+             {/* Message Input */}
+             <div>
+               <label className="text-xs font-semibold text-gray-800 mb-1 block">Message (optional)</label>
+               <input
+                 type="text"
+                 value={message}
+                 onChange={e => setMessage(e.target.value)}
+                 placeholder="Say something nice..."
+                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm font-normal"
+                 maxLength={120}
+               />
+             </div>
 
-              {/* Tip Button */}
-              <button
-                type="submit"
-                disabled={
-                  isProcessing ||
-                  isPendingERC20 ||
-                  isPendingCelo ||
-                  !tipAmount ||
-                  !selectedToken ||
-                  parseFloat(tipAmount) <= 0
-                }
-                className="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
-              >
-                {(isProcessing || isPendingERC20 || isPendingCelo) ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Gift className="h-4 w-4 animate-bounce" />
-                    <span>
-                      Tip {parseFloat(tipAmount || '0').toFixed(2)} {selectedToken?.symbol || 'Token'}
-                    </span>
-                  </>
-                )}
-              </button>
+             {/* Platform Fee Info */}
+             <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-2">
+               <DollarSign className="h-3 w-3 text-amber-400" />
+               <span>Platform fee: {platformFeePercentage?.toString() || '0'}%</span>
+               {tipAmount && (
+                 <span className="ml-auto">
+                   Fee: {formatTipAmount(platformFee)} {selectedToken?.symbol} | 
+                   Net: {formatTipAmount(netTip)} {selectedToken?.symbol}
+                 </span>
+               )}
+             </div>
 
-              {/* Info Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-1">
-                <div className="flex items-start">
-                  <Info className="h-3 w-3 text-blue-600 mr-2 flex-shrink-0 mt-0.5 animate-pulse" />
-                  <div className="text-xs text-blue-700">
-                    <p className="font-medium mb-1">Tipping Info</p>
-                    <p>Your tip will be sent directly to the project. Platform fees may apply. You can tip with CELO or any supported ERC20 token.</p>
-                  </div>
-                </div>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+             {/* Validation Info */}
+             {validationLoading && (
+               <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 rounded-xl p-2">
+                 <Loader2 className="h-3 w-3 animate-spin" />
+                 <span>Validating tip...</span>
+               </div>
+             )}
+             
+             {!validationLoading && !canTip && validationReason && (
+               <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-xl p-2">
+                 <Info className="h-3 w-3" />
+                 <span>{validationReason}</span>
+               </div>
+             )}
+
+             {/* Tip Button */}
+             <button
+               type="submit"
+               disabled={
+                 isProcessing ||
+                 isApproving ||
+                 !tipAmount ||
+                 !selectedToken ||
+                 parseFloat(tipAmount) <= 0 ||
+                 validationLoading ||
+                 (!canTip && !validationLoading)
+               }
+               className="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+             >
+               {(isProcessing || isApproving) ? (
+                 <>
+                   <Loader2 className="h-4 w-4 animate-spin" />
+                   <span>
+                     {tipStep === 'approving' ? 'Approving Token...' : 
+                      tipStep === 'tipping' ? 'Sending Tip...' : 'Processing...'}
+                   </span>
+                 </>
+               ) : (
+                 <>
+                   <Gift className="h-4 w-4 animate-bounce" />
+                   <span>
+                     Tip {parseFloat(tipAmount || '0').toFixed(2)} {selectedToken?.symbol || 'Token'}
+                   </span>
+                 </>
+               )}
+             </button>
+
+             {/* Stepper UI */}
+             {!isCelo && (tipStep !== 'idle' || isProcessing) && (
+               <div className="w-full flex justify-center mt-4">
+                 <div className="flex items-center gap-4">
+                   <Step active={tipStep === 'approving' || tipStep === 'tipping' || tipStep === 'done'} label="Approving" />
+                   <div className={`w-6 h-1 rounded ${tipStep === 'tipping' || tipStep === 'done' ? 'bg-blue-600' : 'bg-gray-300'}`} />
+                   <Step active={tipStep === 'tipping' || tipStep === 'done'} label="Tipping" />
+                   <div className={`w-6 h-1 rounded ${tipStep === 'done' ? 'bg-blue-600' : 'bg-gray-300'}`} />
+                   <Step active={tipStep === 'done'} label="Done" />
+                 </div>
+               </div>
+             )}
+
+             {/* Info Section */}
+             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-1">
+               <div className="flex items-start">
+                 <Info className="h-3 w-3 text-blue-600 mr-2 flex-shrink-0 mt-0.5 animate-pulse" />
+                 <div className="text-xs text-blue-700">
+                   <p className="font-medium mb-1">Tipping Info</p>
+                   <p>Your tip will be sent directly to the project. Platform fees may apply. You can tip with CELO or any supported ERC20 token.</p>
+                   {!isCelo && (
+                     <p className="mt-1 text-blue-600">
+                       Note: Exchange rates are approximated. Actual CELO equivalent may vary.
+                     </p>
+                   )}
+                 </div>
+               </div>
+             </div>
+           </form>
+         )}
+       </div>
+     </div>
+   </div>
+ );
 };
 
 export default TipModal;

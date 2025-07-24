@@ -1,9 +1,11 @@
 // hooks/useProjectTipping.ts
 
 import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
-import { formatEther, parseEther, Address, type Abi } from 'viem'
+import { formatEther, parseEther, Address, type Abi, Hash } from 'viem'
 import { tipsABI as abi } from '@/abi/tipsABI' 
 import { useState, useEffect, useCallback } from 'react'
+import { publicClient } from '@/utils/clients';
+import { erc20ABI } from '@/abi/erc20ABI';
 
 // Types for better TypeScript support
 export interface TipInfo {
@@ -33,26 +35,6 @@ export interface UserTipSummary {
   projectCount: bigint
   tippedProjectIds: bigint[]
   recentTips: TipInfo[]
-}
-
-export interface TokenTipSummary {
-  token: Address
-  totalAmount: bigint
-  totalAmountInCelo: bigint
-  tipCount: bigint
-  uniqueProjectCount: bigint
-  tippedProjectIds: bigint[]
-}
-
-export interface GlobalStats {
-  totalTips: bigint
-  totalProjectsTipped: bigint
-  totalUniqueUsers: bigint
-  totalTokensUsed: bigint
-  totalValueInCelo: bigint
-  totalPlatformFeesInCelo: bigint
-  isEnabled: boolean
-  minTipAmount: bigint
 }
 
 export interface EnhancedTipInfo extends TipInfo {
@@ -87,8 +69,7 @@ const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 
   }
 }
 
-
-// Hook for tipping with ERC20 tokens
+// Hook for tipping with ERC20 tokens (updated to include celoEquivalent)
 export function useTipProject(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
 
@@ -96,30 +77,25 @@ export function useTipProject(contractAddress: Address) {
     projectId,
     token,
     amount,
+    celoEquivalent,
     message = ''
   }: {
     projectId: bigint
     token: Address
     amount: bigint
+    celoEquivalent: bigint
     message?: string
   }) => {
     try {
-      const result = await writeContract({
+      writeContract({
         address: contractAddress,
         abi,
         functionName: 'tipProject',
-        args: [projectId, token, amount, message]
+        args: [projectId, token, amount, celoEquivalent, message]
       })
 
-      logDebug('Tip Project Success', {
-        transactionHash: result,
-        projectId: projectId.toString(),
-        token,
-        amount: amount.toString(),
-        message
-      })
-
-      return result
+      // Return success - the component will handle the transaction hash from the hook's data property
+      return { success: true, hash: '', receipt: null };
     } catch (err) {
       logDebug('Tip Project Error', {
         error: err,
@@ -139,21 +115,24 @@ export function useTipProject(contractAddress: Address) {
   }
 }
 
-// Hook for tipping with CELO
+// Hook for tipping with CELO (unchanged)
 export function useTipProjectWithCelo(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
 
   const tipProjectWithCelo = async ({
     projectId,
     amount,
-    message = ''
+    message = '',
+    userAddress
   }: {
     projectId: bigint
     amount: bigint
     message?: string
+    userAddress: Address
   }) => {
     try {
-      const result = await writeContract({
+      writeContract({
+        account: userAddress,
         address: contractAddress,
         abi,
         functionName: 'tipProjectWithCelo',
@@ -161,14 +140,8 @@ export function useTipProjectWithCelo(contractAddress: Address) {
         value: amount
       })
 
-      logDebug('Tip Project with CELO Success', {
-        transactionHash: result,
-        projectId: projectId.toString(),
-        amount: amount.toString(),
-        message
-      })
-
-      return result
+      // Return success - the component will handle the transaction hash from the hook's data property
+      return { success: true, hash: '', receipt: null };
     } catch (err) {
       logDebug('Tip Project with CELO Error', {
         error: err,
@@ -200,20 +173,15 @@ export function useWithdrawTips(contractAddress: Address) {
     token: Address
   }) => {
     try {
-      const result = await writeContract({
+      writeContract({
         address: contractAddress,
         abi,
         functionName: 'withdrawTips',
         args: [projectId, token]
       })
 
-      logDebug('Withdraw Tips Success', {
-        transactionHash: result,
-        projectId: projectId.toString(),
-        token
-      })
-
-      return result
+      // Return success - the component will handle the transaction hash from the hook's data property
+      return { success: true, hash: '', receipt: null };
     } catch (err) {
       logDebug('Withdraw Tips Error', {
         error: err,
@@ -243,19 +211,15 @@ export function useWithdrawAllTips(contractAddress: Address) {
     projectId: bigint
   }) => {
     try {
-      const result = await writeContract({
+      writeContract({
         address: contractAddress,
         abi,
         functionName: 'withdrawAllTips',
         args: [projectId]
       })
 
-      logDebug('Withdraw All Tips Success', {
-        transactionHash: result,
-        projectId: projectId.toString()
-      })
-
-      return result
+      // Return success - the component will handle the transaction hash from the hook's data property
+      return { success: true, hash: '', receipt: null };
     } catch (err) {
       logDebug('Withdraw All Tips Error', {
         error: err,
@@ -334,84 +298,6 @@ export function useUserTipSummary(contractAddress: Address, userAddress: Address
   }
 }
 
-// Hook for reading token tip summary
-export function useTokenTipSummary(contractAddress: Address, token: Address) {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'getTokenTipSummary',
-    args: [token],
-    query: {
-      enabled: !!contractAddress && !!token
-    }
-  })
-
-  const summary = data ? {
-    token: (data as any[])[0] as Address,
-    totalAmount: (data as any[])[1] as bigint,
-    totalAmountInCelo: (data as any[])[2] as bigint,
-    tipCount: (data as any[])[3] as bigint,
-    uniqueProjectCount: (data as any[])[4] as bigint,
-    tippedProjectIds: (data as any[])[5] as bigint[]
-  } as TokenTipSummary : null
-
-  return {
-    summary,
-    isLoading,
-    error,
-    refetch
-  }
-}
-
-// Hook for reading global stats
-export function useGlobalStats(contractAddress: Address) {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'getGlobalStats',
-    query: {
-      enabled: !!contractAddress
-    }
-  })
-
-  const stats = data ? {
-    totalTips: (data as any[])[0] as bigint,
-    totalProjectsTipped: (data as any[])[1] as bigint,
-    totalUniqueUsers: (data as any[])[2] as bigint,
-    totalTokensUsed: (data as any[])[3] as bigint,
-    totalValueInCelo: (data as any[])[4] as bigint,
-    totalPlatformFeesInCelo: (data as any[])[5] as bigint,
-    isEnabled: (data as any[])[6] as boolean,
-    minTipAmount: (data as any[])[7] as bigint
-  } as GlobalStats : null
-
-  return {
-    stats,
-    isLoading,
-    error,
-    refetch
-  }
-}
-
-// Hook for reading all tipped tokens
-export function useAllTippedTokens(contractAddress: Address) {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'getAllTippedTokens',
-    query: {
-      enabled: !!contractAddress
-    }
-  })
-
-  return {
-    tokens: data as Address[] || [],
-    isLoading,
-    error,
-    refetch
-  }
-}
-
 // Hook for reading top tipped projects
 export function useTopTippedProjects(contractAddress: Address, limit: number = 10) {
   const { data, isLoading, error, refetch } = useReadContract({
@@ -431,31 +317,6 @@ export function useTopTippedProjects(contractAddress: Address, limit: number = 1
 
   return {
     topProjects: result,
-    isLoading,
-    error,
-    refetch
-  }
-}
-
-// Hook for reading top tokens by volume
-export function useTopTokensByVolume(contractAddress: Address, limit: number = 10) {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'getTopTokensByVolume',
-    args: [BigInt(limit)],
-    query: {
-      enabled: !!contractAddress && limit > 0
-    }
-  })
-
-  const result = data ? {
-    tokens: (data as any[])[0] as Address[],
-    amounts: (data as any[])[1] as bigint[]
-  } : { tokens: [], amounts: [] }
-
-  return {
-    topTokens: result,
     isLoading,
     error,
     refetch
@@ -482,50 +343,22 @@ export function useRecentTips(contractAddress: Address, limit: number = 20) {
   }
 }
 
-// Hook for paginated tips
-export function useTipsPaginated(
-  contractAddress: Address, 
-  offset: number = 0, 
-  limit: number = 20
-) {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'getTipsPaginated',
-    args: [BigInt(offset), BigInt(limit)],
-    query: {
-      enabled: !!contractAddress && offset >= 0 && limit > 0
-    }
-  })
-
-  const result = data ? {
-    tips: (data as any[])[0] as TipInfo[],
-    totalCount: (data as any[])[1] as bigint
-  } : { tips: [], totalCount: 0n }
-
-  return {
-    paginatedTips: result,
-    isLoading,
-    error,
-    refetch
-  }
-}
-
-// Hook for checking if user can tip
+// Hook for checking if user can tip (updated to include celoEquivalent)
 export function useCanUserTipProject(
   contractAddress: Address,
   userAddress: Address,
   projectId: bigint,
   token: Address,
-  amount: bigint
+  amount: bigint,
+  celoEquivalent: bigint
 ) {
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
     abi,
     functionName: 'canUserTipProject',
-    args: [userAddress, projectId, token, amount],
+    args: [userAddress, projectId, token, amount, celoEquivalent],
     query: {
-      enabled: !!contractAddress && !!userAddress && projectId !== undefined && !!token && amount > 0n
+      enabled: !!contractAddress && !!userAddress && projectId !== undefined && !!token && amount > 0n && celoEquivalent > 0n
     }
   })
 
@@ -537,30 +370,6 @@ export function useCanUserTipProject(
   return {
     canTip: result.canTip,
     reason: result.reason,
-    isLoading,
-    error,
-    refetch
-  }
-}
-
-// Hook for reading tips by time range
-export function useTipsByTimeRange(
-  contractAddress: Address,
-  startTime: bigint,
-  endTime: bigint
-) {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'getTipsByTimeRange',
-    args: [startTime, endTime],
-    query: {
-      enabled: !!contractAddress && startTime !== undefined && endTime !== undefined && startTime <= endTime
-    }
-  })
-
-  return {
-    tips: data as TipInfo[] || [],
     isLoading,
     error,
     refetch
@@ -606,7 +415,118 @@ export function usePlatformFeePercentage(contractAddress: Address) {
   }
 }
 
-// Main hook for project tipping - following the same pattern as useCampaign
+// Hook for reading contract stats
+export function useContractStats(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getContractStats',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  const stats = data ? {
+    totalTips: (data as any[])[0] as bigint,
+    totalProjectsTipped: (data as any[])[1] as bigint,
+    totalUniqueUsers: (data as any[])[2] as bigint,
+    isEnabled: (data as any[])[3] as boolean,
+    minTipAmount: (data as any[])[4] as bigint
+  } : null
+
+  return {
+    stats,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading all tipped projects
+export function useAllTippedProjects(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getAllTippedProjects',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    projectIds: data as bigint[] || [],
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading project with tip info
+export function useProjectWithTipInfo(contractAddress: Address, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProjectWithTipInfo',
+    args: [projectId],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined
+    }
+  })
+
+  const projectInfo = data ? {
+    id: (data as any[])[0] as bigint,
+    owner: (data as any[])[1] as Address,
+    name: (data as any[])[2] as string,
+    description: (data as any[])[3] as string,
+    active: (data as any[])[4] as boolean,
+    totalTipsInCelo: (data as any[])[5] as bigint,
+    tipperCount: (data as any[])[6] as bigint,
+    tippedTokens: (data as any[])[7] as Address[]
+  } : null
+
+  return {
+    projectInfo,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for ERC20 approval
+export function useApproveToken() {
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract();
+
+  const approveToken = async ({
+    tokenAddress,
+    spender,
+    amount,
+    account
+  }: {
+    tokenAddress: Address;
+    spender: Address;
+    amount: bigint;
+    account: Address;
+  }) => {
+    try {
+      writeContract({
+        account,
+        address: tokenAddress,
+        abi: erc20ABI,
+        functionName: 'approve',
+        args: [spender, amount],
+      });
+      
+      // Return success - the component will handle the transaction hash from the hook's data property
+      return { success: true, hash: '', receipt: null };
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  return { approveToken, isPending, isError, error, isSuccess, data };
+}
+
+// Main hook for project tipping
 export function useProjectTipping(contractAddress: Address) {
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -617,11 +537,11 @@ export function useProjectTipping(contractAddress: Address) {
     }
   }, [contractAddress])
 
-  // Get global stats
-  const { stats: globalStats, isLoading: statsLoading, error: statsError } = useGlobalStats(contractAddress)
+  // Get contract stats
+  const { stats: contractStats, isLoading: statsLoading, error: statsError } = useContractStats(contractAddress)
 
-  // Get all tipped tokens
-  const { tokens: allTippedTokens, isLoading: tokensLoading, error: tokensError } = useAllTippedTokens(contractAddress)
+  // Get all tipped projects
+  const { projectIds: allTippedProjects, isLoading: projectsLoading, error: projectsError } = useAllTippedProjects(contractAddress)
 
   // Get minimum tip amount
   const { minimumTipAmount, isLoading: minTipLoading } = useMinimumTipAmount(contractAddress)
@@ -647,7 +567,6 @@ export function useProjectTipping(contractAddress: Address) {
     try {
       return formatEther(amount)
     } catch (error) {
-      console.error('Error formatting tip amount:', error)
       return '0'
     }
   }, [])
@@ -690,10 +609,9 @@ export function useProjectTipping(contractAddress: Address) {
     }
 
     try {
-      // This would typically aggregate data from multiple sources
       const dashboardData = {
-        globalStats,
-        allTippedTokens,
+        contractStats,
+        allTippedProjects,
         minimumTipAmount,
         platformFeePercentage
       }
@@ -704,10 +622,10 @@ export function useProjectTipping(contractAddress: Address) {
       logDebug('Error loading dashboard data', error, 'error')
       throw error
     }
-  }, [contractAddress, globalStats, allTippedTokens, minimumTipAmount, platformFeePercentage])
+  }, [contractAddress, contractStats, allTippedProjects, minimumTipAmount, platformFeePercentage])
 
-  const isLoading = statsLoading || tokensLoading || minTipLoading || feeLoading
-  const error = statsError || tokensError
+  const isLoading = statsLoading || projectsLoading || minTipLoading || feeLoading
+  const error = statsError || projectsError
 
   return {
     isInitialized,
@@ -718,8 +636,8 @@ export function useProjectTipping(contractAddress: Address) {
     getNetTipAmount,
     enhanceTipInfo,
     enhanceProjectSummary,
-    globalStats,
-    allTippedTokens,
+    contractStats,
+    allTippedProjects,
     minimumTipAmount,
     platformFeePercentage,
     isLoading,
@@ -749,6 +667,48 @@ export function calculateTipAfterFees(amount: bigint, feePercentage: bigint): {
   return { netAmount, feeAmount }
 }
 
+// Helper function to validate tip parameters
+export function validateTipParams({
+  projectId,
+  token,
+  amount,
+  celoEquivalent,
+  minimumTipAmount
+}: {
+  projectId: bigint
+  token: Address
+  amount: bigint
+  celoEquivalent: bigint
+  minimumTipAmount: bigint
+}): { isValid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  if (!projectId || projectId < 0n) {
+    errors.push('Invalid project ID')
+  }
+
+  if (!token || token === '0x0000000000000000000000000000000000000000') {
+    errors.push('Invalid token address')
+  }
+
+  if (!amount || amount <= 0n) {
+    errors.push('Amount must be greater than 0')
+  }
+
+  if (!celoEquivalent || celoEquivalent <= 0n) {
+    errors.push('CELO equivalent must be greater than 0')
+  }
+
+  if (celoEquivalent < minimumTipAmount) {
+    errors.push('Tip amount below minimum required')
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+
 // Export all hooks for convenient importing
 export default {
   useTipProject,
@@ -757,19 +717,18 @@ export default {
   useWithdrawAllTips,
   useProjectTipSummary,
   useUserTipSummary,
-  useTokenTipSummary,
-  useGlobalStats,
-  useAllTippedTokens,
   useTopTippedProjects,
-  useTopTokensByVolume,
   useRecentTips,
-  useTipsPaginated,
   useCanUserTipProject,
-  useTipsByTimeRange,
   useMinimumTipAmount,
   usePlatformFeePercentage,
+  useContractStats,
+  useAllTippedProjects,
+  useProjectWithTipInfo,
   useProjectTipping,
+  useApproveToken,
   parseUnixTimestamp,
   formatTipValue,
-  calculateTipAfterFees
+  calculateTipAfterFees,
+  validateTipParams
 }
