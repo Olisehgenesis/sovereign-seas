@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance, useWalletClient } from 'wagmi';
+import axios from 'axios';
 import { 
   FileCode,
   Vote,
@@ -38,8 +39,7 @@ import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import { v4 as uuidv4 } from 'uuid';
-import {SelfQRcodeWrapper, SelfAppBuilder } from '@selfxyz/qrcode';
-
+import  { SelfAppBuilder, SelfQRcodeWrapper } from '@selfxyz/qrcode';
 import { getUniversalLink } from "@selfxyz/core";
 import { getGoodLink } from '@/utils/get-good-link';
 
@@ -63,7 +63,7 @@ interface StatCardProps {
   onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
-function VerificationComponent() {
+function VerificationComponent({ onSuccess, onError }: { onSuccess: () => void; onError: (error: any) => void }) {
   const { address } = useAccount();
   const [universalLink, setUniversalLink] = useState<string | null>(null);
   if (!address) return null;
@@ -107,14 +107,9 @@ function VerificationComponent() {
       <div className="hidden md:flex justify-center">
         <SelfQRcodeWrapper
           selfApp={selfApp}
-          onSuccess={async () => {
-            console.log('[ProfilePage] Self verification onSuccess triggered');
-            //setShowVerification(false);
-            //setShowSuccessModal(true);
-            //setVerificationStatus('success');
-            //setVerificationError(null);
-            //setIsVerified(true);
-          }}
+          onSuccess={onSuccess}
+          darkMode={true}
+          onError={onError}
         />
       </div>
     </div>
@@ -425,6 +420,66 @@ export default function ProfilePage() {
   const [goodDollarLink, setGoodDollarLink] = useState<string | null>(null);
   const { data: walletClient } = useWalletClient();
 
+  // Add this function to refresh verification data
+  const refreshVerificationData = async () => {
+    if (!address) return;
+    
+    setVerificationLoading(true);
+    try {
+      console.log('Refreshing verification data for wallet:', address);
+      
+      const response = await axios.get(`https://selfauth.vercel.app/api/verify-details?wallet=${address}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
+      });
+      
+      const data = response.data;
+      setIsVerified(!!data.verified);
+      setVerificationProviders(data.profile?.providers || []);
+      setVerificationDetails({
+        gooddollar: data.gooddollar || { isVerified: false },
+        self: data.self || { 
+          isVerified: false,
+          nationality: null,
+          attestationId: null,
+          timestamp: null,
+          userDefinedData: null,
+          verificationOptions: null
+        },
+      });
+      console.log('Verification data refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing verification data:', error);
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ERR_NETWORK') {
+          console.error('Network Error during refresh - API endpoint may be down');
+        } else {
+          console.error('Refresh API Error Details:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            message: error.message,
+            code: error.code
+          });
+        }
+      }
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  // Helper function to safely access nested properties
+  const getVerificationStatus = () => {
+    if (verificationLoading) return 'loading';
+    if (verificationDetails?.self?.isVerified || verificationDetails?.gooddollar?.isVerified) {
+      return 'verified';
+    }
+    return 'unverified';
+  };
+
   // Generate userId using uuidv4 like playground
   useEffect(() => {
     if (!userId) {
@@ -448,24 +503,18 @@ export default function ProfilePage() {
 
     try {
       console.log('Starting GoodDollar verification save...');
-      const response = await fetch('https://selfauth.vercel.app/api/verify-gooddollar', {
-        method: 'POST',
+      const response = await axios.post('https://selfauth.vercel.app/api/verify-gooddollar', {
+        wallet: address,
+        userId: address, // Use wallet address as userId
+        verificationStatus: true,
+        root: data?.root || null
+      }, {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          wallet: address,
-          userId: address, // Use wallet address as userId
-          verificationStatus: true,
-          root: data?.root || null
-        }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const responseData = await response.json();
+      const responseData = response.data;
       console.log('GoodDollar verification save response:', responseData);
 
       if (responseData.status === 'success') {
@@ -525,27 +574,84 @@ export default function ProfilePage() {
   useEffect(() => {
     if (isConnected && address) {
       setVerificationLoading(true);
-      fetch(`https://selfauth.vercel.app/api/verify-details?wallet=${address}`)
-        .then(async (response) => {
-          if (!response.ok) throw new Error('Failed to fetch verification');
-          const data = await response.json();
-          // Set all state from the single response
+      
+      const fetchVerificationData = async () => {
+        try {
+          console.log('Attempting to fetch verification data for wallet:', address);
+          
+          const response = await axios.get(`https://selfauth.vercel.app/api/verify-details?wallet=${address}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            timeout: 10000, // 10 second timeout
+          });
+          
+          const data = response.data;
+          console.log('API Response received:', data);
+          
+          // Set all state from the single response with proper fallbacks
           setIsVerified(!!data.verified);
           setVerificationProviders(data.profile?.providers || []);
           setVerificationDetails({
-            gooddollar: data.gooddollar,
-            self: data.self,
+            gooddollar: data.gooddollar || { isVerified: false },
+            self: data.self || { 
+              isVerified: false,
+              nationality: null,
+              attestationId: null,
+              timestamp: null,
+              userDefinedData: null,
+              verificationOptions: null
+            },
           });
           console.log('Verification details:', { gooddollar: data.gooddollar, self: data.self });
-          setVerificationLoading(false);
-        })
-        .catch((error) => {
+        } catch (error) {
+          console.error('Error checking verification status:', error);
+          
+          if (axios.isAxiosError(error)) {
+            if (error.code === 'ERR_NETWORK') {
+              console.error('Network Error - API endpoint may be down or unreachable');
+              console.error('Trying to ping the API endpoint...');
+              
+              // Try a simple ping to check if the domain is reachable
+              try {
+                await axios.get('https://selfauth.vercel.app', { timeout: 5000 });
+                console.log('Domain is reachable, but API endpoint may be down');
+              } catch (pingError) {
+                const errorMessage = pingError instanceof Error ? pingError.message : 'Unknown error';
+                console.error('Domain is not reachable:', errorMessage);
+              }
+            } else {
+              console.error('API Error Details:', {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                message: error.message,
+                code: error.code
+              });
+            }
+          }
+          
+          // Set default values on error
           setIsVerified(false);
           setVerificationProviders([]);
-          setVerificationDetails(null);
+          setVerificationDetails({
+            gooddollar: { isVerified: false },
+            self: { 
+              isVerified: false,
+              nationality: null,
+              attestationId: null,
+              timestamp: null,
+              userDefinedData: null,
+              verificationOptions: null
+            }
+          });
+        } finally {
           setVerificationLoading(false);
-          console.error('Error checking verification status:', error);
-        });
+        }
+      };
+      
+      fetchVerificationData();
     }
   }, [isConnected, address]);
 
@@ -661,7 +767,12 @@ export default function ProfilePage() {
                   <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.self?.isVerified ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
                     <Shield className={`h-5 w-5 mb-1 ${verificationDetails?.self?.isVerified ? 'text-blue-600' : 'text-gray-400'}`} />
                     <span className="text-base font-bold mb-0.5">Self Protocol</span>
-                    {verificationDetails?.self?.isVerified ? (
+                    {verificationLoading ? (
+                      <div className="flex items-center gap-1 mb-1">
+                        <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                        <span className="text-blue-700 font-semibold text-xs">Loading...</span>
+                      </div>
+                    ) : verificationDetails?.self?.isVerified ? (
                       <div className="flex items-center gap-1 mb-1">
                         <CheckCircle className="h-4 w-4 text-blue-600" />
                         <span className="text-blue-700 font-semibold text-xs">Verified</span>
@@ -677,6 +788,12 @@ export default function ProfilePage() {
                     {/* Show nationality if available */}
                     {verificationDetails?.self?.isVerified && verificationDetails.self.nationality && (
                       <span className="mt-1 text-[10px] text-gray-500">{verificationDetails.self.nationality}</span>
+                    )}
+                    {/* Show verification timestamp if available */}
+                    {verificationDetails?.self?.isVerified && verificationDetails.self.timestamp && (
+                      <span className="mt-1 text-[10px] text-gray-500">
+                        {new Date(verificationDetails.self.timestamp).toLocaleDateString()}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -1245,7 +1362,16 @@ export default function ProfilePage() {
              Scan the QR code with the Self app to verify your identity. This will enable enhanced features and anti-Sybil protection in V3.
            </p>
            
-           <VerificationComponent /> 
+           <VerificationComponent 
+             onSuccess={() => {
+               console.log('[ProfilePage] Self verification onSuccess triggered');
+               refreshVerificationData();
+               setShowVerification(false);
+             }}
+             onError={(error) => {
+               console.error('[ProfilePage] Self verification error:', error);
+             }}
+           />
             
          </div>
        </div>

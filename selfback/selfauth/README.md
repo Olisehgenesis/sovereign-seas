@@ -2,6 +2,49 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Prerequisites
+
+This project requires Redis for data storage. You'll need to set up Redis before running the application.
+
+#### Redis Setup
+
+1. **Local Development**: Install and run Redis locally
+   ```bash
+   # On Ubuntu/Debian
+   sudo apt-get install redis-server
+   sudo systemctl start redis-server
+   
+   # On macOS with Homebrew
+   brew install redis
+   brew services start redis
+   
+   # On Windows with WSL
+   sudo apt-get install redis-server
+   sudo systemctl start redis-server
+   ```
+
+2. **Production**: Use a Redis service like Upstash, Redis Cloud, or AWS ElastiCache
+
+3. **Environment Variables**: The project already has Redis configured in `.env`:
+ 
+   ```
+   
+   For local development, you can override this by creating a `.env.local` file:
+   ```env
+   REDIS_URL=redis://localhost:6379
+   ```
+
+### Environment Setup
+
+The application uses environment variables for configuration. The main ones are:
+
+- `REDIS_URL`: Redis connection string (already configured for production)
+- `CELO_RPC_URL`: Celo blockchain RPC endpoint
+- `PRIVATE_KEY`: Private key for blockchain transactions
+- `TESTNET_ENABLED`: Whether to use testnet (default: false)
+
+### Running the Application
+
 First, run the development server:
 
 ```bash

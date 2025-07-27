@@ -3,15 +3,14 @@ import {
   SelfBackendVerifier,
   AllIds,
   DefaultConfigStore,
-  VerificationConfig
+  VerificationConfig,
+  IConfigStorage
 } from '@selfxyz/core';
-import fs from 'fs';
-import path from 'path';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { error } from 'console';
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
 import { originList } from '@/src/utils/origin';
+import { createClient } from 'redis';
 
 // Add VerificationData interface
 type VerificationData = {
@@ -23,6 +22,72 @@ type VerificationData = {
   verified: boolean;
 };
 
+// Add SelfDetails interface
+type SelfDetails = {
+  isVerified: boolean;
+  nationality: string | null;
+  attestationId: string | null;
+  timestamp: string | null;
+  userDefinedData: any | null;
+  verificationOptions: {
+    minimumAge: number;
+    ofac: boolean;
+    excludedCountries: string[];
+    nationality: boolean;
+    gender: boolean;
+  } | null;
+};
+
+// Redis client
+let redis: any = null;
+
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    console.log('Connecting to Redis at:', redisUrl);
+    redis = createClient({
+      url: redisUrl
+    });
+    try {
+      await redis.connect();
+      console.log('Successfully connected to Redis');
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      throw new Error('Redis connection failed. Please check your REDIS_URL environment variable.');
+    }
+  }
+  return redis;
+};
+
+// Redis Config Store for storing verification configurations
+export class RedisConfigStore implements IConfigStorage {
+  async getActionId(userIdentifier: string, data: string): Promise<string> {
+    return userIdentifier;
+  }
+
+  async setConfig(id: string, config: VerificationConfig): Promise<boolean> {
+    const client = await getRedisClient();
+    await client.set(`config_${id}`, JSON.stringify(config));
+    return true;
+  }
+
+  async getConfig(id: string): Promise<VerificationConfig> {
+    try {
+      const client = await getRedisClient();
+      const config = await client.get(`config_${id}`);
+      if (!config) {
+        // Return default config if no saved config found
+        return verification_config;
+      }
+      return JSON.parse(config as string) as VerificationConfig;
+    } catch (error) {
+      console.log('Error getting config, returning default:', error);
+      // Return default config on error
+      return verification_config;
+    }
+  }
+}
+
 // Configure the Self backend verifier
 // IMPORTANT: This config must match the frontend disclosures exactly
 const verification_config = {
@@ -33,8 +98,9 @@ const verification_config = {
   ofac: false,              // OFAC check (set to true if needed)
 };
 
-const configStore = new DefaultConfigStore(verification_config);
+const configStore = new RedisConfigStore();
 
+// Initialize the verifier with the config store
 const selfBackendVerifier = new SelfBackendVerifier(
   "seasv2",                           // Scope: must match frontend
   "https://selfauth.vercel.app/api/verify", // Public API endpoint
@@ -46,26 +112,16 @@ const selfBackendVerifier = new SelfBackendVerifier(
 
 
 const saveVerificationData = async (data: VerificationData) => {
-  const dataDir = path.join(process.cwd(), 'data');
-  const filePath = path.join(dataDir, 'verifications.json');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-  let existingData: VerificationData[] = [];
-  if (fs.existsSync(filePath)) {
-    try {
-      const fileContent = fs.readFileSync(filePath, 'utf8');
-      existingData = JSON.parse(fileContent);
-    } catch (error) {
-      console.error('Error reading existing data:', error);
-    }
-  }
-  existingData.push(data);
   try {
-    fs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
-    console.log('Verification data saved successfully');
+    // Use wallet address as key, or generate a unique key if no wallet address
+    const key = data.walletAddress || `verification_${Date.now()}`;
+    
+    // Store the verification data in Redis
+    const client = await getRedisClient();
+    await client.set(key, JSON.stringify(data));
+    console.log('Verification data saved successfully to Redis');
   } catch (error) {
-    console.error('Error saving verification data:', error);
+    console.error('Error saving verification data to Redis:', error);
     throw error;
   }
 };
@@ -81,13 +137,18 @@ const parseUserDefinedData = (hexData: string) => {
   }
 };
 
-export function isWalletSelfVerified(wallet: string): boolean {
-  const dataDir = path.join(process.cwd(), 'data');
-  const filePath = path.join(dataDir, 'verifications.json');
-  if (!fs.existsSync(filePath)) return false;
-  const verifications = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  const match = verifications.find((v: any) => v.walletAddress && v.walletAddress.toLowerCase() === wallet.toLowerCase() && v.verified);
-  return !!match;
+export async function isWalletSelfVerified(wallet: string): Promise<boolean> {
+  try {
+    const client = await getRedisClient();
+    const verificationData = await client.get(wallet);
+    if (!verificationData) return false;
+    
+    const data = JSON.parse(verificationData as string) as VerificationData;
+    return data.verified === true;
+  } catch (error) {
+    console.error('Error checking wallet verification:', error);
+    return false;
+  }
 }
 
 // Initialize CORS middleware
@@ -120,12 +181,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
       // Check if verification was successful
       if (result.isValidDetails.isValid) {
-        // Verification successful - process the result
-        return res.status(200).json({
+        // Extract wallet address from user context data
+        const userDefinedData = parseUserDefinedData(userContextData);
+        const walletAddress = result.userData.userIdentifier;
+        
+        // Get configuration options (will return default if none saved)
+        let saveOptions: VerificationConfig;
+        try {
+          saveOptions = await configStore.getConfig(
+            result.userData.userIdentifier
+          );
+          console.log('Using saved configuration for user:', result.userData.userIdentifier);
+        } catch (error) {
+          console.log('Error getting config, using default configuration');
+          saveOptions = verification_config;
+        }
+        
+        // Create filtered subject based on verification result
+        const filteredSubject = { ...result.discloseOutput };
+        
+        // Create verification data object
+        const verificationData: VerificationData = {
+          timestamp: new Date().toISOString(),
+          walletAddress: walletAddress,
+          nationality: filteredSubject.nationality || "Not disclosed",
+          attestationId: attestationId,
+          userDefinedData: userDefinedData,
+          verified: true,
+        };
+        
+        // Save the verification data
+        await saveVerificationData(verificationData);
+        
+        const response: any = {
           status: "success",
           result: true,
-          credentialSubject: result.discloseOutput,
-        });
+          credentialSubject: filteredSubject,
+          verificationOptions: {
+            minimumAge: saveOptions.minimumAge,
+            ofac: saveOptions.ofac,
+            excludedCountries: saveOptions.excludedCountries,
+          },
+        };
+        
+        return res.status(200).json(response);
       } else {
         // Verification failed
         return res.status(500).json({
@@ -147,14 +246,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const walletAddress = req.query.wallet;
       const walletAddressStr = Array.isArray(walletAddress) ? walletAddress[0] : walletAddress;
-      const dataDir = path.join(process.cwd(), 'data');
-      const filePath = path.join(dataDir, 'verifications.json');
-      let selfDetails = { isVerified: false };
+      let selfDetails: SelfDetails = { 
+        isVerified: false,
+        nationality: null,
+        attestationId: null,
+        timestamp: null,
+        userDefinedData: null,
+        verificationOptions: null
+      };
       let providers: string[] = [];
       let isValid = false;
       let verified = false;
       let profileIcons: { [provider: string]: string } = { GoodDollar: '❌', Self: '❌' };
-      if (!fs.existsSync(filePath) || !walletAddressStr) {
+      
+      if (!walletAddressStr) {
         return res.status(200).json({
           profile: {
             isValid: false,
@@ -166,19 +271,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           self: selfDetails
         });
       }
-      const fileContent = fs.readFileSync(filePath, 'utf8');
-      const verifications: VerificationData[] = JSON.parse(fileContent);
-      const filteredVerifications = verifications.filter(v => v.walletAddress && v.walletAddress.toLowerCase() === walletAddressStr.toLowerCase());
-      if (filteredVerifications.length > 0) {
-        const latest = filteredVerifications[0];
-        if (latest.verified) {
-          selfDetails = { isVerified: true };
+      
+      // Get verification data from Redis
+      const client = await getRedisClient();
+      const verificationData = await client.get(walletAddressStr);
+      if (verificationData) {
+        const data = JSON.parse(verificationData as string) as VerificationData;
+        if (data.verified) {
+          // Get user's verification configuration
+          let userConfig: any = verification_config;
+          try {
+            userConfig = await configStore.getConfig(walletAddressStr);
+          } catch (error) {
+            console.log('Using default config for user:', walletAddressStr);
+          }
+          
+          selfDetails = { 
+            isVerified: true,
+            nationality: data.nationality,
+            attestationId: data.attestationId,
+            timestamp: data.timestamp,
+            userDefinedData: data.userDefinedData,
+            verificationOptions: {
+              minimumAge: (userConfig as any).minimumAge || verification_config.minimumAge,
+              ofac: (userConfig as any).ofac || verification_config.ofac,
+              excludedCountries: (userConfig as any).excludedCountries || verification_config.excludedCountries,
+              nationality: (userConfig as any).nationality || verification_config.nationality,
+              gender: (userConfig as any).gender || verification_config.gender
+            }
+          };
           providers.push('Self');
           isValid = true;
           verified = true;
           profileIcons.Self = '✅';
         }
       }
+      
       // GoodDollar always ❌ in this endpoint (no on-chain check)
       return res.status(200).json({
         profile: {

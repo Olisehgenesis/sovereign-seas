@@ -41,6 +41,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.45.1
         version: 5.45.1(react@18.3.1)
+      axios:
+        specifier: ^1.11.0
+        version: 1.11.0
       better-sqlite3:
         specifier: ^9.4.3
         version: 9.6.0
@@ -1867,8 +1870,8 @@ packages:
   avvio@8.4.0:
     resolution: {integrity: sha512-CDSwaxINFy59iNwhYnkvALBwZiTydGkOecZyPkqBpABYR1KqGEsET0VOOYDwtleZSUIdeY36DC2bSZ24CO1igA==}
 
-  axios@1.10.0:
-    resolution: {integrity: sha512-/1xYAC4MP/HEG+3duIhFr4ZQXR4sQXOIe+o6sdqzeykGLx6Upp/1p8MHqhINOvGeP7xyNHe7tsiJByc4SSVUxw==}
+  axios@1.11.0:
+    resolution: {integrity: sha512-1Lx3WLFQWm3ooKDYZD1eXmoGO9fxYQjrycfHFC8P0sCfQVXyROp0p9PFWBehewBOdCwHc+f/b8I0fMto5eSfwA==}
 
   b4a@1.6.7:
     resolution: {integrity: sha512-OnAYlL5b7LEkALw87fUVafQw5rVR9RjwGd4KUwNQ6DrrNmaVaUCgLipfVlzrPQ4tWOR9P0IXGNOx50jYCCdSJg==}
@@ -6569,7 +6572,7 @@ snapshots:
       '@openpassport/zk-kit-smt': 0.0.1
       asn1.js: 5.4.1
       asn1js: 3.0.6
-      axios: 1.10.0
+      axios: 1.11.0
       buffer: 6.0.3
       chai: 4.5.0
       country-emoji: 1.5.6
@@ -8116,7 +8119,7 @@ snapshots:
       '@fastify/error': 3.4.1
       fastq: 1.19.1
 
-  axios@1.10.0:
+  axios@1.11.0:
     dependencies:
       follow-redirects: 1.15.9
       form-data: 4.0.4

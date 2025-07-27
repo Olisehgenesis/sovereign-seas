@@ -1,16 +1,26 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
 import Cors from 'cors';
 import { initMiddleware } from '../../lib/init-middleware';
 import { originList } from '@/src/utils/origin';
 import { createPublicClient, http, Address } from 'viem';
 import { celo } from 'viem/chains';
+import { createClient } from 'redis';
 
 import { IdentitySDK } from '@/src/utils/good/useGooddollar'; // Update with correct path
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
-const SELF_VERIFICATIONS_FILE = path.join(process.cwd(), 'data', 'verifications.json');
+// Redis client
+let redis: any = null;
+
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    redis = createClient({
+      url: redisUrl
+    });
+    await redis.connect();
+  }
+  return redis;
+};
 
 // Initialize CORS middleware
 const cors = initMiddleware(
@@ -40,12 +50,42 @@ export async function isWalletGoodDollarVerified(wallet: string): Promise<boolea
   }
 }
 
+// Helper to check if wallet is self-verified and get details
+export async function getWalletSelfVerificationDetails(wallet: string): Promise<{
+  isVerified: boolean;
+  nationality?: string | null;
+  attestationId?: string | null;
+  timestamp?: string | null;
+  userDefinedData?: any | null;
+  verificationOptions?: any | null;
+}> {
+  try {
+    const client = await getRedisClient();
+    const verificationData = await client.get(wallet);
+    if (!verificationData) return { isVerified: false };
+    
+    const data = JSON.parse(verificationData as string);
+    if (data.verified) {
+      return {
+        isVerified: true,
+        nationality: data.nationality || null,
+        attestationId: data.attestationId || null,
+        timestamp: data.timestamp || null,
+        userDefinedData: data.userDefinedData || null,
+        verificationOptions: data.verificationOptions || null
+      };
+    }
+    return { isVerified: false };
+  } catch (error) {
+    console.error('Error checking wallet verification:', error);
+    return { isVerified: false };
+  }
+}
+
 // Helper to check if wallet is self-verified (via SelfBackendVerifier)
-export function isWalletSelfVerified(wallet: string): boolean {
-  if (!fs.existsSync(SELF_VERIFICATIONS_FILE)) return false;
-  const verifications = JSON.parse(fs.readFileSync(SELF_VERIFICATIONS_FILE, 'utf-8'));
-  const match = verifications.find((v: any) => v.walletAddress && v.walletAddress.toLowerCase() === wallet.toLowerCase() && v.verified);
-  return !!match;
+export async function isWalletSelfVerified(wallet: string): Promise<boolean> {
+  const details = await getWalletSelfVerificationDetails(wallet);
+  return details.isVerified;
 }
 
 export default async function handler(
@@ -67,35 +107,32 @@ export default async function handler(
       return res.status(400).json({ error: 'Either wallet or userId is required' });
     }
 
-    // Check if data directory exists, create if not
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    // Check if data file exists
-    if (!fs.existsSync(DATA_FILE)) {
-      //create the file
+    // Get verification data from Redis
+    let matchingVerifications: any[] = [];
+    if (wallet || userId) {
       try {
-        fs.writeFileSync(DATA_FILE, JSON.stringify([]));
+        const client = await getRedisClient();
+        const key = wallet || userId;
+        const verificationData = await client.get(key as string);
+        if (verificationData) {
+          const data = JSON.parse(verificationData as string);
+          matchingVerifications = [data];
+        }
       } catch (error) {
-        console.error('Error creating data file:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        console.log('No verification data found in Redis');
       }
     }
 
-    const verifications = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-    
-    // Find verifications matching either wallet or userId
-    const matchingVerifications = verifications.filter((v: any) => {
-      if (wallet && v.wallet.toLowerCase() === (wallet as string).toLowerCase()) return true;
-      if (userId && v.userId === userId) return true;
-      return false;
-    }).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
     // GoodDollar and Self verification status
-    let goodDollarDetails = null;
-    let selfDetails = { isVerified: false };
+    let goodDollarDetails: any = null;
+    let selfDetails: any = { 
+      isVerified: false,
+      nationality: null,
+      attestationId: null,
+      timestamp: null,
+      userDefinedData: null,
+      verificationOptions: null
+    };
     let providers: string[] = [];
     let isValid = false;
     let verified = false;
@@ -107,7 +144,7 @@ export default async function handler(
         const mockWalletClient = { chain: celo, account: null, getAddresses: async () => [], } as any;
         const identitySDK = new IdentitySDK(publicClient, mockWalletClient, 'production');
         const { isWhitelisted, root } = await identitySDK.getWhitelistedRoot(wallet as Address);
-        let expiryData = null;
+        let expiryData: any = null;
         if (isWhitelisted) {
           try {
             const identityExpiryData = await identitySDK.getIdentityExpiryData(root || wallet as Address);
@@ -139,8 +176,9 @@ export default async function handler(
         goodDollarDetails = { isVerified: false, wallet: wallet, root: null, expiry: null };
       }
       // Check Self
-      if (isWalletSelfVerified(wallet as string)) {
-        selfDetails = { isVerified: true };
+      const selfVerificationDetails = await getWalletSelfVerificationDetails(wallet as string);
+      if (selfVerificationDetails.isVerified) {
+        selfDetails = selfVerificationDetails;
         providers.push('Self');
         isValid = true;
         verified = true;
@@ -162,7 +200,14 @@ export default async function handler(
         if (!providers.includes('Self')) providers.push('Self');
         isValid = true;
         verified = true;
-        selfDetails = { isVerified: true };
+        selfDetails = { 
+          isVerified: true,
+          nationality: latestVerification.nationality || null,
+          attestationId: latestVerification.attestationId || null,
+          timestamp: latestVerification.timestamp || null,
+          userDefinedData: latestVerification.userDefinedData || null,
+          verificationOptions: latestVerification.verificationOptions || null
+        };
       }
     }
     return res.status(200).json({

@@ -1,31 +1,24 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
-import Cors from 'cors';
-import { initMiddleware } from '../../lib/init-middleware';
-import { originList } from '@/src/utils/origin';
+// CORS removed - using next.config.ts headers instead
+// initMiddleware removed - CORS handled by next.config.ts
+// originList removed - CORS handled by next.config.ts
+import { createClient } from 'redis';
 
-// Path to the JSON file
-const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
+// Redis client
+let redis: any = null;
+
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    redis = createClient({
+      url: redisUrl
+    });
+    await redis.connect();
+  }
+  return redis;
+};
 
 // Initialize CORS middleware
-const cors = initMiddleware(
-  Cors({
-    origin: originList,
-    methods: ['GET', 'POST', 'OPTIONS'],
-  })
-);
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Run the CORS middleware
-  await cors(req, res);
-
-  // Only allow GET requests
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
@@ -36,35 +29,23 @@ export default async function handler(
       return res.status(400).json({ error: 'Wallet address is required' });
     }
 
-    // Check if data file exists
-    if (!fs.existsSync(DATA_FILE)) {
-      return res.status(200).json({ 
-        verified: false,
-        message: 'No verification data found'
-      });
-    }
-
-    // Read verification data
-    const verifications = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    // Get verification data from Redis
+    const client = await getRedisClient();
+    const verificationData = await client.get(wallet);
     
-    // Find the most recent verification for this wallet
-    const walletVerifications = verifications
-      .filter((v: any) => v.wallet.toLowerCase() === wallet.toLowerCase())
-      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    if (walletVerifications.length === 0) {
+    if (!verificationData) {
       return res.status(200).json({ 
         verified: false,
         message: 'Wallet not found in verification records'
       });
     }
 
-    // Return the most recent verification status
-    const latestVerification = walletVerifications[0];
+    // Parse verification data
+    const data = JSON.parse(verificationData as string);
     return res.status(200).json({
-      verified: latestVerification.verificationStatus,
-      timestamp: latestVerification.timestamp,
-      message: latestVerification.verificationStatus ? 'Wallet is verified' : 'Wallet is not verified'
+      verified: data.verified,
+      timestamp: data.timestamp,
+      message: data.verified ? 'Wallet is verified' : 'Wallet is not verified'
     });
 
   } catch (error) {

@@ -4,6 +4,21 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
   
+  // Global CORS headers - allow all origins
+  async headers() {
+    return [
+      {
+        source: '/api/:path*', // Apply to all API routes
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With' },
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+        ],
+      },
+    ];
+  },
+  
   // Ignore build errors for specific modules
   typescript: {
     // !! WARN !!
