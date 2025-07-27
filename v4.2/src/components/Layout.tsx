@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import Header from '@/components/Header';
+// import Header from '@/components/Header';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Footer from './Footer';
 
@@ -8,7 +8,7 @@ export default function Layout() {
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="relative z-10 min-h-screen flex flex-col">
-          <Header />
+          {/* <Header /> */}
 
           <main className="flex-1 relative z-10 pt-16">
             {/* <div className="container mx-auto px-4 py-6"> */}

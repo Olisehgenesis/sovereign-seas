@@ -37,7 +37,7 @@ const configStore = new DefaultConfigStore(verification_config);
 
 const selfBackendVerifier = new SelfBackendVerifier(
   "seasv2",                           // Scope: must match frontend
-  "https://auth.sovseas.xyz/api/verify", // Public API endpoint
+  "https://selfauth.vercel.app/api/verify", // Public API endpoint
   false,                               // Production mode (set to true for mock/testing)
   AllIds,                              // Accept all document types
   configStore,                         // Configuration store
