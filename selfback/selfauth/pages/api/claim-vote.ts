@@ -2,15 +2,12 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { claimAndVoteForUser } from '../../src/utils/claims';
-import fs from 'fs';
-import path from 'path';
 import { createPublicClient, createWalletClient, http} from 'viem';
 import { PublicClient, WalletClient } from "viem";
 import { celo } from 'viem/chains';
 import { isWalletGoodDollarVerified } from './verify-details';
 import { createClient } from 'redis';
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
 const testnetEnabled = process.env.TESTNET_ENABLED === 'true';
 
 // Redis client
