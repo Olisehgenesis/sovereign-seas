@@ -38,7 +38,7 @@ import { Address } from 'viem';
 import { formatEther } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import { v4 as uuidv4 } from 'uuid';
-import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
+import {SelfQRcodeWrapper, SelfAppBuilder } from '@selfxyz/qrcode';
 
 import { getUniversalLink } from "@selfxyz/core";
 import { getGoodLink } from '@/utils/get-good-link';
@@ -68,10 +68,13 @@ function VerificationComponent() {
   const [universalLink, setUniversalLink] = useState<string | null>(null);
   if (!address) return null;
   const selfApp = new SelfAppBuilder({
+    version : 2,
     appName: "Sovereign Seas",
     scope: "seasv2",
     endpoint: "https://selfauth.vercel.app/api/verify",
     logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
+    endpointType: "https",
+    userDefinedData: "Sovereign Seas V4.2",
     userId: address,
     userIdType: "hex",
     disclosures: {

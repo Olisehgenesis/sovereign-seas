@@ -1,14 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import SelfQRcodeWrapper, { SelfAppBuilder } from '@selfxyz/qrcode';
 import { v4 as uuidv4 } from 'uuid';
 import { useAccount } from 'wagmi';
+
+// Dynamic imports for Self SDK modules
+const getSelfModules = () => import('@selfxyz/core').then(mod => ({
+  getUniversalLink: mod.getUniversalLink
+}));
+
+const getSelfQRModules = () => import('@selfxyz/qrcode').then(mod => ({
+  SelfAppBuilder: mod.SelfAppBuilder,
+  SelfQRcodeWrapper: mod.SelfQRcodeWrapper
+}));
+
+const getEthers = () => import('ethers');
 
 export default function VerifyPage() {
     const [userId, setUserId] = useState<string | null>(null);
     const [isVerified, setIsVerified] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selfApp, setSelfApp] = useState<any>(null);
+    const [SelfQRcodeWrapper, setSelfQRcodeWrapper] = useState<any>(null);
 
     useEffect(() => {
         if (!userId) {
@@ -18,23 +31,49 @@ export default function VerifyPage() {
         }
     }, [userId]);
 
-    if (!userId) return null;
-
-    const selfApp = new SelfAppBuilder({
-        appName: "Sovereign Seas",
-        scope: "sovereign-seas",
-        endpoint: "https://auth.sovseas.xyz/api/verify",
-        endpointType: "https",
-        userId,
-        disclosures: {
-            name: true,
-            date_of_birth: true,
-            nationality: true,
-            minimumAge: 18,
-            ofac: true,
+    useEffect(() => {
+        const initializeApp = async () => {
+            if (!userId) return;
             
-        }
-    }).build();
+            try {
+                const [selfModules, selfQRModules, ethersModule] = await Promise.all([
+                    getSelfModules(),
+                    getSelfQRModules(),
+                    getEthers()
+                ]);
+
+                const { SelfAppBuilder } = selfQRModules;
+                const { getUniversalLink } = selfModules;
+                const ethers = ethersModule;
+
+                setSelfQRcodeWrapper(selfQRModules.SelfQRcodeWrapper);
+
+                const app = new SelfAppBuilder({
+                    appName: "Sovereign Seas",
+                    scope: "sovereign-seas",
+                    endpoint: "https://auth.sovseas.xyz/api/verify",
+                    endpointType: "https",
+                    userId,
+                    disclosures: {
+                        name: true,
+                        date_of_birth: true,
+                        nationality: true,
+                        minimumAge: 18,
+                        ofac: true,
+                    }
+                }).build();
+
+                setSelfApp(app);
+            } catch (error: any) {
+                console.error("Failed to initialize Self app:", error);
+                setError("Failed to initialize verification app");
+            }
+        };
+
+        initializeApp();
+    }, [userId]);
+
+    if (!userId) return null;
 
     const handleVerificationSuccess = async () => {
         console.log('Verification successful');
@@ -90,11 +129,18 @@ export default function VerifyPage() {
                 </div>
 
                 <div className="flex justify-center mb-6">
-                    <SelfQRcodeWrapper
-                        selfApp={selfApp}
-                        onSuccess={handleVerificationSuccess}
-                        size={250}
-                    />
+                    {selfApp && SelfQRcodeWrapper ? (
+                        <SelfQRcodeWrapper
+                            selfApp={selfApp}
+                            onSuccess={handleVerificationSuccess}
+                            size={250}
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center p-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <span className="ml-2 text-gray-600">Loading QR Code...</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="text-center space-y-2">
