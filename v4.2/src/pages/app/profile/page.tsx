@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance, useWalletClient } from 'wagmi';
-import axios from 'axios';
+// import axios from 'axios'; // Removed to use fetch instead
 import { 
   FileCode,
   Vote,
@@ -155,9 +155,16 @@ interface ProjectCardProps {
 }
 
 const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
-  const parsedMetadata = project.metadata?.additionalData 
-    ? JSON.parse(project.metadata.additionalData) 
-    : {};
+  const parsedMetadata = (() => {
+    try {
+      return project.metadata?.additionalData 
+        ? JSON.parse(project.metadata.additionalData) 
+        : {};
+    } catch (error) {
+      console.error('Error parsing project metadata:', error);
+      return {};
+    }
+  })();
   const location = getNormalizedLocation(parsedMetadata);
 
   return (
@@ -226,9 +233,16 @@ interface CampaignCardProps {
 }
 
 const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
-  const parsedMetadata = campaign.metadata?.mainInfo 
-    ? JSON.parse(campaign.metadata.mainInfo) 
-    : {};
+  const parsedMetadata = (() => {
+    try {
+      return campaign.metadata?.mainInfo 
+        ? JSON.parse(campaign.metadata.mainInfo) 
+        : {};
+    } catch (error) {
+      console.error('Error parsing campaign metadata:', error);
+      return {};
+    }
+  })();
 
   const getStatus = () => {
     const now = Math.floor(Date.now() / 1000);
@@ -315,11 +329,16 @@ interface VoteCardProps {
 }
 
 const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
-  const parsedMetadata = vote.metadata?.mainInfo 
-    ? JSON.parse(vote.metadata.mainInfo) 
-    : {};
-
-  console.log(parsedMetadata)
+  const parsedMetadata = (() => {
+    try {
+      return vote.metadata?.mainInfo 
+        ? JSON.parse(vote.metadata.mainInfo) 
+        : {};
+    } catch (error) {
+      console.error('Error parsing vote metadata:', error);
+      return {};
+    }
+  })();
 
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all">
@@ -428,15 +447,31 @@ export default function ProfilePage() {
     try {
       console.log('Refreshing verification data for wallet:', address);
       
-      const response = await axios.get(`https://selfauth.vercel.app/api/verify-details?wallet=${address}`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`https://selfauth.vercel.app/api/verify?wallet=${address}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
-        timeout: 10000, // 10 second timeout
+        signal: controller.signal
       });
       
-      const data = response.data;
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Refresh API Response received:', data);
+      
+      // Handle the new API response structure
       setIsVerified(!!data.verified);
       setVerificationProviders(data.profile?.providers || []);
       setVerificationDetails({
@@ -453,17 +488,13 @@ export default function ProfilePage() {
       console.log('Verification data refreshed successfully');
     } catch (error) {
       console.error('Error refreshing verification data:', error);
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'ERR_NETWORK') {
-          console.error('Network Error during refresh - API endpoint may be down');
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('Request timeout during refresh');
+        } else if (error.message.includes('HTTP error')) {
+          console.error('HTTP Error during refresh:', error.message);
         } else {
-          console.error('Refresh API Error Details:', {
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data,
-            message: error.message,
-            code: error.code
-          });
+          console.error('Network Error during refresh - API endpoint may be down');
         }
       }
     } finally {
@@ -503,18 +534,27 @@ export default function ProfilePage() {
 
     try {
       console.log('Starting GoodDollar verification save...');
-      const response = await axios.post('https://selfauth.vercel.app/api/verify-gooddollar', {
-        wallet: address,
-        userId: address, // Use wallet address as userId
-        verificationStatus: true,
-        root: data?.root || null
-      }, {
+      const response = await fetch('https://selfauth.vercel.app/api/verify-gooddollar', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
+        body: JSON.stringify({
+          wallet: address,
+          userId: address, // Use wallet address as userId
+          verificationStatus: true,
+          root: data?.root || null
+        })
       });
 
-      const responseData = response.data;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
       console.log('GoodDollar verification save response:', responseData);
 
       if (responseData.status === 'success') {
@@ -579,18 +619,31 @@ export default function ProfilePage() {
         try {
           console.log('Attempting to fetch verification data for wallet:', address);
           
-          const response = await axios.get(`https://selfauth.vercel.app/api/verify-details?wallet=${address}`, {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
+          const response = await fetch(`https://selfauth.vercel.app/api/verify?wallet=${address}`, {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
             },
-            timeout: 10000, // 10 second timeout
+            signal: controller.signal
           });
           
-          const data = response.data;
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
           console.log('API Response received:', data);
           
-          // Set all state from the single response with proper fallbacks
+          // Handle the new API response structure with proper fallbacks
           setIsVerified(!!data.verified);
           setVerificationProviders(data.profile?.providers || []);
           setVerificationDetails({
@@ -605,30 +658,35 @@ export default function ProfilePage() {
             },
           });
           console.log('Verification details:', { gooddollar: data.gooddollar, self: data.self });
+          console.log('Full verification response:', data);
         } catch (error) {
           console.error('Error checking verification status:', error);
           
-          if (axios.isAxiosError(error)) {
-            if (error.code === 'ERR_NETWORK') {
+          if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+              console.error('Request timeout - API endpoint may be down or unreachable');
+            } else if (error.message.includes('HTTP error')) {
+              console.error('HTTP Error:', error.message);
+            } else {
               console.error('Network Error - API endpoint may be down or unreachable');
               console.error('Trying to ping the API endpoint...');
               
               // Try a simple ping to check if the domain is reachable
               try {
-                await axios.get('https://selfauth.vercel.app', { timeout: 5000 });
+                const pingController = new AbortController();
+                const pingTimeoutId = setTimeout(() => pingController.abort(), 5000);
+                
+                const pingResponse = await fetch('https://selfauth.vercel.app', {
+                  method: 'GET',
+                  signal: pingController.signal
+                });
+                
+                clearTimeout(pingTimeoutId);
                 console.log('Domain is reachable, but API endpoint may be down');
               } catch (pingError) {
                 const errorMessage = pingError instanceof Error ? pingError.message : 'Unknown error';
                 console.error('Domain is not reachable:', errorMessage);
               }
-            } else {
-              console.error('API Error Details:', {
-                status: error.response?.status,
-                statusText: error.response?.statusText,
-                data: error.response?.data,
-                message: error.message,
-                code: error.code
-              });
             }
           }
           
@@ -759,9 +817,18 @@ export default function ProfilePage() {
                       </button>
                     )}
                     {/* Show expiry if available */}
-                    {verificationDetails?.gooddollar?.isVerified && verificationDetails.gooddollar.expiry?.expiryDate && (
-                      <span className="mt-1 text-[10px] text-gray-500">exp. {new Date(verificationDetails.gooddollar.expiry.expiryDate).toLocaleDateString()}</span>
-                    )}
+                    {verificationDetails?.gooddollar?.isVerified && verificationDetails.gooddollar.expiry?.expiryDate && (() => {
+                      try {
+                        return (
+                          <span className="mt-1 text-[10px] text-gray-500">
+                            exp. {new Date(verificationDetails.gooddollar.expiry.expiryDate).toLocaleDateString()}
+                          </span>
+                        );
+                      } catch (error) {
+                        console.error('Error parsing expiry date:', error);
+                        return null;
+                      }
+                    })()}
                   </div>
                   {/* Self Badge Card */}
                   <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.self?.isVerified ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
@@ -790,11 +857,18 @@ export default function ProfilePage() {
                       <span className="mt-1 text-[10px] text-gray-500">{verificationDetails.self.nationality}</span>
                     )}
                     {/* Show verification timestamp if available */}
-                    {verificationDetails?.self?.isVerified && verificationDetails.self.timestamp && (
-                      <span className="mt-1 text-[10px] text-gray-500">
-                        {new Date(verificationDetails.self.timestamp).toLocaleDateString()}
-                      </span>
-                    )}
+                    {verificationDetails?.self?.isVerified && verificationDetails.self.timestamp && (() => {
+                      try {
+                        return (
+                          <span className="mt-1 text-[10px] text-gray-500">
+                            {new Date(verificationDetails.self.timestamp).toLocaleDateString()}
+                          </span>
+                        );
+                      } catch (error) {
+                        console.error('Error parsing timestamp:', error);
+                        return null;
+                      }
+                    })()}
                   </div>
                 </div>
                 {/* End Badges Row */}
