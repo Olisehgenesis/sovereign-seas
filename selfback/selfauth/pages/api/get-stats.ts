@@ -1,9 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-// CORS removed - using next.config.ts headers instead
-// initMiddleware removed - CORS handled by next.config.ts
-// originList removed - CORS handled by next.config.ts
 
-// Initialize CORS middleware
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   // Add your statistics logic here
   res.status(200).json({

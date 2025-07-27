@@ -1,99 +1,47 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { promises as fs } from 'fs';
-import path from 'path';
-import Cors from 'cors';
-import { initMiddleware } from '../../lib/init-middleware';
-import { originList } from '@/src/utils/origin';
+import { createClient } from 'redis';
 
-// Initialize CORS middleware
-const cors = initMiddleware(
-  Cors({
-    origin: originList,
-    methods: ['GET', 'POST', 'OPTIONS'],
-  })
-);
+// Redis client
+let redis: any = null;
 
-// JSON file storage functions (same as verify.ts)
-const PROFILES_FILE = path.join(process.cwd(), 'data', 'profiles.json');
-
-async function ensureDataDirectory() {
-  const dataDir = path.join(process.cwd(), 'data');
-  try {
-    await fs.access(dataDir);
-  } catch {
-    await fs.mkdir(dataDir, { recursive: true });
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    console.log('Connecting to Redis at:', redisUrl);
+    redis = createClient({
+      url: redisUrl
+    });
+    try {
+      await redis.connect();
+      console.log('Successfully connected to Redis');
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      throw new Error('Redis connection failed. Please check your REDIS_URL environment variable.');
+    }
   }
-}
-
-async function loadProfiles() {
-  try {
-    await ensureDataDirectory();
-    const data = await fs.readFile(PROFILES_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    // File doesn't exist or is empty, return empty array
-    return [];
-  }
-}
+  return redis;
+};
 
 async function saveGoodDollarVerification(walletAddress: string, verificationData: any) {
   try {
-    await ensureDataDirectory();
+    const client = await getRedisClient();
     
-    const profiles = await loadProfiles();
-    
-    // Check if wallet already exists
-    const existingIndex = profiles.findIndex((p: any) => p.walletAddress === walletAddress);
-    
+    // Create the verification data structure
     const newVerification = {
       provider: 'gooddollar',
       verifiedAt: new Date().toISOString(),
       isValid: verificationData.verificationStatus || true,
       root: verificationData.root || false,
       userId: verificationData.userId || walletAddress, // Use wallet address as userId
-      verificationStatus: verificationData.verificationStatus || true
+      verificationStatus: verificationData.verificationStatus || true,
+      walletAddress: walletAddress
     };
     
-    if (existingIndex >= 0) {
-      // Wallet exists - check if GoodDollar verification already exists
-      const existingProfile = profiles[existingIndex];
-      const existingVerifications = existingProfile.verifications || [];
-      
-      // Check if GoodDollar verification already exists
-      const providerIndex = existingVerifications.findIndex((v: any) => v.provider === 'gooddollar');
-      
-      if (providerIndex >= 0) {
-        // Update existing GoodDollar verification
-        existingVerifications[providerIndex] = newVerification;
-        console.log(`Updated GoodDollar verification for wallet: ${walletAddress}`);
-      } else {
-        // Add new GoodDollar verification
-        existingVerifications.push(newVerification);
-        console.log(`Added new GoodDollar verification for wallet: ${walletAddress}`);
-      }
-      
-      // Update the profile with new verifications array
-      profiles[existingIndex] = {
-        ...existingProfile,
-        verifications: existingVerifications,
-        lastUpdated: new Date().toISOString()
-      };
-    } else {
-      // Create new profile with GoodDollar verification
-      const newProfile = {
-        walletAddress,
-        verifications: [newVerification],
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      };
-      profiles.push(newProfile);
-      console.log(`Created new profile with GoodDollar verification for wallet: ${walletAddress}`);
-    }
+    // Save to Redis using wallet address as key
+    await client.set(walletAddress, JSON.stringify(newVerification));
+    console.log(`Saved GoodDollar verification to Redis for wallet: ${walletAddress}`);
     
-    await fs.writeFile(PROFILES_FILE, JSON.stringify(profiles, null, 2));
-    console.log(`Saved GoodDollar verification to ${PROFILES_FILE}`);
-    
-    return profiles[existingIndex >= 0 ? existingIndex : profiles.length - 1];
+    return newVerification;
   } catch (error) {
     console.error('Error saving GoodDollar verification:', error);
     throw error;
@@ -101,7 +49,6 @@ async function saveGoodDollarVerification(walletAddress: string, verificationDat
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  await cors(req, res);
   console.log("GoodDollar verification request:", req.body);
 
   if (req.method === 'POST') {

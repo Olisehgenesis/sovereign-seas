@@ -1,12 +1,14 @@
 //add api route to claim and vote for a user with reeor logoong
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { claimAndVoteForUser, getContractStats, getCampaignStats, getProjectStats, walletBalance, getContractBalance } from '../../src/utils/claims';
-// CORS removed - using next.config.ts headers instead
-// initMiddleware removed - CORS handled by next.config.ts
-// originList removed - CORS handled by next.config.ts
 import { isWalletGoodDollarVerified } from './verify-details';
 
-// Initialize CORS middleware
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   //get method in req.query

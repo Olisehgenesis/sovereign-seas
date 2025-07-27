@@ -2,26 +2,37 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { claimAndVoteForUser } from '../../src/utils/claims';
-import Cors from 'cors';
-import { initMiddleware } from '../../lib/init-middleware';
 import fs from 'fs';
 import path from 'path';
-import { originList } from '@/src/utils/origin';
 import { createPublicClient, createWalletClient, http} from 'viem';
 import { PublicClient, WalletClient } from "viem";
 import { celo } from 'viem/chains';
 import { isWalletGoodDollarVerified } from './verify-details';
-
-// Initialize CORS middleware
-const cors = initMiddleware(
-  Cors({
-    origin: originList,
-    methods: ['GET', 'POST', 'OPTIONS'],
-  })
-);
+import { createClient } from 'redis';
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
 const testnetEnabled = process.env.TESTNET_ENABLED === 'true';
+
+// Redis client
+let redis: any = null;
+
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    console.log('Connecting to Redis at:', redisUrl);
+    redis = createClient({
+      url: redisUrl
+    });
+    try {
+      await redis.connect();
+      console.log('Successfully connected to Redis');
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      throw new Error('Redis connection failed. Please check your REDIS_URL environment variable.');
+    }
+  }
+  return redis;
+};
 
 const publicClient = createPublicClient({
   chain: celo,
@@ -33,26 +44,15 @@ const walletClient = createWalletClient({
   // ...add your wallet config if needed
 });
 
-// Helper function to check if a wallet is verified
+// Helper function to check if a wallet is verified using Redis
 async function isWalletVerified(wallet: string): Promise<boolean> {
   try {
-    if (!fs.existsSync(DATA_FILE)) {
-      return false;
-    }
-
-    const verifications = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    const client = await getRedisClient();
+    const verificationData = await client.get(wallet);
+    if (!verificationData) return false;
     
-    // Find the most recent verification for this wallet
-    const walletVerifications = verifications
-      .filter((v: any) => v.wallet.toLowerCase() === wallet.toLowerCase())
-      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    if (walletVerifications.length === 0) {
-      return false;
-    }
-
-    // Return the most recent verification status
-    return walletVerifications[0].verificationStatus;
+    const data = JSON.parse(verificationData as string);
+    return data.verified === true;
   } catch (error) {
     console.error('Error checking wallet verification:', error);
     return false;
@@ -63,9 +63,6 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Run the CORS middleware
-  await cors(req, res);
-
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ 

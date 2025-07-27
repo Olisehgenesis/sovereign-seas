@@ -1,7 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
-import { originList } from '@/src/utils/origin';
+import { createClient } from 'redis';
 
 // Define the data structure
 interface WalletVerification {
@@ -10,27 +8,31 @@ interface WalletVerification {
   timestamp: string;
 }
 
-// Path to store the JSON file
-const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
+// Redis client
+let redis: any = null;
 
-// Ensure data directory exists
-if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
-  fs.mkdirSync(path.join(process.cwd(), 'data'));
-}
-
-// Initialize empty array if file doesn't exist
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify([]));
-}
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    console.log('Connecting to Redis at:', redisUrl);
+    redis = createClient({
+      url: redisUrl
+    });
+    try {
+      await redis.connect();
+      console.log('Successfully connected to Redis');
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      throw new Error('Redis connection failed. Please check your REDIS_URL environment variable.');
+    }
+  }
+  return redis;
+};
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Check origin
-  const origin = req.headers.origin;
- 
-
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -51,14 +53,9 @@ export default async function handler(
       timestamp: new Date().toISOString()
     };
 
-    // Read existing data
-    const existingData = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-    
-    // Add new verification
-    existingData.push(newVerification);
-
-    // Save updated data
-    fs.writeFileSync(DATA_FILE, JSON.stringify(existingData, null, 2));
+    // Save to Redis
+    const client = await getRedisClient();
+    await client.set(wallet, JSON.stringify(newVerification));
 
     return res.status(200).json({ success: true, data: newVerification });
   } catch (error) {

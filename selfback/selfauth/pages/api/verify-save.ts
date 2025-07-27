@@ -1,9 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
-import Cors from 'cors';
-import { initMiddleware } from '../../lib/init-middleware';
-import { originList } from '@/src/utils/origin';
+import { createClient } from 'redis';
 
 interface WalletVerification {
   wallet: string;
@@ -12,33 +8,31 @@ interface WalletVerification {
   timestamp: string;
 }
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'wallet-verifications.json');
+// Redis client
+let redis: any = null;
 
-// Initialize CORS middleware
-const cors = initMiddleware(
-  Cors({
-    origin: originList,
-    methods: ['GET', 'POST', 'OPTIONS'],
-  })
-);
-
-// Ensure data directory exists
-if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
-  fs.mkdirSync(path.join(process.cwd(), 'data'));
-}
-
-// Initialize empty array if file doesn't exist
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify([]));
-}
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    console.log('Connecting to Redis at:', redisUrl);
+    redis = createClient({
+      url: redisUrl
+    });
+    try {
+      await redis.connect();
+      console.log('Successfully connected to Redis');
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      throw new Error('Redis connection failed. Please check your REDIS_URL environment variable.');
+    }
+  }
+  return redis;
+};
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Run the CORS middleware
-  await cors(req, res);
-
   // This API is deprecated - verification is now handled by the main verify endpoint
   return res.status(410).json({ 
     error: 'This endpoint is deprecated. Verification is now handled by the main verify endpoint.',

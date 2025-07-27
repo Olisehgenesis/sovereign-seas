@@ -1,60 +1,72 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
-import Cors from 'cors';
-import { initMiddleware } from '../../lib/init-middleware';
+import { createClient } from 'redis';
 
-const PROFILES_FILE = path.join(process.cwd(), 'data', 'profiles.json');
+// Redis client
+let redis: any = null;
 
-// Initialize CORS middleware
-const cors = initMiddleware(
-  Cors({
-    origin: [
-      'http://localhost:4173',
-      'http://localhost:4174',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://sovseas.xyz',
-      'https://auth.sovseas.xyz'
-    ],
-    methods: ['GET', 'POST', 'OPTIONS'],
-  })
-);
+const getRedisClient = async () => {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    console.log('Connecting to Redis at:', redisUrl);
+    redis = createClient({
+      url: redisUrl
+    });
+    try {
+      await redis.connect();
+      console.log('Successfully connected to Redis');
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      throw new Error('Redis connection failed. Please check your REDIS_URL environment variable.');
+    }
+  }
+  return redis;
+};
+
+interface VerifiedUser {
+  wallet: string;
+  verificationType: string;
+  verifiedAt: string;
+  country: string;
+  timestamp: string;
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Run the CORS middleware
-  await cors(req, res);
-
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Check if data file exists
-    if (!fs.existsSync(PROFILES_FILE)) {
-      return res.status(200).json({ 
-        verifiedUsers: [],
-        total: 0,
-        message: 'No verification data found'
-      });
-    }
-
-    const profiles = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf-8'));
+    const client = await getRedisClient();
     
-    // Get only verified users and include country information
-    const verifiedUsers = profiles
-      .filter((p: any) => p.isValid)
-      .map((p: any) => ({
-        wallet: p.walletAddress,
-        verificationType: p.verificationType || 'self',
-        verifiedAt: p.verifiedAt,
-        country: p.disclosures?.nationality || 'Unknown',
-        timestamp: p.verifiedAt
-      }))
-      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // Get all keys from Redis that contain verification data
+    const keys = await client.keys('*');
+    const verifiedUsers: VerifiedUser[] = [];
+    
+    for (const key of keys) {
+      try {
+        const data = await client.get(key);
+        if (data) {
+          const profile = JSON.parse(data as string);
+          if (profile.verified === true) {
+            verifiedUsers.push({
+              wallet: profile.walletAddress || key,
+              verificationType: 'self',
+              verifiedAt: profile.timestamp,
+              country: profile.nationality || 'Unknown',
+              timestamp: profile.timestamp
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing data for key:', key, error);
+      }
+    }
+    
+    // Sort by timestamp (most recent first)
+    verifiedUsers.sort((a: VerifiedUser, b: VerifiedUser) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return res.status(200).json({
       verifiedUsers,

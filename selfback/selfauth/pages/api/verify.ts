@@ -7,9 +7,6 @@ import {
   IConfigStorage
 } from '@selfxyz/core';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import Cors from 'cors';
-import { initMiddleware } from '../../lib/init-middleware';
-import { originList } from '@/src/utils/origin';
 import { createClient } from 'redis';
 
 // Add VerificationData interface
@@ -151,17 +148,7 @@ export async function isWalletSelfVerified(wallet: string): Promise<boolean> {
   }
 }
 
-// Initialize CORS middleware
-const cors = initMiddleware(
-  Cors({
-    origin: originList,
-    methods: ['GET', 'POST', 'OPTIONS'],
-  })
-);
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Run the CORS middleware
-  await cors(req, res);
   if (req.method === 'POST') {
     try {
       // Extract data from the request
