@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance, useWalletClient } from 'wagmi';
+import { motion, AnimatePresence } from 'framer-motion';
 // import axios from 'axios'; // Removed to use fetch instead
 import { 
   FileCode,
@@ -42,6 +43,82 @@ import { v4 as uuidv4 } from 'uuid';
 import  { SelfAppBuilder, SelfQRcodeWrapper } from '@selfxyz/qrcode';
 import { getUniversalLink } from "@selfxyz/core";
 import { getGoodLink } from '@/utils/get-good-link';
+
+// Helper function to safely parse JSON
+const safeJsonParse = (jsonString: string, fallback = {}) => {
+  try {
+    return jsonString ? JSON.parse(jsonString) : fallback;
+  } catch (e) {
+    console.warn('Failed to parse JSON:', e);
+    return fallback;
+  }
+};
+
+// Parse project metadata like in projects page
+const parseProjectMetadata = (projectDetails: any) => {
+  const { metadata } = projectDetails;
+  const bioData = safeJsonParse(metadata?.bio || '{}');
+  const contractInfo = safeJsonParse(metadata?.contractInfo || '{}');
+  const additionalData = safeJsonParse(metadata?.additionalData || '{}');
+
+  return {
+    tagline: bioData.tagline || '',
+    category: bioData.category || '',
+    tags: bioData.tags || [],
+    location: bioData.location || '',
+    establishedDate: bioData.establishedDate || '',
+    website: bioData.website || '',
+    blockchain: contractInfo.blockchain || '',
+    techStack: contractInfo.techStack || [],
+    license: contractInfo.license || '',
+    developmentStage: contractInfo.developmentStage || '',
+    openSource: contractInfo.openSource !== undefined ? contractInfo.openSource : true,
+    logo: additionalData.media?.logo || additionalData.logo || '',
+    coverImage: additionalData.media?.coverImage || additionalData.coverImage || '',
+    demoVideo: additionalData.media?.demoVideo || additionalData.demoVideo || '',
+    demoUrl: additionalData.links?.demoUrl || additionalData.demoUrl || '',
+    githubRepo: additionalData.links?.githubRepo || additionalData.githubRepo || '',
+    documentation: additionalData.links?.documentation || additionalData.documentation || '',
+    karmaGapProfile: additionalData.links?.karmaGapProfile || additionalData.karmaGapProfile || '',
+    twitter: additionalData.links?.twitter || additionalData.social?.twitter || additionalData.twitter || '',
+    linkedin: additionalData.links?.linkedin || additionalData.social?.linkedin || additionalData.linkedin || '',
+    discord: additionalData.links?.discord || additionalData.social?.discord || additionalData.discord || '',
+    telegram: additionalData.links?.telegram || additionalData.social?.telegram || additionalData.telegram || '',
+    teamMembers: additionalData.teamMembers || [],
+    contactEmail: additionalData.contactEmail || '',
+    keyFeatures: additionalData.keyFeatures || [],
+    bio: bioData.bio || metadata?.bio || ''
+  };
+};
+
+// Parse campaign metadata like in campaigns page
+const parseCampaignMetadata = (campaignDetails: any) => {
+  let parsedMetadata: any = {};
+  
+  try {
+    if (campaignDetails.metadata?.mainInfo) {
+      try {
+        const mainInfo = JSON.parse(campaignDetails.metadata.mainInfo);
+        parsedMetadata = { ...parsedMetadata, ...mainInfo };
+      } catch (e) {
+        parsedMetadata.mainInfo = campaignDetails.metadata.mainInfo;
+      }
+    }
+
+    if (campaignDetails.metadata?.additionalInfo) {
+      try {
+        const additionalInfo = JSON.parse(campaignDetails.metadata.additionalInfo);
+        parsedMetadata = { ...parsedMetadata, ...additionalInfo };
+      } catch (e) {
+        parsedMetadata.additionalInfo = campaignDetails.metadata.additionalInfo;
+      }
+    }
+  } catch (e) {
+    console.warn('Error parsing campaign metadata:', e);
+  }
+
+  return parsedMetadata;
+};
 
 // GoodDollar imports
 import GoodDollarVerifyModal from '@/components/goodDollar';
@@ -122,24 +199,44 @@ function VerificationComponent({ onSuccess, onError }: { onSuccess: () => void; 
 
 
 const StatCard = ({ icon: Icon, label, value, color = 'blue', trend = null, onClick }: StatCardProps) => (
-  <div 
-    className={`bg-gradient-to-br from-${color}-50 to-${color}-100 rounded-xl p-4 shadow-sm border border-${color}-200/50 hover:shadow-md transition-all ${onClick ? 'cursor-pointer' : ''}`}
+  <motion.div 
+    whileHover={{ scale: 1.02, y: -2 }}
+    whileTap={{ scale: 0.98 }}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+    className={`bg-gradient-to-br from-${color}-50 to-${color}-100 rounded-xl p-4 shadow-sm border border-${color}-200/50 hover:shadow-lg transition-all duration-300 ${onClick ? 'cursor-pointer' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-center justify-between mb-2">
-      <div className={`w-10 h-10 bg-${color}-500/10 rounded-lg flex items-center justify-center`}>
+      <motion.div 
+        className={`w-10 h-10 bg-${color}-500/10 rounded-lg flex items-center justify-center`}
+        whileHover={{ rotate: 5, scale: 1.1 }}
+        transition={{ duration: 0.2 }}
+      >
         <Icon className={`h-5 w-5 text-${color}-600`} />
-      </div>
+      </motion.div>
       {trend && (
-        <div className={`flex items-center gap-1 text-xs ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`flex items-center gap-1 text-xs ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}
+        >
           <TrendingUp className="h-3 w-3" />
           <span>{Math.abs(trend)}%</span>
-        </div>
+        </motion.div>
       )}
     </div>
-    <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+    <motion.p 
+      className="text-2xl font-bold text-gray-900 mb-1"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.1 }}
+    >
+      {value}
+    </motion.p>
     <p className="text-xs font-medium text-gray-600">{label}</p>
-  </div>
+  </motion.div>
 );
 
 interface ProjectCardProps {
@@ -149,82 +246,126 @@ interface ProjectCardProps {
     active: boolean;
     createdAt: bigint;
     campaignIds?: bigint[];
-    metadata?: {
-      additionalData?: string;
+    metadata: {
+      tagline?: string;
+      category?: string;
+      tags?: string[];
+      location?: string;
+      establishedDate?: string;
+      website?: string;
+      blockchain?: string;
+      techStack?: string[];
+      license?: string;
+      developmentStage?: string;
+      openSource?: boolean;
+      logo?: string;
+      coverImage?: string;
+      demoVideo?: string;
+      demoUrl?: string;
+      githubRepo?: string;
+      documentation?: string;
+      karmaGapProfile?: string;
+      twitter?: string;
+      linkedin?: string;
+      discord?: string;
+      telegram?: string;
+      teamMembers?: any[];
+      contactEmail?: string;
+      keyFeatures?: string[];
+      bio?: string;
     };
   };
   onClick: () => void;
 }
 
 const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
-  const parsedMetadata = (() => {
-    try {
-      return project.metadata?.additionalData 
-        ? JSON.parse(project.metadata.additionalData) 
-        : {};
-    } catch (error) {
-      console.error('Error parsing project metadata:', error);
-      return {};
-    }
-  })();
-  const location = getNormalizedLocation(parsedMetadata);
+  const location = getNormalizedLocation(project.metadata);
 
-  // Get logo from multiple possible locations
-  const getProjectLogo = () => {
-    return parsedMetadata.media?.logo || parsedMetadata.logo || null;
-  };
+  // Get logo from processed metadata
+  const projectLogo = project.metadata.logo || project.metadata.coverImage || null;
 
-  const projectLogo = getProjectLogo();
+  // Debug logging for logo issues
+  if (import.meta.env.DEV && !projectLogo) {
+    console.log(`No logo found for project ${project.name}:`, {
+      metadata: project.metadata,
+      logo: project.metadata.logo,
+      coverImage: project.metadata.coverImage
+    });
+  }
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all group relative">
+    <motion.div 
+      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-all group relative"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.03, y: -4 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Location Badge (card style) */}
       <LocationBadge location={location} variant="card" />
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          {projectLogo ? (
-            <img
-              src={formatIpfsUrl(projectLogo)}
-              alt={`${project.name} logo`}
-              className="w-8 h-8 rounded-lg object-cover"
-              onError={(e) => {
-                console.warn(`Failed to load logo for project ${project.name}:`, projectLogo);
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">
-              {project.name?.charAt(0)}
-            </div>
-          )}
-          <div>
-            <h3 className="font-semibold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">
-              {project.name}
-            </h3>
-            <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-              project.active ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-50'
-            }`}>
-              {project.active ? 'Active' : 'Inactive'}
+              <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-4">
+            {projectLogo ? (
+              <motion.img
+                src={formatIpfsUrl(projectLogo)}
+                alt={`${project.name} logo`}
+                className="w-12 h-12 rounded-xl object-cover shadow-md"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.2 }}
+                onError={(e) => {
+                  console.warn(`Failed to load logo for project ${project.name}:`, projectLogo);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <motion.div 
+                className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-md"
+                whileHover={{ rotate: 5, scale: 1.1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {project.name?.charAt(0)}
+              </motion.div>
+            )}
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors mb-1">
+                {project.name}
+              </h3>
+              <motion.div 
+                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                  project.active ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-50'
+                }`}
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                {project.active ? 'Active' : 'Inactive'}
+              </motion.div>
             </div>
           </div>
-        </div>
-        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+        <motion.div
+          whileHover={{ rotate: 15, scale: 1.1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+        </motion.div>
       </div>
       
-      <p className="text-gray-600 text-xs mb-3 line-clamp-2">{project.description}</p>
+      <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">{project.description}</p>
       
-      <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+      <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
         <span>Created {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}</span>
-        <span>{project.campaignIds?.length || 0} campaigns</span>
+        <span className="font-medium">{project.campaignIds?.length || 0} campaigns</span>
       </div>
       
-      <button
+      <motion.button
         onClick={onClick}
-        className="w-full px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium"
+        className="w-full px-4 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors text-sm font-semibold"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ duration: 0.2 }}
       >
         View Project
-      </button>
-    </div>
+      </motion.button>
+    </motion.div>
   );
 };
 
@@ -237,46 +378,32 @@ interface CampaignCardProps {
     endTime: bigint;
     maxWinners: bigint;
     totalFunds: bigint;
-    metadata?: {
-      mainInfo?: string;
-      additionalInfo?: string;
+    metadata: {
+      type?: string;
+      category?: string;
+      tags?: string[];
       logo?: string;
+      bannerImage?: string;
+      bio?: string;
+      tagline?: string;
+      [key: string]: any;
     };
   };
   onClick: () => void;
 }
 
 const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
-  const parsedMetadata = (() => {
-    try {
-      return campaign.metadata?.mainInfo 
-        ? JSON.parse(campaign.metadata.mainInfo) 
-        : {};
-    } catch (error) {
-      console.error('Error parsing campaign metadata:', error);
-      return {};
-    }
-  })();
+  // Get logo from processed metadata
+  const campaignLogo = campaign.metadata.logo || campaign.metadata.bannerImage || null;
 
-  // Get logo from multiple possible locations
-  const getCampaignLogo = () => {
-    // Try mainInfo first
-    if (parsedMetadata.logo) return parsedMetadata.logo;
-    
-    // Try additionalInfo if available
-    try {
-      if (campaign.metadata?.additionalInfo) {
-        const additionalInfo = JSON.parse(campaign.metadata.additionalInfo);
-        if (additionalInfo.logo) return additionalInfo.logo;
-      }
-    } catch (error) {
-      console.error('Error parsing campaign additionalInfo:', error);
-    }
-    
-    return null;
-  };
-
-  const campaignLogo = getCampaignLogo();
+  // Debug logging for logo issues
+  if (import.meta.env.DEV && !campaignLogo) {
+    console.log(`No logo found for campaign ${campaign.name}:`, {
+      metadata: campaign.metadata,
+      logo: campaign.metadata.logo,
+      bannerImage: campaign.metadata.bannerImage
+    });
+  }
 
   const getStatus = () => {
     const now = Math.floor(Date.now() / 1000);
@@ -298,56 +425,80 @@ const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all group">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
+    <motion.div 
+      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-all group"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.03, y: -4 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-4">
           {campaignLogo ? (
-            <img
+            <motion.img
               src={formatIpfsUrl(campaignLogo)}
               alt={`${campaign.name} logo`}
-              className="w-8 h-8 rounded-lg object-cover"
+              className="w-12 h-12 rounded-xl object-cover shadow-md"
+              whileHover={{ scale: 1.1 }}
+              transition={{ duration: 0.2 }}
               onError={(e) => {
                 console.warn(`Failed to load logo for campaign ${campaign.name}:`, campaignLogo);
                 e.currentTarget.style.display = 'none';
               }}
             />
           ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white">
-              <Trophy className="h-4 w-4" />
-            </div>
+            <motion.div 
+              className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md"
+              whileHover={{ rotate: 5, scale: 1.1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Trophy className="h-5 w-5" />
+            </motion.div>
           )}
           <div>
-            <h3 className="font-semibold text-gray-900 text-sm group-hover:text-purple-600 transition-colors">
+            <h3 className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors mb-1">
               {campaign.name}
             </h3>
-            <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors[status]}`}>
+            <motion.div 
+              className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${statusColors[status]}`}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
               {status.charAt(0).toUpperCase() + status.slice(1)}
-            </div>
+            </motion.div>
           </div>
         </div>
-        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
+        <motion.div
+          whileHover={{ rotate: 15, scale: 1.1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
+        </motion.div>
       </div>
       
-      <p className="text-gray-600 text-xs mb-3 line-clamp-2">{campaign.description}</p>
+      <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">{campaign.description}</p>
       
-      <div className="space-y-1 mb-3">
-        <div className="flex justify-between text-xs">
+      <div className="space-y-2 mb-4">
+        <div className="flex justify-between text-sm">
           <span className="text-gray-500">Total Funds</span>
-          <span className="font-medium">{formatEther(BigInt(campaign.totalFunds))} CELO</span>
+          <span className="font-semibold text-green-600">{formatEther(BigInt(campaign.totalFunds))} CELO</span>
         </div>
-        <div className="flex justify-between text-xs">
+        <div className="flex justify-between text-sm">
           <span className="text-gray-500">Max Winners</span>
-          <span className="text-gray-900">{campaign.maxWinners.toString()}</span>
+          <span className="font-semibold text-purple-600">{campaign.maxWinners.toString()}</span>
         </div>
       </div>
       
-      <button
+      <motion.button
         onClick={onClick}
-        className="w-full px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-xs font-medium"
+        className="w-full px-4 py-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors text-sm font-semibold"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ duration: 0.2 }}
       >
         View Campaign
-      </button>
-    </div>
+      </motion.button>
+    </motion.div>
   );
 };
 
@@ -424,37 +575,7 @@ const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
 
   
 
-//   return (
-//     <div className="flex flex-col items-center justify-center mb-6">
-//       <div className="relative group transition-transform duration-300 hover:scale-105 focus-within:scale-105">
-//         <div className="p-3 bg-gradient-to-br from-blue-100 via-white to-purple-100 rounded-2xl shadow-lg border border-blue-200 animate-pulse group-hover:animate-none transition-all">
-//           <Suspense fallback={<p className="text-center">Loading QR Code...</p>}>
-//             <VerificationComponent />
-//           </Suspense>
-//         </div>
-//         <div className="absolute -top-2 -right-2 animate-bounce">
-//           <Shield className="h-6 w-6 text-blue-400 drop-shadow" />
-//         </div>
-//       </div>
-//       <div className="mt-4 w-full px-4 py-2 min-h-12 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium text-center animate-fade-in flex items-center justify-center gap-2">
-//         <span role="img" aria-label="mobile" className="mr-2">📱</span>
-//         Scan QR code with Self app
-//       </div>
-//       <p className="mt-2 text-xs text-gray-500">
-//         User ID: {address?.substring(0, 8)}...
-//       </p>
-//       {/* Universal Link button for mobile */}
-//       {universalLink && (
-//         <button
-//           className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-//           onClick={() => window.open(universalLink, "_blank")}
-//         >
-//           Open Self App
-//         </button>
-//       )}
-//     </div>
-//   );
-// }
+
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -589,14 +710,7 @@ export default function ProfilePage() {
     }
   }, [address]);
 
-  // Helper function to safely access nested properties
-  const getVerificationStatus = () => {
-    if (verificationLoading) return 'loading';
-    if (isVerified) {
-      return 'verified';
-    }
-    return 'unverified';
-  };
+
 
   // Generate userId using uuidv4 like playground
   useEffect(() => {
@@ -848,14 +962,26 @@ export default function ProfilePage() {
   const { campaigns: allCampaigns, isLoading: campaignsLoading } = useAllCampaigns(CONTRACT_ADDRESS);
   const { voteHistory, isLoading: votesLoading } = useUserVoteHistory(CONTRACT_ADDRESS, address as Address);
 
-  // Filter user's data
+  // Filter and process user's data
   const userProjects = allProjects?.filter(project => 
     project.project.owner?.toLowerCase() === address?.toLowerCase()
-  ) || [];
+  ).map(projectDetails => {
+    const parsedMetadata = parseProjectMetadata(projectDetails);
+    return {
+      ...projectDetails.project,
+      metadata: parsedMetadata
+    };
+  }) || [];
 
   const userCampaigns = allCampaigns?.filter(campaign => 
     campaign.campaign.admin?.toLowerCase() === address?.toLowerCase()
-  ) || [];
+  ).map(campaignDetails => {
+    const parsedMetadata = parseCampaignMetadata(campaignDetails);
+    return {
+      ...campaignDetails.campaign,
+      metadata: parsedMetadata
+    };
+  }) || [];
 
   // Calculate user metrics including verification status
   const userMetrics = useMemo(() => {
@@ -879,16 +1005,16 @@ export default function ProfilePage() {
     let filtered = [...userProjects];
 
     if (filter !== 'all') {
-      filtered = filtered.filter(project => project.project.active === (filter === 'active'));
+      filtered = filtered.filter(project => project.active === (filter === 'active'));
     }
 
     return filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return (a.project.name || '').localeCompare(b.project.name || '');
+          return (a.name || '').localeCompare(b.name || '');
         case 'recent':
         default:
-          return Number(b.project.createdAt || 0) - Number(a.project.createdAt || 0);
+          return Number(b.createdAt || 0) - Number(a.createdAt || 0);
       }
     });
   }, [userProjects, filter, sortBy]);
@@ -1098,17 +1224,27 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        {/* Enhanced Navigation Tabs */}
+        <motion.div 
+          className="flex flex-wrap gap-2 mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           {[
             { id: 'dashboard', label: 'Dashboard', icon: Home },
             { id: 'projects', label: 'Projects', icon: FileCode, count: userMetrics.projects },
             { id: 'campaigns', label: 'Campaigns', icon: Trophy, count: userMetrics.campaigns },
             { id: 'votes', label: 'Votes', icon: Vote, count: userMetrics.votes },
             { id: 'identity', label: 'Identity', icon: Shield }
-          ].map(tab => (
-            <button
+          ].map((tab, index) => (
+            <motion.button
               key={tab.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-sm relative ${
                 activeTab === tab.id
@@ -1119,68 +1255,102 @@ export default function ProfilePage() {
               <tab.icon className="h-4 w-4" />
               {tab.label}
               {tab.count !== undefined && (
-                <span className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                  activeTab === tab.id
-                    ? 'bg-white text-blue-600'
-                    : 'bg-blue-100 text-blue-600'
-                }`}>
+                <motion.span 
+                  className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                    activeTab === tab.id
+                      ? 'bg-white text-blue-600'
+                      : 'bg-blue-100 text-blue-600'
+                  }`}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2 + index * 0.1 }}
+                >
                   {tab.count}
-                </span>
+                </motion.span>
               )}
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Dashboard Tab */}
+        {/* Enhanced Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-8">
+          <motion.div 
+            className="space-y-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
             {/* Quick Actions */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50">
+            <motion.div 
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
               <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  onClick={() => navigate('/app/project/start')}
-                  className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl hover:from-blue-100 hover:to-indigo-100 transition-all group"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
-                    <Plus className="h-5 w-5" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">New Project</h3>
-                    <p className="text-xs text-gray-600">Start building</p>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => navigate('/app/campaign/start')}
-                  className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl hover:from-purple-100 hover:to-indigo-100 transition-all group"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
-                    <Trophy className="h-5 w-5" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">New Campaign</h3>
-                    <p className="text-xs text-gray-600">Launch funding</p>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => navigate('/explore')}
-                  className="flex items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-teal-50 rounded-xl hover:from-green-100 hover:to-teal-100 transition-all group"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white shadow-md">
-                    <Compass className="h-5 w-5" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">Explore</h3>
-                    <p className="text-xs text-gray-600">Discover projects</p>
-                  </div>
-                </button>
+                {[
+                  {
+                    title: 'New Project',
+                    subtitle: 'Start building',
+                    icon: Plus,
+                    color: 'from-blue-500 to-indigo-600',
+                    bgColor: 'from-blue-50 to-indigo-50',
+                    hoverColor: 'hover:from-blue-100 hover:to-indigo-100',
+                    action: () => navigate('/app/project/start')
+                  },
+                  {
+                    title: 'New Campaign',
+                    subtitle: 'Launch funding',
+                    icon: Trophy,
+                    color: 'from-purple-500 to-indigo-600',
+                    bgColor: 'from-purple-50 to-indigo-50',
+                    hoverColor: 'hover:from-purple-100 hover:to-indigo-100',
+                    action: () => navigate('/app/campaign/start')
+                  },
+                  {
+                    title: 'Explore',
+                    subtitle: 'Discover projects',
+                    icon: Compass,
+                    color: 'from-green-500 to-teal-600',
+                    bgColor: 'from-green-50 to-teal-50',
+                    hoverColor: 'hover:from-green-100 hover:to-teal-100',
+                    action: () => navigate('/explore')
+                  }
+                ].map((action, index) => (
+                  <motion.button
+                    key={action.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={action.action}
+                    className={`flex items-center gap-3 p-4 bg-gradient-to-br ${action.bgColor} rounded-xl ${action.hoverColor} transition-all group shadow-sm hover:shadow-md`}
+                  >
+                    <motion.div 
+                      className={`w-10 h-10 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center text-white shadow-md`}
+                      whileHover={{ rotate: 5, scale: 1.1 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <action.icon className="h-5 w-5" />
+                    </motion.div>
+                    <div className="text-left">
+                      <h3 className="font-semibold text-gray-900">{action.title}</h3>
+                      <p className="text-xs text-gray-600">{action.subtitle}</p>
+                    </div>
+                  </motion.button>
+                ))}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Additional Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Enhanced Stats Grid */}
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
               <StatCard 
                 icon={TrendingUp} 
                 label="Total Value" 
@@ -1196,17 +1366,163 @@ export default function ProfilePage() {
               <StatCard 
                 icon={Users} 
                 label="Active Projects" 
-                value={userProjects.filter(p => p.project.active).length}
+                value={userProjects.filter(p => p.active).length}
                 color="purple"
               />
               <StatCard 
                 icon={Zap} 
                 label="Active Campaigns" 
-                value={userCampaigns.filter(c => c.campaign.active).length}
+                value={userCampaigns.filter(c => c.active).length}
                 color="blue"
               />
-            </div>
-          </div>
+            </motion.div>
+
+            {/* Visual Analytics Section */}
+            <motion.div 
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Analytics Overview</h2>
+              
+              {/* Progress Bars */}
+              <div className="space-y-4 mb-6">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">Project Completion</span>
+                    <span className="font-semibold text-blue-600">
+                      {userProjects.filter(p => p.active).length}/{userProjects.length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <motion.div 
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${userProjects.length > 0 ? (userProjects.filter(p => p.active).length / userProjects.length) * 100 : 0}%` }}
+                      transition={{ duration: 1, delay: 0.5 }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">Campaign Success Rate</span>
+                    <span className="font-semibold text-purple-600">
+                      {userCampaigns.filter(c => c.active).length}/{userCampaigns.length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <motion.div 
+                      className="bg-gradient-to-r from-purple-500 to-indigo-600 h-3 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${userCampaigns.length > 0 ? (userCampaigns.filter(c => c.active).length / userCampaigns.length) * 100 : 0}%` }}
+                      transition={{ duration: 1, delay: 0.6 }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">Voting Activity</span>
+                    <span className="font-semibold text-green-600">{userMetrics.votes} votes</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <motion.div 
+                      className="bg-gradient-to-r from-green-500 to-teal-600 h-3 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(userMetrics.votes * 10, 100)}%` }}
+                      transition={{ duration: 1, delay: 0.7 }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <motion.div 
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-blue-600 font-medium">Total Value</p>
+                      <p className="text-xl font-bold text-blue-900">{userMetrics.totalVoteValue} CELO</p>
+                    </div>
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-blue-600" />
+                    </div>
+                  </div>
+                </motion.div>
+                
+                <motion.div 
+                  className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-200"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-purple-600 font-medium">Avg. Vote</p>
+                      <p className="text-xl font-bold text-purple-900">
+                        {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} CELO
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-purple-600" />
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Recent Activity Section */}
+            <motion.div 
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h2>
+              <div className="space-y-3">
+                {voteHistory.slice(0, 3).map((vote, index) => {
+                  const project = allProjects?.find(p => p.project.id === vote.projectId);
+                  const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
+                  
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.6 + index * 0.1 }}
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <span className="text-sm text-gray-900">
+                          Voted {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? 'CELO' : 'cUSD'} on{' '}
+                          <span className="font-medium">{project?.project.name || `Project #${vote.projectId}`}</span>
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {new Date().toLocaleDateString()}
+                      </span>
+                    </motion.div>
+                  );
+                })}
+                {voteHistory.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                    className="text-center py-4 text-gray-500 text-sm"
+                  >
+                    No recent activity
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* Projects Tab */}
@@ -1243,17 +1559,33 @@ export default function ProfilePage() {
             </div>
 
             {/* Projects Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProjects.map((project) => (
-                <ProjectCard
-                  key={project.project.id.toString()}
-                  project={project.project}
-                  onClick={() => navigate(`/explorer/project/${project.project.id}`)}
-                />
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {filteredProjects.map((project, index) => (
+                <motion.div
+                  key={project.id.toString()}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <ProjectCard
+                    project={project}
+                    onClick={() => navigate(`/explorer/project/${project.id}`)}
+                  />
+                </motion.div>
               ))}
               
               {filteredProjects.length === 0 && (
-                <div className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200">
+                <motion.div 
+                  className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
                   <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No Projects Found</h3>
                   <p className="text-gray-600 mb-4 text-sm">
@@ -1262,45 +1594,70 @@ export default function ProfilePage() {
                       : `No ${filter} projects found.`
                     }
                   </p>
-                  <button
+                  <motion.button
                     onClick={() => navigate('/app/project/start')}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Create Project
-                  </button>
-                </div>
+                  </motion.button>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
           </div>
         )}
 
         {/* Campaigns Tab */}
         {activeTab === 'campaigns' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {userCampaigns.map((campaign) => (
-                <CampaignCard
-                  key={campaign.campaign.id.toString()}
-                  campaign={campaign.campaign}
-                  onClick={() => navigate(`/explorer/campaign/${campaign.campaign.id}`)}
-                />
+          <motion.div 
+            className="space-y-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {userCampaigns.map((campaign, index) => (
+                <motion.div
+                  key={campaign.id.toString()}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <CampaignCard
+                    campaign={campaign}
+                    onClick={() => navigate(`/explorer/campaign/${campaign.id}`)}
+                  />
+                </motion.div>
               ))}
               
               {userCampaigns.length === 0 && (
-                <div className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200">
+                <motion.div 
+                  className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
                   <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No Campaigns Found</h3>
                   <p className="text-gray-600 mb-4 text-sm">You haven't created any campaigns yet.</p>
-                  <button
+                  <motion.button
                     onClick={() => navigate('/app/campaign/start')}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Launch Campaign
-                  </button>
-                </div>
+                  </motion.button>
+                </motion.div>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* Votes Tab */}
@@ -1337,66 +1694,189 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Votes List */}
-            <div className="space-y-3">
-              {voteHistory.map((vote, index) => (
-                <VoteCard
-                  key={index}
-                  vote={vote}
-                  onViewProject={(projectId) => navigate(`/explorer/project/${projectId}`)}
-                  onViewCampaign={(campaignId) => navigate(`/explorer/campaign/${campaignId}`)}
-                />
-              ))}
-              
-              {voteHistory.length === 0 && (
-               <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
-               <Vote className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Votes Cast Yet</h3>
-               <p className="text-gray-600 mb-4 text-sm">Start participating by voting on projects you believe in.</p>
-               <button
-                 onClick={() => navigate('/explore')}
-                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-               >
-                 Explore Projects
-               </button>
-             </div>
-           )}
-         </div>
-       </div>
-     )}
+            {/* Votes Table */}
+            {voteHistory.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Project
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Campaign
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          CELO Equivalent
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {voteHistory.map((vote, index) => {
+                        // Find project and campaign details
+                        const project = allProjects?.find(p => p.project.id === vote.projectId);
+                        const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
+                        
+                        return (
+                          <tr key={index} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-bold mr-3">
+                                  {project?.project.name?.charAt(0) || 'P'}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {project?.project.name || `Project #${vote.projectId}`}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    ID: {vote.projectId.toString()}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white mr-3">
+                                  <Trophy className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {campaign?.campaign.name || `Campaign #${vote.campaignId}`}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    ID: {vote.campaignId.toString()}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm font-medium text-green-600">
+                                {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? 'CELO' : 'cUSD'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-900">
+                                {formatEther(BigInt(vote.celoEquivalent))} CELO
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => navigate(`/explorer/project/${vote.projectId}`)}
+                                  className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium"
+                                >
+                                  View Project
+                                </button>
+                                <button
+                                  onClick={() => navigate(`/explorer/campaign/${vote.campaignId}`)}
+                                  className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-xs font-medium"
+                                >
+                                  View Campaign
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {voteHistory.length === 0 && (
+              <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
+                <Vote className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Votes Cast Yet</h3>
+                <p className="text-gray-600 mb-4 text-sm">Start participating by voting on projects you believe in.</p>
+                <button
+                  onClick={() => navigate('/explore')}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  Explore Projects
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
      {/* Identity Tab */}
      {activeTab === 'identity' && (
        <div className="space-y-6">
-         {/* Identity Status */}
-         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-           <div className="flex items-center justify-between mb-4">
-             <div className="flex items-center gap-3">
-               <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                 isVerified ? 'bg-green-50' : 'bg-yellow-50'
-               }`}>
-                 <Shield className={`h-6 w-6 ${
-                   isVerified ? 'text-green-600' : 'text-yellow-600'
-                 }`} />
+                    {/* Identity Status */}
+           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+             <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center gap-3">
+                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                   isVerified ? 'bg-green-50' : 'bg-yellow-50'
+                 }`}>
+                   <Shield className={`h-6 w-6 ${
+                     isVerified ? 'text-green-600' : 'text-yellow-600'
+                   }`} />
+                 </div>
+                 <div>
+                   <h2 className="text-lg font-bold text-gray-900">
+                     Identity Verification
+                   </h2>
+                   <p className="text-sm text-gray-600">
+                     {isVerified ? 'Your identity has been verified' : 'Verify your identity for enhanced security'}
+                   </p>
+                 </div>
                </div>
-               <div>
-                 <h2 className="text-lg font-bold text-gray-900">
-                   Identity Verification
-                 </h2>
-                 <p className="text-sm text-gray-600">
-                   {isVerified ? 'Your identity has been verified' : 'Verify your identity for enhanced security'}
-                 </p>
+               {isVerified && (
+                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
+                   <CheckCircle className="h-4 w-4 text-green-600" />
+                   <span className="text-sm font-medium text-green-700">
+                     Verified ({verificationProviders.join(', ')})
+                   </span>
+                 </div>
+               )}
+             </div>
+
+             {/* Verification Progress Circle */}
+             <div className="flex items-center justify-center mb-6">
+               <div className="relative">
+                 <svg className="w-24 h-24 transform -rotate-90">
+                   <circle
+                     cx="48"
+                     cy="48"
+                     r="36"
+                     stroke="currentColor"
+                     strokeWidth="8"
+                     fill="transparent"
+                     className="text-gray-200"
+                   />
+                   <motion.circle
+                     cx="48"
+                     cy="48"
+                     r="36"
+                     stroke="currentColor"
+                     strokeWidth="8"
+                     fill="transparent"
+                     className="text-green-500"
+                     strokeLinecap="round"
+                     initial={{ strokeDasharray: "0 226" }}
+                     animate={{ strokeDasharray: `${isVerified ? 226 : 113} 226` }}
+                     transition={{ duration: 1, delay: 0.5 }}
+                   />
+                 </svg>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                   <div className="text-center">
+                     <div className="text-2xl font-bold text-gray-900">
+                       {isVerified ? '100%' : '50%'}
+                     </div>
+                     <div className="text-xs text-gray-500">Verified</div>
+                   </div>
+                 </div>
                </div>
              </div>
-             {isVerified && (
-               <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
-                 <CheckCircle className="h-4 w-4 text-green-600" />
-                 <span className="text-sm font-medium text-green-700">
-                   Verified ({verificationProviders.join(', ')})
-                 </span>
-               </div>
-             )}
-           </div>
 
            {!isVerified && (
              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
