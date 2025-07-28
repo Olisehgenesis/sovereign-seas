@@ -47,6 +47,8 @@ import { getGoodLink } from '@/utils/get-good-link';
 import GoodDollarVerifyModal from '@/components/goodDollar';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
+import CountryFlag from 'react-country-flag';
+import { getFlagColorData } from '@/utils/flagUtils';
 // Add GoodDollar logo import (add the image to public/images/gooddollar.png if not present)
 // import goodDollarLogo from '/public/images/good.png';
 
@@ -167,17 +169,28 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
   })();
   const location = getNormalizedLocation(parsedMetadata);
 
+  // Get logo from multiple possible locations
+  const getProjectLogo = () => {
+    return parsedMetadata.media?.logo || parsedMetadata.logo || null;
+  };
+
+  const projectLogo = getProjectLogo();
+
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all group relative">
       {/* Location Badge (card style) */}
       <LocationBadge location={location} variant="card" />
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          {parsedMetadata.media?.logo ? (
+          {projectLogo ? (
             <img
-              src={formatIpfsUrl(parsedMetadata.media.logo)}
+              src={formatIpfsUrl(projectLogo)}
               alt={`${project.name} logo`}
               className="w-8 h-8 rounded-lg object-cover"
+              onError={(e) => {
+                console.warn(`Failed to load logo for project ${project.name}:`, projectLogo);
+                e.currentTarget.style.display = 'none';
+              }}
             />
           ) : (
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">
@@ -226,6 +239,7 @@ interface CampaignCardProps {
     totalFunds: bigint;
     metadata?: {
       mainInfo?: string;
+      additionalInfo?: string;
       logo?: string;
     };
   };
@@ -243,6 +257,26 @@ const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
       return {};
     }
   })();
+
+  // Get logo from multiple possible locations
+  const getCampaignLogo = () => {
+    // Try mainInfo first
+    if (parsedMetadata.logo) return parsedMetadata.logo;
+    
+    // Try additionalInfo if available
+    try {
+      if (campaign.metadata?.additionalInfo) {
+        const additionalInfo = JSON.parse(campaign.metadata.additionalInfo);
+        if (additionalInfo.logo) return additionalInfo.logo;
+      }
+    } catch (error) {
+      console.error('Error parsing campaign additionalInfo:', error);
+    }
+    
+    return null;
+  };
+
+  const campaignLogo = getCampaignLogo();
 
   const getStatus = () => {
     const now = Math.floor(Date.now() / 1000);
@@ -267,11 +301,15 @@ const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all group">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          {parsedMetadata.logo ? (
+          {campaignLogo ? (
             <img
-              src={formatIpfsUrl(parsedMetadata.logo)}
+              src={formatIpfsUrl(campaignLogo)}
               alt={`${campaign.name} logo`}
               className="w-8 h-8 rounded-lg object-cover"
+              onError={(e) => {
+                console.warn(`Failed to load logo for campaign ${campaign.name}:`, campaignLogo);
+                e.currentTarget.style.display = 'none';
+              }}
             />
           ) : (
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white">
@@ -534,7 +572,7 @@ export default function ProfilePage() {
       
       // Compare results
       console.log('\n--- Comparison ---');
-      console.log('All responses identical:', JSON.stringify(data1) === JSON.stringify(data2) && JSON.stringify(data2) === JSON.stringify(data3));
+      console.log('All responses identical:', JSON.stringify(data1) === JSON.stringify(data2));
       console.log('Response 1 verified:', data1.verified);
       console.log('Response 2 verified:', data2.verified);
       
@@ -878,11 +916,39 @@ export default function ProfilePage() {
     );
   }
 
+  // Get theme colors based on nationality
+  const getThemeColors = () => {
+    if (verificationDetails?.self?.isVerified && verificationDetails.self.nationality) {
+      const countryCode = verificationDetails.self.nationality.length === 3 
+        ? verificationDetails.self.nationality.substring(0, 2).toUpperCase()
+        : verificationDetails.self.nationality.toUpperCase();
+      
+      const flagData = getFlagColorData(countryCode);
+      if (flagData) {
+        const baseColor = flagData.borderColor.replace('border-', '').replace('-300', '');
+        return {
+          from: `${baseColor}-50`,
+          via: 'white',
+          to: `${baseColor}-50`,
+          accent: `${baseColor}-100`
+        };
+      }
+    }
+    return {
+      from: 'indigo-50',
+      via: 'white', 
+      to: 'purple-50',
+      accent: 'indigo-100'
+    };
+  };
+
+  const themeColors = getThemeColors();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className={`min-h-screen bg-gradient-to-br from-${themeColors.from} via-${themeColors.via} to-${themeColors.to}`}>
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Profile Header */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200/50 p-6 mb-8">
+        <div className={`bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-${themeColors.accent.replace('-100', '-200')}/50 p-6 mb-8`}>
           <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -923,22 +989,22 @@ export default function ProfilePage() {
                     })()}
                   </div>
                   {/* Self Badge Card */}
-                  <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.self?.isVerified ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
-                    <Shield className={`h-5 w-5 mb-1 ${verificationDetails?.self?.isVerified ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.self?.isVerified ? `${themeColors.accent} border-${themeColors.accent.replace('-100', '-200')}` : 'bg-gray-50 border-gray-200'}`}>
+                    <Shield className={`h-5 w-5 mb-1 ${verificationDetails?.self?.isVerified ? `text-${themeColors.accent.replace('-100', '-600')}` : 'text-gray-400'}`} />
                     <span className="text-base font-bold mb-0.5">Self Protocol</span>
                     {verificationLoading ? (
                       <div className="flex items-center gap-1 mb-1">
-                        <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                        <span className="text-blue-700 font-semibold text-xs">Loading...</span>
+                        <Loader2 className={`h-4 w-4 text-${themeColors.accent.replace('-100', '-600')} animate-spin`} />
+                        <span className={`text-${themeColors.accent.replace('-100', '-700')} font-semibold text-xs`}>Loading...</span>
                       </div>
                     ) : verificationDetails?.self?.isVerified ? (
                       <div className="flex items-center gap-1 mb-1">
-                        <CheckCircle className="h-4 w-4 text-blue-600" />
-                        <span className="text-blue-700 font-semibold text-xs">Verified</span>
+                        <CheckCircle className={`h-4 w-4 text-${themeColors.accent.replace('-100', '-600')}`} />
+                        <span className={`text-${themeColors.accent.replace('-100', '-700')} font-semibold text-xs`}>Verified</span>
                       </div>
                     ) : (
                       <button
-                        className="mt-1 px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+                        className={`mt-1 px-3 py-1 bg-${themeColors.accent.replace('-100', '-600')} text-white rounded-lg text-xs font-semibold hover:bg-${themeColors.accent.replace('-100', '-700')} transition-colors`}
                         onClick={() => { setShowVerification(true); setShowMethodSelection(false); }}
                       >
                         Verify with Self Protocol
@@ -973,6 +1039,31 @@ export default function ProfilePage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Profile</h1>
+                  {/* Nationality Flag */}
+                  {verificationDetails?.self?.isVerified && verificationDetails.self.nationality && (() => {
+                    // Convert 3-letter country code to 2-letter if needed
+                    const countryCode = verificationDetails.self.nationality.length === 3 
+                      ? verificationDetails.self.nationality.substring(0, 2).toUpperCase()
+                      : verificationDetails.self.nationality.toUpperCase();
+                    
+                    const flagData = getFlagColorData(countryCode);
+                    const flagBorderColor = flagData?.borderColor || 'border-blue-200';
+                    const flagBgColor = flagBorderColor.replace('border-', 'bg-').replace('-300', '-50');
+                    
+                    return (
+                      <div className={`flex items-center gap-2 px-3 py-2 ${flagBgColor} rounded-full border ${flagBorderColor} shadow-sm`}>
+                        <CountryFlag 
+                          countryCode={countryCode} 
+                          svg 
+                          style={{ width: '1.2em', height: '1.2em', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }} 
+                          title={`Nationality: ${verificationDetails.self.nationality}`}
+                        />
+                        <span className="text-sm font-semibold text-gray-800">
+                          {verificationDetails.self.nationality}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   {isVerified ? (
                     <div className="flex items-center gap-2 px-2 py-1 bg-green-50 rounded-full">
                       <Shield className="h-4 w-4 text-green-600" />

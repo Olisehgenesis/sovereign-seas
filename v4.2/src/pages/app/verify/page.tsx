@@ -77,7 +77,7 @@ export default function VerifyPage() {
 
     const handleVerificationSuccess = async () => {
         console.log('Verification successful');
-        const address =  useAccount();
+        const { address } = useAccount();
         if (!address) {
             setError('No wallet address found');
             return;
@@ -90,7 +90,7 @@ export default function VerifyPage() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ 
-                    wallet: address.address?.toLowerCase(),
+                    wallet: address?.toLowerCase(),
                     verificationStatus: true 
                 }),
             });
