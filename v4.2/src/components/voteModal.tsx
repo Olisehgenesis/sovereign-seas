@@ -55,7 +55,7 @@ interface ProjectVoteSimulation {
 
 // API Functions
 const claimFreeVote = async (beneficiaryAddress: string, campaignId: bigint | string, projectId: string) => {
-  const response = await fetch('https://auth.sovseas.xyz/api/claim-vote', {
+  const response = await fetch('https://selfauth.vercel.app/api/claim-vote', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -214,7 +214,7 @@ export default function VoteModal({
     setClaimError('');
     
     try {
-      const response = await fetch(`https://auth.sovseas.xyz/api/check-wallet?wallet=${encodeURIComponent(address)}`, {
+      const response = await fetch(`https://selfauth.vercel.app/api/check-wallet?wallet=${encodeURIComponent(address.toLowerCase())}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });

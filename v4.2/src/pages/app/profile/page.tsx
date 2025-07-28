@@ -450,14 +450,11 @@ export default function ProfilePage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      const response = await fetch(`https://selfauth.vercel.app/api/verify?wallet=${address}`, {
+      const response = await fetch(`https://selfauth.vercel.app/api/verify?wallet=${address.toLowerCase()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
         },
         signal: controller.signal
       });
@@ -486,6 +483,8 @@ export default function ProfilePage() {
         },
       });
       console.log('Verification data refreshed successfully');
+      console.log('isVerified state set to:', !!data.verified);
+      console.log('Self verification status:', data.self?.isVerified);
     } catch (error) {
       console.error('Error refreshing verification data:', error);
       if (error instanceof Error) {
@@ -502,10 +501,60 @@ export default function ProfilePage() {
     }
   };
 
+  // Debug function to test API directly - can be called from browser console
+  const debugApiCall = async (testAddress?: string) => {
+    const targetAddress = testAddress || address;
+    if (!targetAddress) {
+      console.error('No address available for testing');
+      return;
+    }
+
+    console.log('=== DEBUG API CALL ===');
+    console.log('Testing address:', targetAddress);
+    
+    try {
+      // Test 1: Direct fetch with minimal headers
+      console.log('\n--- Test 1: Direct fetch ---');
+      const response1 = await fetch(`https://selfauth.vercel.app/api/verify?wallet=${targetAddress.toLowerCase()}`);
+      const data1 = await response1.json();
+      console.log('Response 1:', data1);
+      
+      // Test 2: Fetch with app headers
+      console.log('\n--- Test 2: App headers ---');
+      const response2 = await fetch(`https://selfauth.vercel.app/api/verify?wallet=${targetAddress.toLowerCase()}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      const data2 = await response2.json();
+      console.log('Response 2:', data2);
+      
+      
+      
+      // Compare results
+      console.log('\n--- Comparison ---');
+      console.log('All responses identical:', JSON.stringify(data1) === JSON.stringify(data2) && JSON.stringify(data2) === JSON.stringify(data3));
+      console.log('Response 1 verified:', data1.verified);
+      console.log('Response 2 verified:', data2.verified);
+      
+    } catch (error) {
+      console.error('Debug API call failed:', error);
+    }
+  };
+
+  // Expose debug function to window for console access
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).debugVerificationApi = debugApiCall;
+      console.log('Debug function available: window.debugVerificationApi()');
+    }
+  }, [address]);
+
   // Helper function to safely access nested properties
   const getVerificationStatus = () => {
     if (verificationLoading) return 'loading';
-    if (verificationDetails?.self?.isVerified || verificationDetails?.gooddollar?.isVerified) {
+    if (isVerified) {
       return 'verified';
     }
     return 'unverified';
@@ -538,13 +587,10 @@ export default function ProfilePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
         },
         body: JSON.stringify({
-          wallet: address,
-          userId: address, // Use wallet address as userId
+          wallet: address.toLowerCase(),
+          userId: address.toLowerCase(), // Use wallet address as userId
           verificationStatus: true,
           root: data?.root || null
         })
@@ -621,32 +667,66 @@ export default function ProfilePage() {
           
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          //chcek if adress is null or undefined
+          if (!address){
+            alert('No address found');
+            return;
+          }else{
+            //log the address
+            console.log('Address found:', address);
+            
+
+          }
+          //convert address to string and lowercase
+          const strAddress = address.toString().toLowerCase();
+
+          // Add cache-busting and debugging headers
+          const apiUrl = `https://selfauth.vercel.app/api/verify?wallet=${strAddress}`;
+          console.log('Making request to:', apiUrl);
           
-          const response = await fetch(`https://selfauth.vercel.app/api/verify?wallet=${address}`, {
+          const requestHeaders = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+            
+          };
+          
+          console.log('Request headers:', requestHeaders);
+          
+          const response = await fetch(apiUrl, {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            },
+            headers: requestHeaders,
             signal: controller.signal
           });
           
           clearTimeout(timeoutId);
           
+          console.log('Response status:', response.status);
+          console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+          
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           
-          const data = await response.json();
-          console.log('API Response received:', data);
+          const responseText = await response.text();
+          console.log('Raw response text:', responseText);
+          
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('Failed to parse JSON response:', parseError);
+            console.error('Response text was:', responseText);
+            throw new Error('Invalid JSON response from server');
+          }
+          
+          console.log('Parsed API Response received:', data);
+          console.log('Response type:', typeof data);
+          console.log('Response keys:', Object.keys(data));
           
           // Handle the new API response structure with proper fallbacks
-          setIsVerified(!!data.verified);
-          setVerificationProviders(data.profile?.providers || []);
-          setVerificationDetails({
+          const verified = !!data.verified;
+          const providers = data.profile?.providers || [];
+          const verificationDetails = {
             gooddollar: data.gooddollar || { isVerified: false },
             self: data.self || { 
               isVerified: false,
@@ -656,9 +736,21 @@ export default function ProfilePage() {
               userDefinedData: null,
               verificationOptions: null
             },
-          });
+          };
+          
+          console.log('Setting verification state:');
+          console.log('- verified:', verified);
+          console.log('- providers:', providers);
+          console.log('- verificationDetails:', verificationDetails);
+          
+          setIsVerified(verified);
+          setVerificationProviders(providers);
+          setVerificationDetails(verificationDetails);
+          
           console.log('Verification details:', { gooddollar: data.gooddollar, self: data.self });
           console.log('Full verification response:', data);
+          console.log('isVerified state set to:', verified);
+          console.log('Self verification status:', data.self?.isVerified);
         } catch (error) {
           console.error('Error checking verification status:', error);
           
@@ -1293,6 +1385,43 @@ export default function ProfilePage() {
                </p>
              </div>
            </div>
+
+           {/* Debug Section (only in development) */}
+           {true && (
+             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+               <h4 className="font-semibold text-yellow-800 mb-2">Debug Tools</h4>
+               <p className="text-sm text-yellow-700 mb-3">
+                 Development tools to help debug verification issues
+               </p>
+               <div className="space-y-2">
+                 <button
+                   onClick={() => debugApiCall()}
+                   className="px-3 py-1 bg-yellow-600 text-white rounded text-xs font-medium hover:bg-yellow-700 transition-colors"
+                 >
+                   Test API Call
+                 </button>
+                 <button
+                   onClick={() => refreshVerificationData()}
+                   className="ml-2 px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors"
+                 >
+                   Refresh Data
+                 </button>
+                 <button
+                   onClick={() => {
+                     console.log('Current verification state:', {
+                       isVerified,
+                       verificationProviders,
+                       verificationDetails,
+                       verificationLoading
+                     });
+                   }}
+                   className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors"
+                 >
+                   Log State
+                 </button>
+               </div>
+             </div>
+           )}
          </div>
        </div>
      )}

@@ -51,7 +51,7 @@ export default function VerifyPage() {
                 const app = new SelfAppBuilder({
                     appName: "Sovereign Seas",
                     scope: "sovereign-seas",
-                    endpoint: "https://auth.sovseas.xyz/api/verify",
+                    endpoint: "https://selfauth.vercel.app/api/verify",
                     endpointType: "https",
                     userId,
                     disclosures: {
@@ -84,13 +84,13 @@ export default function VerifyPage() {
         }
         try {
             console.log('Starting verification process...');
-            const response = await fetch('https://auth.sovseas.xyz/api/save-verify', {
+            const response = await fetch('https://selfauth.vercel.app/api/save-verify', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ 
-                    wallet: address,
+                    wallet: address.address?.toLowerCase(),
                     verificationStatus: true 
                 }),
             });
