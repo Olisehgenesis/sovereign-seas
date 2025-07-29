@@ -1034,9 +1034,6 @@ export function parseProjectMetadata(jsonString: string) {
 
 // Helper function to format project for display
 export function formatProjectForDisplay(projectDetails: ProjectDetails) {
-
-
-
   if (!projectDetails) {
     return null;
   }
@@ -1044,17 +1041,25 @@ export function formatProjectForDisplay(projectDetails: ProjectDetails) {
   const { project, metadata } = projectDetails;
   
   try {
+    // Parse the bio data to extract location and other fields
+    const bioData = parseProjectMetadata(metadata.bio || '{}');
+    const contractInfo = parseProjectMetadata(metadata.contractInfo || '{}');
+    const additionalData = parseProjectMetadata(metadata.additionalData || '{}');
+    
     const formatted = {
       ...project,
       ...metadata,
-      additionalDataParsed: parseProjectMetadata(metadata.additionalData),
+      // Extract location from bio data
+      location: bioData.location || '',
+      // Parse all metadata fields
+      additionalDataParsed: additionalData,
+      bioDataParsed: bioData,
+      contractInfoParsed: contractInfo,
       campaignCount: project.campaignIds.length,
       createdAtDate: new Date(Number(project.createdAt) * 1000),
       isTransferrable: project.transferrable,
       isActive: project.active
     };
-
-
 
     return formatted;
   } catch (error) {

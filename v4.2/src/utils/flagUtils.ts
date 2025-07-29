@@ -159,4 +159,17 @@ export function getAllFlagColors(): { [key: string]: FlagColorData } {
  */
 export function hasFlagColor(countryCode: string): boolean {
   return countryCode in flagColors;
+}
+
+/**
+ * Get flag color data with earth badge fallback
+ * If all attempts to get the country fail, returns earth badge data
+ * @param countryCode - ISO 3166-1 alpha-2 country code
+ * @returns FlagColorData object with earth badge fallback
+ */
+export function getFlagColorDataWithFallback(countryCode: string): FlagColorData {
+  return flagColors[countryCode] || { 
+    borderColor: 'border-blue-200', 
+    description: 'Earth - global' 
+  };
 } 

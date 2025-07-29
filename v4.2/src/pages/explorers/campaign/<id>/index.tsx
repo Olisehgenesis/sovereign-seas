@@ -58,6 +58,8 @@ import {
   useCampaignTokenAmount,
 } from '@/hooks/useVotingMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
+import LocationBadge from '@/components/LocationBadge';
+import { getNormalizedLocation } from '@/utils/locationUtils';
 
 interface Project {
   voteCount: bigint;
@@ -1527,6 +1529,24 @@ export default function CampaignView() {
                     const isApproved = project.participation?.approved === true;
                     const voteProgress = Math.min(100, (voteCount / 500) * 100);
                     const styling = getPositionStyling(index);
+                    
+                    // Get location data for the project - now simplified since formatProjectForDisplay extracts location
+                    let location = null;
+                    
+                    // First try the extracted location field
+                    if (project.location) {
+                      location = getNormalizedLocation({ location: project.location });
+                    }
+                    
+                    // If no location, try additionalDataParsed
+                    if (!location && project.additionalDataParsed) {
+                      location = getNormalizedLocation(project.additionalDataParsed);
+                    }
+                    
+                    // If still no location, try bioDataParsed
+                    if (!location && project.bioDataParsed) {
+                      location = getNormalizedLocation(project.bioDataParsed);
+                    }
 
                     return (
                       <motion.div
@@ -1560,6 +1580,9 @@ export default function CampaignView() {
                           boxShadow: `0 10px 32px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.8)`,
                         }}
                       >
+                        {/* Location Badge - Add this near the top of the card */}
+                        <LocationBadge location={location} variant="card" />
+                        
                         {/* Animated Background Gradient */}
                         <motion.div 
                           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"

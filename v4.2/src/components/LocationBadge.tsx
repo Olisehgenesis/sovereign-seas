@@ -42,7 +42,10 @@ const LocationBadge: React.FC<LocationBadgeProps> = ({ location, variant = 'inli
           <Globe className="w-5 h-5 drop-shadow" />
         ) : countryCode ? (
           <CountryFlag countryCode={countryCode} svg style={{ width: '1.6em', height: '1.6em', filter: 'drop-shadow(0 0 4px #60a5fa)' }} title={country} />
-        ) : null}
+        ) : (
+          // Earth badge fallback when no country code is available
+          <Globe className="w-5 h-5 drop-shadow" />
+        )}
       </span>
     );
   }
@@ -59,10 +62,13 @@ const LocationBadge: React.FC<LocationBadgeProps> = ({ location, variant = 'inli
 
   return (
     <span className={badgeClass}>
-      {countryCode && (
+      {countryCode ? (
         <CountryFlag countryCode={countryCode} svg style={{ width: '1.2em', height: '1.2em', filter: 'drop-shadow(0 0 4px #60a5fa)' }} title={country} />
+      ) : (
+        // Earth badge fallback when no country code is available
+        <Globe className="w-4 h-4 drop-shadow" />
       )}
-      {city && !country ? city : country || city || 'Unknown'}
+      {city && !country ? city : country || city || 'Global'}
     </span>
   );
 };

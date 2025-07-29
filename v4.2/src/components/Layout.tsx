@@ -7,7 +7,7 @@ import Header from './Header';
 export default function Layout() {
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100" style={{ transform: 'scale(0.67)', transformOrigin: 'top left', width: '149.25%', height: '149.25%' }}>
         <div className="relative z-10 min-h-screen flex flex-col">
           <Header />
 
