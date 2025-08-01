@@ -349,9 +349,7 @@ export default function VoteModal({
 
   // Handle vote success
   useEffect(() => {
-    if (isSuccess && !isProcessing) return;
-    
-    if (isSuccess && isProcessing) {
+    if (isSuccess && !isPending) {
       setCurrentView('success');
       setIsProcessing(false);
       setCountdown(0);
@@ -362,11 +360,11 @@ export default function VoteModal({
         handleClose();
       }, 3000);
     }
-  }, [isSuccess, isProcessing, onVoteSuccess]);
+  }, [isSuccess, isPending, onVoteSuccess]);
 
   // Transaction timeout
   useEffect(() => {
-    if (isProcessing && !isSuccess) {
+    if (isPending && !isSuccess) {
       setCountdown(12);
       
       const interval = setInterval(() => {
@@ -383,7 +381,7 @@ export default function VoteModal({
       
       return () => clearInterval(interval);
     }
-  }, [isProcessing, isSuccess, onClose, navigate, campaignId]);
+  }, [isPending, isSuccess, onClose, navigate, campaignId]);
 
   // Reset on modal close
   useEffect(() => {
@@ -481,8 +479,14 @@ export default function VoteModal({
   if (!isOpen || !selectedProject) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+      onClick={handleClose}
+    >
+      <div 
+        className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Header */}
         <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 text-white relative overflow-hidden">
