@@ -757,6 +757,26 @@ export default function ProfilePage() {
 
       if (responseData.status === 'success') {
         console.log('GoodDollar verification saved successfully');
+        
+        // Update verification details to include Good Dollar verification
+        setVerificationDetails((prev: any) => ({
+          ...prev,
+          gooddollar: {
+            isVerified: true,
+            wallet: address,
+            root: data?.root || null,
+            expiry: null
+          }
+        }));
+        
+        // Update providers list to include Good Dollar
+        setVerificationProviders((prev: string[]) => {
+          if (!prev.includes('GoodDollar')) {
+            return [...prev, 'GoodDollar'];
+          }
+          return prev;
+        });
+        
         setIsVerified(true);
         setShowSuccessModal(true);
         setVerificationStatus('success');
@@ -876,18 +896,54 @@ export default function ProfilePage() {
           console.log('Response keys:', Object.keys(data));
           
           // Handle the new API response structure with proper fallbacks
-          const verified = !!data.verified;
-          const providers = data.profile?.providers || [];
+          // Get Self verification data from the verify endpoint
+          const selfData = data.self || { 
+            isVerified: false,
+            nationality: null,
+            attestationId: null,
+            timestamp: null,
+            userDefinedData: null,
+            verificationOptions: null
+          };
+          
+          // Get Good Dollar verification data from verify-details endpoint
+          let goodDollarData = { 
+            isVerified: false,
+            wallet: address,
+            root: null,
+            expiry: null
+          };
+          
+          try {
+            const goodDollarResponse = await fetch(`https://selfauth.vercel.app/api/verify-details?wallet=${strAddress}`);
+            if (goodDollarResponse.ok) {
+              const goodDollarResult = await goodDollarResponse.json();
+              goodDollarData = goodDollarResult.gooddollar || goodDollarData;
+            }
+          } catch (error) {
+            console.error('Error fetching Good Dollar verification:', error);
+          }
+          
+          // Combine Self and Good Dollar verification status
+          const selfVerified = !!data.verified;
+          const selfProviders = data.profile?.providers || [];
+          
+          // Determine overall verification status and providers
+          const allProviders = [...selfProviders];
+          let overallVerified = selfVerified;
+          
+          // Add Good Dollar to providers if verified
+          if (goodDollarData.isVerified && !allProviders.includes('GoodDollar')) {
+            allProviders.push('GoodDollar');
+            overallVerified = true;
+          }
+          
+          const verified = overallVerified;
+          const providers = allProviders;
+          
           const verificationDetails = {
-            gooddollar: data.gooddollar || { isVerified: false },
-            self: data.self || { 
-              isVerified: false,
-              nationality: null,
-              attestationId: null,
-              timestamp: null,
-              userDefinedData: null,
-              verificationOptions: null
-            },
+            gooddollar: goodDollarData,
+            self: selfData,
           };
           
           console.log('Setting verification state:');
@@ -938,7 +994,12 @@ export default function ProfilePage() {
           setIsVerified(false);
           setVerificationProviders([]);
           setVerificationDetails({
-            gooddollar: { isVerified: false },
+            gooddollar: { 
+              isVerified: false,
+              wallet: address,
+              root: null,
+              expiry: null
+            },
             self: { 
               isVerified: false,
               nationality: null,

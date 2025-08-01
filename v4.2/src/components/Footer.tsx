@@ -29,7 +29,7 @@ const navigation = [
 
 export default function Footer() {
   return (
-    <footer className="bg-white/90 backdrop-blur-sm mt-auto border-t border-blue-100 relative overflow-hidden">
+    <footer className="mt-auto bg-white/90 backdrop-blur-sm border-t border-blue-100 relative overflow-hidden shadow-lg">
       {/* Wave pattern background */}
       <div className="absolute inset-0 opacity-5 pointer-events-none">
         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
@@ -46,24 +46,24 @@ export default function Footer() {
         </svg>
       </div>
       
-      <div className="mx-auto max-w-7xl py-4 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8 relative">
+      <div className="mx-auto max-w-7xl py-6 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8 relative">
         <div className="flex justify-center space-x-4 md:order-2">
           {navigation.map((item) => (
             <a
               key={item.name}
               href={item.href}
-              className="text-blue-500 hover:text-indigo-600 transition-all hover:-translate-y-1 transform flex items-center justify-center h-8 w-8 bg-blue-50 rounded-full border border-blue-100 shadow-sm hover:shadow-md"
+              className="text-blue-500 hover:text-indigo-600 transition-all hover:-translate-y-1 transform flex items-center justify-center h-10 w-10 bg-blue-50 rounded-full border border-blue-100 shadow-sm hover:shadow-md"
               target="_blank"
               rel="noopener noreferrer"
             >
               <span className="sr-only">{item.name}</span>
-              <item.icon className="h-4 w-4" aria-hidden="true" />
+              <item.icon className="h-5 w-5" aria-hidden="true" />
             </a>
           ))}
         </div>
-        <div className="mt-2 md:order-1 md:mt-0">
-          <p className="text-center text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} Developed with <span className="inline-block animate-pulse text-blue-500">⚓</span> by <span className="tilt-neon bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-600 font-bold">Oliseh GENESIS</span>
+        <div className="mt-4 md:order-1 md:mt-0">
+          <p className="text-center text-sm text-gray-600">
+            &copy; {new Date().getFullYear()} Developed with <span className="inline-block animate-pulse text-blue-500">⚓</span> by <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-600 font-bold">Oliseh GENESIS</span>
           </p>
         </div>
       </div>

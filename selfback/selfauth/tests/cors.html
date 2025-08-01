@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Debug Tools</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            background: #28a745;
+        }
+        .error {
+            background: #dc3545;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid #e9ecef;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        .success-result {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error-result {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔍 CORS Debug Tools</h2>
+        <p>Test different methods to debug your CORS issue with the verification API</p>
+    </div>
+
+    <div class="container">
+        <h3>1. Test Your Exact Fetch Call</h3>
+        <button onclick="testExactFetch()">Test Your Fetch</button>
+        <div id="exact-result"></div>
+    </div>
+
+    <div class="container">
+        <h3>2. Test with Different Headers</h3>
+        <button onclick="testMinimalFetch()">Minimal Headers</button>
+        <button onclick="testWithAcceptOnly()">Accept Header Only</button>
+        <button onclick="testNoCacheControl()">No Cache Control</button>
+        <div id="headers-result"></div>
+    </div>
+
+    <div class="container">
+        <h3>3. Test with Axios</h3>
+        <button onclick="testAxios()">Test Axios</button>
+        <div id="axios-result"></div>
+    </div>
+
+    <div class="container">
+        <h3>4. Test Alternative HTTP Libraries</h3>
+        <button onclick="testKy()">Test Ky</button>
+        <button onclick="testSuperAgent()">Test SuperAgent</button>
+        <button onclick="testAlova()">Test Alova.js</button>
+        <div id="alternatives-result"></div>
+    </div>
+
+    <div class="container">
+        <h3>4. Test CORS Proxy</h3>
+        <button onclick="testCorsProxy()">Test AllOrigins Proxy</button>
+        <div id="proxy-result"></div>
+    </div>
+
+    <div class="container">
+        <h3>5. Test CORS Proxy</h3>
+        <button onclick="testCorsProxy()">Test AllOrigins Proxy</button>
+        <div id="proxy-result"></div>
+    </div>
+
+    <div class="container">
+        <h3>6. Test Browser Environment</h3>
+        <button onclick="checkBrowserCORS()">Check Browser CORS Support</button>
+        <div id="browser-result"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ky/0.33.3/index.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/superagent/8.1.2/superagent.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alova/2.9.3/alova.global.min.js"></script>
+    <script>
+        const walletAddress = '0x53eaF4CD171842d8144e45211308e5D90B4b0088';
+        const apiUrl = `https://selfauth.vercel.app/api/verify?wallet=${walletAddress}`;
+
+        function displayResult(elementId, success, message, data = null) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `
+                <div class="result ${success ? 'success-result' : 'error-result'}">
+                    <strong>${success ? '✅ Success' : '❌ Error'}:</strong> ${message}
+                    ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+                </div>
+            `;
+        }
+
+        // Test 1: Your exact fetch call
+        async function testExactFetch() {
+            try {
+                console.log('Testing exact fetch call...');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResult('exact-result', true, `Fetch successful! Status: ${response.status}`, data);
+                
+            } catch (error) {
+                console.error('Exact fetch error:', error);
+                displayResult('exact-result', false, error.message);
+            }
+        }
+
+        // Test 2: Minimal headers
+        async function testMinimalFetch() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResult('headers-result', true, 'Minimal fetch successful!', data);
+                
+            } catch (error) {
+                displayResult('headers-result', false, `Minimal fetch error: ${error.message}`);
+            }
+        }
+
+        // Test 3: Accept header only
+        async function testWithAcceptOnly() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResult('headers-result', true, 'Accept-only fetch successful!', data);
+                
+            } catch (error) {
+                displayResult('headers-result', false, `Accept-only fetch error: ${error.message}`);
+            }
+        }
+
+        // Test 4: No cache control
+        async function testNoCacheControl() {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResult('headers-result', true, 'No-cache-control fetch successful!', data);
+                
+            } catch (error) {
+                displayResult('headers-result', false, `No-cache-control fetch error: ${error.message}`);
+            }
+        }
+
+        // Test 5: Ky
+        async function testKy() {
+            try {
+                const response = await ky.get(apiUrl, {
+                    timeout: 10000,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                }).json();
+                
+                displayResult('alternatives-result', true, 'Ky successful!', response);
+                
+            } catch (error) {
+                displayResult('alternatives-result', false, `Ky error: ${error.message}`);
+            }
+        }
+
+        // Test 6: SuperAgent
+        async function testSuperAgent() {
+            try {
+                const response = await superagent
+                    .get(apiUrl)
+                    .timeout(10000)
+                    .set('Accept', 'application/json');
+                
+                displayResult('alternatives-result', true, 'SuperAgent successful!', response.body);
+                
+            } catch (error) {
+                displayResult('alternatives-result', false, `SuperAgent error: ${error.message}`);
+            }
+        }
+
+        // Test 7: Alova.js
+        async function testAlova() {
+            try {
+                // Note: Alova.js requires more setup, this is a simplified test
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResult('alternatives-result', true, 'Alova.js (via fetch) successful!', data);
+                
+            } catch (error) {
+                displayResult('alternatives-result', false, `Alova.js error: ${error.message}`);
+            }
+        }
+        async function testAxios() {
+            try {
+                const response = await axios.get(apiUrl, {
+                    timeout: 10000,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                displayResult('axios-result', true, `Axios successful! Status: ${response.status}`, response.data);
+                
+            } catch (error) {
+                const errorMsg = error.response 
+                    ? `HTTP ${error.response.status}: ${error.response.statusText}`
+                    : error.message;
+                displayResult('axios-result', false, `Axios error: ${errorMsg}`);
+            }
+        }
+
+        // Test 9: CORS Proxy
+        async function testCorsProxy() {
+            try {
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+                const response = await fetch(proxyUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const proxyData = await response.json();
+                const actualData = JSON.parse(proxyData.contents);
+                
+                displayResult('proxy-result', true, 'CORS proxy successful!', actualData);
+                
+            } catch (error) {
+                displayResult('proxy-result', false, `Proxy error: ${error.message}`);
+            }
+        }
+
+        // Test 10: Browser CORS support
+        async function checkBrowserCORS() {
+            const results = {
+                userAgent: navigator.userAgent,
+                fetchSupport: typeof fetch !== 'undefined',
+                corsSupport: 'withCredentials' in new XMLHttpRequest(),
+                location: window.location.origin,
+                cookies: document.cookie ? 'Present' : 'None',
+                localStorage: typeof localStorage !== 'undefined',
+                extensions: []
+            };
+
+            // Check for common browser extensions that might interfere
+            if (window.ethereum) results.extensions.push('MetaMask/Web3');
+            if (window.chrome && window.chrome.runtime) results.extensions.push('Chrome Extension');
+            
+            displayResult('browser-result', true, 'Browser environment check complete', results);
+        }
+    </script>
+</body>
+</html>

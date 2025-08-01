@@ -45,7 +45,7 @@ export default function Header() {
   console.log('Privy Auth State:', { authenticated, ready });
   const { login } = useLogin();
 
-  // Handle scroll effect - more subtle than original
+  // Handle scroll effect - header reduces size when scrolling
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -112,17 +112,25 @@ export default function Header() {
         {({ open, close }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex h-16 items-center justify-between">
+              <div className={`flex items-center justify-between transition-all duration-300 ${
+                isScrolled ? 'h-16' : 'h-20'
+              }`}>
                 
                 {/* Logo - enhanced with more color */}
                 <Link to="/" className="flex items-center group">
-                  <div className="relative h-8 w-8 mr-3">
+                  <div className={`relative mr-3 transition-all duration-300 ${
+                    isScrolled ? 'h-6 w-6' : 'h-8 w-8'
+                  }`}>
                     <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 shadow-lg group-hover:shadow-blue-400/50 transition-all duration-300 group-hover:scale-105 flex items-center justify-center animate-pulse">
-                      <Anchor className="h-4 w-4 text-white group-hover:rotate-12 transition-transform duration-300" />
+                      <Anchor className={`text-white group-hover:rotate-12 transition-all duration-300 ${
+                        isScrolled ? 'h-3 w-3' : 'h-4 w-4'
+                      }`} />
                     </div>
                     <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-400 to-pink-500 opacity-20 animate-ping"></div>
                   </div>
-                  <span className="text-xl font-bold text-gray-800">
+                  <span className={`font-bold text-gray-800 transition-all duration-300 ${
+                    isScrolled ? 'text-lg' : 'text-xl'
+                  }`}>
                     Sovereign<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative animate-pulse">
                       Seas
                       <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 animate-pulse"></span>
@@ -146,8 +154,12 @@ export default function Header() {
                             : 'text-gray-600 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50'
                         }`}
                       >
-                        <NavIcon className={`h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`} />
-                        <span className={`font-semibold ${isActive ? 'text-white' : 'text-blue-600 group-hover:text-indigo-700'}`}>
+                        <NavIcon className={`mr-2 group-hover:scale-110 transition-all duration-200 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'} ${
+                          isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4'
+                        }`} />
+                        <span className={`font-semibold transition-all duration-200 ${isActive ? 'text-white' : 'text-blue-600 group-hover:text-indigo-700'} ${
+                          isScrolled ? 'text-sm' : 'text-sm'
+                        }`}>
                           {item.name}
                         </span>
                         {isActive && (

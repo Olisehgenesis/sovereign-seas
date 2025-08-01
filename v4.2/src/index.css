@@ -50,6 +50,89 @@ body {
   overflow-x: hidden;
 }
 
+/* Ensure proper sticky footer behavior */
+html, body {
+  height: 100%;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Override min-h-screen on pages to work with sticky footer */
+.layout-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-container > * {
+  flex-shrink: 0;
+}
+
+.layout-container > main {
+  flex: 1 0 auto;
+}
+
+/* Ensure footer stays at bottom */
+footer {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* Additional sticky footer support */
+.sticky-footer-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sticky-footer-layout > main {
+  flex: 1 0 auto;
+}
+
+.sticky-footer-layout > footer {
+  flex-shrink: 0;
+}
+
+/* Ensure proper flex behavior for layout */
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.layout-container > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.layout-container main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-container main > * {
+  flex: 1;
+}
+
+/* For pages that need to maintain their own height */
+.page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-content > div[class*="min-h-screen"] {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Typography improvements */
 .tilt-neon {
   font-family: 'Tilt Neon', 'Playfair Display', serif;
