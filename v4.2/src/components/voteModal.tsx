@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { parseEther, formatEther } from 'viem';
 import { useAccount } from 'wagmi';
+import { createPortal } from 'react-dom';
 import { 
   X,
   AlertCircle,
@@ -478,13 +479,15 @@ export default function VoteModal({
 
   if (!isOpen || !selectedProject) return null;
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       onClick={handleClose}
     >
       <div 
         className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto"
+        style={{ position: 'relative', zIndex: 10000 }}
         onClick={(e) => e.stopPropagation()}
       >
         
@@ -1011,4 +1014,6 @@ export default function VoteModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
