@@ -2115,17 +2115,35 @@ export default function ProfilePage() {
 
      {/* Verification Success Modal */}
      {showSuccessModal && (
-       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-         <div className="bg-white rounded-lg p-6 max-w-md w-full">
-           <div className="flex items-center justify-between mb-4">
-             <h3 className="text-lg font-bold text-gray-900">Identity Verification</h3>
+       <div 
+         className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+         onClick={() => setShowSuccessModal(false)}
+       >
+         <div 
+           className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden"
+           style={{ position: 'relative', zIndex: 10000 }}
+           onClick={(e) => e.stopPropagation()}
+         >
+           {/* Header */}
+           <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 text-white relative overflow-hidden">
+             <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20"></div>
              <button
                onClick={() => setShowSuccessModal(false)}
-               className="text-gray-400 hover:text-gray-600"
+               className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 z-10"
              >
                <X className="h-5 w-5" />
              </button>
+             
+             <div className="relative z-10">
+               <div className="flex items-center mb-2">
+                 <Shield className="h-6 w-6 mr-2 text-blue-300" />
+                 <h3 className="text-xl font-bold">Identity Verification</h3>
+               </div>
+             </div>
            </div>
+
+           <div className="p-6">
            
            <div className="text-center mb-6">
              {verificationStatus === 'loading' && (
@@ -2176,38 +2194,56 @@ export default function ProfilePage() {
                Try Again
              </button>
            )}
+           </div>
          </div>
        </div>
      )}
 
      {/* Verification Modal */}
      {showVerification && userId && (
-       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-         <div className="bg-white rounded-lg p-6 max-w-md w-full">
-           <div className="flex items-center justify-between mb-4">
-             <h3 className="text-lg font-bold text-gray-900">Verify Identity</h3>
+       <div 
+         className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+         onClick={() => setShowVerification(false)}
+       >
+         <div 
+           className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto"
+           style={{ position: 'relative', zIndex: 10000 }}
+           onClick={(e) => e.stopPropagation()}
+         >
+           {/* Header */}
+           <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 text-white relative overflow-hidden">
+             <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20"></div>
              <button
                onClick={() => setShowVerification(false)}
-               className="text-gray-400 hover:text-gray-600"
+               className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 z-10"
              >
                <X className="h-5 w-5" />
              </button>
+             
+             <div className="relative z-10">
+               <div className="flex items-center mb-2">
+                 <Shield className="h-6 w-6 mr-2 text-blue-300" />
+                 <h3 className="text-xl font-bold">Verify Identity</h3>
+               </div>
+               <p className="text-blue-100 text-sm">
+                 Scan the QR code with the Self app to verify your identity. This will enable enhanced features and anti-Sybil protection.
+               </p>
+             </div>
            </div>
-           <p className="text-sm text-gray-600 mb-6">
-             Scan the QR code with the Self app to verify your identity. This will enable enhanced features and anti-Sybil protection in V3.
-           </p>
-           
-           <VerificationComponent 
-             onSuccess={() => {
-               console.log('[ProfilePage] Self verification onSuccess triggered');
-               refreshVerificationData();
-               setShowVerification(false);
-             }}
-             onError={(error) => {
-               console.error('[ProfilePage] Self verification error:', error);
-             }}
-           />
-            
+
+           <div className="p-6">
+             <VerificationComponent 
+               onSuccess={() => {
+                 console.log('[ProfilePage] Self verification onSuccess triggered');
+                 refreshVerificationData();
+                 setShowVerification(false);
+               }}
+               onError={(error) => {
+                 console.error('[ProfilePage] Self verification error:', error);
+               }}
+             />
+           </div>
          </div>
        </div>
      )}
