@@ -212,8 +212,39 @@ const EditProjectPage = () => {
 
   // Check permissions
   const { isAdmin } = useCanBypassFees(contractAddress, 0n);
-  const isOwner = projectDetails?.project?.owner?.toLowerCase() === address?.toLowerCase();
+  
+  // Normalize addresses for comparison (remove 0x prefix and convert to lowercase)
+  const normalizeAddress = (addr: string | undefined) => {
+    if (!addr) return '';
+    return addr.replace(/^0x/i, '').toLowerCase();
+  };
+  
+  const normalizedOwner = normalizeAddress(projectDetails?.project?.owner);
+  const normalizedUser = normalizeAddress(address);
+  
+  // Multiple comparison methods to handle different address formats
+  const isOwnerExact = projectDetails?.project?.owner?.toLowerCase() === address?.toLowerCase();
+  const isOwnerNormalized = normalizedOwner === normalizedUser && normalizedOwner !== '';
+  const isOwner = isOwnerExact || isOwnerNormalized;
+  
   const canEdit = isOwner || isAdmin;
+  
+  // Debug wallet comparison
+  console.log('Wallet comparison debug:', {
+    projectOwner: projectDetails?.project?.owner,
+    projectOwnerType: typeof projectDetails?.project?.owner,
+    normalizedOwner,
+    userAddress: address,
+    userAddressType: typeof address,
+    normalizedUser,
+    isOwnerExact,
+    isOwnerNormalized,
+    isOwner,
+    isAdmin,
+    canEdit,
+    projectDetailsLoaded: !!projectDetails,
+    addressConnected: !!address
+  });
   
   // FIXED: Main data population effect - removed logoFile dependency and added initialization tracking
   useEffect(() => {
