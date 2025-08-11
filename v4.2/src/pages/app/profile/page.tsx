@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance, useWalletClient } from 'wagmi';
-import { motion, AnimatePresence } from 'framer-motion';
+// import { motion, AnimatePresence } from 'framer-motion'; // Removed for performance optimization
 // import axios from 'axios'; // Removed to use fetch instead
 import { 
   FileCode,
@@ -175,7 +175,7 @@ function VerificationComponent({ onSuccess, onError }: { onSuccess: () => void; 
       <div className="md:hidden flex flex-col items-center gap-2 mb-4">
         <button
           onClick={() => universalLink && window.open(universalLink, '_blank')}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors font-medium"
+                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors duration-150 font-medium"
         >
           <Smartphone className="h-5 w-5" />
           Open Self App
@@ -199,44 +199,32 @@ function VerificationComponent({ onSuccess, onError }: { onSuccess: () => void; 
 
 
 const StatCard = ({ icon: Icon, label, value, color = 'blue', trend = null, onClick }: StatCardProps) => (
-  <motion.div 
-    whileHover={{ scale: 1.02, y: -2 }}
-    whileTap={{ scale: 0.98 }}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3 }}
-    className={`bg-gradient-to-br from-${color}-50 to-${color}-100 rounded-xl p-4 shadow-sm border border-${color}-200/50 hover:shadow-lg transition-all duration-300 ${onClick ? 'cursor-pointer' : ''}`}
+  <div 
+    className={`bg-gradient-to-br from-${color}-50 to-${color}-100 rounded-xl p-4 shadow-sm border border-${color}-200/50 hover:shadow-lg transition-shadow duration-150 ${onClick ? 'cursor-pointer' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-center justify-between mb-2">
-      <motion.div 
+      <div 
         className={`w-10 h-10 bg-${color}-500/10 rounded-lg flex items-center justify-center`}
-        whileHover={{ rotate: 5, scale: 1.1 }}
-        transition={{ duration: 0.2 }}
       >
         <Icon className={`h-5 w-5 text-${color}-600`} />
-      </motion.div>
+      </div>
       {trend && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
+        <div 
           className={`flex items-center gap-1 text-xs ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}
         >
           <TrendingUp className="h-3 w-3" />
           <span>{Math.abs(trend)}%</span>
-        </motion.div>
+        </div>
       )}
     </div>
-    <motion.p 
+    <p 
       className="text-2xl font-bold text-gray-900 mb-1"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.1 }}
     >
       {value}
-    </motion.p>
+    </p>
     <p className="text-xs font-medium text-gray-600">{label}</p>
-  </motion.div>
+  </div>
 );
 
 interface ProjectCardProps {
@@ -294,59 +282,46 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
   }
 
   return (
-    <motion.div 
-      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-all group relative"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.03, y: -4 }}
-      transition={{ duration: 0.3 }}
+    <div 
+      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-shadow duration-150 group relative"
     >
       {/* Location Badge (card style) */}
       <LocationBadge location={location} variant="card" />
               <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             {projectLogo ? (
-              <motion.img
+              <img
                 src={formatIpfsUrl(projectLogo)}
                 alt={`${project.name} logo`}
                 className="w-12 h-12 rounded-xl object-cover shadow-md"
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.2 }}
                 onError={(e) => {
                   console.warn(`Failed to load logo for project ${project.name}:`, projectLogo);
                   e.currentTarget.style.display = 'none';
                 }}
               />
             ) : (
-              <motion.div 
+              <div 
                 className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-md"
-                whileHover={{ rotate: 5, scale: 1.1 }}
-                transition={{ duration: 0.2 }}
               >
                 {project.name?.charAt(0)}
-              </motion.div>
+              </div>
             )}
             <div>
-              <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors mb-1">
+              <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors duration-150 mb-1">
                 {project.name}
               </h3>
-              <motion.div 
+              <div 
                 className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
                   project.active ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-50'
                 }`}
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
               >
                 {project.active ? 'Active' : 'Inactive'}
-              </motion.div>
+              </div>
             </div>
           </div>
-        <motion.div
-          whileHover={{ rotate: 15, scale: 1.1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-        </motion.div>
+        <div>
+          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors duration-150" />
+        </div>
       </div>
       
       <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">{project.description}</p>
@@ -356,16 +331,13 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
         <span className="font-medium">{project.campaignIds?.length || 0} campaigns</span>
       </div>
       
-      <motion.button
+      <button
         onClick={onClick}
-        className="w-full px-4 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors text-sm font-semibold"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
+        className="w-full px-4 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors duration-150 text-sm font-semibold"
       >
         View Project
-      </motion.button>
-    </motion.div>
+      </button>
+    </div>
   );
 };
 
@@ -425,55 +397,42 @@ const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
   };
 
   return (
-    <motion.div 
-      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-all group"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.03, y: -4 }}
-      transition={{ duration: 0.3 }}
+    <div 
+      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-shadow duration-150 group"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4">
           {campaignLogo ? (
-            <motion.img
+            <img
               src={formatIpfsUrl(campaignLogo)}
               alt={`${campaign.name} logo`}
               className="w-12 h-12 rounded-xl object-cover shadow-md"
-              whileHover={{ scale: 1.1 }}
-              transition={{ duration: 0.2 }}
               onError={(e) => {
                 console.warn(`Failed to load logo for campaign ${campaign.name}:`, campaignLogo);
                 e.currentTarget.style.display = 'none';
               }}
             />
           ) : (
-            <motion.div 
+            <div 
               className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md"
-              whileHover={{ rotate: 5, scale: 1.1 }}
-              transition={{ duration: 0.2 }}
             >
               <Trophy className="h-5 w-5" />
-            </motion.div>
+            </div>
           )}
           <div>
-            <h3 className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors mb-1">
+                        <h3 className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors duration-150 mb-1">
               {campaign.name}
             </h3>
-            <motion.div 
+            <div 
               className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${statusColors[status]}`}
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.2 }}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
-            </motion.div>
+            </div>
           </div>
         </div>
-        <motion.div
-          whileHover={{ rotate: 15, scale: 1.1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
-        </motion.div>
+        <div>
+          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors duration-150" />
+        </div>
       </div>
       
       <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">{campaign.description}</p>
@@ -489,16 +448,13 @@ const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
         </div>
       </div>
       
-      <motion.button
+      <button
         onClick={onClick}
-        className="w-full px-4 py-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors text-sm font-semibold"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ duration: 0.2 }}
+        className="w-full px-4 py-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors duration-150 text-sm font-semibold"
       >
         View Campaign
-      </motion.button>
-    </motion.div>
+      </button>
+    </div>
   );
 };
 
@@ -530,7 +486,7 @@ const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
   })();
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-all">
+    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-shadow duration-150">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white">
@@ -558,13 +514,13 @@ const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
       <div className="flex gap-2">
         <button
           onClick={() => onViewProject(vote.projectId)}
-          className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium"
+          className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-150 text-xs font-medium"
         >
           View Project
         </button>
         <button
           onClick={() => onViewCampaign(vote.campaignId)}
-          className="flex-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-xs font-medium"
+          className="flex-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors duration-150 text-xs font-medium"
         >
           View Campaign
         </button>
@@ -1155,7 +1111,7 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <button
-                        className="mt-1 px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+                        className="mt-1 px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors duration-150"
                         onClick={handleGoodDollarVerifyClick}
                       >
                         Verify with GoodDollar
@@ -1191,7 +1147,7 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <button
-                        className={`mt-1 px-3 py-1 bg-${themeColors.accent.replace('-100', '-600')} text-white rounded-lg text-xs font-semibold hover:bg-${themeColors.accent.replace('-100', '-700')} transition-colors`}
+                        className={`mt-1 px-3 py-1 bg-${themeColors.accent.replace('-100', '-600')} text-white rounded-lg text-xs font-semibold hover:bg-${themeColors.accent.replace('-100', '-700')} transition-colors duration-150`}
                         onClick={() => { setShowVerification(true); setShowMethodSelection(false); }}
                       >
                         Verify with Self Protocol
@@ -1261,7 +1217,7 @@ export default function ProfilePage() {
                   ) : (
                     <button
                       onClick={() => setShowMethodSelection(true)}
-                      className="flex items-center gap-1 px-2 py-1 bg-yellow-50 hover:bg-yellow-100 rounded-full transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 bg-yellow-50 hover:bg-yellow-100 rounded-full transition-colors duration-150"
                     >
                       <Shield className="h-4 w-4 text-yellow-600" />
                       <span className="text-xs font-medium text-yellow-700">Verify</span>
@@ -1286,11 +1242,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Enhanced Navigation Tabs */}
-        <motion.div 
+        <div 
           className="flex flex-wrap gap-2 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
         >
           {[
             { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -1299,13 +1252,8 @@ export default function ProfilePage() {
             { id: 'votes', label: 'Votes', icon: Vote, count: userMetrics.votes },
             { id: 'identity', label: 'Identity', icon: Shield }
           ].map((tab, index) => (
-            <motion.button
+            <button
               key={tab.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-sm relative ${
                 activeTab === tab.id
@@ -1316,37 +1264,28 @@ export default function ProfilePage() {
               <tab.icon className="h-4 w-4" />
               {tab.label}
               {tab.count !== undefined && (
-                <motion.span 
+                <span 
                   className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
                     activeTab === tab.id
                       ? 'bg-white text-blue-600'
                       : 'bg-blue-100 text-blue-600'
                   }`}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2 + index * 0.1 }}
                 >
                   {tab.count}
-                </motion.span>
+                </span>
               )}
-            </motion.button>
+            </button>
           ))}
-        </motion.div>
+        </div>
 
         {/* Enhanced Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <motion.div 
+          <div 
             className="space-y-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
           >
             {/* Quick Actions */}
-            <motion.div 
+            <div 
               className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
             >
               <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1379,38 +1318,28 @@ export default function ProfilePage() {
                     action: () => navigate('/explore')
                   }
                 ].map((action, index) => (
-                  <motion.button
+                  <button
                     key={action.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
                     onClick={action.action}
                     className={`flex items-center gap-3 p-4 bg-gradient-to-br ${action.bgColor} rounded-xl ${action.hoverColor} transition-all group shadow-sm hover:shadow-md`}
                   >
-                    <motion.div 
+                    <div 
                       className={`w-10 h-10 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center text-white shadow-md`}
-                      whileHover={{ rotate: 5, scale: 1.1 }}
-                      transition={{ duration: 0.2 }}
                     >
                       <action.icon className="h-5 w-5" />
-                    </motion.div>
+                    </div>
                     <div className="text-left">
                       <h3 className="font-semibold text-gray-900">{action.title}</h3>
                       <p className="text-xs text-gray-600">{action.subtitle}</p>
                     </div>
-                  </motion.button>
+                  </button>
                 ))}
               </div>
-            </motion.div>
+            </div>
 
             {/* Enhanced Stats Grid */}
-            <motion.div 
+            <div 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
             >
               <StatCard 
                 icon={TrendingUp} 
@@ -1436,14 +1365,11 @@ export default function ProfilePage() {
                 value={userCampaigns.filter(c => c.active).length}
                 color="blue"
               />
-            </motion.div>
+            </div>
 
             {/* Visual Analytics Section */}
-            <motion.div 
+            <div 
               className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
             >
               <h2 className="text-lg font-bold text-gray-900 mb-4">Analytics Overview</h2>
               
@@ -1457,11 +1383,9 @@ export default function ProfilePage() {
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
-                    <motion.div 
-                      className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${userProjects.length > 0 ? (userProjects.filter(p => p.active).length / userProjects.length) * 100 : 0}%` }}
-                      transition={{ duration: 1, delay: 0.5 }}
+                    <div 
+                                             className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-200"
+                      style={{ width: `${userProjects.length > 0 ? (userProjects.filter(p => p.active).length / userProjects.length) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -1474,11 +1398,9 @@ export default function ProfilePage() {
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
-                    <motion.div 
-                      className="bg-gradient-to-r from-purple-500 to-indigo-600 h-3 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${userCampaigns.length > 0 ? (userCampaigns.filter(c => c.active).length / userCampaigns.length) * 100 : 0}%` }}
-                      transition={{ duration: 1, delay: 0.6 }}
+                    <div 
+                                             className="bg-gradient-to-r from-purple-500 to-indigo-600 h-3 rounded-full transition-all duration-200"
+                      style={{ width: `${userCampaigns.length > 0 ? (userCampaigns.filter(c => c.active).length / userCampaigns.length) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -1489,11 +1411,9 @@ export default function ProfilePage() {
                     <span className="font-semibold text-green-600">{userMetrics.votes} votes</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
-                    <motion.div 
-                      className="bg-gradient-to-r from-green-500 to-teal-600 h-3 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(userMetrics.votes * 10, 100)}%` }}
-                      transition={{ duration: 1, delay: 0.7 }}
+                    <div 
+                                             className="bg-gradient-to-r from-green-500 to-teal-600 h-3 rounded-full transition-all duration-200"
+                      style={{ width: `${Math.min(userMetrics.votes * 10, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -1501,10 +1421,8 @@ export default function ProfilePage() {
 
               {/* Visual Stats Grid */}
               <div className="grid grid-cols-2 gap-4">
-                <motion.div 
-                  className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
+                <div 
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200 hover:shadow-md transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -1515,12 +1433,10 @@ export default function ProfilePage() {
                       <TrendingUp className="h-5 w-5 text-blue-600" />
                     </div>
                   </div>
-                </motion.div>
+                </div>
                 
-                <motion.div 
-                  className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-200"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
+                <div 
+                  className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-200 hover:shadow-md transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -1533,16 +1449,13 @@ export default function ProfilePage() {
                       <BarChart3 className="h-5 w-5 text-purple-600" />
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Recent Activity Section */}
-            <motion.div 
+            <div 
               className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
             >
               <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h2>
               <div className="space-y-3">
@@ -1551,12 +1464,9 @@ export default function ProfilePage() {
                   const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
                   
                   return (
-                    <motion.div
+                    <div
                       key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.6 + index * 0.1 }}
-                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150"
                     >
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       <div className="flex-1">
@@ -1568,22 +1478,19 @@ export default function ProfilePage() {
                       <span className="text-xs text-gray-500">
                         {new Date().toLocaleDateString()}
                       </span>
-                    </motion.div>
+                    </div>
                   );
                 })}
                 {voteHistory.length === 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
+                  <div
                     className="text-center py-4 text-gray-500 text-sm"
                   >
                     No recent activity
-                  </motion.div>
+                  </div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
 
         {/* Projects Tab */}
@@ -1620,32 +1527,23 @@ export default function ProfilePage() {
             </div>
 
             {/* Projects Grid */}
-            <motion.div 
+            <div 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
             >
               {filteredProjects.map((project, index) => (
-                <motion.div
+                <div
                   key={project.id.toString()}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
                   <ProjectCard
                     project={project}
                     onClick={() => navigate(`/explorer/project/${project.id}`)}
                   />
-                </motion.div>
+                </div>
               ))}
               
               {filteredProjects.length === 0 && (
-                <motion.div 
+                <div 
                   className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
                 >
                   <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No Projects Found</h3>
@@ -1655,70 +1553,54 @@ export default function ProfilePage() {
                       : `No ${filter} projects found.`
                     }
                   </p>
-                  <motion.button
+                  <button
                     onClick={() => navigate('/app/project/start')}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 text-sm font-medium"
                   >
                     Create Project
-                  </motion.button>
-                </motion.div>
+                  </button>
+                </div>
               )}
-            </motion.div>
+            </div>
           </div>
         )}
 
         {/* Campaigns Tab */}
         {activeTab === 'campaigns' && (
-          <motion.div 
+          <div 
             className="space-y-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
           >
-            <motion.div 
+            <div 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
             >
               {userCampaigns.map((campaign, index) => (
-                <motion.div
+                <div
                   key={campaign.id.toString()}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
                   <CampaignCard
                     campaign={campaign}
                     onClick={() => navigate(`/explorer/campaign/${campaign.id}`)}
                   />
-                </motion.div>
+                </div>
               ))}
               
               {userCampaigns.length === 0 && (
-                <motion.div 
+                <div 
                   className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
                 >
                   <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No Campaigns Found</h3>
                   <p className="text-gray-600 mb-4 text-sm">You haven't created any campaigns yet.</p>
-                  <motion.button
+                  <button
                     onClick={() => navigate('/app/campaign/start')}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-150 text-sm font-medium"
                   >
                     Launch Campaign
-                  </motion.button>
-                </motion.div>
+                  </button>
+                </div>
               )}
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
 
         {/* Votes Tab */}
@@ -1786,7 +1668,7 @@ export default function ProfilePage() {
                         const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
                         
                         return (
-                          <tr key={index} className="hover:bg-gray-50 transition-colors">
+                          <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
                             <td className="px-4 py-3">
                               <div className="flex items-center">
                                 <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-bold mr-3">
@@ -1831,13 +1713,13 @@ export default function ProfilePage() {
                               <div className="flex space-x-2">
                                 <button
                                   onClick={() => navigate(`/explorer/project/${vote.projectId}`)}
-                                  className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium"
+                                  className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-150 text-xs font-medium"
                                 >
                                   View Project
                                 </button>
                                 <button
                                   onClick={() => navigate(`/explorer/campaign/${vote.campaignId}`)}
-                                  className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-xs font-medium"
+                                  className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors duration-150 text-xs font-medium"
                                 >
                                   View Campaign
                                 </button>
@@ -1859,7 +1741,7 @@ export default function ProfilePage() {
                 <p className="text-gray-600 mb-4 text-sm">Start participating by voting on projects you believe in.</p>
                 <button
                   onClick={() => navigate('/explore')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150 text-sm font-medium"
                 >
                   Explore Projects
                 </button>
@@ -1914,7 +1796,7 @@ export default function ProfilePage() {
                      fill="transparent"
                      className="text-gray-200"
                    />
-                   <motion.circle
+                   <circle
                      cx="48"
                      cy="48"
                      r="36"
@@ -1923,9 +1805,10 @@ export default function ProfilePage() {
                      fill="transparent"
                      className="text-green-500"
                      strokeLinecap="round"
-                     initial={{ strokeDasharray: "0 226" }}
-                     animate={{ strokeDasharray: `${isVerified ? 226 : 113} 226` }}
-                     transition={{ duration: 1, delay: 0.5 }}
+                     style={{ 
+                       strokeDasharray: `${isVerified ? 226 : 113} 226`,
+                       transition: 'stroke-dasharray 0.3s ease-in-out'
+                     }}
                    />
                  </svg>
                  <div className="absolute inset-0 flex items-center justify-center">
@@ -1966,7 +1849,7 @@ export default function ProfilePage() {
              {!isVerified ? (
                <button
                  onClick={() => setShowMethodSelection(true)}
-                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 font-medium"
                >
                  <UserCheck className="h-5 w-5" />
                  Start Identity Verification
@@ -2028,13 +1911,13 @@ export default function ProfilePage() {
                <div className="space-y-2">
                  <button
                    onClick={() => debugApiCall()}
-                   className="px-3 py-1 bg-yellow-600 text-white rounded text-xs font-medium hover:bg-yellow-700 transition-colors"
+                   className="px-3 py-1 bg-yellow-600 text-white rounded text-xs font-medium hover:bg-yellow-700 transition-colors duration-150"
                  >
                    Test API Call
                  </button>
                  <button
                    onClick={() => refreshVerificationData()}
-                   className="ml-2 px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors"
+                   className="ml-2 px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors duration-150"
                  >
                    Refresh Data
                  </button>
@@ -2047,7 +1930,7 @@ export default function ProfilePage() {
                        verificationLoading
                      });
                    }}
-                   className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors"
+                   className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors duration-150"
                  >
                    Log State
                  </button>
@@ -2130,7 +2013,7 @@ export default function ProfilePage() {
              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20"></div>
              <button
                onClick={() => setShowSuccessModal(false)}
-               className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 z-10"
+               className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors duration-150 p-2 rounded-full hover:bg-white/10 z-10"
              >
                <X className="h-5 w-5" />
              </button>
@@ -2177,7 +2060,7 @@ export default function ProfilePage() {
                  setShowSuccessModal(false);
                  setIsVerified(true);
                }}
-               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
              >
                Continue
              </button>

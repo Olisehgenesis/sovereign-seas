@@ -439,8 +439,8 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   if (!isOpen || !project) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-1 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] rounded-3xl shadow-2xl border border-slate-200 flex flex-col lg:flex-row overflow-hidden relative animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-1 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-3xl bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] rounded-3xl shadow-2xl border border-slate-200 flex flex-col lg:flex-row overflow-hidden relative animate-fadeIn mt-4 sm:mt-8 lg:mt-16 max-h-[90vh] overflow-y-auto min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] my-4 mx-4 sm:my-8 lg:my-16">
         {/* Country flag badge in top-left */}
         <div className="absolute left-4 top-4 z-30">
           <LocationBadge location={location} variant="card" />

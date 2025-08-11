@@ -9,9 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@reown/appkit": "^1.7.2",
-    "@reown/appkit-adapter-wagmi": "^1.7.2",
-    "@reown/appkit-wallet": "^1.7.2",
+    "@goodsdks/engagement-sdk": "^1.0.1",
+    "@privy-io/react-auth": "^1.84.0",
     "@selfxyz/common": "^0.0.6",
     "@selfxyz/core": "1.0.7-beta.1",
     "@selfxyz/qrcode": "1.0.10-beta.1",
@@ -20,7 +19,7 @@
     "@tamagui/font-inter": "^1.125.22",
     "@tamagui/vite-plugin": "^1.125.22",
     "@tamagui/web": "^1.125.22",
-    "@tanstack/react-query": "^4.36.1",
+    "@tanstack/react-query": "^5.84.2",
     "clsx": "^1.2.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -37,8 +36,9 @@
     "redis": "^5.6.1",
     "tamagui": "^1.125.22",
     "uuid": "^11.1.0",
-    "viem": "^1.21.4",
-    "wagmi": "^1.4.13",
+    "viem": "^2.33.3",
+    "wagmi": "^2.16.2",
+    "@wagmi/connectors": "^5.9.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
