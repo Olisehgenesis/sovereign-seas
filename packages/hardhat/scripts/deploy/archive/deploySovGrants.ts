@@ -144,4 +144,9 @@ async function deploySovereignSeasGrants() {
 }
 
 // Execute deployment
-deploySovereignSeasGrants();
+// deploySovereignSeasGrants();
+
+// Export the function for use in other scripts
+export async function deploySovGrants() {
+  return await deploySovereignSeasGrants();
+}

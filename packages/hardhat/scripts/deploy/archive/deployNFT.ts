@@ -133,5 +133,7 @@ async function deploySovereignSeasNFT() {
   }
 }
 
-// Execute deployment
-deploySovereignSeasNFT(); 
+
+export async function deployNFT(network?: string) {
+  return await deploySovereignSeasNFT();
+} 

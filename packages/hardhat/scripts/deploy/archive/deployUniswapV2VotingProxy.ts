@@ -47,7 +47,7 @@ const publicClient = createPublicClient({
   transport: http(RPC_URL)
 });
 
-async function deployUniswapV2VotingProxy() {
+async function deployUniswapV2VotingProxyInternal() {
   try {
     console.log('Deploying UniswapV2VotingProxy contract...');
     
@@ -84,4 +84,9 @@ async function deployUniswapV2VotingProxy() {
 }
 
 // Execute deployment
-deployUniswapV2VotingProxy(); 
+// deployUniswapV2VotingProxy();
+
+// Export the function for use in other scripts
+export async function deployUniswapV2VotingProxy(network?: string) {
+  return await deployUniswapV2VotingProxyInternal();
+} 

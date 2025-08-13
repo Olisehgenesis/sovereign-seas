@@ -2,7 +2,7 @@ import { createWalletClient, http, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { celoAlfajores, celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
-import uniswapVotingProxyAbi from '../../../artifacts/contracts/UniswapV2VotingProxy.sol/UniswapV2VotingProxy.json';
+import uniswapVotingProxyAbi from '../../../../artifacts/contracts/UniswapV2VotingProxy.sol/UniswapV2VotingProxy.json';
 
 dotenv.config();
 
@@ -62,7 +62,7 @@ try {
   process.exit(1);
 }
 
-async function deployUniswapVotingProxy() {
+async function deployUniswapVotingProxyInternal() {
   try {
     console.log('Deploying UniswapV2VotingProxy contract...');
     
@@ -138,5 +138,8 @@ async function deployUniswapVotingProxy() {
   }
 }
 
-// Execute deployment
-deployUniswapVotingProxy(); 
+
+// Export the function for use in other scripts
+export async function deployUniswapVotingProxy(network?: string) {
+  return await deployUniswapVotingProxyInternal();
+} 

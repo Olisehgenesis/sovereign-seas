@@ -70,7 +70,7 @@ try {
   process.exit(1);
 }
 
-async function deployUniswapV3VotingProxy() {
+async function deployUniswapV3VotingProxyInternal() {
   try {
     console.log('Deploying CeloUniswapV3VotingProxy contract...');
     
@@ -150,4 +150,9 @@ async function deployUniswapV3VotingProxy() {
 }
 
 // Execute deployment
-deployUniswapV3VotingProxy(); 
+// deployUniswapV3VotingProxy();
+
+// Export the function for use in other scripts
+export async function deployUniswapV3VotingProxy(network?: string) {
+  return await deployUniswapV3VotingProxyInternal();
+} 

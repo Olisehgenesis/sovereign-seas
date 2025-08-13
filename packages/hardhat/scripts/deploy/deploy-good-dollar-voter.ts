@@ -36,7 +36,7 @@ const publicClient = createPublicClient({
   transport: http(RPC_URL)
 });
 
-async function deployGoodDollarVoter() {
+async function deployGoodDollarVoterInternal() {
   try {
     console.log('🚀 Deploying GoodDollarVoter contract...\n');
     
@@ -256,18 +256,7 @@ async function deployGoodDollarVoter() {
   }
 }
 
-// Execute deployment
-deployGoodDollarVoter()
-  .then((contractAddress) => {
-    if (contractAddress) {
-      console.log('\n🎉 Deployment completed successfully!');
-      process.exit(0);
-    } else {
-      console.log('\n💥 Deployment failed!');
-      process.exit(1);
-    }
-  })
-  .catch((error) => {
-    console.error('💥 Fatal deployment error:', error);
-    process.exit(1);
-  });
+// Export the function for use in other scripts
+export async function deployGoodDollarVoter() {
+  return await deployGoodDollarVoterInternal();
+}

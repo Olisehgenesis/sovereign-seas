@@ -30,7 +30,7 @@ const publicClient = createPublicClient({
   transport: http(RPC_URL)
 });
 
-async function deployUniswapFactory() {
+async function deployUniswapFactoryInternal() {
   try {
     console.log('Deploying Uniswap Factory contract...');
     
@@ -71,4 +71,9 @@ async function deployUniswapFactory() {
 }
 
 // Execute deployment
-deployUniswapFactory(); 
+// deployUniswapFactory();
+
+// Export the function for use in other scripts
+export async function deployUniswapFactory(network?: string) {
+  return await deployUniswapFactoryInternal();
+} 

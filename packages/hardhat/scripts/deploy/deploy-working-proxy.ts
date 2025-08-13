@@ -32,7 +32,7 @@ const publicClient = createPublicClient({
   transport: http(RPC_URL) // ✅ Fixed
 });
 
-async function deployWorkingCeloVotingProxy() {
+async function deployWorkingCeloVotingProxyInternal() {
   try {
     console.log('🚀 Deploying WorkingCeloVotingProxy contract...\n');
     
@@ -148,17 +148,22 @@ async function deployWorkingCeloVotingProxy() {
 }
 
 // Execute deployment
-deployWorkingCeloVotingProxy()
-  .then((contractAddress) => {
-    if (contractAddress) {
-      console.log('\n🎉 Deployment completed successfully!');
-      process.exit(0);
-    } else {
-      console.log('\n💥 Deployment failed!');
-      process.exit(1);
-    }
-  })
-  .catch((error) => {
-    console.error('💥 Fatal deployment error:', error);
-    process.exit(1);
-  });
+// deployWorkingCeloVotingProxy()
+//   .then((contractAddress) => {
+//     if (contractAddress) {
+//       console.log('\n🎉 Deployment completed successfully!');
+//       process.exit(0);
+//     } else {
+//       console.log('\n💥 Deployment failed!');
+//       process.exit(1);
+//     }
+//   })
+//   .catch((error) => {
+//     console.error('💥 Fatal deployment error:', error);
+//     process.exit(1);
+//   });
+
+// Export the function for use in other scripts
+export async function deployWorkingProxy(network?: string) {
+  return await deployWorkingCeloVotingProxyInternal();
+}

@@ -68,7 +68,7 @@ try {
   process.exit(1);
 }
 
-async function deploySovereignVotingGateway() {
+async function deploySovereignVotingGatewayInternal() {
   try {
     // Check wallet balance
     const balance = await publicClient.getBalance({ address: account.address });
@@ -209,12 +209,17 @@ async function deploySovereignVotingGateway() {
 }
 
 // Execute deployment
-console.log('🏁 Starting deployment...');
-deploySovereignVotingGateway()
-  .then(() => {
-    console.log('🏆 Deployment completed successfully!');
-    process.exit(0);
-  })
-  .catch(() => {
-    process.exit(1);
-  });
+// console.log('🏁 Starting deployment...');
+// deploySovereignVotingGateway()
+//   .then(() => {
+//     console.log('🏆 Deployment completed successfully!');
+//     process.exit(0);
+//   })
+//   .catch(() => {
+//     process.exit(1);
+//   });
+
+// Export the function for use in other scripts
+export async function deploySovereignVotingGateway(network?: string) {
+  return await deploySovereignVotingGatewayInternal();
+}

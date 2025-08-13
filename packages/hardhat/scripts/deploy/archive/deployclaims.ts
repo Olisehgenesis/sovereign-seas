@@ -131,4 +131,9 @@ async function deploySovereignSeasVerificationVoting() {
 }
 
 // Execute deployment
-deploySovereignSeasVerificationVoting();
+// deploySovereignSeasVerificationVoting();
+
+// Export the function for use in other scripts
+export async function deployClaims() {
+  return await deploySovereignSeasVerificationVoting();
+}

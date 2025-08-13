@@ -250,19 +250,8 @@ async function deployProjectTipping() {
   }
 }
 
-// Execute deployment
-deployProjectTipping()
-  .then((contractAddress) => {
-    if (contractAddress) {
-      console.log('\n🎉 ProjectTipping deployment completed successfully!');
-      console.log('🚀 Ready to start tipping projects!');
-      process.exit(0);
-    } else {
-      console.log('\n💥 Deployment failed!');
-      process.exit(1);
-    }
-  })
-  .catch((error) => {
-    console.error('💥 Fatal deployment error:', error);
-    process.exit(1);
-  });
+
+// Export the function for use in other scripts
+export async function deployTips(network?: string) {
+  return await deployProjectTipping();
+}

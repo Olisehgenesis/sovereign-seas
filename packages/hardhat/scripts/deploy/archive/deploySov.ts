@@ -1,6 +1,6 @@
 import { createWalletClient, http, parseEther, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { celoAlfajores } from 'viem/chains';
+import { celoAlfajores, celo } from 'viem/chains';
 import * as dotenv from 'dotenv';
 import sovereignSeasV4Abi from '../../../artifacts/contracts/SovereignSeasV4.sol/SovereignSeasV4.json';
 import { readFileSync } from 'fs';
@@ -43,24 +43,31 @@ try {
   process.exit(1);
 }
 
-async function deploySovereignSeasV4() {
+async function deploySovereignSeasV4(network?: string) {
   try {
-    console.log('Deploying SovereignSeasV4 contract...');
+    // Determine the network and chain
+    const isMainnet = network === 'celo' || network === 'mainnet';
+    const chain = isMainnet ? celo : celoAlfajores;
+    const rpcUrl = isMainnet ? (process.env.CELO_MAINNET_RPC_URL || 'https://rpc.ankr.com/celo') : RPC_URL;
+    
+    console.log(`Deploying SovereignSeasV4 contract to ${isMainnet ? 'Celo Mainnet' : 'Celo Alfajores Testnet'}...`);
     
     // Create wallet client with private key
     const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
     const walletClient = createWalletClient({
       account,
-      chain: celoAlfajores,
-      transport: http(RPC_URL)
+      chain: chain,
+      transport: http(rpcUrl)
     });
     
     const publicClient = createPublicClient({
-      chain: celoAlfajores,
-      transport: http(RPC_URL)
+      chain: chain,
+      transport: http(rpcUrl)
     });
     
     console.log(`Using account: ${account.address}`);
+    console.log(`Network: ${isMainnet ? 'Celo Mainnet' : 'Celo Alfajores Testnet'}`);
+    console.log(`RPC URL: ${rpcUrl}`);
     console.log(`CELO token address: ${CELO_TOKEN_ADDRESS}`);
     console.log(`Mento broker address: ${MENTO_BROKER_ADDRESS}`);
     
@@ -112,4 +119,9 @@ async function deploySovereignSeasV4() {
 }
 
 // Execute deployment
-deploySovereignSeasV4();
+// deploySovereignSeasV4();
+
+// Export the function for use in other scripts
+export async function deploySov(network?: string) {
+  return await deploySovereignSeasV4(network);
+}
