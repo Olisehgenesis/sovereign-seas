@@ -1,0 +1,12 @@
+{
+  "network": "celo",
+  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+  "contract": "0x8970026D77290AA73FF2c95f80D6a4beEd94284F",
+  "timestamp": "2025-08-13T10:00:54.371Z",
+  "configuration": {
+    "goodDollarToken": "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A",
+    "directPaymentsFactory": "0xb1C7F09156d04BFf6F412447A73a0F72929b6ea4",
+    "defaultPoolSize": "1000000000000000000000",
+    "projectCreationReward": "50000000000000000000"
+  }
+}
