@@ -5,6 +5,9 @@ import { config } from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
 
+//use this contrcat fro test 
+const SOVEREIGN_SEAS_ADDRESS=0x59dda5c6baca06b9939d6acf04765eafae1f6a9f
+
 config();
 
 async function main() {
