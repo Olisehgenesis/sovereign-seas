@@ -27,13 +27,15 @@ import {
   Trophy,
   TrendingUp,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  AlertCircle
 } from 'lucide-react';
 import { uploadToIPFS } from '@/utils/imageUtils';
 import { useCreateCampaignWithFees } from '@/hooks/useCampaignMethods';
 import { Address } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
-import { useAccount } from 'wagmi';
+import { useAccount, useBalance, useWriteContract, useReadContract } from 'wagmi';
+import { contractABI as abi } from '@/abi/seas4ABI';
 
 interface Campaign {
   name: string;
@@ -124,18 +126,57 @@ export default function CreateCampaign() {
   const celoToken = import.meta.env.VITE_CELO_TOKEN;
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
   
+  // Debug environment variables
+  console.log('Environment variables:');
+  console.log('- VITE_CELO_TOKEN:', import.meta.env.VITE_CELO_TOKEN);
+  console.log('- VITE_CONTRACT_V4:', import.meta.env.VITE_CONTRACT_V4);
+  console.log('- celoToken:', celoToken);
+  console.log('- contractAddress:', contractAddress);
+
+  // Check if environment variables are loaded
+  if (!celoToken) {
+    console.error('VITE_CELO_TOKEN environment variable is not set!');
+  }
+  if (!contractAddress) {
+    console.error('VITE_CONTRACT_V4 environment variable is not set!');
+  }
+  
   // Wallet and contract hooks
   const { address, isConnected } = useAccount();
   const { authenticated, ready } = usePrivy();
-  const {
-    createCampaignWithFees,
-    isPending,
-    isError,
-    error: contractError,
-    isSuccess,
-    campaignCreationFee,
-    canBypass
-  } = useCreateCampaignWithFees(contractAddress, address || '0x0');
+  
+  // Get user's CELO balance
+  const { data: celoBalance } = useBalance({
+    address,
+    token: celoToken as Address,
+  });
+  
+  // Direct contract interaction
+  const { writeContract, isPending, isError, error: contractError, isSuccess, data } = useWriteContract();
+  
+  // Read campaign creation fee directly from contract
+  const { data: campaignCreationFee } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'campaignCreationFee',
+    query: {
+      enabled: !!contractAddress
+    }
+  });
+  
+  // Cast the fee to bigint and add type guard
+  const feeAmount = campaignCreationFee as bigint | undefined;
+  
+  // Check if user can bypass fees (super admin)
+  const { data: canBypass } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'superAdmins',
+    args: [address || '0x0'],
+    query: {
+      enabled: !!contractAddress && !!address
+    }
+  });
 
   console.log(isError)
   
@@ -431,6 +472,39 @@ export default function CreateCampaign() {
       return;
     }
 
+    if (!celoToken) {
+      setErrorMessage('CELO token configuration is missing. Please check your environment variables.');
+      return;
+    }
+
+    if (!contractAddress) {
+      setErrorMessage('Contract address configuration is missing. Please check your environment variables.');
+      return;
+    }
+
+    if (!campaignCreationFee && !canBypass) {
+      setErrorMessage('Campaign creation fee is not available. Please try again later.');
+      return;
+    }
+
+    // Check if user has sufficient CELO balance for the fee
+    if (!canBypass && feeAmount && celoBalance) {
+      const requiredBalance = feeAmount;
+      const userBalance = celoBalance.value;
+      
+      console.log('Balance check:');
+      console.log('- Required fee:', requiredBalance.toString());
+      console.log('- User balance:', userBalance.toString());
+      console.log('- Sufficient balance:', userBalance >= requiredBalance);
+      
+      if (userBalance < requiredBalance) {
+        const feeInCelo = (Number(requiredBalance) / 1e18).toFixed(6);
+        const balanceInCelo = (Number(userBalance) / 1e18).toFixed(6);
+        setErrorMessage(`Insufficient CELO balance. Required: ${feeInCelo} CELO, Available: ${balanceInCelo} CELO`);
+        return;
+      }
+    }
+
     if (!validateForm()) {
       setErrorMessage('Please fix the validation errors before submitting');
       return;
@@ -457,26 +531,47 @@ export default function CreateCampaign() {
       const cleanedCampaign: Campaign = {
         ...campaign,
         logo: logoIpfsUrl || campaign.logo,
-        tags: campaign.tags.filter(tag => tag.trim() !== ''),
-        eligibilityCriteria: campaign.eligibilityCriteria.filter(c => c.trim() !== ''),
-        requirements: campaign.requirements.filter(r => r.trim() !== ''),
-        judgesCriteria: campaign.judgesCriteria.filter(c => c.trim() !== ''),
+        tags: campaign.tags.filter(tag => tag.trim() !== '').length > 0 
+          ? campaign.tags.filter(tag => tag.trim() !== '')
+          : ['Innovation', 'Web3', 'Blockchain'], // Default tags
+        eligibilityCriteria: campaign.eligibilityCriteria.filter(c => c.trim() !== '').length > 0 
+          ? campaign.eligibilityCriteria.filter(c => c.trim() !== '')
+          : ['Open to all participants'], // Default eligibility
+        requirements: campaign.requirements.filter(r => r.trim() !== '').length > 0
+          ? campaign.requirements.filter(r => r.trim() !== '')
+          : ['Valid project submission'], // Default requirements
+        judgesCriteria: campaign.judgesCriteria.filter(c => c.trim() !== '').length > 0
+          ? campaign.judgesCriteria.filter(c => c.trim() !== '')
+          : ['Innovation and impact'], // Default judging criteria
         rewards: {
           ...campaign.rewards,
-          distribution: campaign.rewards.distribution.filter(d => d.trim() !== '')
+          distribution: campaign.rewards.distribution.filter(d => d.trim() !== '').length > 0 
+            ? campaign.rewards.distribution.filter(d => d.trim() !== '')
+            : ['Equal distribution among winners'] // Default distribution
         }
       } as const;
 
       // Create main info metadata (for contract)
       const mainInfoData = {
         type: cleanedCampaign.campaignType,
-        category: cleanedCampaign.category,
-        maxParticipants: cleanedCampaign.maxParticipants ? parseInt(cleanedCampaign.maxParticipants) : 0,
-        eligibilityCriteria: cleanedCampaign.eligibilityCriteria,
-        requirements: cleanedCampaign.requirements,
-        judgesCriteria: cleanedCampaign.judgesCriteria,
-        rewards: cleanedCampaign.rewards,
-        submissionGuidelines: cleanedCampaign.submissionGuidelines
+        category: cleanedCampaign.category || 'Other',
+        maxParticipants: cleanedCampaign.maxParticipants ? parseInt(cleanedCampaign.maxParticipants) : 1000, // Default to 1000 participants
+        eligibilityCriteria: cleanedCampaign.eligibilityCriteria.filter(c => c.trim() !== '').length > 0 
+          ? cleanedCampaign.eligibilityCriteria.filter(c => c.trim() !== '')
+          : ['Open to all participants'], // Default eligibility
+        requirements: cleanedCampaign.requirements.filter(r => r.trim() !== '').length > 0
+          ? cleanedCampaign.requirements.filter(r => r.trim() !== '')
+          : ['Valid project submission'], // Default requirements
+        judgesCriteria: cleanedCampaign.judgesCriteria.filter(c => c.trim() !== '').length > 0
+          ? cleanedCampaign.judgesCriteria.filter(c => c.trim() !== '')
+          : ['Innovation and impact'], // Default judging criteria
+        rewards: {
+          totalPrizePool: cleanedCampaign.prizePool || '0',
+          distribution: cleanedCampaign.rewards.distribution.filter(d => d.trim() !== '').length > 0 
+            ? cleanedCampaign.rewards.distribution.filter(d => d.trim() !== '')
+            : ['Equal distribution among winners'] // Default distribution
+        },
+        submissionGuidelines: cleanedCampaign.submissionGuidelines || 'Submit your project with detailed description and any relevant media.'
       };
 
       // Create additional info metadata (for contract)
@@ -486,7 +581,7 @@ export default function CreateCampaign() {
         creator: address,
         tags: cleanedCampaign.tags,
         logo: cleanedCampaign.logo,
-        prizePool: cleanedCampaign.prizePool,
+        prizePool: cleanedCampaign.prizePool || '0', // Ensure prizePool has a value
         media: {
           website: cleanedCampaign.website,
           videoLink: cleanedCampaign.videoLink
@@ -518,29 +613,65 @@ export default function CreateCampaign() {
             distributionType: 'custom',
             notes: cleanedCampaign.customDistributionNotes || 'Manual distribution will be implemented by campaign admin'
           })
-        : '';
+        : 'default'; // Use 'default' instead of empty string
 
       setIsUploading(false);
       
       console.log('Creating campaign with contract...');
       console.log('Campaign creation fee:', campaignCreationFee?.toString());
       console.log('Can bypass fees:', canBypass);
+      console.log('Fee token:', cleanedCampaign.feeToken);
+      console.log('CELO token:', celoToken);
+
+      // Debug the final data being sent
+      console.log('Final campaign data:');
+      console.log('- mainInfoData:', mainInfoData);
+      console.log('- additionalInfoData:', additionalInfoData);
+      console.log('- startTimeUnix:', startTimeUnix.toString());
+      console.log('- endTimeUnix:', endTimeUnix.toString());
+      console.log('- customDistributionData:', customDistributionData);
+
+      // Show fee information to user
+      if (!canBypass && feeAmount) {
+        console.log('Fee information:');
+        console.log('- Campaign creation fee:', feeAmount.toString());
+        console.log('- Fee in CELO:', (Number(feeAmount) / 1e18).toFixed(6));
+        console.log('- User address:', address);
+        console.log('- Fee token:', cleanedCampaign.feeToken);
+        
+        // Show fee message to user
+        setSuccessMessage(`Campaign creation fee: ${(Number(feeAmount) / 1e18).toFixed(6)} CELO. Please ensure you have sufficient funds.`);
+      }
+
+      // Debug transaction details
+      const feeValue = !canBypass && feeAmount ? feeAmount : 0n;
+      console.log('Transaction details:');
+      console.log('- Contract address:', contractAddress);
+      console.log('- Fee value to send:', feeValue.toString());
+      console.log('- Fee value in CELO:', (Number(feeValue) / 1e18).toFixed(6));
+      console.log('- Can bypass fees:', canBypass);
 
       // Call the contract method
-      await createCampaignWithFees({
-        name: cleanedCampaign.name,
-        description: cleanedCampaign.description,
-        mainInfo: JSON.stringify(mainInfoData),
-        additionalInfo: JSON.stringify(additionalInfoData),
-        startTime: startTimeUnix,
-        endTime: endTimeUnix,
-        adminFeePercentage: BigInt(parseInt(cleanedCampaign.adminFeePercentage)),
-        maxWinners: BigInt(cleanedCampaign.maxWinners ? parseInt(cleanedCampaign.maxWinners) : 0),
-        useQuadraticDistribution: cleanedCampaign.useQuadraticDistribution,
-        useCustomDistribution: cleanedCampaign.useCustomDistribution,
-        customDistributionData,
-        payoutToken: cleanedCampaign.payoutToken as Address,
-        feeToken: cleanedCampaign.feeToken as Address
+      await writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'createCampaign',
+        args: [
+          cleanedCampaign.name,
+          cleanedCampaign.description,
+          JSON.stringify(mainInfoData),
+          JSON.stringify(additionalInfoData),
+          startTimeUnix,
+          endTimeUnix,
+          BigInt(parseInt(cleanedCampaign.adminFeePercentage)),
+          BigInt(cleanedCampaign.maxWinners ? parseInt(cleanedCampaign.maxWinners) : 10), // Default to 10 winners
+          cleanedCampaign.useQuadraticDistribution,
+          cleanedCampaign.useCustomDistribution,
+          customDistributionData,
+          cleanedCampaign.payoutToken as Address,
+          cleanedCampaign.feeToken as Address
+        ],
+        value: feeValue
       });
       
     } catch (error) {
@@ -1564,6 +1695,24 @@ export default function CreateCampaign() {
                        <p>• Distribution: {campaign.useQuadraticDistribution ? 'Quadratic' : campaign.useCustomDistribution ? 'Custom' : 'Linear'}</p>
                        <p>• Media files: {logoFile ? 1 : 0} file(s)</p>
                        <p>• Token: CELO (Payout & Fees)</p>
+                       {!canBypass && feeAmount && feeAmount > 0n ? (
+                         <>
+                           <p>• Creation Fee: {(Number(feeAmount) / 1e18).toFixed(6)} CELO</p>
+                           {celoBalance && celoBalance.value >= feeAmount ? (
+                             <p className="font-medium text-green-600">
+                               • Your Balance: {(Number(celoBalance.value) / 1e18).toFixed(6)} CELO ✓
+                             </p>
+                           ) : celoBalance ? (
+                             <p className="font-medium text-red-600">
+                               • Your Balance: {(Number(celoBalance.value) / 1e18).toFixed(6)} CELO ✗
+                             </p>
+                           ) : (
+                             <p className="font-medium text-gray-600">
+                               • Your Balance: Loading...
+                             </p>
+                           )}
+                         </>
+                       ) : null}
                      </div>
                    </div>
                  </div>
@@ -1573,8 +1722,30 @@ export default function CreateCampaign() {
 
            {/* Submit Button and related elements moved outside of Section */}
            <div className="mt-8 space-y-6">
+             {/* Balance Warning */}
+             {(() => {
+               if (!canBypass && feeAmount && feeAmount > 0n && celoBalance && celoBalance.value < feeAmount) {
+                 return (
+                   <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                     <div className="flex items-start">
+                       <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+                       <div>
+                         <p className="text-red-700 font-medium">Insufficient CELO Balance</p>
+                         <p className="text-red-600 text-sm mt-1">
+                           You need {(Number(feeAmount) / 1e18).toFixed(6)} CELO to create a campaign, 
+                           but you only have {(Number(celoBalance.value) / 1e18).toFixed(6)} CELO. 
+                           Please add more CELO to your wallet before proceeding.
+                         </p>
+                       </div>
+                     </div>
+                   </div>
+                 );
+               }
+               return null;
+             })()}
+
              {/* Upload Progress */}
-             {(isUploading || loading) && (
+             {(Boolean(isUploading) || Boolean(loading)) && (
                <div className="bg-white rounded-xl p-6 border border-gray-200">
                  <div className="flex items-center justify-between mb-2">
                    <span className="font-medium text-gray-700">
@@ -1593,7 +1764,7 @@ export default function CreateCampaign() {
              <div className="flex justify-center pt-6">
                <button
                  type="submit"
-                 disabled={loading || isUploading}
+                 disabled={Boolean(loading) || Boolean(isUploading) || (!canBypass && feeAmount && celoBalance && celoBalance.value < feeAmount)}
                  className="px-12 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold text-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center group border border-emerald-400/30 relative overflow-hidden"
                >
                  {loading || isUploading ? (
@@ -1610,6 +1781,13 @@ export default function CreateCampaign() {
                  )}
                </button>
              </div>
+             
+             {/* Helpful message when button is disabled */}
+             {!canBypass && feeAmount && celoBalance && celoBalance.value < feeAmount && (
+               <div className="text-center text-sm text-red-500 mt-2">
+                 <p>Submit button is disabled due to insufficient CELO balance for the campaign creation fee.</p>
+               </div>
+             )}
              
              <div className="text-center text-sm text-gray-500 mt-4">
                <p>* Required fields must be completed before submission</p>

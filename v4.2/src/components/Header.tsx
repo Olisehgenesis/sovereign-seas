@@ -9,6 +9,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 const navigation = [
   { name: 'Explorer', href: '/explorer', icon: Compass },
   { name: 'Campaigns', href: '/campaigns', icon: Globe },
+  { name: 'Campaign Pools', href: '/campaign-pools', icon: Award },
   { name: 'Projects', href: '/projects', icon: Ship },
   { name: 'Docs', href: '/docs', icon: BookOpen },
 ];
@@ -25,6 +26,12 @@ const createOptions = [
     href: '/app/project/start',
     icon: Compass,
     description: 'Begin a new project',
+  },
+  {
+    name: 'Campaign with Pool',
+    href: '/campaign-pools',
+    icon: Award,
+    description: 'Create a campaign with Good Dollar pool',
   }
 ];
 

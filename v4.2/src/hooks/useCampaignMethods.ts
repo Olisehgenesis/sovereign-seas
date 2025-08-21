@@ -1,9 +1,9 @@
 // hooks/useCampaignMethods.ts
 
-import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
-import {  formatEther, Address, type Abi } from 'viem'
-import { contractABI as abi } from '@/abi/seas4ABI'
-import { useState, useEffect, useCallback } from 'react'
+import { useReadContract, useWriteContract, useReadContracts } from 'wagmi';
+import { Address, formatEther, type Abi } from 'viem';
+import { useState, useEffect, useCallback } from 'react';
+import { contractABI as abi } from '@/abi/seas4ABI';
 
 // Types for better TypeScript support
 export interface CampaignMetadata {
@@ -98,7 +98,7 @@ const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 
 
 
 
-const celoToken = import.meta.env.VITE_CELO_TOKEN;
+const celoToken = import.meta.env.VITE_CELO_TOKEN as Address;
 
 // Fixed hook for creating a new campaign
 export function useCreateCampaign(contractAddress: Address) {
@@ -136,11 +136,14 @@ export function useCreateCampaign(contractAddress: Address) {
     feeAmount: bigint; // The calculated fee amount
   }) => {
     try {
-      
-
+      console.log('createCampaign - Function called with:');
+      console.log('- feeAmount:', feeAmount.toString());
+      console.log('- feeToken:', feeToken);
+      console.log('- celoToken:', celoToken);
 
       // Check if paying fee in native CELO (assuming CELO token address)
-      const isCeloFee = feeToken.toLowerCase() === celoToken.toLowerCase()
+      const isCeloFee = feeToken.toLowerCase() === celoToken.toLowerCase();
+      console.log('- isCeloFee:', isCeloFee);
       
       const result = await writeContract({
         address: contractAddress,
@@ -165,6 +168,10 @@ export function useCreateCampaign(contractAddress: Address) {
         ...(isCeloFee && { value: feeAmount })
       });
 
+      console.log('createCampaign - Transaction submitted successfully');
+      console.log('- Transaction hash:', result);
+      console.log('- Value sent:', isCeloFee ? feeAmount.toString() : '0');
+
       logDebug('Campaign Creation Success', {
         transactionHash: result,
         timestamp: new Date().toISOString(),
@@ -174,6 +181,7 @@ export function useCreateCampaign(contractAddress: Address) {
 
       return result;
     } catch (err) {
+      console.error('createCampaign - Error occurred:', err);
       logDebug('Campaign Creation Error', {
         error: err,
         message: err instanceof Error ? err.message : 'Unknown error',
@@ -344,18 +352,30 @@ export function useCreateCampaignWithFees(contractAddress: Address, userAddress:
   }) => {
     let feeAmount = 0n;
     
+    console.log('useCreateCampaignWithFees - Fee calculation:');
+    console.log('- canBypass:', canBypass);
+    console.log('- campaignCreationFee:', campaignCreationFee?.toString());
+    console.log('- feeToken:', params.feeToken);
+    console.log('- celoToken:', celoToken);
+    
     if (!canBypass && campaignCreationFee) {
       // If paying with CELO, use base fee
-
       if (params.feeToken.toLowerCase() === celoToken.toLowerCase()) {
         feeAmount = campaignCreationFee;
+        console.log('- Fee amount set to:', feeAmount.toString());
       } else {
         // For other tokens, you would need to calculate the equivalent amount
         // This requires calling getExpectedConversionRate or similar
         throw new Error('Non-CELO fee payment not implemented in this example');
       }
+    } else if (canBypass) {
+      console.log('- User can bypass fees, feeAmount remains 0');
+    } else {
+      console.log('- No campaign creation fee required, feeAmount remains 0');
     }
 
+    console.log('- Final feeAmount:', feeAmount.toString());
+    
     return createCampaign({
       ...params,
       feeAmount

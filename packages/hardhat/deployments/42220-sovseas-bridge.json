@@ -1,0 +1,30 @@
+{
+  "network": {
+    "name": "celo",
+    "chainId": "42220",
+    "timestamp": "2025-08-20T17:50:06.670Z"
+  },
+  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+  "contracts": {
+    "SovSeasBridge": "0xF04A21ED9Fd2335683fFE18CAAd8016311D4Ff69"
+  },
+  "constructorArgs": {
+    "sovSeasAddress": "0x59dda5c6baca06b9939d6acf04765eafae1f6a9f",
+    "goodDollarToken": "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A",
+    "directPaymentsFactory": "0xb1C7F09156d04BFf6F412447A73a0F72929b6ea4"
+  },
+  "settings": {
+    "defaultPoolSize": null,
+    "projectCreationReward": null,
+    "membershipReward": null,
+    "distributionReward": null,
+    "managerFeeBps": null
+  },
+  "explorer": {
+    "contract": "https://celoscan.io/address/0xF04A21ED9Fd2335683fFE18CAAd8016311D4Ff69"
+  },
+  "verification": {
+    "verified": true,
+    "verifiedAt": "2025-08-20T17:50:30.000Z"
+  }
+}
