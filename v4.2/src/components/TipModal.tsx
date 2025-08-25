@@ -247,6 +247,21 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     celoEquivalent as bigint
   );
 
+  // Debug logging for validation
+  useEffect(() => {
+    console.log('🔍 Tip Validation Debug:', {
+      canTip,
+      validationReason,
+      validationLoading,
+      userAddress,
+      projectId: project.id,
+      selectedToken: selectedToken?.symbol,
+      parsedTipAmount: parsedTipAmount.toString(),
+      celoEquivalent: celoEquivalent.toString(),
+      tippingContract: TIPPING_CONTRACT
+    });
+  }, [canTip, validationReason, validationLoading, userAddress, project.id, selectedToken, parsedTipAmount, celoEquivalent]);
+
   // Add helper for formatting balances to 3 decimal places
   const formatBalance3 = (balance: bigint) => {
     try {
@@ -428,8 +443,18 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       setTipStep('idle');
       setWaitingForApproval(false);
       setWaitingForTip(false);
+    } else {
+      // Debug logging when modal opens
+      console.log('🔍 Tip Modal Opened:', {
+        project,
+        userAddress,
+        tippingContract: TIPPING_CONTRACT,
+        selectedToken: selectedToken?.symbol,
+        tipAmount,
+        parsedTipAmount: parsedTipAmount.toString()
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, project, userAddress, selectedToken, tipAmount, parsedTipAmount]);
 
   // Handle close
   const handleClose = useCallback(() => {
@@ -746,6 +771,20 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                  (!canTip && !validationLoading)
                }
                className="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+               onClick={() => {
+                 console.log('🔍 Tip Button Debug Info:', {
+                   isProcessing,
+                   isApproving,
+                   tipAmount,
+                   selectedToken: selectedToken?.symbol,
+                   tipAmountValid: parseFloat(tipAmount || '0') > 0,
+                   validationLoading,
+                   canTip,
+                   validationReason,
+                   userAddress,
+                   projectId: project.id
+                 });
+               }}
              >
                {(isProcessing || isApproving) ? (
                  <>

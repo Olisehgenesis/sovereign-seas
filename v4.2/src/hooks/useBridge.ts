@@ -1,18 +1,22 @@
-import { useWriteContract, useReadContract, useReadContracts, useAccount, useSendTransaction } from 'wagmi'
-import { formatEther, Address, type Abi, parseEther } from 'viem'
-import { bridgeAbi } from "@/abi/bridge"
+import { useWriteContract, useReadContract, useReadContracts, useSendTransaction } from 'wagmi'
+import { Address } from 'viem'
+import { bridgeAbi } from '@/abi/bridge'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Interface } from "ethers"
 import { getDataSuffix, submitReferral } from '@divvi/referral-sdk'
 import { waitForTransactionReceipt } from 'viem/actions'
 
-const contractAddress = import.meta.env.VITE_SIMPLE_BRIDGE_V1;
+// Use fallback address if environment variable is not set
+const contractAddress = (import.meta.env.VITE_SIMPLE_BRIDGE_V1 || "0x8970026D77290AA73FF2c95f80D6a4beEd94284F") as Address;
 
 // Divvi Integration 
 const dataSuffix = getDataSuffix({
   consumer: '0x53eaF4CD171842d8144e45211308e5D90B4b0088',
   providers: ['0x0423189886d7966f0dd7e7d256898daeee625dca','0xc95876688026be9d6fa7a7c33328bd013effa2bb','0x7beb0e14f8d2e6f6678cc30d867787b384b19e20'],
 })
+
+// Campaign creation fee: 2 CELO
+const CAMPAIGN_CREATION_FEE = 2n * 10n**18n; // 2 CELO in wei
 
 // Types for better TypeScript support
 export interface ProjectMetadata {
@@ -152,8 +156,7 @@ export function useCreateProject() {
 
 // Hook for creating a campaign with Good Dollar pool
 export function useCreateCampaign() {
-  const { isPending, isError, error, isSuccess } = useWriteContract()
-  const { sendTransactionAsync } = useSendTransaction()
+  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
 
   const createCampaign = async ({
     name,
@@ -193,55 +196,51 @@ export function useCreateCampaign() {
     feeAmount?: bigint
   }) => {
     try {
-      // Divvi referral integration section
-      const createCampaignInterface = new Interface(bridgeAbi);
+      // Validate contract address
+      if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
+        throw new Error('Invalid contract address. Please check your environment variables.');
+      }
 
-      const createCampaignData = createCampaignInterface.encodeFunctionData('createCampaign', [
-        name,
-        description,
-        mainInfo,
-        additionalInfo,
-        startTime,
-        endTime,
-        adminFeePercentage,
-        maxWinners,
-        useQuadraticDistribution,
-        useCustomDistribution,
-        customDistributionData,
-        payoutToken,
-        feeToken,
-        goodDollarPoolAmount,
-        poolProjectId,
-        poolIpfs
-      ]);
+      // Use writeContract directly for better integration
+      // Default to 2 CELO fee if not specified
+      const feeToSend = feeAmount || CAMPAIGN_CREATION_FEE;
       
-      const celoChainId = 42220; // Celo mainnet chain ID
-      const dataWithSuffix = createCampaignData + dataSuffix;
-
-      // Using sendTransactionAsync to support referral integration
-      const tx = await sendTransactionAsync({
-        to: contractAddress as `0x${string}`,
-        data: dataWithSuffix as `0x${string}`,
-        value: feeAmount || BigInt(0)
+      console.log('Creating campaign with bridge contract:', {
+        contractAddress,
+        feeToSend: (Number(feeToSend) / 1e18).toFixed(6) + ' CELO',
+        name,
+        description: description.substring(0, 50) + '...'
       });
-
-      if (!tx) {
-        throw new Error('Transaction failed to send');
-      }
-
-      // Submit the referral to Divvi
-      try {
-        await submitReferral({
-          txHash: tx as unknown as `0x${string}`,
-          chainId: celoChainId
-        });
-      } catch (referralError) {
-        console.error("Referral submission error:", referralError);
-      }
-
-      return tx;
+      
+      await writeContract({
+        address: contractAddress as Address,
+        abi: bridgeAbi,
+        functionName: 'createCampaign',
+        args: [
+          name,
+          description,
+          mainInfo,
+          additionalInfo,
+          startTime,
+          endTime,
+          adminFeePercentage,
+          maxWinners,
+          useQuadraticDistribution,
+          useCustomDistribution,
+          customDistributionData,
+          payoutToken,
+          feeToken,
+          goodDollarPoolAmount,
+          poolProjectId,
+          poolIpfs
+        ],
+        value: feeToSend
+      });
+      
     } catch (err) {
       console.error('❌ Error in createCampaign:', err)
+      console.error('Contract address used:', contractAddress)
+      console.error('Fee amount:', feeAmount ? (Number(feeAmount) / 1e18).toFixed(6) + ' CELO' : 'Not specified')
       throw err
     }
   }

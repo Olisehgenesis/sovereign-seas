@@ -287,16 +287,26 @@ contract SovSeasBridge is Ownable, ReentrancyGuard, Pausable {
         // Get campaign count before creation
         uint256 campaignId = sovSeasContract.getCampaignCount();
         
+        // Check if user is super admin
+        bool isSuperAdmin = sovSeasContract.superAdmins(msg.sender);
+        
         // Validate and collect fee if needed
         uint256 requiredFee = sovSeasContract.campaignCreationFee();
-        if (requiredFee > 0 && !sovSeasContract.superAdmins(msg.sender)) {
+        if (requiredFee > 0 && !isSuperAdmin) {
             require(msg.value >= requiredFee, "Insufficient CELO sent for campaign creation fee");
+            // Validate bridge has sufficient balance
+            _validateBridgeBalance(requiredFee);
             // Refund excess CELO
             _refundExcessCelo(requiredFee);
         }
         
         // Create campaign in main contract with exact fee amount
-        uint256 feeToSend = requiredFee > 0 && !sovSeasContract.superAdmins(msg.sender) ? requiredFee : 0;
+        uint256 feeToSend = (requiredFee > 0 && !isSuperAdmin) ? requiredFee : 0;
+        
+        // Log fee information for debugging
+        emit GoodDollarPoolCreated(campaignId, address(0), feeToSend);
+        
+        // Forward the exact fee amount to the main contract
         sovSeasContract.createCampaign{value: feeToSend}(
             _name, _description, _mainInfo, _additionalInfo,
             _startTime, _endTime, _adminFeePercentage, _maxWinners,
@@ -317,16 +327,21 @@ contract SovSeasBridge is Ownable, ReentrancyGuard, Pausable {
         uint256 _projectId,
         address _feeToken
     ) external payable validCampaign(_campaignId) validProject(_projectId) whenNotPaused {
+        // Check if user is super admin
+        bool isSuperAdmin = sovSeasContract.superAdmins(msg.sender);
+        
         // Validate and collect fee if needed
         uint256 requiredFee = sovSeasContract.projectAdditionFee();
-        if (requiredFee > 0 && !sovSeasContract.superAdmins(msg.sender)) {
+        if (requiredFee > 0 && !isSuperAdmin) {
             require(msg.value >= requiredFee, "Insufficient CELO sent for project addition fee");
             // Refund excess CELO
             _refundExcessCelo(requiredFee);
         }
         
         // Add to main contract with exact fee amount
-        uint256 feeToSend = requiredFee > 0 && !sovSeasContract.superAdmins(msg.sender) ? requiredFee : 0;
+        uint256 feeToSend = (requiredFee > 0 && !isSuperAdmin) ? requiredFee : 0;
+        
+        // Forward the exact fee amount to the main contract
         sovSeasContract.addProjectToCampaign{value: feeToSend}(_campaignId, _projectId, _feeToken);
         
         // Get project owner
@@ -850,11 +865,19 @@ function emergencyWithdrawGoodDollar(address _recipient, uint256 _amount) extern
 }
 
 /**
+* @dev Fund the bridge with CELO for fee payments
+*/
+function fundBridgeWithCelo() external payable {
+    require(msg.value > 0, "Must send CELO to fund bridge");
+    emit GoodDollarPoolCreated(0, address(0), msg.value);
+}
+
+/**
 * @dev Fund the bridge with Good Dollars
 */
 function fundBridge(uint256 _amount) external {
-   require(_amount > 0, "Amount must be positive");
-   goodDollar.transferFrom(msg.sender, address(this), _amount);
+    require(_amount > 0, "Amount must be positive");
+    goodDollar.transferFrom(msg.sender, address(this), _amount);
 }
 
 /**
@@ -895,10 +918,55 @@ function withdrawFees(address _recipient) external onlyOwner {
 }
 
 /**
+ * @dev Validate that bridge has sufficient CELO balance for operations
+ */
+function _validateBridgeBalance(uint256 _requiredAmount) internal view {
+    require(address(this).balance >= _requiredAmount, "Bridge contract has insufficient CELO balance");
+}
+
+/**
  * @dev Get bridge CELO balance
  */
 function getBridgeCeloBalance() external view returns (uint256) {
     return address(this).balance;
+}
+
+/**
+ * @dev Check if user can bypass fees
+ */
+function canBypassFees(address _user) external view returns (bool) {
+    return sovSeasContract.superAdmins(_user);
+}
+
+/**
+ * @dev Get required campaign creation fee
+ */
+function getCampaignCreationFee() external view returns (uint256) {
+    return sovSeasContract.campaignCreationFee();
+}
+
+/**
+ * @dev Get required project addition fee
+ */
+function getProjectAdditionFee() external view returns (uint256) {
+    return sovSeasContract.projectAdditionFee();
+}
+
+/**
+ * @dev Get comprehensive fee information
+ */
+function getFeeInfo(address _user) external view returns (
+    uint256 campaignCreationFee,
+    uint256 projectAdditionFee,
+    bool canBypass,
+    uint256 bridgeBalance,
+    uint256 userSentValue
+) {
+    campaignCreationFee = sovSeasContract.campaignCreationFee();
+    projectAdditionFee = sovSeasContract.projectAdditionFee();
+    canBypass = sovSeasContract.superAdmins(_user);
+    bridgeBalance = address(this).balance;
+    userSentValue = 0; // This will be 0 in view functions
 }
 
 // =============================================================================

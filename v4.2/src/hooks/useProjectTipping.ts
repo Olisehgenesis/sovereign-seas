@@ -526,6 +526,620 @@ export function useApproveToken() {
   return { approveToken, isPending, isError, error, isSuccess, data };
 }
 
+// Hook for reading project tipped tokens
+export function useProjectTippedTokens(contractAddress: Address, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProjectTippedTokens',
+    args: [projectId],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined
+    }
+  })
+
+  return {
+    tippedTokens: data as Address[] || [],
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading project tipper count
+export function useProjectTipperCount(contractAddress: Address, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProjectTipperCount',
+    args: [projectId],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined
+    }
+  })
+
+  return {
+    tipperCount: data as bigint || 0n,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading project tippers
+export function useProjectTippers(contractAddress: Address, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProjectTippers',
+    args: [projectId],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined
+    }
+  })
+
+  return {
+    tippers: data as Address[] || [],
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading project tips by token
+export function useProjectTipsByToken(contractAddress: Address, projectId: bigint, token: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProjectTipsByToken',
+    args: [projectId, token],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined && !!token
+    }
+  })
+
+  return {
+    tipAmount: data as bigint || 0n,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading project total tips in CELO
+export function useProjectTotalTipsInCelo(contractAddress: Address, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProjectTotalTipsInCelo',
+    args: [projectId],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined
+    }
+  })
+
+  return {
+    totalTipsInCelo: data as bigint || 0n,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading user recent tips
+export function useUserRecentTips(contractAddress: Address, userAddress: Address, limit: number = 20) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getUserRecentTips',
+    args: [userAddress, BigInt(limit)],
+    query: {
+      enabled: !!contractAddress && !!userAddress && limit > 0
+    }
+  })
+
+  return {
+    tips: data as TipInfo[] || [],
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading user tipped projects
+export function useUserTippedProjects(contractAddress: Address, userAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getUserTippedProjects',
+    args: [userAddress],
+    query: {
+      enabled: !!contractAddress && !!userAddress
+    }
+  })
+
+  return {
+    projectIds: data as bigint[] || [],
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading user tips to specific project
+export function useUserTipsToProject(contractAddress: Address, userAddress: Address, projectId: bigint, token: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getUserTipsToProject',
+    args: [userAddress, projectId, token],
+    query: {
+      enabled: !!contractAddress && !!userAddress && projectId !== undefined && !!token
+    }
+  })
+
+  return {
+    tipAmount: data as bigint || 0n,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading total tips count
+export function useTotalTipsCount(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getTotalTipsCount',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    totalTipsCount: data as bigint || 0n,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading platform fee balance
+export function usePlatformFeeBalance(contractAddress: Address, token: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getPlatformFeeBalance',
+    args: [token],
+    query: {
+      enabled: !!contractAddress && !!token
+    }
+  })
+
+  return {
+    feeBalance: data as bigint || 0n,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading tipping status
+export function useTippingStatus(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'tippingEnabled',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    isEnabled: data as boolean || false,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading CELO token address
+export function useCeloTokenAddress(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'celoToken',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    celoTokenAddress: data as Address,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading sovereign seas contract address
+export function useSovereignSeasAddress(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'sovereignSeas',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    sovereignSeasAddress: data as Address,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading collected fees
+export function useCollectedFees(contractAddress: Address, token: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'collectedFees',
+    args: [token],
+    query: {
+      enabled: !!contractAddress && !!token
+    }
+  })
+
+  return {
+    collectedFees: data as bigint || 0n,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for checking if project has been tipped
+export function useHasBeenTipped(contractAddress: Address, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'hasBeenTipped',
+    args: [projectId],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined
+    }
+  })
+
+  return {
+    hasBeenTipped: data as boolean || false,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for checking if user has tipped project
+export function useHasUserTippedProject(contractAddress: Address, userAddress: Address, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'hasUserTippedProject',
+    args: [userAddress, projectId],
+    query: {
+      enabled: !!contractAddress && !!userAddress && projectId !== undefined
+    }
+  })
+
+  return {
+    hasTipped: data as boolean || false,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for checking if user is project tipper
+export function useIsProjectTipper(contractAddress: Address, projectId: bigint, userAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'isProjectTipper',
+    args: [projectId, userAddress],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined && !!userAddress
+    }
+  })
+
+  return {
+    isTipper: data as boolean || false,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for checking if token has been tipped to project
+export function useIsTokenTippedToProject(contractAddress: Address, projectId: bigint, token: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'isTokenTippedToProject',
+    args: [projectId, token],
+    query: {
+      enabled: !!contractAddress && projectId !== undefined && !!token
+    }
+  })
+
+  return {
+    isTokenTipped: data as boolean || false,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for reading all tips
+export function useAllTips(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getAllTips',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    allTips: data as TipInfo[] || [],
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for emergency withdrawal
+export function useEmergencyWithdraw(contractAddress: Address) {
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+
+  const emergencyWithdraw = async ({
+    token,
+    recipient,
+    amount
+  }: {
+    token: Address
+    recipient: Address
+    amount: bigint
+  }) => {
+    try {
+      writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'emergencyWithdraw',
+        args: [token, recipient, amount]
+      })
+
+      return { success: true, hash: '', receipt: null };
+    } catch (err) {
+      logDebug('Emergency Withdraw Error', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error'
+      }, 'error')
+      throw err
+    }
+  }
+
+  return {
+    emergencyWithdraw,
+    isPending,
+    isError,
+    error,
+    isSuccess,
+    data
+  }
+}
+
+// Hook for withdrawing platform fees
+export function useWithdrawPlatformFees(contractAddress: Address) {
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+
+  const withdrawPlatformFees = async ({
+    token,
+    recipient,
+    amount
+  }: {
+    token: Address
+    recipient: Address
+    amount: bigint
+  }) => {
+    try {
+      writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'withdrawPlatformFees',
+        args: [token, recipient, amount]
+      })
+
+      return { success: true, hash: '', receipt: null };
+    } catch (err) {
+      logDebug('Withdraw Platform Fees Error', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error'
+      }, 'error')
+      throw err
+    }
+  }
+
+  return {
+    withdrawPlatformFees,
+    isPending,
+    isError,
+    error,
+    isSuccess,
+    data
+  }
+}
+
+// Hook for toggling tipping status
+export function useToggleTipping(contractAddress: Address) {
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+
+  const toggleTipping = async () => {
+    try {
+      writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'toggleTipping'
+      })
+
+      return { success: true, hash: '', receipt: null };
+    } catch (err) {
+      logDebug('Toggle Tipping Error', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error'
+      }, 'error')
+      throw err
+    }
+  }
+
+  return {
+    toggleTipping,
+    isPending,
+    isError,
+    error,
+    isSuccess,
+    data
+  }
+}
+
+// Hook for setting minimum tip amount
+export function useSetMinimumTipAmount(contractAddress: Address) {
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+
+  const setMinimumTipAmount = async ({
+    newMinimum
+  }: {
+    newMinimum: bigint
+  }) => {
+    try {
+      writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'setMinimumTipAmount',
+        args: [newMinimum]
+      })
+
+      return { success: true, hash: '', receipt: null };
+    } catch (err) {
+      logDebug('Set Minimum Tip Amount Error', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error'
+      }, 'error')
+      throw err
+    }
+  }
+
+  return {
+    setMinimumTipAmount,
+    isPending,
+    isError,
+    error,
+    isSuccess,
+    data
+  }
+}
+
+// Hook for reading owner address
+export function useOwner(contractAddress: Address) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'owner',
+    query: {
+      enabled: !!contractAddress
+    }
+  })
+
+  return {
+    owner: data as Address,
+    isLoading,
+    error,
+    refetch
+  }
+}
+
+// Hook for transferring ownership
+export function useTransferOwnership(contractAddress: Address) {
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+
+  const transferOwnership = async ({
+    newOwner
+  }: {
+    newOwner: Address
+  }) => {
+    try {
+      writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'transferOwnership',
+        args: [newOwner]
+      })
+
+      return { success: true, hash: '', receipt: null };
+    } catch (err) {
+      logDebug('Transfer Ownership Error', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error'
+      }, 'error')
+      throw err
+    }
+  }
+
+  return {
+    transferOwnership,
+    isPending,
+    isError,
+    error,
+    isSuccess,
+    data
+  }
+}
+
+// Hook for renouncing ownership
+export function useRenounceOwnership(contractAddress: Address) {
+  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+
+  const renounceOwnership = async () => {
+    try {
+      writeContract({
+        address: contractAddress,
+        abi,
+        functionName: 'renounceOwnership'
+      })
+
+      return { success: true, hash: '', receipt: null };
+    } catch (err) {
+      logDebug('Renounce Ownership Error', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error'
+      }, 'error')
+      throw err
+    }
+  }
+
+  return {
+    renounceOwnership,
+    isPending,
+    isError,
+    error,
+    isSuccess,
+    data
+  }
+}
+
 // Main hook for project tipping
 export function useProjectTipping(contractAddress: Address) {
   const [isInitialized, setIsInitialized] = useState(false)
@@ -709,6 +1323,223 @@ export function validateTipParams({
   }
 }
 
+// Enhanced utility functions
+export function getTokenDisplayName(tokenAddress: Address): string {
+  if (tokenAddress === '0x0000000000000000000000000000000000000000') return 'CELO';
+  
+  // Common token addresses on Celo
+  const knownTokens: { [key: string]: string } = {
+    '0x765DE816845861e75A25fCA122bb6898B8B1282a': 'cUSD',
+    '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73': 'cEUR',
+    '0xE919F65739c26a42616b7b8eedC6b5524d1e3aC4': 'cREAL'
+  };
+  
+  return knownTokens[tokenAddress] || 'ERC20';
+}
+
+export function formatTokenAmount(amount: bigint, tokenAddress: Address, decimals: number = 18): string {
+  try {
+    if (tokenAddress === '0x0000000000000000000000000000000000000000') {
+      return `${formatEther(amount)} CELO`;
+    }
+    return `${formatEther(amount)} ${getTokenDisplayName(tokenAddress)}`;
+  } catch {
+    return '0';
+  }
+}
+
+export function calculateTipStatistics(tips: TipInfo[]): {
+  totalTips: bigint;
+  totalCELOEquivalent: bigint;
+  uniqueTippers: number;
+  uniqueProjects: number;
+  uniqueTokens: number;
+  averageTip: bigint;
+  largestTip: bigint;
+  smallestTip: bigint;
+} {
+  if (tips.length === 0) {
+    return {
+      totalTips: 0n,
+      totalCELOEquivalent: 0n,
+      uniqueTippers: 0,
+      uniqueProjects: 0,
+      uniqueTokens: 0,
+      averageTip: 0n,
+      largestTip: 0n,
+      smallestTip: 0n
+    };
+  }
+
+  const totalTips = tips.reduce((sum, tip) => sum + tip.amount, 0n);
+  const totalCELOEquivalent = tips.reduce((sum, tip) => sum + tip.celoEquivalent, 0n);
+  const uniqueTippers = new Set(tips.map(tip => tip.tipper)).size;
+  const uniqueProjects = new Set(tips.map(tip => tip.projectId)).size;
+  const uniqueTokens = new Set(tips.map(tip => tip.token)).size;
+  const averageTip = totalTips / BigInt(tips.length);
+  const largestTip = tips.reduce((max, tip) => tip.amount > max ? tip.amount : max, 0n);
+  const smallestTip = tips.reduce((min, tip) => tip.amount < min ? tip.amount : min, largestTip);
+
+  return {
+    totalTips,
+    totalCELOEquivalent,
+    uniqueTippers,
+    uniqueProjects,
+    uniqueTokens,
+    averageTip,
+    largestTip,
+    smallestTip
+  };
+}
+
+export function groupTipsByProject(tips: TipInfo[]): Map<string, TipInfo[]> {
+  const grouped = new Map<string, TipInfo[]>();
+  
+  tips.forEach(tip => {
+    const projectId = tip.projectId.toString();
+    if (!grouped.has(projectId)) {
+      grouped.set(projectId, []);
+    }
+    grouped.get(projectId)!.push(tip);
+  });
+  
+  return grouped;
+}
+
+export function groupTipsByToken(tips: TipInfo[]): Map<string, TipInfo[]> {
+  const grouped = new Map<string, TipInfo[]>();
+  
+  tips.forEach(tip => {
+    const token = tip.token;
+    if (!grouped.has(token)) {
+      grouped.set(token, []);
+    }
+    grouped.get(token)!.push(tip);
+  });
+  
+  return grouped;
+}
+
+export function groupTipsByTipper(tips: TipInfo[]): Map<string, TipInfo[]> {
+  const grouped = new Map<string, TipInfo[]>();
+  
+  tips.forEach(tip => {
+    const tipper = tip.tipper;
+    if (!grouped.has(tipper)) {
+      grouped.set(tipper, []);
+    }
+    grouped.get(tipper)!.push(tip);
+  });
+  
+  return grouped;
+}
+
+export function sortTipsByAmount(tips: TipInfo[], ascending: boolean = false): TipInfo[] {
+  return [...tips].sort((a, b) => {
+    if (ascending) {
+      return Number(a.amount - b.amount);
+    }
+    return Number(b.amount - a.amount);
+  });
+}
+
+export function sortTipsByTimestamp(tips: TipInfo[], ascending: boolean = false): TipInfo[] {
+  return [...tips].sort((a, b) => {
+    if (ascending) {
+      return Number(a.timestamp - b.timestamp);
+    }
+    return Number(b.timestamp - a.timestamp);
+  });
+}
+
+export function filterTipsByDateRange(tips: TipInfo[], startDate: Date, endDate: Date): TipInfo[] {
+  const startTimestamp = Math.floor(startDate.getTime() / 1000);
+  const endTimestamp = Math.floor(endDate.getTime() / 1000);
+  
+  return tips.filter(tip => {
+    const tipTimestamp = Number(tip.timestamp);
+    return tipTimestamp >= startTimestamp && tipTimestamp <= endTimestamp;
+  });
+}
+
+export function filterTipsByAmount(tips: TipInfo[], minAmount: bigint, maxAmount: bigint): TipInfo[] {
+  return tips.filter(tip => tip.amount >= minAmount && tip.amount <= maxAmount);
+}
+
+export function filterTipsByProject(tips: TipInfo[], projectId: bigint): TipInfo[] {
+  return tips.filter(tip => tip.projectId === projectId);
+}
+
+export function filterTipsByToken(tips: TipInfo[], token: Address): TipInfo[] {
+  return tips.filter(tip => tip.token === token);
+}
+
+export function filterTipsByTipper(tips: TipInfo[], tipper: Address): TipInfo[] {
+  return tips.filter(tip => tip.tipper === tipper);
+}
+
+// Enhanced validation functions
+export function validateTipAmount(amount: bigint, minimumAmount: bigint): { isValid: boolean; error?: string } {
+  if (amount <= 0n) {
+    return { isValid: false, error: 'Tip amount must be greater than 0' };
+  }
+  
+  if (amount < minimumAmount) {
+    return { isValid: false, error: `Tip amount must be at least ${formatEther(minimumAmount)} CELO` };
+  }
+  
+  return { isValid: true };
+}
+
+export function validateProjectId(projectId: bigint): { isValid: boolean; error?: string } {
+  if (projectId === undefined || projectId < 0n) {
+    return { isValid: false, error: 'Invalid project ID' };
+  }
+  
+  return { isValid: true };
+}
+
+export function validateTokenAddress(token: Address): { isValid: boolean; error?: string } {
+  if (!token || token === '0x0000000000000000000000000000000000000000') {
+    return { isValid: false, error: 'Invalid token address' };
+  }
+  
+  return { isValid: true };
+}
+
+export function validateUserAddress(userAddress: Address): { isValid: boolean; error?: string } {
+  if (!userAddress) {
+    return { isValid: false, error: 'User address is required' };
+  }
+  
+  if (userAddress === '0x0000000000000000000000000000000000000000') {
+    return { isValid: false, error: 'Invalid user address' };
+  }
+  
+  return { isValid: true };
+}
+
+// Enhanced error handling utility
+export function handleContractError(error: any): { message: string; code?: string; details?: any } {
+  if (typeof error === 'string') {
+    return { message: error };
+  }
+  
+  if (error?.message) {
+    return { message: error.message, details: error };
+  }
+  
+  if (error?.error?.message) {
+    return { message: error.error.message, details: error.error };
+  }
+  
+  if (error?.reason) {
+    return { message: error.reason, details: error };
+  }
+  
+  return { message: 'An unknown error occurred', details: error };
+}
+
 // Export all hooks for convenient importing
 export default {
   useTipProject,
@@ -727,8 +1558,52 @@ export default {
   useProjectWithTipInfo,
   useProjectTipping,
   useApproveToken,
+  useProjectTippedTokens,
+  useProjectTipperCount,
+  useProjectTippers,
+  useProjectTipsByToken,
+  useProjectTotalTipsInCelo,
+  useUserRecentTips,
+  useUserTippedProjects,
+  useUserTipsToProject,
+  useTotalTipsCount,
+  usePlatformFeeBalance,
+  useTippingStatus,
+  useCeloTokenAddress,
+  useSovereignSeasAddress,
+  useCollectedFees,
+  useHasBeenTipped,
+  useHasUserTippedProject,
+  useIsProjectTipper,
+  useIsTokenTippedToProject,
+  useAllTips,
+  useEmergencyWithdraw,
+  useWithdrawPlatformFees,
+  useToggleTipping,
+  useSetMinimumTipAmount,
+  useOwner,
+  useTransferOwnership,
+  useRenounceOwnership,
   parseUnixTimestamp,
   formatTipValue,
   calculateTipAfterFees,
-  validateTipParams
+  validateTipParams,
+  getTokenDisplayName,
+  formatTokenAmount,
+  calculateTipStatistics,
+  groupTipsByProject,
+  groupTipsByToken,
+  groupTipsByTipper,
+  sortTipsByAmount,
+  sortTipsByTimestamp,
+  filterTipsByDateRange,
+  filterTipsByAmount,
+  filterTipsByProject,
+  filterTipsByToken,
+  filterTipsByTipper,
+  validateTipAmount,
+  validateProjectId,
+  validateTokenAddress,
+  validateUserAddress,
+  handleContractError
 }

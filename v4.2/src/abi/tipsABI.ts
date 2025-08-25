@@ -1,4 +1,4 @@
-export const tipsABI =[
+export const tipsABI = [
   {
     "inputs": [
       {

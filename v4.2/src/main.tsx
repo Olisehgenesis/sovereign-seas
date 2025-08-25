@@ -25,6 +25,8 @@ import VerifyPage from './pages/app/verify/page'
 import VoteEmbed from './pages/embed/VoteEmbed'
 import CampaignEmbed from './pages/embed/campaign'
 import CreateCampaignV2 from './pages/app/v2/create-campaign'
+import ProjectViewV2 from './pages/app/v2/explorer/project/[id]/page'
+import TestTipsPage from './pages/app/v2/test-tips/page'
 globalThis.Buffer = Buffer
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -39,6 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/campaigns" element={<CampaignsPage />} />
             {/* <Route path="/app/v2/campaign-pools" element={<CampaignPoolsPage />} /> */}
             <Route path="/app/v2/create-campaign" element={<CreateCampaignV2 />} />
+           
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/docs" element={<DocsPage />} />
 
@@ -57,8 +60,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/embed/:campaignid/:projectid" element={<VoteEmbed />} />
             <Route path="/embed/campaign/:campaignid" element={<CampaignEmbed />} />
 
-            //test
-           
+            //v2 routes
+            <Route path="/v2/explorer/project/:id" element={<ProjectViewV2 />} />
+            <Route path="/app/v2/test-tips" element={<TestTipsPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Route>

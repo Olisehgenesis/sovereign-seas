@@ -1,12 +1,353 @@
 [
   {
-    "inputs": [],
-    "name": "celoToken",
-    "outputs": [
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      },
       {
         "internalType": "address",
-        "name": "",
+        "name": "_feeToken",
         "type": "address"
+      }
+    ],
+    "name": "addProjectToCampaign",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "approveProject",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "campaignCreationFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      }
+    ],
+    "name": "campaigns",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "admin",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "startTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "endTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "adminFeePercentage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxWinners",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "useQuadraticDistribution",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "useCustomDistribution",
+        "type": "bool"
+      },
+      {
+        "internalType": "address",
+        "name": "payoutToken",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalFunds",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_description",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_mainInfo",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_additionalInfo",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_startTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_endTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_adminFeePercentage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_maxWinners",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "_useQuadraticDistribution",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "_useCustomDistribution",
+        "type": "bool"
+      },
+      {
+        "internalType": "string",
+        "name": "_customDistributionData",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_payoutToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_feeToken",
+        "type": "address"
+      }
+    ],
+    "name": "createCampaign",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_description",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_bioPart",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_contractInfoPart",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_additionalDataPart",
+        "type": "string"
+      },
+      {
+        "internalType": "address[]",
+        "name": "_contracts",
+        "type": "address[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "_transferrable",
+        "type": "bool"
+      }
+    ],
+    "name": "createProject",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      }
+    ],
+    "name": "distributeFunds",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCampaign",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "admin",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "startTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "endTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "adminFeePercentage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxWinners",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "useQuadraticDistribution",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "useCustomDistribution",
+        "type": "bool"
+      },
+      {
+        "internalType": "address",
+        "name": "payoutToken",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalFunds",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCampaignCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -83,31 +424,16 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_projectId",
+        "name": "_campaignId",
         "type": "uint256"
       }
     ],
-    "name": "getProjectMetadata",
+    "name": "getSortedProjects",
     "outputs": [
       {
-        "internalType": "string",
-        "name": "bio",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "contractInfo",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "additionalData",
-        "type": "string"
-      },
-      {
-        "internalType": "address[]",
-        "name": "contracts",
-        "type": "address[]"
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
@@ -115,6 +441,165 @@
   },
   {
     "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_admin",
+        "type": "address"
+      }
+    ],
+    "name": "isCampaignAdmin",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "projectAdditionFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "projectParticipations",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "campaignId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "approved",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "voteCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fundsReceived",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "projects",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "transferrable",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "createdAt",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_admin",
+        "type": "address"
+      }
+    ],
+    "name": "superAdmins",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      },
       {
         "internalType": "address",
         "name": "_token",
@@ -124,36 +609,39 @@
         "internalType": "uint256",
         "name": "_amount",
         "type": "uint256"
-      }
-    ],
-    "name": "getTokenToCeloEquivalent",
-    "outputs": [
+      },
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
+        "internalType": "bytes32",
+        "name": "_bypassCode",
+        "type": "bytes32"
       }
     ],
-    "stateMutability": "view",
+    "name": "vote",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_token",
-        "type": "address"
-      }
-    ],
-    "name": "isTokenSupported",
-    "outputs": [
+        "internalType": "uint256",
+        "name": "_campaignId",
+        "type": "uint256"
+      },
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
+        "internalType": "uint256",
+        "name": "_projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "_bypassCode",
+        "type": "bytes32"
       }
     ],
-    "stateMutability": "view",
+    "name": "voteWithCelo",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   }
 ]

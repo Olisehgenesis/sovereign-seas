@@ -39,6 +39,7 @@ import { parseEther } from 'viem';
 import { useNavigate } from 'react-router-dom';
 import { useBridge } from '@/hooks/useBridge';
 import { useReadContract, useWriteContract } from 'wagmi';
+import { bridgeAbi } from '@/abi/bridge';
 import { contractABI as abi } from '@/abi/seas4ABI';
 
 interface Campaign {
@@ -122,7 +123,9 @@ export default function CreateCampaignV2() {
   
   // Get CELO token address from environment
   const celoToken = import.meta.env.VITE_CELO_TOKEN as Address;
-  const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
+  // Use main contract for reading fees, bridge contract for creating campaigns
+  const mainContractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
+  const bridgeContractAddress = (import.meta.env.VITE_SIMPLE_BRIDGE_V1 || "0x8970026D77290AA73FF2c95f80D6a4beEd94284F") as Address;
   
   // Collapsible sections state
   const [expandedSection, setExpandedSection] = useState('basic');
@@ -130,27 +133,27 @@ export default function CreateCampaignV2() {
   // Wallet and contract hooks
   const { authenticated, ready, user } = usePrivy();
   
-  // Read campaign creation fee directly from contract
+  // Read campaign creation fee from main contract
   const { data: campaignCreationFee } = useReadContract({
-    address: contractAddress,
-    abi,
+    address: mainContractAddress,
+    abi: abi, // Use main contract ABI
     functionName: 'campaignCreationFee',
     query: {
-      enabled: !!contractAddress
+      enabled: !!mainContractAddress
     }
   });
   
   // Cast the fee to bigint and add type guard
   const feeAmount = campaignCreationFee as bigint | undefined;
   
-  // Check if user can bypass fees (super admin)
+  // Check if user can bypass fees (super admin) from main contract
   const { data: canBypass } = useReadContract({
-    address: contractAddress,
-    abi,
+    address: mainContractAddress,
+    abi: abi, // Use main contract ABI
     functionName: 'superAdmins',
     args: [user?.wallet?.address || '0x0'],
     query: {
-      enabled: !!contractAddress && !!user?.wallet?.address
+      enabled: !!mainContractAddress && !!user?.wallet?.address
     }
   });
 
@@ -165,9 +168,6 @@ export default function CreateCampaignV2() {
     isPending: isCreatingCampaign, 
     isSuccess: campaignCreated
   } = useCreateCampaign();
-
-  // Temporary: Direct contract interaction for testing
-  const { writeContract, isPending: isDirectPending, isSuccess: isDirectSuccess } = useWriteContract();
 
   // File handling
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -316,9 +316,15 @@ export default function CreateCampaignV2() {
     if (!campaign.maxWinners) errors.maxWinners = 'Max winners is required';
     if (!campaign.contactEmail) errors.contactEmail = 'Contact email is required';
 
-    // Check if CELO token is available
+    // Check if contract addresses are available
+    if (!mainContractAddress) {
+      errors.name = 'Main contract address is missing. Please check VITE_CONTRACT_V4 environment variable.';
+    }
+    if (!bridgeContractAddress) {
+      errors.name = 'Bridge contract address is missing. Please check VITE_SIMPLE_BRIDGE_V1 environment variable.';
+    }
     if (!celoToken) {
-      errors.name = 'CELO token configuration is missing. Please check your environment variables.';
+      errors.name = 'CELO token configuration is missing. Please check VITE_CELO_TOKEN environment variable.';
     }
 
     // Validate dates
@@ -349,17 +355,34 @@ export default function CreateCampaignV2() {
       return;
     }
 
+    // Validate contract addresses
+    if (!mainContractAddress) {
+      alert('Main contract address is missing. Please check VITE_CONTRACT_V4 environment variable.');
+      return;
+    }
+    if (!bridgeContractAddress) {
+      alert('Bridge contract address is missing. Please check VITE_SIMPLE_BRIDGE_V1 environment variable.');
+      return;
+    }
     if (!celoToken) {
-      alert('CELO token configuration is missing. Please check your environment variables.');
+      alert('CELO token configuration is missing. Please check VITE_CELO_TOKEN environment variable.');
       return;
     }
 
-    // Check if user has sufficient CELO for the fee
     if (!canBypass && feeAmount && feeAmount > 0n) {
       // Note: We can't easily check CELO balance here since we're using useBridge
       // The transaction will fail if insufficient funds, but we can warn the user
       console.log('Campaign creation fee required:', (Number(feeAmount) / 1e18).toFixed(6), 'CELO');
     }
+
+    // Debug information
+    console.log('Creating campaign with:', {
+      mainContractAddress,
+      bridgeContractAddress,
+      feeAmount: feeAmount ? (Number(feeAmount) / 1e18).toFixed(6) + ' CELO' : 'Not set',
+      canBypass,
+      celoToken
+    });
 
     try {
       setLoading(true);

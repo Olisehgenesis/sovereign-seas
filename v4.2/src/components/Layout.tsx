@@ -1,16 +1,21 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 // import Header from '@/components/Header';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Footer from './Footer';
 import Header from './Header';
 
 export default function Layout() {
+  const location = useLocation();
+  
+  // Check if current route should hide header
+  const shouldShowHeader = !location.pathname.includes('/v2/explorer/project/');
+
   return (
     <ErrorBoundary>
       <div className="layout-container bg-gradient-to-br from-blue-50 to-indigo-100" style={{ transform: 'scale(0.74)', transformOrigin: 'top left', width: '135.14%', height: '135.14%' }}>
-        <Header />
+        {shouldShowHeader && <Header />}
 
-        <main className="flex-1 relative z-10 pt-20 pb-8">
+        <main className={`flex-1 relative z-10 ${shouldShowHeader ? 'pt-20 pb-8' : 'pt-0 pb-8'}`}>
           <div className="page-content">
             <Outlet />
           </div>
