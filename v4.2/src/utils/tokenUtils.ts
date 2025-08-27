@@ -6,7 +6,7 @@ export const KNOWN_TOKENS: { [key: string]: TokenInfo } = {
     symbol: 'CELO',
     name: 'CELO',
     decimals: 18,
-    logo: '🌾',
+    logo: '/images/celo.png',
     color: '#FCFF52',
     description: 'Native CELO token'
   },
@@ -14,7 +14,7 @@ export const KNOWN_TOKENS: { [key: string]: TokenInfo } = {
     symbol: 'cUSD',
     name: 'Celo Dollar',
     decimals: 18,
-    logo: '💵',
+    logo: '/images/cusd.png',
     color: '#00D4AA',
     description: 'Celo Dollar stablecoin'
   },
@@ -36,13 +36,60 @@ export const KNOWN_TOKENS: { [key: string]: TokenInfo } = {
   },
   '0x471EcE3750Da237f93B8E339c536989b8978a438': {
     symbol: 'CELO',
-    name: 'CELO (Wrapped)',
+    name: 'CELO ',
     decimals: 18,
-    logo: '🌾',
+    logo: '/images/celo.png',
     color: '#FCFF52',
     description: 'Wrapped CELO token'
+  },
+  [import.meta.env.VITE_GOOD_DOLLAR_TOKEN || '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A']: {
+    symbol: 'G$',
+    name: 'GoodDollar',
+    decimals: 18,
+    logo: '/images/good.png',
+    color: '#00D4AA',
+    description: 'GoodDollar token'
   }
 };
+
+// Default token list for the TipModal
+export const tokenList = [
+  {
+    address: '0x0000000000000000000000000000000000000000',
+    symbol: 'CELO',
+    name: 'CELO',
+    decimals: 18,
+    icon: '/images/celo.png'
+  },
+  {
+    address: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+    symbol: 'cUSD',
+    name: 'Celo Dollar',
+    decimals: 18,
+    icon: '/images/cusd.png'
+  },
+  {
+    address: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
+    symbol: 'cEUR',
+    name: 'Celo Euro',
+    decimals: 18,
+    icon: '/images/cusd.png'
+  },
+  {
+    address: '0xE919F65739c26a42616b7b8eedC6b5524d1e3aC4',
+    symbol: 'cREAL',
+    name: 'Celo Real',
+    decimals: 18,
+    icon: '/images/cusd.png'
+  },
+  {
+    address: import.meta.env.VITE_GOOD_DOLLAR_TOKEN || '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
+    symbol: 'G$',
+    name: 'GoodDollar',
+    decimals: 18,
+    icon: '/images/good.png'
+  }
+];
 
 export interface TokenInfo {
   symbol: string;

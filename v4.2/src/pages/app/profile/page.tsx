@@ -1943,8 +1943,8 @@ export default function ProfilePage() {
 
      {/* Verification Method Selection Modal */}
      {showMethodSelection && (
-       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-         <div className="bg-white rounded-lg p-6 max-w-md w-full">
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+         <div className="bg-white rounded-lg p-6 max-w-md w-full mt-4 sm:mt-8 lg:mt-16 mb-4">
            <div className="flex items-center justify-between mb-4">
              <h3 className="text-lg font-bold text-gray-900">Choose Verification Method</h3>
              <button
@@ -1999,12 +1999,12 @@ export default function ProfilePage() {
      {/* Verification Success Modal */}
      {showSuccessModal && (
        <div 
-         className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+         className="fixed inset-0 bg-black/60 flex items-start justify-center z-[9999] p-4 backdrop-blur-sm overflow-y-auto"
          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
          onClick={() => setShowSuccessModal(false)}
        >
          <div 
-           className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden"
+           className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden mt-4 sm:mt-8 lg:mt-16 mb-4"
            style={{ position: 'relative', zIndex: 10000 }}
            onClick={(e) => e.stopPropagation()}
          >
@@ -2085,12 +2085,12 @@ export default function ProfilePage() {
      {/* Verification Modal */}
      {showVerification && userId && (
        <div 
-         className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+         className="fixed inset-0 bg-black/60 flex items-start justify-center z-[9999] p-4 backdrop-blur-sm overflow-y-auto"
          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
          onClick={() => setShowVerification(false)}
        >
          <div 
-           className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto"
+           className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto mt-4 sm:mt-8 lg:mt-16 mb-4"
            style={{ position: 'relative', zIndex: 10000 }}
            onClick={(e) => e.stopPropagation()}
          >
@@ -2140,8 +2140,8 @@ export default function ProfilePage() {
 
      {/* GoodDollar Face Verification Popup */}
      {showGoodDollarPopup && (
-       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-         <div className="bg-white rounded-lg p-6 max-w-md w-full relative">
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+         <div className="bg-white rounded-lg p-6 max-w-md w-full relative mt-4 sm:mt-8 lg:mt-16 mb-4">
            <button
              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
              onClick={() => setShowGoodDollarPopup(false)}

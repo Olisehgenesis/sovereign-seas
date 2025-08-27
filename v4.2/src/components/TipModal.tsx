@@ -15,7 +15,7 @@ import {
 import { erc20ABI } from '@/abi/erc20ABI';
 import { useProjectDetails } from '@/hooks/useProjectMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
-import { tokenList, getTokenDetails } from '@/utils/tokenUtils';
+import { tokenList, getTokenInfo } from '@/utils/tokenUtils';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
 import { publicClient, walletClient } from '@/utils/clients';
@@ -109,7 +109,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     return [
       ...tokenList,
       ...customTokens.filter(
-        t => !tokenList.some(st => st.address.toLowerCase() === t.address.toLowerCase())
+        t => !tokenList.some((st: any) => st.address.toLowerCase() === t.address.toLowerCase())
       ),
     ];
   }, [customTokens]);
@@ -138,7 +138,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
 
   // GoodDollar Balance
   const { data: goodDollarBalance } = useReadContract({
-    address: '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A' as Address,
+    address: (import.meta.env.VITE_GOOD_DOLLAR_TOKEN || '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A') as Address,
     abi: erc20ABI,
     functionName: 'balanceOf',
     args: userAddress ? [userAddress] : undefined,
@@ -191,7 +191,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     return 0n;
   }, [celoBalance, cusdBalance, goodDollarBalance, custom1Balance, custom2Balance, custom3Balance, customTokens]);
 
-  // Add custom token
+    // Add custom token
   const handleAddCustomToken = async () => {
     setError('');
     const addr = customTokenInput.trim();
@@ -206,9 +206,9 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     }
     
     try {
-      const { symbol, name, decimals } = await getTokenDetails(addr);
+      const { symbol, name, decimals } = getTokenInfo(addr as Address);
       const icon = '/images/token.png';
-      setCustomTokens(tokens => [...tokens, { address: addr, symbol, name, decimals, icon }]);
+      setCustomTokens(tokens => [...tokens, { address: addr as Address, symbol, name, decimals, icon }]);
       setCustomTokenInput('');
     } catch {
       setError('Could not fetch token info.');
@@ -465,7 +465,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-1 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] rounded-3xl shadow-2xl border border-slate-200 flex flex-col lg:flex-row overflow-hidden relative animate-fadeIn mt-4 sm:mt-8 lg:mt-16 max-h-[90vh] overflow-y-auto min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] my-4 mx-4 sm:my-8 lg:my-16">
+      <div className="w-full max-w-3xl bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] rounded-3xl shadow-2xl border border-slate-200 flex flex-col lg:flex-row overflow-hidden relative animate-fadeIn mt-4 sm:mt-8 lg:mt-16 max-h-[90vh] overflow-y-auto min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] mb-4">
         {/* Country flag badge in top-left */}
         <div className="absolute left-4 top-4 z-30">
           <LocationBadge location={location} variant="card" />

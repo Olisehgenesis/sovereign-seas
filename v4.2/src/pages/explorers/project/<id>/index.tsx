@@ -1,5 +1,3 @@
-
-
 import { useState,  useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAccount } from 'wagmi';
@@ -1576,8 +1574,8 @@ export default function ProjectView() {
 
      {/* Share Modal */}
      {showShareModal && (
-       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-         <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20 md:rounded-3xl md:max-w-md md:p-8 p-0 h-full md:h-auto overflow-y-auto transition-all duration-300">
+       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto">
+         <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20 md:rounded-3xl md:max-w-md md:p-8 p-0 h-full md:h-auto overflow-y-auto transition-all duration-300 mt-4 sm:mt-8 lg:mt-16 mb-4">
            <div className="p-8 md:p-8 p-6">
              <div className="flex items-center justify-between mb-8">
                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">

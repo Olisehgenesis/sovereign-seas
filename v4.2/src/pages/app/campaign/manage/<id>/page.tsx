@@ -1377,8 +1377,8 @@ export default function CampaignManagePage() {
   
        {/* Simulate Distribution Modal */}
        {showSimulateModal && (
-         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto">
+           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl mt-4 sm:mt-8 lg:mt-16 mb-4">
              <div className="flex items-center justify-between mb-6">
                <h3 className="text-xl font-semibold text-slate-800 flex items-center">
                  <Calculator className="h-6 w-6 mr-2 text-blue-600" />

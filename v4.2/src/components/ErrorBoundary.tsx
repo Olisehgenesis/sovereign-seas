@@ -58,8 +58,8 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
       return (
         <>
           {this.props.children}
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative mt-4 sm:mt-8 lg:mt-16 mb-4">
               <div className="sticky top-0 bg-white border-b p-6 rounded-t-xl">
                 <button
                   onClick={this.handleClose}

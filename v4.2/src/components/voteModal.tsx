@@ -481,12 +481,12 @@ export default function VoteModal({
 
   const modalContent = (
     <div 
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/60 flex items-start justify-center z-[9999] p-4 backdrop-blur-sm overflow-y-auto"
       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       onClick={handleClose}
     >
       <div 
-        className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto mt-4 sm:mt-8 lg:mt-16 mb-4"
         style={{ position: 'relative', zIndex: 10000 }}
         onClick={(e) => e.stopPropagation()}
       >
