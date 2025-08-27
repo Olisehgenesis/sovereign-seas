@@ -21,6 +21,14 @@ export default defineConfig({
   server: {
     allowedHosts: true,
     port: 4173,
+    fs: {
+      allow: [
+        // default allowlist
+        './',
+        // explicitly allow reading .env from that path
+        '/root/live/v2/sovereign-seas/v4.2'
+      ]
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
