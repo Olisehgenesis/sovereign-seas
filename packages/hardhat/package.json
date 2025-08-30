@@ -63,6 +63,8 @@
     "deploy:good-dollar-bridge": "ts-node scripts/deploy.ts good-dollar-bridge",
     "deploy:all-uniswap": "ts-node scripts/deploy.ts all-uniswap",
     "deploy:heyzo": "ts-node scripts/deploy-heyzo.ts",
+    "deploy:v6": "ts-node scripts/deploy-v6.ts",
+    "deploy:v6:hardhat": "ts-node scripts/deploy-v6-hardhat.ts",
     "# Verification Commands": "",
     "verify": "ts-node scripts/verify.ts",
     "verify:seas": "ts-node scripts/verify.ts seas",
