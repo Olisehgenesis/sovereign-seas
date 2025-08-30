@@ -26,6 +26,7 @@ import VoteEmbed from './pages/embed/VoteEmbed'
 import CampaignEmbed from './pages/embed/campaign'
 import CreateCampaignV2 from './pages/app/v2/create-campaign'
 import ProjectViewV2 from './pages/app/v2/explorer/project/[id]/page'
+import CampaignViewV2 from './pages/app/v2/explorer/campaign/[id]/page'
 import TestTipsPage from './pages/app/v2/test-tips/page'
 globalThis.Buffer = Buffer
 
@@ -62,6 +63,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
             //v2 routes
             <Route path="/v2/explorer/project/:id" element={<ProjectViewV2 />} />
+            <Route path="/v2/explorer/campaign/:id" element={<CampaignViewV2 />} />
             <Route path="/app/v2/test-tips" element={<TestTipsPage />} />
 
             <Route path="*" element={<NotFound />} />

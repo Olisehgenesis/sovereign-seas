@@ -1,0 +1,102 @@
+{
+  "network": {
+    "name": "celo",
+    "chainId": "42220",
+    "lastUpdated": "2025-08-21T13:47:04.708Z"
+  },
+  "contracts": {
+    "SovSeasBridge": {
+      "current": {
+        "version": "v4",
+        "address": "0xcdD8c1e1bbdC86E5fdc4dE76FDaaa6f2619220cF",
+        "deployedAt": "2025-08-21T13:47:04.708Z",
+        "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+        "verified": true,
+        "verifiedAt": "2025-08-21T13:47:04.707Z",
+        "explorer": "https://celoscan.io/address/0xcdD8c1e1bbdC86E5fdc4dE76FDaaa6f2619220cF#code"
+      },
+      "versions": {
+        "v1": {
+          "address": "0xfbd8e327D1F08eF4C9114555e3381bDFC87B63ea",
+          "deployedAt": "2025-08-20T10:06:52.610Z",
+          "deployer": "0x53eaF4CD171842d8144e45211308e5D90b4b0088",
+          "verified": true,
+          "verifiedAt": "2025-08-20T10:07:00.000Z",
+          "explorer": "https://celoscan.io/address/0xfbd8e327D1F08eF4C9114555e3381bDFC87B63ea#code",
+          "status": "deprecated"
+        },
+        "v2": {
+          "address": "0xF04A21ED9Fd2335683fFE18CAAd8016311D4Ff69",
+          "deployedAt": "2025-08-20T17:50:06.670Z",
+          "deployer": "0x53eaF4CD171842d8144e45211308e5D90b4b0088",
+          "verified": true,
+          "verifiedAt": "2025-08-20T17:50:30.000Z",
+          "explorer": "https://celoscan.io/address/0xF04A21ED9Fd2335683fFE18CAAd8016311D4Ff69#code",
+          "status": "deprecated"
+        },
+        "v3": {
+          "address": "0xBce285A3edcd0c73b9525B57aA6C47A6892bF5b2",
+          "deployedAt": "2025-08-21T06:11:05.724Z",
+          "deployer": "0x53eaF4CD171842d8144e45211308e5D90b4b0088",
+          "verified": true,
+          "verifiedAt": "2025-08-21T06:11:30.000Z",
+          "explorer": "https://celoscan.io/address/0xBce285A3edcd0c73b9525B57aA6C47A6892bF5b2#code",
+          "status": "deprecated"
+        },
+        "v4": {
+          "address": "0xcdD8c1e1bbdC86E5fdc4dE76FDaaa6f2619220cF",
+          "deployedAt": "2025-08-21T13:47:04.708Z",
+          "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+          "verified": true,
+          "verifiedAt": "2025-08-21T13:47:04.707Z",
+          "explorer": "https://celoscan.io/address/0xcdD8c1e1bbdC86E5fdc4dE76FDaaa6f2619220cF#code",
+          "status": "active"
+        }
+      },
+      "constructorArgs": {
+        "sovSeasAddress": "0x59dda5c6baca06b9939d6acf04765eafae1f6a9f",
+        "goodDollarToken": "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A",
+        "directPaymentsFactory": "0xb1C7F09156d04BFf6F412447A73a0F72929b6ea4"
+      },
+      "settings": {
+        "defaultPoolSize": "1000000000000000000000",
+        "projectCreationReward": "50000000000000000000",
+        "membershipReward": "25000000000000000000",
+        "distributionReward": "10000000000000000000",
+        "managerFeeBps": 500
+      },
+      "totalDeployments": 4,
+      "lastDeployment": "2025-08-21T13:47:04.708Z"
+    }
+  },
+  "deploymentHistory": [
+    {
+      "version": "v1",
+      "contract": "SovSeasBridge",
+      "address": "0xfbd8e327D1F08eF4C9114555e3381bDFC87B63ea",
+      "deployedAt": "2025-08-20T10:06:52.610Z",
+      "status": "deprecated"
+    },
+    {
+      "version": "v2",
+      "contract": "SovSeasBridge",
+      "address": "0xF04A21ED9Fd2335683fFE18CAAd8016311D4Ff69",
+      "deployedAt": "2025-08-20T17:50:06.670Z",
+      "status": "deprecated"
+    },
+    {
+      "version": "v3",
+      "contract": "SovSeasBridge",
+      "address": "0xBce285A3edcd0c73b9525B57aA6C47A6892bF5b2",
+      "deployedAt": "2025-08-21T06:11:05.724Z",
+      "status": "deprecated"
+    },
+    {
+      "version": "v4",
+      "contract": "SovSeasBridge",
+      "address": "0xcdD8c1e1bbdC86E5fdc4dE76FDaaa6f2619220cF",
+      "deployedAt": "2025-08-21T13:47:04.708Z",
+      "status": "active"
+    }
+  ]
+}
