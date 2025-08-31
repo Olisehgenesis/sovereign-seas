@@ -1,0 +1,12 @@
+{
+  "network": "celo",
+  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+  "timestamp": "2025-08-31T09:42:25.056Z",
+  "contracts": {
+    "projectsModule": "0x4967E13DEDB6F13570aABAdC8471b6F957C6dAe2",
+    "campaignsModule": "0x2670B3655659Ad36FC642Bb6c6AA621A84251E57",
+    "votingModule": "0x681176Acf251eE22110168D9cCd5b618983f9510",
+    "treasuryModule": "0xF14EA7E3e38cbb029B23F9ADbb7782f7CcE9D402",
+    "migrationModule": "0xFD1D95A9415299ED98776045d3A9BE00912D03b8"
+  }
+}

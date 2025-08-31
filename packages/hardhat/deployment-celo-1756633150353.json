@@ -1,0 +1,8 @@
+{
+  "network": "celo",
+  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+  "timestamp": "2025-08-31T09:39:16.463Z",
+  "contracts": {
+    "projectsModule": "0x4967E13DEDB6F13570aABAdC8471b6F957C6dAe2"
+  }
+}
