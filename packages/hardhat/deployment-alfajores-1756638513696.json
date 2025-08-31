@@ -1,0 +1,14 @@
+{
+  "network": "alfajores",
+  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+  "timestamp": "2025-08-31T10:39:55.040Z",
+  "contracts": {
+    "projectsModule": "0xFa90c8D2F34CD73E7f9487b0Cc5099Bd50960aC3",
+    "campaignsModule": "0xa91fF4DA29D295cd8e2fD4b785b86491e2f5aAd4",
+    "votingModule": "0xE7BbB729fF64e4AC6002c626AfC7Fc1bE65A9397",
+    "treasuryModule": "0x6794D988E46ee1bc8a5920ae155ee54d515457dd",
+    "migrationModule": "0x135F7F36F98D6970df3269619D4fD864de8F7865",
+    "sovereignSeasV5": "0x9EFA4eDa180135e39cA8c188a909bDd321B91b4b",
+    "implementation": "0xF7847D71a8D37Ab5a77459a728C8e54d3c8D5df3"
+  }
+}

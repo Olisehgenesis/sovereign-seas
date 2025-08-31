@@ -1,8 +1,0 @@
-{
-  "network": "alfajores",
-  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
-  "timestamp": "2025-08-31T09:38:58.167Z",
-  "contracts": {
-    "projectsModule": "0xc125898CcF5bEFa84a1f08Ed0dA0052a919168D8"
-  }
-}

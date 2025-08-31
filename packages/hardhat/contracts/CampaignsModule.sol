@@ -36,6 +36,7 @@ struct Campaign {
     // Enhanced V5 fields
     OfficialStatus officialStatus;
     mapping(address => bool) campaignAdmins;
+    address[] adminList; // List of campaign admins for easy iteration
     mapping(address => uint256) tokenAmounts;
     mapping(address => uint256) userMaxVoteAmount;
     uint256[] poolIds;
@@ -50,6 +51,16 @@ struct Campaign {
     bool featuredCampaign;
     uint256 minimumVoteAmount;
     uint256 maximumVoteAmount;
+    
+    // ERC20 Campaign Configuration
+    CampaignType campaignType;
+    address[] allowedVotingTokens;
+    mapping(address => uint256) tokenWeights; // Weight multiplier (1000 = 1.0x)
+    bool isERC20Campaign;
+    
+    // Project Addition Fee Configuration
+    address projectAdditionFeeToken; // Token to pay for adding projects (CELO or campaign token)
+    uint256 projectAdditionFeeAmount; // Amount required to add projects
 }
 
 // Campaign metadata struct for easier management
@@ -69,6 +80,13 @@ enum OfficialStatus {
     FLAGGED,        // 2: Marked for review due to concerns
     SUSPENDED,      // 3: Temporarily suspended from platform
     ARCHIVED        // 4: No longer active but preserved for reference
+}
+
+// Campaign Type Enum for ERC20 Support
+enum CampaignType {
+    STANDARD,       // 0: Standard CELO-based campaign (default)
+    HYBRID,         // 1: Both CELO and selected ERC20 tokens allowed
+    TOKEN_ONLY      // 2: Only selected ERC20 tokens (no CELO)
 }
 
 /**
@@ -98,6 +116,10 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
     mapping(uint256 => uint256[]) public campaignsByMonth; // timestamp => campaignIds
     mapping(bool => uint256[]) public campaignsByActiveStatus; // active => campaignIds
     
+    // ERC20 Campaign tracking
+    mapping(uint256 => uint256[]) public campaignsByType; // CampaignType => campaignIds
+    mapping(address => uint256[]) public campaignsByToken; // token => campaignIds that allow this token
+    
     // Constants
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
@@ -111,6 +133,12 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
     event CampaignAdminRemoved(uint256 indexed campaignId, address indexed admin, address indexed removedBy);
     event CampaignFunded(uint256 indexed campaignId, address indexed funder, address indexed token, uint256 amount);
     event CampaignFundsDistributed(uint256 indexed campaignId, uint256[] projectIds, uint256[] amounts, address token);
+    
+    // ERC20 Campaign Events
+    event CampaignTypeUpdated(uint256 indexed campaignId, CampaignType oldType, CampaignType newType, address indexed updatedBy);
+    event CampaignTokensUpdated(uint256 indexed campaignId, address[] tokens, uint256[] weights, address indexed updatedBy);
+    event CampaignTokenWeightUpdated(uint256 indexed campaignId, address indexed token, uint256 oldWeight, uint256 newWeight, address indexed updatedBy);
+    event ProjectAdditionFeeUpdated(uint256 indexed campaignId, address indexed oldToken, address indexed newToken, uint256 oldAmount, uint256 newAmount, address updatedBy);
     event CampaignFundsWithdrawn(uint256 indexed campaignId, address indexed withdrawer, address indexed token, uint256 amount);
     event CampaignTagAdded(uint256 indexed campaignId, string tag);
     event CampaignTagRemoved(uint256 indexed campaignId, string tag);
@@ -281,6 +309,106 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
             msg.sender
         );
     }
+    
+    /**
+     * @dev Create ERC20-based campaign with token configuration
+     */
+    function createERC20Campaign(
+        string memory _name,
+        string memory _description,
+        string memory _mainInfo,
+        string memory _additionalInfo,
+        uint256 _startTime,
+        uint256 _endTime,
+        uint256 _adminFeePercentage,
+        uint256 _maxWinners,
+        bool _useQuadraticDistribution,
+        bool _useCustomDistribution,
+        string memory _customDistributionData,
+        address _payoutToken,
+        CampaignType _campaignType,
+        address[] memory _allowedTokens,
+        uint256[] memory _tokenWeights,
+        address _projectAdditionFeeToken,
+        uint256 _projectAdditionFeeAmount
+    ) external nonReentrant hasRole(MANAGER_ROLE) returns (uint256) {
+        require(_allowedTokens.length == _tokenWeights.length, "CampaignsModule: Arrays length mismatch");
+        require(_allowedTokens.length > 0, "CampaignsModule: Must specify at least one token");
+        
+        // Validate campaign type
+        require(_campaignType != CampaignType.STANDARD, "CampaignsModule: Use createCampaign for standard campaigns");
+        
+        // Validate tokens and weights
+        for (uint256 i = 0; i < _allowedTokens.length; i++) {
+            require(_allowedTokens[i] != address(0), "CampaignsModule: Invalid token address");
+            require(_tokenWeights[i] > 0, "CampaignsModule: Token weight must be positive");
+            
+            // For TOKEN_ONLY campaigns, ensure CELO is not included
+            if (_campaignType == CampaignType.TOKEN_ONLY) {
+                // Get CELO token address from treasury
+                bytes memory celoTokenData = mainContract.callModule("treasury", abi.encodeWithSignature("getCeloToken()"));
+                address celoToken = abi.decode(celoTokenData, (address));
+                require(_allowedTokens[i] != celoToken, "CampaignsModule: CELO not allowed in TOKEN_ONLY campaigns");
+            }
+        }
+        
+        // Validate project addition fee configuration
+        require(_projectAdditionFeeToken != address(0), "CampaignsModule: Invalid project addition fee token");
+        require(_projectAdditionFeeAmount > 0, "CampaignsModule: Project addition fee must be positive");
+        
+        // For TOKEN_ONLY campaigns, project addition fee must be in allowed tokens
+        if (_campaignType == CampaignType.TOKEN_ONLY) {
+            bool tokenAllowed = false;
+            for (uint256 i = 0; i < _allowedTokens.length; i++) {
+                if (_allowedTokens[i] == _projectAdditionFeeToken) {
+                    tokenAllowed = true;
+                    break;
+                }
+            }
+            require(tokenAllowed, "CampaignsModule: Project addition fee token must be in allowed tokens");
+        }
+        
+        uint256 campaignId = _createCampaign(
+            _name,
+            _description,
+            _mainInfo,
+            _additionalInfo,
+            _startTime,
+            _endTime,
+            _adminFeePercentage,
+            _maxWinners,
+            _useQuadraticDistribution,
+            _useCustomDistribution,
+            _customDistributionData,
+            _payoutToken,
+            msg.sender
+        );
+        
+        // Configure ERC20 settings
+        Campaign storage campaign = campaigns[campaignId];
+        campaign.campaignType = _campaignType;
+        campaign.isERC20Campaign = true;
+        
+        // Set allowed tokens and weights
+        for (uint256 i = 0; i < _allowedTokens.length; i++) {
+            campaign.allowedVotingTokens.push(_allowedTokens[i]);
+            campaign.tokenWeights[_allowedTokens[i]] = _tokenWeights[i];
+            
+            // Index by token
+            campaignsByToken[_allowedTokens[i]].push(campaignId);
+        }
+        
+        // Set project addition fee configuration
+        campaign.projectAdditionFeeToken = _projectAdditionFeeToken;
+        campaign.projectAdditionFeeAmount = _projectAdditionFeeAmount;
+        
+        // Index by campaign type
+        campaignsByType[uint256(_campaignType)].push(campaignId);
+        
+        emit CampaignTokensUpdated(campaignId, _allowedTokens, _tokenWeights, msg.sender);
+        
+        return campaignId;
+    }
 
     // Campaign Update Functions
     function updateCampaign(
@@ -392,6 +520,139 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
         campaigns[_campaignId].lastUpdated = block.timestamp;
         emit CampaignUpdated(_campaignId, msg.sender);
     }
+    
+    // ERC20 Campaign Management Functions
+    function updateCampaignType(
+        uint256 _campaignId,
+        CampaignType _newType
+    ) external campaignAdmin(_campaignId) activeCampaign(_campaignId) {
+        Campaign storage campaign = campaigns[_campaignId];
+        CampaignType oldType = campaign.campaignType;
+        
+        require(_newType != oldType, "CampaignsModule: Same campaign type");
+        
+        // Validate type change
+        if (_newType == CampaignType.TOKEN_ONLY) {
+            // Ensure no CELO tokens in allowed tokens
+            bytes memory celoTokenData = mainContract.callModule("treasury", abi.encodeWithSignature("getCeloToken()"));
+            address celoToken = abi.decode(celoTokenData, (address));
+            
+            for (uint256 i = 0; i < campaign.allowedVotingTokens.length; i++) {
+                require(campaign.allowedVotingTokens[i] != celoToken, "CampaignsModule: CELO not allowed in TOKEN_ONLY campaigns");
+            }
+        }
+        
+        campaign.campaignType = _newType;
+        campaign.lastUpdated = block.timestamp;
+        
+        // Update indexing
+        if (oldType != CampaignType.STANDARD) {
+            // Remove from old type index
+            _removeFromArray(campaignsByType[uint256(oldType)], _campaignId);
+        }
+        if (_newType != CampaignType.STANDARD) {
+            // Add to new type index
+            campaignsByType[uint256(_newType)].push(_campaignId);
+        }
+        
+        emit CampaignTypeUpdated(_campaignId, oldType, _newType, msg.sender);
+    }
+    
+    function updateCampaignTokens(
+        uint256 _campaignId,
+        address[] memory _newTokens,
+        uint256[] memory _newWeights
+    ) external campaignAdmin(_campaignId) activeCampaign(_campaignId) {
+        require(_newTokens.length == _newWeights.length, "CampaignsModule: Arrays length mismatch");
+        require(_newTokens.length > 0, "CampaignsModule: Must specify at least one token");
+        
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.isERC20Campaign, "CampaignsModule: Not an ERC20 campaign");
+        
+        // Validate tokens and weights
+        for (uint256 i = 0; i < _newTokens.length; i++) {
+            require(_newTokens[i] != address(0), "CampaignsModule: Invalid token address");
+            require(_newWeights[i] > 0, "CampaignsModule: Token weight must be positive");
+            
+            // For TOKEN_ONLY campaigns, ensure CELO is not included
+            if (campaign.campaignType == CampaignType.TOKEN_ONLY) {
+                bytes memory celoTokenData = mainContract.callModule("treasury", abi.encodeWithSignature("getCeloToken()"));
+                address celoToken = abi.decode(celoTokenData, (address));
+                require(_newTokens[i] != celoToken, "CampaignsModule: CELO not allowed in TOKEN_ONLY campaigns");
+            }
+        }
+        
+        // Remove old token indexing
+        for (uint256 i = 0; i < campaign.allowedVotingTokens.length; i++) {
+            _removeFromArray(campaignsByToken[campaign.allowedVotingTokens[i]], _campaignId);
+        }
+        
+        // Clear old tokens and weights
+        delete campaign.allowedVotingTokens;
+        
+        // Set new tokens and weights
+        for (uint256 i = 0; i < _newTokens.length; i++) {
+            campaign.allowedVotingTokens.push(_newTokens[i]);
+            campaign.tokenWeights[_newTokens[i]] = _newWeights[i];
+            
+            // Index by token
+            campaignsByToken[_newTokens[i]].push(_campaignId);
+        }
+        
+        campaign.lastUpdated = block.timestamp;
+        emit CampaignTokensUpdated(_campaignId, _newTokens, _newWeights, msg.sender);
+    }
+    
+    function updateTokenWeight(
+        uint256 _campaignId,
+        address _token,
+        uint256 _newWeight
+    ) external campaignAdmin(_campaignId) activeCampaign(_campaignId) {
+        require(_newWeight > 0, "CampaignsModule: Token weight must be positive");
+        
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.isERC20Campaign, "CampaignsModule: Not an ERC20 campaign");
+        require(campaign.tokenWeights[_token] > 0, "CampaignsModule: Token not configured for campaign");
+        
+        uint256 oldWeight = campaign.tokenWeights[_token];
+        campaign.tokenWeights[_token] = _newWeight;
+        campaign.lastUpdated = block.timestamp;
+        
+        emit CampaignTokenWeightUpdated(_campaignId, _token, oldWeight, _newWeight, msg.sender);
+    }
+    
+    function updateProjectAdditionFee(
+        uint256 _campaignId,
+        address _newToken,
+        uint256 _newAmount
+    ) external campaignAdmin(_campaignId) activeCampaign(_campaignId) {
+        require(_newToken != address(0), "CampaignsModule: Invalid token address");
+        require(_newAmount > 0, "CampaignsModule: Fee amount must be positive");
+        
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.isERC20Campaign, "CampaignsModule: Not an ERC20 campaign");
+        
+        // For TOKEN_ONLY campaigns, ensure the new token is in allowed tokens
+        if (campaign.campaignType == CampaignType.TOKEN_ONLY) {
+            bool tokenAllowed = false;
+            for (uint256 i = 0; i < campaign.allowedVotingTokens.length; i++) {
+                if (campaign.allowedVotingTokens[i] == _newToken) {
+                    tokenAllowed = true;
+                    break;
+                }
+            }
+            require(tokenAllowed, "CampaignsModule: Project addition fee token must be in allowed tokens");
+        }
+        
+        address oldToken = campaign.projectAdditionFeeToken;
+        uint256 oldAmount = campaign.projectAdditionFeeAmount;
+        
+        campaign.projectAdditionFeeToken = _newToken;
+        campaign.projectAdditionFeeAmount = _newAmount;
+        campaign.lastUpdated = block.timestamp;
+        
+        emit ProjectAdditionFeeUpdated(_campaignId, oldToken, _newToken, oldAmount, _newAmount, msg.sender);
+    }
 
     // Campaign Admin Management
     function addCampaignAdmin(uint256 _campaignId, address _newAdmin) external campaignAdmin(_campaignId) {
@@ -411,7 +672,21 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
         campaigns[_campaignId].campaignAdmins[_admin] = false;
         campaigns[_campaignId].lastUpdated = block.timestamp;
         
+        // Remove from admin list
+        address[] storage adminList = campaigns[_campaignId].adminList;
+        for (uint256 i = 0; i < adminList.length; i++) {
+            if (adminList[i] == _admin) {
+                adminList[i] = adminList[adminList.length - 1];
+                adminList.pop();
+                break;
+            }
+        }
+        
         emit CampaignAdminRemoved(_campaignId, _admin, msg.sender);
+    }
+    
+    function getCampaignAdmins(uint256 _campaignId) external view returns (address[] memory) {
+        return campaigns[_campaignId].adminList;
     }
 
     // Tag Management
@@ -592,6 +867,158 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
             campaign.payoutToken,
             campaign.active,
             campaign.totalFunds
+        );
+    }
+    
+    /**
+     * @dev Get ERC20 campaign configuration
+     */
+    function getERC20CampaignConfig(uint256 _campaignId) external view returns (
+        CampaignType campaignType,
+        bool isERC20Campaign,
+        address[] memory allowedTokens,
+        uint256[] memory tokenWeights,
+        address projectAdditionFeeToken,
+        uint256 projectAdditionFeeAmount
+    ) {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.id != 0, "CampaignsModule: Campaign does not exist");
+        
+        allowedTokens = campaign.allowedVotingTokens;
+        tokenWeights = new uint256[](allowedTokens.length);
+        
+        for (uint256 i = 0; i < allowedTokens.length; i++) {
+            tokenWeights[i] = campaign.tokenWeights[allowedTokens[i]];
+        }
+        
+        return (
+            campaign.campaignType,
+            campaign.isERC20Campaign,
+            allowedTokens,
+            tokenWeights,
+            campaign.projectAdditionFeeToken,
+            campaign.projectAdditionFeeAmount
+        );
+    }
+    
+    /**
+     * @dev Get campaigns by type
+     */
+    function getCampaignsByType(CampaignType _type) external view returns (uint256[] memory) {
+        return campaignsByType[uint256(_type)];
+    }
+    
+    /**
+     * @dev Get campaigns that allow a specific token
+     */
+    function getCampaignsByToken(address _token) external view returns (uint256[] memory) {
+        return campaignsByToken[_token];
+    }
+    
+    /**
+     * @dev Check if a token is allowed for voting in a campaign
+     */
+    function isTokenAllowedForCampaign(uint256 _campaignId, address _token) external view returns (bool) {
+        Campaign storage campaign = campaigns[_campaignId];
+        if (!campaign.isERC20Campaign) return false;
+        
+        return campaign.tokenWeights[_token] > 0;
+    }
+    
+    /**
+     * @dev Get token weight for a campaign
+     */
+    function getTokenWeight(uint256 _campaignId, address _token) external view returns (uint256) {
+        Campaign storage campaign = campaigns[_campaignId];
+        if (!campaign.isERC20Campaign) return 0;
+        
+        return campaign.tokenWeights[_token];
+    }
+    
+    /**
+     * @dev Get project addition fee configuration for a campaign
+     */
+    function getProjectAdditionFeeConfig(uint256 _campaignId) external view returns (
+        address feeToken,
+        uint256 feeAmount
+    ) {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.id != 0, "CampaignsModule: Campaign does not exist");
+        
+        if (campaign.isERC20Campaign) {
+            // ERC20 campaigns have custom fee configuration
+            return (campaign.projectAdditionFeeToken, campaign.projectAdditionFeeAmount);
+        } else {
+            // Standard campaigns use global fee from TreasuryModule
+            bytes memory feeData = mainContract.callModule("treasury", abi.encodeWithSignature("getProjectAdditionFee()"));
+            uint256 globalFee = abi.decode(feeData, (uint256));
+            
+            // Get CELO token address
+            bytes memory celoTokenData = mainContract.callModule("treasury", abi.encodeWithSignature("getCeloToken()"));
+            address celoToken = abi.decode(celoTokenData, (address));
+            
+            return (celoToken, globalFee);
+        }
+    }
+    
+    /**
+     * @dev Get campaign with pool status from PoolsModule
+     */
+    function getCampaignWithPoolStatus(uint256 _campaignId) external returns (
+        uint256 id,
+        address admin,
+        string memory name,
+        string memory description,
+        uint256 startTime,
+        uint256 endTime,
+        uint256 adminFeePercentage,
+        uint256 maxWinners,
+        bool useQuadraticDistribution,
+        bool useCustomDistribution,
+        address payoutToken,
+        bool active,
+        uint256 totalFunds,
+        uint256 totalPools,
+        uint256 poolTotalFunds,
+        uint256 poolTotalVotes,
+        bool hasActivePools
+    ) {
+        Campaign storage campaign = campaigns[_campaignId];
+        
+        // Get pool status from PoolsModule
+        uint256 totalPools = 0;
+        uint256 poolTotalFunds = 0;
+        uint256 poolTotalVotes = 0;
+        bool hasActivePools = false;
+        
+        try mainContract.callModule("pools", abi.encodeWithSignature("getCampaignPoolStatus(uint256)", _campaignId)) returns (bytes memory poolData) {
+            (uint256 pools, uint256 funds, uint256 votes, bool active) = abi.decode(poolData, (uint256, uint256, uint256, bool));
+            totalPools = pools;
+            poolTotalFunds = funds;
+            poolTotalVotes = votes;
+            hasActivePools = active;
+        } catch {
+            // Pool data not available
+        }
+        
+        return (
+            campaign.id,
+            campaign.admin,
+            campaign.name,
+            campaign.description,
+            campaign.startTime,
+            campaign.endTime,
+            campaign.adminFeePercentage,
+            campaign.maxWinners,
+            campaign.useQuadraticDistribution,
+            campaign.useCustomDistribution,
+            campaign.payoutToken,
+            campaign.active,
+            campaign.totalFunds,
+            totalPools,
+            poolTotalFunds,
+            poolTotalVotes,
+            hasActivePools
         );
     }
     
@@ -847,6 +1274,127 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
         return false;
     }
 
+    // ==================== MIGRATION FUNCTIONS ====================
+    
+    // Create campaign from V4 migration data
+    function createCampaignFromV4(
+        uint256 _v4CampaignId,
+        address _admin,
+        string memory _name,
+        string memory _description,
+        string memory _mainInfo,
+        string memory _additionalInfo,
+        uint256 _startTime,
+        uint256 _endTime,
+        uint256 _adminFeePercentage,
+        uint256 _maxWinners,
+        bool _useQuadraticDistribution,
+        bool _useCustomDistribution,
+        string memory _customDistributionData,
+        address _payoutToken,
+        bool _active,
+        uint256 _totalFunds,
+        uint256 _createdAt
+    ) external onlyMainContract returns (uint256) {
+        require(_v4CampaignId >= 0, "CampaignsModule: Invalid V4 campaign ID");
+        require(_admin != address(0), "CampaignsModule: Invalid admin address");
+        require(bytes(_name).length > 0, "CampaignsModule: Name cannot be empty");
+        
+        uint256 campaignId = nextCampaignId;
+        nextCampaignId++;
+        
+        Campaign storage campaign = campaigns[campaignId];
+        campaign.id = campaignId;
+        campaign.admin = _admin;
+        campaign.name = _name;
+        campaign.description = _description;
+        campaign.mainInfo = _mainInfo;
+        campaign.additionalInfo = _additionalInfo;
+        campaign.startTime = _startTime;
+        campaign.endTime = _endTime;
+        campaign.adminFeePercentage = _adminFeePercentage;
+        campaign.maxWinners = _maxWinners;
+        campaign.useQuadraticDistribution = _useQuadraticDistribution;
+        campaign.useCustomDistribution = _useCustomDistribution;
+        campaign.customDistributionData = _customDistributionData;
+        campaign.payoutToken = _payoutToken;
+        campaign.active = _active;
+        campaign.totalFunds = _totalFunds;
+        campaign.createdAt = _createdAt > 0 ? _createdAt : block.timestamp;
+        campaign.lastUpdated = block.timestamp;
+        campaign.officialStatus = OfficialStatus.PENDING;
+        
+        // Add to campaign arrays
+        campaignIds.push(campaignId);
+        adminCampaigns[_admin].push(campaignId);
+        campaignsByActiveStatus[_active].push(campaignId);
+        
+        // Set default values for V5 fields
+        campaign.autoPoolCreated = false;
+        campaign.featuredCampaign = false;
+        campaign.minimumVoteAmount = 0;
+        campaign.maximumVoteAmount = type(uint256).max;
+        
+        emit CampaignCreated(campaignId, _admin, _name, _startTime, _endTime);
+        
+        return campaignId;
+    }
+    
+    // Set campaign token amounts from V4 migration
+    function setCampaignTokenAmountsFromV4(
+        uint256 _campaignId,
+        address[] memory _tokens,
+        uint256[] memory _amounts
+    ) external onlyMainContract campaignExists(_campaignId) {
+        require(_tokens.length == _amounts.length, "CampaignsModule: Array length mismatch");
+        
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            if (_tokens[i] != address(0) && _amounts[i] > 0) {
+                campaigns[_campaignId].tokenAmounts[_tokens[i]] = _amounts[i];
+                
+                // Add to campaign used tokens if not already present
+                if (!isTokenUsedInCampaign[_campaignId][_tokens[i]]) {
+                    campaignUsedTokens[_campaignId].push(_tokens[i]);
+                    isTokenUsedInCampaign[_campaignId][_tokens[i]] = true;
+                }
+            }
+        }
+    }
+    
+    // Set user max vote amounts from V4 migration
+    function setUserMaxVoteAmountsFromV4(
+        uint256 _campaignId,
+        address[] memory _users,
+        uint256[] memory _maxAmounts
+    ) external onlyMainContract campaignExists(_campaignId) {
+        require(_users.length == _maxAmounts.length, "CampaignsModule: Array length mismatch");
+        
+        for (uint256 i = 0; i < _users.length; i++) {
+            if (_users[i] != address(0) && _maxAmounts[i] > 0) {
+                campaigns[_campaignId].userMaxVoteAmount[_users[i]] = _maxAmounts[i];
+            }
+        }
+    }
+    
+    // Set campaign admins from V4 migration
+    function setCampaignAdminsFromV4(
+        uint256 _campaignId,
+        address[] memory _admins
+    ) external onlyMainContract campaignExists(_campaignId) {
+        for (uint256 i = 0; i < _admins.length; i++) {
+            if (_admins[i] != address(0)) {
+                campaigns[_campaignId].campaignAdmins[_admins[i]] = true;
+                emit CampaignAdminAdded(_campaignId, _admins[i], msg.sender);
+            }
+        }
+    }
+    
+    // Set next campaign ID for V4 migration (to preserve IDs)
+    function setNextCampaignId(uint256 _nextId) external onlyMainContract {
+        require(_nextId >= nextCampaignId, "CampaignsModule: Can only increase nextCampaignId");
+        nextCampaignId = _nextId;
+    }
+
     // Module info
     function getModuleName() external pure returns (string memory) {
         return "campaigns";
@@ -854,5 +1402,20 @@ contract CampaignsModule is Initializable, ReentrancyGuardUpgradeable {
     
     function getModuleVersion() external pure returns (uint256) {
         return 5;
+    }
+    
+    // ==================== HELPER FUNCTIONS ====================
+    
+    /**
+     * @dev Remove an element from an array by value
+     */
+    function _removeFromArray(uint256[] storage _array, uint256 _value) internal {
+        for (uint256 i = 0; i < _array.length; i++) {
+            if (_array[i] == _value) {
+                _array[i] = _array[_array.length - 1];
+                _array.pop();
+                break;
+            }
+        }
     }
 }

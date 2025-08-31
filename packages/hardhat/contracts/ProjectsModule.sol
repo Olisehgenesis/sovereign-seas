@@ -52,6 +52,10 @@ contract ProjectsModule is Initializable, ReentrancyGuardUpgradeable {
         string socialMediaHandle;
         bool verified;
         uint256 lastUpdated;
+        
+        // Multiple ownership support
+        mapping(address => bool) owners;
+        address[] ownerList;
     }
     
     // State variables
@@ -96,7 +100,7 @@ contract ProjectsModule is Initializable, ReentrancyGuardUpgradeable {
     }
     
     modifier onlyProjectOwner(uint256 _projectId) {
-        require(projects[_projectId].owner == msg.sender, "ProjectsModule: Only project owner can call");
+        require(projects[_projectId].owners[msg.sender] || projects[_projectId].owner == msg.sender, "ProjectsModule: Only project owner can call");
         _;
     }
     
@@ -125,16 +129,21 @@ contract ProjectsModule is Initializable, ReentrancyGuardUpgradeable {
         string memory _additionalData,
         address[] memory _contracts,
         bool _transferrable
-    ) external nonReentrant returns (uint256) {
+    ) external payable nonReentrant returns (uint256) {
         require(bytes(_name).length > 0, "ProjectsModule: Name cannot be empty");
         require(bytes(_description).length > 0, "ProjectsModule: Description cannot be empty");
-
+        
+        // Collect 0.5 CELO project creation fee
+        require(msg.value == 0.5 ether, "ProjectsModule: Must send exactly 0.5 CELO for project creation");
+        
         uint256 projectId = nextProjectId;
         nextProjectId++;
         
         Project storage newProject = projects[projectId];
         newProject.id = projectId;
         newProject.owner = payable(msg.sender);
+        newProject.owners[msg.sender] = true;
+        newProject.ownerList.push(msg.sender);
         newProject.name = _name;
         newProject.description = _description;
         newProject.bio = _bio;
@@ -155,7 +164,60 @@ contract ProjectsModule is Initializable, ReentrancyGuardUpgradeable {
         ownerProjects[msg.sender].push(projectId);
         projectsByStatus[OfficialStatus.PENDING].push(projectId);
         
+        // Transfer fee to treasury
+        _transferCreationFeeToTreasury();
+        
         emit ProjectCreated(projectId, msg.sender, _name);
+        return projectId;
+    }
+    
+    /**
+     * @dev Create project from V4 migration (NO FEE REQUIRED)
+     */
+    function createProjectFromV4Migration(
+        uint256 _v4ProjectId,
+        address _owner,
+        string memory _name,
+        string memory _description,
+        string memory _bio,
+        string memory _contractInfo,
+        string memory _additionalData,
+        address[] memory _contracts,
+        bool _transferrable,
+        bool _active,
+        uint256 _createdAt
+    ) external onlyMainContract returns (uint256) {
+        require(_v4ProjectId >= 0, "ProjectsModule: Invalid V4 project ID");
+        require(_owner != address(0), "ProjectsModule: Invalid owner address");
+        require(bytes(_name).length > 0, "ProjectsModule: Name cannot be empty");
+        
+        uint256 projectId = nextProjectId;
+        nextProjectId++;
+        
+        Project storage newProject = projects[projectId];
+        newProject.id = projectId;
+        newProject.owner = payable(_owner);
+        newProject.name = _name;
+        newProject.description = _description;
+        newProject.bio = _bio;
+        newProject.contractInfo = _contractInfo;
+        newProject.additionalData = _additionalData;
+        newProject.contracts = _contracts;
+        newProject.transferrable = _transferrable;
+        newProject.active = _active;
+        newProject.createdAt = _createdAt > 0 ? _createdAt : block.timestamp;
+        newProject.lastUpdated = block.timestamp;
+        newProject.officialStatus = OfficialStatus.PENDING;
+        newProject.totalFundsRaised = 0;
+        newProject.totalVotesReceived = 0;
+        newProject.verified = false;
+        
+        // Update indexes
+        projectIds.push(projectId);
+        ownerProjects[_owner].push(projectId);
+        projectsByStatus[OfficialStatus.PENDING].push(projectId);
+        
+        emit ProjectCreatedFromV4(projectId, _owner, _name, _v4ProjectId);
         return projectId;
     }
 
@@ -427,6 +489,53 @@ contract ProjectsModule is Initializable, ReentrancyGuardUpgradeable {
         );
     }
     
+    /**
+     * @dev Get project with pool status from PoolsModule
+     */
+    function getProjectWithPoolStatus(uint256 _projectId) external returns (
+        uint256 id,
+        address owner,
+        string memory name,
+        string memory description,
+        bool transferrable,
+        bool active,
+        uint256 createdAt,
+        uint256[] memory campaignIds,
+        bool hasPool,
+        uint256 totalFunded,
+        uint256 totalClaimed
+    ) {
+        Project storage project = projects[_projectId];
+        
+        // Get pool status from PoolsModule
+        bool hasPool = false;
+        uint256 totalFunded = 0;
+        uint256 totalClaimed = 0;
+        
+        try mainContract.callModule("pools", abi.encodeWithSignature("getProjectPoolStatus(uint256)", _projectId)) returns (bytes memory poolData) {
+            (bool exists, uint256 funded, uint256 claimed, , , ) = abi.decode(poolData, (bool, uint256, uint256, bool, uint256, uint256));
+            hasPool = exists;
+            totalFunded = funded;
+            totalClaimed = claimed;
+        } catch {
+            // Pool data not available
+        }
+        
+        return (
+            project.id,
+            project.owner,
+            project.name,
+            project.description,
+            project.transferrable,
+            project.active,
+            project.createdAt,
+            project.campaignIds,
+            hasPool,
+            totalFunded,
+            totalClaimed
+        );
+    }
+    
     function getProjectMetadata(uint256 _projectId) external view returns (
         string memory bio,
         string memory contractInfo,
@@ -581,12 +690,163 @@ contract ProjectsModule is Initializable, ReentrancyGuardUpgradeable {
         return false;
     }
 
+    // ==================== MIGRATION FUNCTIONS ====================
+    
+    // Create project from V4 migration data (NO FEE REQUIRED)
+    function createProjectFromV4(
+        uint256 _v4ProjectId,
+        address payable _owner,
+        string memory _name,
+        string memory _description,
+        string memory _bio,
+        string memory _contractInfo,
+        string memory _additionalData,
+        address[] memory _contracts,
+        bool _transferrable,
+        bool _active,
+        uint256 _createdAt
+    ) external onlyMainContract returns (uint256) {
+        require(_v4ProjectId >= 0, "ProjectsModule: Invalid V4 project ID");
+        require(_owner != address(0), "ProjectsModule: Invalid owner address");
+        require(bytes(_name).length > 0, "ProjectsModule: Name cannot be empty");
+        
+        uint256 projectId = nextProjectId;
+        nextProjectId++;
+        
+        Project storage project = projects[projectId];
+        project.id = projectId;
+        project.owner = _owner;
+        project.name = _name;
+        project.description = _description;
+        project.bio = _bio;
+        project.contractInfo = _contractInfo;
+        project.additionalData = _additionalData;
+        project.contracts = _contracts;
+        project.transferrable = _transferrable;
+        project.active = _active;
+        project.createdAt = _createdAt > 0 ? _createdAt : block.timestamp;
+        project.lastUpdated = block.timestamp;
+        project.officialStatus = OfficialStatus.PENDING;
+        project.totalFundsRaised = 0;
+        project.totalVotesReceived = 0;
+        project.verified = false;
+        
+        // Add to project arrays
+        projectIds.push(projectId);
+        ownerProjects[_owner].push(projectId);
+        projectsByStatus[OfficialStatus.PENDING].push(projectId);
+        
+        emit ProjectCreatedFromV4(projectId, _owner, _name, _v4ProjectId);
+        
+        return projectId;
+    }
+    
+    // Set project campaign participation from V4 migration
+    function setProjectCampaignParticipationFromV4(
+        uint256 _projectId,
+        uint256[] memory _campaignIds
+    ) external onlyMainContract {
+        require(projects[_projectId].id != 0, "ProjectsModule: Project does not exist");
+        
+        Project storage project = projects[_projectId];
+        project.campaignIds = _campaignIds;
+        
+        // Set campaign participation mapping
+        for (uint256 i = 0; i < _campaignIds.length; i++) {
+            project.campaignParticipation[_campaignIds[i]] = true;
+        }
+    }
+    
+    // Set next project ID for V4 migration (to preserve IDs)
+    function setNextProjectId(uint256 _nextId) external onlyMainContract {
+        require(_nextId >= nextProjectId, "ProjectsModule: Can only increase nextProjectId");
+        nextProjectId = _nextId;
+    }
+
+    // ==================== FEE MANAGEMENT ====================
+    
+    /**
+     * @dev Transfer project creation fee to treasury
+     */
+    function _transferCreationFeeToTreasury() internal {
+        // Transfer 0.5 CELO to treasury module
+        mainContract.callModule("treasury", abi.encodeWithSignature("collectFee(address,uint256,string,uint256,address)", address(0), 0.5 ether, "project_creation", 0, msg.sender));
+    }
+    
     // Module info
     function getModuleName() external pure returns (string memory) {
         return "projects";
     }
     
+    // ==================== OWNER MANAGEMENT ====================
+    
+    /**
+     * @dev Add project owner
+     */
+    function addProjectOwner(uint256 _projectId, address _newOwner) external onlyProjectOwner(_projectId) {
+        require(_newOwner != address(0), "ProjectsModule: Invalid owner address");
+        require(!projects[_projectId].owners[_newOwner], "ProjectsModule: Already an owner");
+        
+        projects[_projectId].owners[_newOwner] = true;
+        projects[_projectId].ownerList.push(_newOwner);
+        projects[_projectId].lastUpdated = block.timestamp;
+        
+        emit ProjectOwnerAdded(_projectId, _newOwner, msg.sender);
+    }
+    
+    /**
+     * @dev Remove project owner
+     */
+    function removeProjectOwner(uint256 _projectId, address _owner) external onlyProjectOwner(_projectId) {
+        require(_owner != projects[_projectId].owner, "ProjectsModule: Cannot remove primary owner");
+        require(projects[_projectId].owners[_owner], "ProjectsModule: Not an owner");
+        
+        projects[_projectId].owners[_owner] = false;
+        projects[_projectId].lastUpdated = block.timestamp;
+        
+        // Remove from owner list
+        address[] storage ownerList = projects[_projectId].ownerList;
+        for (uint256 i = 0; i < ownerList.length; i++) {
+            if (ownerList[i] == _owner) {
+                ownerList[i] = ownerList[ownerList.length - 1];
+                ownerList.pop();
+                break;
+            }
+        }
+        
+        emit ProjectOwnerRemoved(_projectId, _owner, msg.sender);
+    }
+    
+    /**
+     * @dev Check if address is project owner
+     */
+    function isProjectOwner(uint256 _projectId, address _owner) external view returns (bool) {
+        return projects[_projectId].owners[_owner];
+    }
+    
+    /**
+     * @dev Get all project owners
+     */
+    function getProjectOwners(uint256 _projectId) external view returns (address[] memory) {
+        return projects[_projectId].ownerList;
+    }
+    
     function getModuleVersion() external pure returns (uint256) {
         return 5;
+    }
+    
+    // ==================== EVENTS ====================
+    
+    event ProjectCreatedFromV4(uint256 indexed projectId, address indexed owner, string name, uint256 indexed v4ProjectId);
+    event ProjectOwnerAdded(uint256 indexed projectId, address indexed newOwner, address indexed addedBy);
+    event ProjectOwnerRemoved(uint256 indexed projectId, address indexed owner, address indexed removedBy);
+    
+    // ==================== RECEIVE FUNCTION ====================
+    
+    /**
+     * @dev Receive function for native CELO payments
+     */
+    receive() external payable {
+        // Accept CELO payments for project creation fees
     }
 }

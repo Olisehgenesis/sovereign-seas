@@ -7,7 +7,7 @@ import { join } from 'path';
 config();
 
 // Configuration
-const NETWORK = process.argv[2] || 'celo'; // Default to celo mainnet
+const NETWORK = process.argv[2] || 'alfajores'; // Default to alfajores testnet
 const DEPLOYMENT_FILE = `deployment-${NETWORK}-${Date.now()}.json`;
 
 // Load existing deployment if exists
@@ -44,6 +44,29 @@ const DEPLOYED_ADDRESSES = loadDeployment();
 async function main() {
   const [deployer] = await ethers.getSigners();
   
+  // Network confirmation
+  const networkDisplayNames = {
+    'alfajores': 'Celo Alfajores Testnet',
+    'celo': 'Celo Mainnet',
+    'baklava': 'Celo Baklava Testnet'
+  };
+  
+  const networkDisplayName = networkDisplayNames[NETWORK] || NETWORK;
+  console.log(`\n⚠️  DEPLOYMENT NETWORK: ${networkDisplayName.toUpperCase()}`);
+  console.log(`📍 Network ID: ${NETWORK}`);
+  
+  if (NETWORK === 'celo') {
+    console.log("🚨 WARNING: You are deploying to CELO MAINNET!");
+    console.log("🚨 This will use real CELO tokens and cost real money!");
+    console.log("🚨 Make sure this is what you want!");
+    console.log("🚨 To deploy to testnet, run: npm run deploy:testnet");
+    console.log("🚨 To deploy to mainnet, run: npm run deploy:mainnet");
+    console.log("\n⏰ Waiting 10 seconds before proceeding...");
+    await new Promise(resolve => setTimeout(resolve, 10000));
+  } else {
+    console.log("✅ Deploying to testnet - safe for testing");
+  }
+  
   // Display current deployment status
   console.log('\n📊 Current Deployment Status:');
   const status = {
@@ -64,7 +87,7 @@ async function main() {
   const totalCount = 6;
   console.log(`\n📈 Progress: ${deployedCount}/${totalCount} contracts deployed`);
   
-  console.log(`\n🚀 Deploying SovereignSeas V5 Proxy Architecture to ${NETWORK === 'celo' ? 'Celo Mainnet' : 'Alfajores Testnet'}...`);
+  console.log(`\n🚀 Deploying SovereignSeas V5 Proxy Architecture to ${networkDisplayName}...`);
   console.log("👤 Deployer account:", deployer.address);
   console.log("💰 Account balance:", ethers.formatEther(await deployer.provider.getBalance(deployer.address)), "CELO");
   

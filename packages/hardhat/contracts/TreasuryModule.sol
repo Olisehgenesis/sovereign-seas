@@ -39,8 +39,26 @@ struct FeeStructure {
     uint256 platformFeePercentage;
     uint256 campaignCreationFee;
     uint256 projectAdditionFee;
+    uint256 projectCreationFee;
     uint256 emergencyWithdrawalDelay;
     bool feesEnabled;
+}
+
+// Fee update request structure
+struct FeeUpdateRequest {
+    uint256 newAmount;
+    address requester;
+    uint256 timestamp;
+    uint256 signatures;
+}
+
+// Emergency withdrawal request structure
+struct EmergencyWithdrawalRequest {
+    uint256 amount;
+    address recipient;
+    address requester;
+    uint256 timestamp;
+    uint256 signatures;
 }
 
 /**
@@ -61,6 +79,15 @@ contract TreasuryModule is Initializable, ReentrancyGuardUpgradeable {
     // Fee management
     mapping(address => uint256) public collectedFees;
     FeeStructure public feeStructure;
+    
+    // Fee update tracking
+    mapping(address => bool) public feeUpdateSignatures;
+    mapping(string => FeeUpdateRequest) public pendingFeeUpdates;
+    uint256 public requiredFeeUpdateSignatures = 2;
+    
+    // Emergency withdrawal tracking
+    mapping(address => bool) public emergencyWithdrawalSignatures;
+    mapping(address => EmergencyWithdrawalRequest) public pendingEmergencyWithdrawals;
 
     
     // Treasury settings
@@ -114,8 +141,14 @@ contract TreasuryModule is Initializable, ReentrancyGuardUpgradeable {
     event ProjectFundsDistributedDetailed(uint256 indexed campaignId, uint256 indexed projectId, uint256 amount, address token, string comment, bytes jsonData);
     event FundsDistributed(uint256 indexed campaignId);
     event CustomFundsDistributed(uint256 indexed campaignId, string distributionDetails);
-    event FeeStructureUpdated(uint256 platformFee, uint256 campaignFee, uint256 projectFee, bool feesEnabled);
+    event FeeStructureUpdated(uint256 platformFee, uint256 campaignFee, uint256 projectFee, uint256 projectCreationFee, bool feesEnabled);
     event SlippageToleranceUpdated(uint256 oldSlippage, uint256 newSlippage);
+    event FeeUpdateRequested(string feeType, uint256 newAmount, address indexed requester);
+    event FeeUpdateSigned(string feeType, uint256 newAmount, address indexed signer);
+    event FeeUpdateExecuted(string feeType, uint256 oldAmount, uint256 newAmount);
+    event EmergencyWithdrawalRequested(address indexed token, uint256 amount, address indexed requester);
+    event EmergencyWithdrawalSigned(address indexed token, uint256 amount, address indexed signer);
+    event EmergencyWithdrawalExecuted(address indexed token, uint256 amount, address indexed recipient);
 
     // Modifiers
     modifier onlyMainContract() {
@@ -140,8 +173,9 @@ contract TreasuryModule is Initializable, ReentrancyGuardUpgradeable {
         // Initialize fee structure
         feeStructure = FeeStructure({
             platformFeePercentage: 15,
-            campaignCreationFee: 2 * 1e18,
+            campaignCreationFee: 0.5 ether, // 0.5 CELO campaign creation fee
             projectAdditionFee: 1 * 1e18,
+            projectCreationFee: 0.5 ether, // 0.5 CELO project creation fee
             emergencyWithdrawalDelay: 24 hours,
             feesEnabled: true
         });
@@ -271,7 +305,7 @@ contract TreasuryModule is Initializable, ReentrancyGuardUpgradeable {
         
         emit FeeAmountUpdated("campaignCreation", oldCampaignFee, _campaignCreationFee);
         emit FeeAmountUpdated("projectAddition", oldProjectFee, _projectAdditionFee);
-        emit FeeStructureUpdated(_platformFeePercentage, _campaignCreationFee, _projectAdditionFee, _feesEnabled);
+        emit FeeStructureUpdated(_platformFeePercentage, _campaignCreationFee, _projectAdditionFee, feeStructure.projectCreationFee, _feesEnabled);
     }
     
     function collectFee(address _token, uint256 _amount, string memory _feeType) external onlyMainContract {
@@ -937,6 +971,7 @@ contract TreasuryModule is Initializable, ReentrancyGuardUpgradeable {
         uint256 platformFeePercentage,
         uint256 campaignCreationFee,
         uint256 projectAdditionFee,
+        uint256 projectCreationFee,
         uint256 emergencyWithdrawalDelay,
         bool feesEnabled
     ) {
@@ -944,9 +979,44 @@ contract TreasuryModule is Initializable, ReentrancyGuardUpgradeable {
             feeStructure.platformFeePercentage,
             feeStructure.campaignCreationFee,
             feeStructure.projectAdditionFee,
+            feeStructure.projectCreationFee,
             feeStructure.emergencyWithdrawalDelay,
             feeStructure.feesEnabled
         );
+    }
+    
+    /**
+     * @dev Get campaign pool funds from PoolsModule
+     */
+    function getCampaignPoolFunds(uint256 _campaignId) external returns (
+        uint256 totalPools,
+        uint256 totalFunds,
+        uint256 totalVotes,
+        bool hasActivePools
+    ) {
+        try mainContract.callModule("pools", abi.encodeWithSignature("getCampaignPoolStatus(uint256)", _campaignId)) returns (bytes memory poolData) {
+            return abi.decode(poolData, (uint256, uint256, uint256, bool));
+        } catch {
+            return (0, 0, 0, false);
+        }
+    }
+    
+    /**
+     * @dev Get project pool funds from PoolsModule
+     */
+    function getProjectPoolFunds(uint256 _projectId) external returns (
+        bool exists,
+        uint256 totalFunded,
+        uint256 totalClaimed,
+        bool isActive,
+        uint256 campaignFunds,
+        uint256 directContributions
+    ) {
+        try mainContract.callModule("pools", abi.encodeWithSignature("getProjectPoolStatus(uint256)", _projectId)) returns (bytes memory poolData) {
+            return abi.decode(poolData, (bool, uint256, uint256, bool, uint256, uint256));
+        } catch {
+            return (false, 0, 0, false, 0, 0);
+        }
     }
     
     function getCollectedFees(address _token) external view returns (uint256) {
@@ -982,9 +1052,242 @@ contract TreasuryModule is Initializable, ReentrancyGuardUpgradeable {
         // Allow contract to receive CELO
     }
 
+    // ==================== MIGRATION FUNCTIONS ====================
+    
+    // Set core configuration from V4 migration
+    function setCoreConfigurationFromV4(
+        address _celoToken,
+        address _mentoTokenBroker,
+        uint256 _campaignCreationFee,
+        uint256 _projectAdditionFee
+    ) external onlyMainContract {
+        celoToken = IERC20(_celoToken);
+        mentoTokenBroker = _mentoTokenBroker;
+        
+        // Update fee structure
+        feeStructure.campaignCreationFee = 0.5 ether; // 0.5 CELO campaign creation fee
+        feeStructure.projectAdditionFee = _projectAdditionFee;
+        feeStructure.projectCreationFee = 0.5 ether; // 0.5 CELO project creation fee
+        feeStructure.platformFeePercentage = PLATFORM_FEE;
+        feeStructure.feesEnabled = true;
+        feeStructure.emergencyWithdrawalDelay = 24 hours;
+    }
+    
+    // Add supported token from V4 migration
+    function addSupportedTokenFromV4(
+        address _token,
+        address _provider,
+        bytes32 _exchangeId
+    ) external onlyMainContract {
+        if (!supportedTokens[_token]) {
+            supportedTokens[_token] = true;
+            supportedTokensList.push(_token);
+        }
+        
+        // Set exchange provider
+        tokenExchangeProviders[_token] = TokenExchangeProvider({
+            provider: _provider,
+            exchangeId: _exchangeId,
+            active: true
+        });
+    }
+    
+    // Set collected fees from V4 migration
+    function setCollectedFeesFromV4(
+        address _token,
+        uint256 _amount
+    ) external onlyMainContract {
+        if (_amount > 0) {
+            collectedFees[_token] = _amount;
+        }
+    }
+    
+    // Batch add supported tokens from V4 migration
+    function batchAddSupportedTokensFromV4(
+        address[] memory _tokens,
+        address[] memory _providers,
+        bytes32[] memory _exchangeIds
+    ) external onlyMainContract {
+        require(_tokens.length == _providers.length && _tokens.length == _exchangeIds.length, 
+                "TreasuryModule: Array length mismatch");
+        
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            this.addSupportedTokenFromV4(_tokens[i], _providers[i], _exchangeIds[i]);
+        }
+    }
+    
+    // Batch set collected fees from V4 migration
+    function batchSetCollectedFeesFromV4(
+        address[] memory _tokens,
+        uint256[] memory _amounts
+    ) external onlyMainContract {
+        require(_tokens.length == _amounts.length, "TreasuryModule: Array length mismatch");
+        
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            this.setCollectedFeesFromV4(_tokens[i], _amounts[i]);
+        }
+    }
+
     // Module info
     function getModuleName() external pure returns (string memory) {
         return "treasury";
+    }
+    
+    /**
+     * @dev Get CELO token address
+     */
+    function getCeloToken() external view returns (address) {
+        return address(celoToken);
+    }
+    
+    /**
+     * @dev Get project addition fee amount
+     */
+    function getProjectAdditionFee() external view returns (uint256) {
+        return feeStructure.projectAdditionFee;
+    }
+    
+    // ==================== FEE UPDATE SYSTEM ====================
+    
+    /**
+     * @dev Request fee update (requires 2 admin signatures)
+     */
+    function requestFeeUpdate(
+        string memory _feeType,
+        uint256 _newAmount
+    ) external hasRole(ADMIN_ROLE) {
+        require(_newAmount > 0, "TreasuryModule: Invalid fee amount");
+        
+        // Clear previous signatures
+        delete feeUpdateSignatures[msg.sender];
+        
+        // Store the request
+        pendingFeeUpdates[_feeType] = FeeUpdateRequest({
+            newAmount: _newAmount,
+            requester: msg.sender,
+            timestamp: block.timestamp,
+            signatures: 0
+        });
+        
+        emit FeeUpdateRequested(_feeType, _newAmount, msg.sender);
+    }
+    
+    /**
+     * @dev Sign fee update request
+     */
+    function signFeeUpdate(string memory _feeType) external hasRole(ADMIN_ROLE) {
+        require(pendingFeeUpdates[_feeType].requester != address(0), "TreasuryModule: No pending update");
+        require(!feeUpdateSignatures[msg.sender], "TreasuryModule: Already signed");
+        
+        pendingFeeUpdates[_feeType].signatures++;
+        feeUpdateSignatures[msg.sender] = true;
+        
+        emit FeeUpdateSigned(_feeType, pendingFeeUpdates[_feeType].newAmount, msg.sender);
+        
+        // Execute if enough signatures
+        if (pendingFeeUpdates[_feeType].signatures >= requiredFeeUpdateSignatures) {
+            _executeFeeUpdate(_feeType);
+        }
+    }
+    
+    /**
+     * @dev Execute fee update
+     */
+    function _executeFeeUpdate(string memory _feeType) internal {
+        FeeUpdateRequest storage request = pendingFeeUpdates[_feeType];
+        
+        if (keccak256(bytes(_feeType)) == keccak256(bytes("campaign_creation"))) {
+            uint256 oldAmount = feeStructure.campaignCreationFee;
+            feeStructure.campaignCreationFee = request.newAmount;
+            emit FeeUpdateExecuted(_feeType, oldAmount, request.newAmount);
+        } else if (keccak256(bytes(_feeType)) == keccak256(bytes("project_addition"))) {
+            uint256 oldAmount = feeStructure.projectAdditionFee;
+            feeStructure.projectAdditionFee = request.newAmount;
+            emit FeeUpdateExecuted(_feeType, oldAmount, request.newAmount);
+        } else if (keccak256(bytes(_feeType)) == keccak256(bytes("project_creation"))) {
+            uint256 oldAmount = feeStructure.projectCreationFee;
+            feeStructure.projectCreationFee = request.newAmount;
+            emit FeeUpdateExecuted(_feeType, oldAmount, request.newAmount);
+        }
+        
+        // Clear the request
+        delete pendingFeeUpdates[_feeType];
+        
+        // Clear all signatures
+        for (uint256 i = 0; i < supportedTokensList.length; i++) {
+            delete feeUpdateSignatures[supportedTokensList[i]];
+        }
+    }
+    
+    // ==================== EMERGENCY WITHDRAWAL SYSTEM ====================
+    
+    /**
+     * @dev Request emergency withdrawal (requires 2 admin signatures)
+     */
+    function requestEmergencyWithdrawal(
+        address _token,
+        uint256 _amount,
+        address _recipient
+    ) external hasRole(ADMIN_ROLE) {
+        require(_amount > 0, "TreasuryModule: Invalid amount");
+        require(_recipient != address(0), "TreasuryModule: Invalid recipient");
+        
+        // Clear previous signatures
+        delete emergencyWithdrawalSignatures[msg.sender];
+        
+        // Store the request
+        pendingEmergencyWithdrawals[_token] = EmergencyWithdrawalRequest({
+            amount: _amount,
+            recipient: _recipient,
+            requester: msg.sender,
+            timestamp: block.timestamp,
+            signatures: 0
+        });
+        
+        emit EmergencyWithdrawalRequested(_token, _amount, msg.sender);
+    }
+    
+    /**
+     * @dev Sign emergency withdrawal request
+     */
+    function signEmergencyWithdrawal(address _token) external hasRole(ADMIN_ROLE) {
+        require(pendingEmergencyWithdrawals[_token].requester != address(0), "TreasuryModule: No pending withdrawal");
+        require(!emergencyWithdrawalSignatures[msg.sender], "TreasuryModule: Already signed");
+        
+        pendingEmergencyWithdrawals[_token].signatures++;
+        emergencyWithdrawalSignatures[msg.sender] = true;
+        
+        emit EmergencyWithdrawalSigned(_token, pendingEmergencyWithdrawals[_token].amount, msg.sender);
+        
+        // Execute if enough signatures
+        if (pendingEmergencyWithdrawals[_token].signatures >= requiredFeeUpdateSignatures) {
+            _executeEmergencyWithdrawal(_token);
+        }
+    }
+    
+    /**
+     * @dev Execute emergency withdrawal
+     */
+    function _executeEmergencyWithdrawal(address _token) internal {
+        EmergencyWithdrawalRequest storage request = pendingEmergencyWithdrawals[_token];
+        
+        if (_token == address(0)) {
+            // Native CELO
+            payable(request.recipient).transfer(request.amount);
+        } else {
+            // ERC20 token
+            IERC20(_token).safeTransfer(request.recipient, request.amount);
+        }
+        
+        emit EmergencyWithdrawalExecuted(_token, request.amount, request.recipient);
+        
+        // Clear the request
+        delete pendingEmergencyWithdrawals[_token];
+        
+        // Clear all signatures
+        for (uint256 i = 0; i < supportedTokensList.length; i++) {
+            delete emergencyWithdrawalSignatures[supportedTokensList[i]];
+        }
     }
     
     function getModuleVersion() external pure returns (uint256) {

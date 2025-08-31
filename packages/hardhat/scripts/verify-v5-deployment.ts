@@ -9,8 +9,31 @@ dotenv.config()
 
 const execAsync = promisify(exec)
 
-const NETWORK = process.argv[2] || 'celo'
+const NETWORK = process.argv[2] || 'alfajores' // Default to testnet for safety
 
+// Network configuration
+const NETWORK_CONFIG = {
+  'alfajores': {
+    name: 'Celo Alfajores Testnet',
+    explorer: 'https://alfajores.celoscan.io',
+    apiUrl: 'https://api-alfajores.celoscan.io/api',
+    safe: true
+  },
+  'celo': {
+    name: 'Celo Mainnet',
+    explorer: 'https://celoscan.io',
+    apiUrl: 'https://api.celoscan.io/api',
+    safe: false
+  },
+  'baklava': {
+    name: 'Celo Baklava Testnet',
+    explorer: 'https://baklava.celoscan.io',
+    apiUrl: 'https://api-baklava.celoscan.io/api',
+    safe: true
+  }
+};
+
+const currentNetwork = NETWORK_CONFIG[NETWORK] || NETWORK_CONFIG['alfajores'];
 
 function loadDeployment(): Record<string, string> {
   try {
@@ -36,8 +59,9 @@ async function verifyContract(contractName: string, contractAddress: string) {
   try {
     console.log(`\n🔍 Verifying ${contractName}...`)
     console.log(`   Address: ${contractAddress}`)
+    console.log(`   Network: ${currentNetwork.name}`)
     
-    const verifyCommand = `npx hardhat verify --network celo ${contractAddress}`
+    const verifyCommand = `npx hardhat verify --network ${NETWORK} ${contractAddress}`
     console.log(`   🚀 Running: ${verifyCommand}`)
     
     const { stdout, stderr } = await execAsync(verifyCommand)
@@ -51,17 +75,17 @@ async function verifyContract(contractName: string, contractAddress: string) {
       console.log(`   ⚠️  stderr: ${stderr.trim()}`)
     }
     
-    console.log(`   🔗 View on CeloScan: https://celoscan.io/address/${contractAddress}`)
+    console.log(`   🔗 View on ${currentNetwork.name}: ${currentNetwork.explorer}/address/${contractAddress}`)
     return true
     
   } catch (error: any) {
     if (error.message.includes("Already Verified")) {
-      console.log(`   ✅ Contract already verified on CeloScan`)
-      console.log(`   🔗 View on CeloScan: https://celoscan.io/address/${contractAddress}`)
+      console.log(`   ✅ Contract already verified on ${currentNetwork.name}`)
+      console.log(`   🔗 View on ${currentNetwork.name}: ${currentNetwork.explorer}/address/${contractAddress}`)
       return true
     } else {
       console.log(`   ❌ Verification failed: ${error.message}`)
-      console.log(`   🔗 Manual verification: https://celoscan.io/address/${contractAddress}`)
+      console.log(`   🔗 Manual verification: ${currentNetwork.explorer}/address/${contractAddress}`)
       return false
     }
   }
@@ -69,7 +93,19 @@ async function verifyContract(contractName: string, contractAddress: string) {
 
 async function main() {
   console.log('🚀 SovereignSeas V5 Contract Verification Script')
-  console.log('🌐 Network: Celo Mainnet')
+  console.log(`🌐 Network: ${currentNetwork.name}`)
+  console.log(`📍 Network ID: ${NETWORK}`)
+  
+  // Network safety check
+  if (!currentNetwork.safe) {
+    console.log('\n🚨 WARNING: You are verifying on MAINNET!')
+    console.log('🚨 This will use real API calls and may have rate limits!')
+    console.log('🚨 Make sure this is what you want!')
+    console.log('\n⏰ Waiting 5 seconds before proceeding...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  } else {
+    console.log('✅ Verifying on testnet - safe for testing');
+  }
   
   console.log('\n📋 Contracts to verify:')
   Object.entries(CONTRACTS).forEach(([name, address]) => {
@@ -84,9 +120,9 @@ async function main() {
   }
   
   console.log('\n🎉 Verification script completed!')
-  console.log('\n🔗 All contracts on CeloScan:')
+  console.log(`\n🔗 All contracts on ${currentNetwork.name}:`)
   Object.entries(CONTRACTS).forEach(([name, address]) => {
-    console.log(`   ${name}: https://celoscan.io/address/${address}`)
+    console.log(`   ${name}: ${currentNetwork.explorer}/address/${address}`)
   })
 }
 

@@ -13,6 +13,9 @@ interface IModule {
     function initialize(address _main) external;
     function getModuleName() external pure returns (string memory);
     function getModuleVersion() external pure returns (uint256);
+    
+    // Optional role granting function for modules that support it
+    function grantRolesToV5Admin(address v5Admin) external;
 }
 
 /**
@@ -123,8 +126,15 @@ contract SovereignSeasV5 is
             migrationModule = _moduleAddress;
         }
         
-        // Initialize the module
-        IModule(_moduleAddress).initialize(address(this));
+        // Initialize the module with the deployer as admin
+        IModule(_moduleAddress).initialize(msg.sender);
+        
+        // Also grant admin role to the proxy itself for module management
+        try IModule(_moduleAddress).grantRolesToV5Admin(address(this)) {
+            // Successfully granted proxy admin roles
+        } catch {
+            // Module doesn't have grantRolesToV5Admin function, that's okay
+        }
         
         emit ModuleRegistered(_moduleName, _moduleAddress);
     }
@@ -154,8 +164,15 @@ contract SovereignSeasV5 is
             migrationModule = _newModuleAddress;
         }
         
-        // Initialize the new module
-        IModule(_newModuleAddress).initialize(address(this));
+        // Initialize the new module with the deployer as admin
+        IModule(_newModuleAddress).initialize(msg.sender);
+        
+        // Also grant admin role to the proxy itself for module management
+        try IModule(_newModuleAddress).grantRolesToV5Admin(address(this)) {
+            // Successfully granted proxy admin roles
+        } catch {
+            // Module doesn't have grantRolesToV5Admin function, that's okay
+        }
         
         emit ModuleUpgraded(_moduleName, oldAddress, _newModuleAddress);
     }

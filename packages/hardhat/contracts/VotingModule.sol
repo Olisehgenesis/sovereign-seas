@@ -386,6 +386,43 @@ contract VotingModule is Initializable, ReentrancyGuardUpgradeable {
         return (participation.approved, participation.voteCount, participation.fundsReceived);
     }
     
+    /**
+     * @dev Get participation with pool status from PoolsModule
+     */
+    function getParticipationWithPoolStatus(uint256 _campaignId, uint256 _projectId) external returns (
+        bool approved,
+        uint256 voteCount,
+        uint256 fundsReceived,
+        bool hasPool,
+        uint256 poolTotalFunded,
+        uint256 poolTotalClaimed
+    ) {
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        
+        // Get pool status from PoolsModule
+        bool hasPool = false;
+        uint256 poolTotalFunded = 0;
+        uint256 poolTotalClaimed = 0;
+        
+        try mainContract.callModule("pools", abi.encodeWithSignature("getProjectPoolStatus(uint256)", _projectId)) returns (bytes memory poolData) {
+            (bool exists, uint256 funded, uint256 claimed, , , ) = abi.decode(poolData, (bool, uint256, uint256, bool, uint256, uint256));
+            hasPool = exists;
+            poolTotalFunded = funded;
+            poolTotalClaimed = claimed;
+        } catch {
+            // Pool data not available
+        }
+        
+        return (
+            participation.approved,
+            participation.voteCount,
+            participation.fundsReceived,
+            hasPool,
+            poolTotalFunded,
+            poolTotalClaimed
+        );
+    }
+    
     function getUserVotesForProjectWithToken(
         uint256 _campaignId,
         address _user,
@@ -617,6 +654,130 @@ contract VotingModule is Initializable, ReentrancyGuardUpgradeable {
             }
         }
         campaignsParticipated = seenCount;
+    }
+
+    // ==================== MIGRATION FUNCTIONS ====================
+    
+    // Create project participation from V4 migration
+    function createProjectParticipationFromV4(
+        uint256 _campaignId,
+        uint256 _projectId,
+        bool _approved,
+        uint256 _voteCount,
+        uint256 _fundsReceived
+    ) external onlyMainContract {
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        participation.projectId = _projectId;
+        participation.campaignId = _campaignId;
+        participation.approved = _approved;
+        participation.voteCount = _voteCount;
+        participation.fundsReceived = _fundsReceived;
+        
+        if (_approved) {
+            emit ProjectApproved(_campaignId, _projectId);
+        }
+    }
+    
+    // Set project token votes from V4 migration
+    function setProjectTokenVotesFromV4(
+        uint256 _campaignId,
+        uint256 _projectId,
+        address[] memory _tokens,
+        uint256[] memory _amounts
+    ) external onlyMainContract {
+        require(_tokens.length == _amounts.length, "VotingModule: Array length mismatch");
+        
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            if (_tokens[i] != address(0) && _amounts[i] > 0) {
+                participation.tokenVotes[_tokens[i]] = _amounts[i];
+            }
+        }
+    }
+    
+    // Add vote from V4 migration
+    function addVoteFromV4(
+        address _voter,
+        uint256 _campaignId,
+        uint256 _projectId,
+        address _token,
+        uint256 _amount,
+        uint256 _celoEquivalent,
+        uint256 _timestamp
+    ) external onlyMainContract {
+        // Create vote struct
+        Vote memory newVote = Vote({
+            voter: _voter,
+            campaignId: _campaignId,
+            projectId: _projectId,
+            token: _token,
+            amount: _amount,
+            celoEquivalent: _celoEquivalent,
+            timestamp: _timestamp > 0 ? _timestamp : block.timestamp
+        });
+        
+        // Add to user vote history
+        userVoteHistory[_voter].push(newVote);
+        
+        // Update user votes mapping
+        userVotes[_campaignId][_voter][_projectId][_token] = _amount;
+        
+        // Update total user votes in campaign
+        totalUserVotesInCampaign[_campaignId][_voter] += _celoEquivalent;
+        
+        // Add to campaign voters if not already present
+        if (!campaignVoterParticipated[_campaignId][_voter]) {
+            campaignVoterParticipated[_campaignId][_voter] = true;
+            campaignVoters[_campaignId].push(_voter);
+            campaignTotalVoters[_campaignId]++;
+        }
+        
+        emit VoteCast(_voter, _campaignId, _projectId, _token, _amount, _celoEquivalent);
+    }
+    
+    // Batch add votes from V4 migration
+    function batchAddVotesFromV4(
+        address[] memory _voters,
+        uint256[] memory _campaignIds,
+        uint256[] memory _projectIds,
+        address[] memory _tokens,
+        uint256[] memory _amounts,
+        uint256[] memory _celoEquivalents,
+        uint256[] memory _timestamps
+    ) external onlyMainContract {
+        require(_voters.length == _campaignIds.length && 
+                _voters.length == _projectIds.length && 
+                _voters.length == _tokens.length && 
+                _voters.length == _amounts.length && 
+                _voters.length == _celoEquivalents.length && 
+                _voters.length == _timestamps.length, 
+                "VotingModule: Array length mismatch");
+        
+        for (uint256 i = 0; i < _voters.length; i++) {
+            this.addVoteFromV4(
+                _voters[i],
+                _campaignIds[i],
+                _projectIds[i],
+                _tokens[i],
+                _amounts[i],
+                _celoEquivalents[i],
+                _timestamps[i]
+            );
+        }
+    }
+    
+    // Set user max vote amount from V4 migration
+    function setUserMaxVoteAmountFromV4(
+        uint256 _campaignId,
+        address _user,
+        uint256 _maxAmount
+    ) external onlyMainContract {
+        if (_maxAmount > 0) {
+            // This would need to be coordinated with CampaignsModule
+            // For now, we'll just track it here
+            voterWeight[_campaignId][_user] = _maxAmount;
+        }
     }
 
     // Module info

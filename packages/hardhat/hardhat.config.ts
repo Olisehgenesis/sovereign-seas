@@ -5,15 +5,18 @@ import "@openzeppelin/hardhat-upgrades";
 import "dotenv/config";
 
 // Hardhat Configuration for SovereignSeas V5
-// Default network: Celo Mainnet
+// Default network: Celo Alfajores Testnet (SAFE for testing)
 // Required environment variables:
 // - PRIVATE_KEY: Your deployment wallet private key
 // - CELO_RPC_URL: Celo RPC endpoint (optional, defaults to Ankr)
 // - CELOSCAN_API_KEY: For contract verification (optional)
 // Note: Gas settings are automatically determined by the network
+// 
+// SAFETY: Defaults to testnet to prevent accidental mainnet deployments
+// To deploy to mainnet, explicitly specify: --network celo
 
 const config: HardhatUserConfig = {
-  defaultNetwork: "celo",
+  defaultNetwork: "alfajores",
   solidity: {
     compilers: [
       {
@@ -42,17 +45,14 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 1337,
     },
+    // 🚨 MAINNET - Uses real CELO tokens and costs real money
     celo: {
       url: "https://forno.celo.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 42220,
       timeout: 180000, // Increased timeout to 3 minutes
-      // Alternative RPC URLs if needed:
-      // url: "https://forno.celo.org",
-      // url: "https://rpc.celo.org",
-      // url: "https://celo-mainnet-rpc.allthatnode.com",
-      // url: "https://celo.drpc.org",
     },
+    // ✅ TESTNET - Safe for testing, no real money involved
     alfajores: {
       url: "https://alfajores-forno.celo-testnet.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
