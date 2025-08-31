@@ -1985,7 +1985,7 @@ contract SovereignSeasV6 is
     // REMOVED DUPLICATE withdrawFees function
 
     function canBypassFees(uint256 _campaignId, address _user) internal view returns (bool) {
-        return superAdmins[_user] || (_campaignId > 0 && campaigns[_campaignId].campaignAdmins[_user]);
+    return superAdmins[_user] || (_campaignId >= 0 && campaigns[_campaignId].campaignAdmins[_user]);
     }
 
     // V4 Token Conversion System
@@ -2106,11 +2106,11 @@ contract SovereignSeasV6 is
             "SEVAS: Project not in campaign or has votes"
         );
         
-        uint256[] storage campaignIds = projects[_projectId].campaignIds;
-        for (uint256 i = 0; i < campaignIds.length; i++) {
-            if (campaignIds[i] == _campaignId) {
-                campaignIds[i] = campaignIds[campaignIds.length - 1];
-                campaignIds.pop();
+        uint256[] storage projectCampaignIds = projects[_projectId].campaignIds;
+        for (uint256 i = 0; i < projectCampaignIds.length; i++) {
+            if (projectCampaignIds[i] == _campaignId) {
+                projectCampaignIds[i] = projectCampaignIds[projectCampaignIds.length - 1];
+                projectCampaignIds.pop();
                 break;
             }
         }

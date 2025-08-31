@@ -29,6 +29,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
     "@openzeppelin/contracts-upgradeable": "^5.4.0",
+    "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "dotenv": "^16.4.5",
     "ethers": "^6.14.4",
     "viem": "^2.30.0"
@@ -65,6 +66,9 @@
     "deploy:heyzo": "ts-node scripts/deploy-heyzo.ts",
     "deploy:v6": "ts-node scripts/deploy-v6.ts",
     "deploy:v6:hardhat": "ts-node scripts/deploy-v6-hardhat.ts",
+    "deploy:v5": "ts-node scripts/deploy-v5-proxy.ts celo",
+    "deploy:v5:proxy": "ts-node scripts/deploy-v5-proxy.ts celo",
+    "deploy:v5:alfajores": "ts-node scripts/deploy-v5-proxy.ts alfajores",
     "# Verification Commands": "",
     "verify": "ts-node scripts/verify.ts",
     "verify:seas": "ts-node scripts/verify.ts seas",
@@ -82,6 +86,8 @@
     "verify:working-proxy": "ts-node scripts/verify.ts working-proxy",
     "verify:all-uniswap": "ts-node scripts/verify.ts all-uniswap",
     "verify:heyzo": "ts-node scripts/verify-heyzo.ts",
+    "verify:v5": "ts-node scripts/verify-v5-deployment.ts",
+    "verify:v5:proxy": "ts-node scripts/verify-v5-deployment.ts",
     "# Testing Commands": "",
     "test:script": "ts-node scripts/test.ts",
     "test:nft": "ts-node scripts/test.ts nft",
@@ -115,7 +121,14 @@
     "claim-vote": "ts-node scripts/utils.ts claim-vote",
     "get-vote-conversion": "ts-node scripts/utils.ts get-vote-conversion",
     "check-celo-addresses": "ts-node scripts/utils.ts check-celo-addresses",
-    "sync:abis": "node sync-abis.js"
+    "sync:abis": "node sync-abis.js",
+    "# V5 Specific Commands": "",
+    "v5:test": "ts-node scripts/verify-v5-deployment.ts",
+    "v5:deploy:alfajores": "ts-node scripts/deploy-v5-proxy.ts --network alfajores",
+    "v5:deploy:celo": "ts-node scripts/deploy-v5-proxy.ts --network celo",
+    "v5:deploy:viem:alfajores": "ts-node scripts/deploy-v5-proxy-viem.ts alfajores",
+    "v5:deploy:viem:celo": "ts-node scripts/deploy-v5-proxy-viem.ts celo",
+    "v5:verify:celo": "ts-node scripts/verify-v5-contracts.ts"
   },
   "author": "olisehgenesis",
   "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"

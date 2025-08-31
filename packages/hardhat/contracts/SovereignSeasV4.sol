@@ -325,7 +325,7 @@ contract SovereignSeasV4 is Ownable(msg.sender), ReentrancyGuard {
     }
 
     function canBypassFees(uint256 _campaignId, address _user) internal view returns (bool) {
-        return superAdmins[_user] || (_campaignId > 0 && campaigns[_campaignId].campaignAdmins[_user]);
+    return superAdmins[_user] || (_campaignId >= 0 && campaigns[_campaignId].campaignAdmins[_user]);
     }
 
     // Token Conversion

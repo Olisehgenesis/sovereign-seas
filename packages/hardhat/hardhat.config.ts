@@ -1,30 +1,63 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-verify";
+import "@openzeppelin/hardhat-upgrades";
 import "dotenv/config";
 
+// Hardhat Configuration for SovereignSeas V5
+// Default network: Celo Mainnet
+// Required environment variables:
+// - PRIVATE_KEY: Your deployment wallet private key
+// - CELO_RPC_URL: Celo RPC endpoint (optional, defaults to Ankr)
+// - CELOSCAN_API_KEY: For contract verification (optional)
+// Note: Gas settings are automatically determined by the network
+
 const config: HardhatUserConfig = {
+  defaultNetwork: "celo",
   solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    compilers: [
+      {
+        version: "0.8.24",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          viaIR: true,
+        },
       },
-      viaIR: true,
-    },
+      {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          viaIR: true,
+        },
+      },
+    ],
   },
   networks: {
+    hardhat: {
+      chainId: 1337,
+    },
+    celo: {
+      url: "https://forno.celo.org",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 42220,
+      timeout: 180000, // Increased timeout to 3 minutes
+      // Alternative RPC URLs if needed:
+      // url: "https://forno.celo.org",
+      // url: "https://rpc.celo.org",
+      // url: "https://celo-mainnet-rpc.allthatnode.com",
+      // url: "https://celo.drpc.org",
+    },
     alfajores: {
       url: "https://alfajores-forno.celo-testnet.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 44787,
-      gasPrice: 5000000000,
-    },
-    celo: {
-      url: "https://rpc.ankr.com/celo",
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 42220,
+      timeout: 60000,
     },
   },
   etherscan: {
