@@ -155,7 +155,13 @@ async function detailedDebug() {
       bio: "",
       contractInfo: "",
       additionalData: "",
-      tags: [],
+      jsonMetadata: JSON.stringify({
+        tags: ["test", "minimal"],
+        difficulty: "beginner",
+        estimatedTime: "1 week",
+        techStack: ["solidity"],
+        teamSize: 1
+      }),
       category: "",
       website: "",
       github: "",

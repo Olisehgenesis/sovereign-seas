@@ -85,7 +85,14 @@ async function main() {
           bio: "Test bio for direct call",
           contractInfo: "Test contract info",
           additionalData: "Test additional data",
-          tags: ["test", "direct", "debug"],
+          jsonMetadata: JSON.stringify({
+            tags: ["test", "direct", "debug"],
+            difficulty: "beginner",
+            estimatedTime: "1 week",
+            techStack: ["solidity", "typescript"],
+            teamSize: 1,
+            fundingNeeded: "500 CELO"
+          }),
           category: "Environment",
           website: "https://test.example.com",
           github: "https://github.com/test",
@@ -112,7 +119,14 @@ async function main() {
           bio: "Test bio for direct call",
           contractInfo: "Test contract info",
           additionalData: "Test additional data",
-          tags: ["test", "direct", "debug"],
+          jsonMetadata: JSON.stringify({
+            tags: ["test", "direct", "debug"],
+            difficulty: "beginner",
+            estimatedTime: "1 week",
+            techStack: ["solidity", "typescript"],
+            teamSize: 1,
+            fundingNeeded: "500 CELO"
+          }),
           category: "Environment",
           website: "https://test.example.com",
           github: "https://github.com/test",

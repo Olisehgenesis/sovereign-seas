@@ -96,11 +96,11 @@ contract CampaignsModule is BaseModule {
         uint256 projectAdditionFeeAmount; // Amount required to add projects
     }
 
-    // Campaign metadata struct
+    // Campaign metadata struct - JSON-based for flexibility
     struct CampaignMetadata {
         string mainInfo;
         string additionalInfo;
-        string[] tags;
+        string jsonMetadata; // JSON string containing flexible metadata
         string category;
         string website;
         string logo;
@@ -114,7 +114,6 @@ contract CampaignsModule is BaseModule {
     mapping(uint256 => Campaign) public campaigns;
     mapping(address => uint256[]) public campaignsByAdmin;
     mapping(string => uint256[]) public campaignsByCategory;
-    mapping(string => uint256[]) public campaignsByTag;
     
     uint256 public nextCampaignId;
     uint256 public totalCampaigns;
@@ -123,7 +122,6 @@ contract CampaignsModule is BaseModule {
 
     // Enhanced indexing
     mapping(OfficialStatus => uint256[]) public campaignsByStatus;
-    mapping(uint256 => mapping(string => bool)) public campaignHasTag;
     
     // V4 compatibility tracking
     mapping(uint256 => address[]) private campaignUsedTokens;
@@ -412,15 +410,6 @@ contract CampaignsModule is BaseModule {
             campaignsByCategory[_metadata.category].push(campaignId);
         }
 
-        // Add to tags - SAFE VERSION with limits
-        uint256 maxTags = _metadata.tags.length > 10 ? 10 : _metadata.tags.length;
-        for (uint256 i = 0; i < maxTags; i++) {
-            if (bytes(_metadata.tags[i]).length > 0 && bytes(_metadata.tags[i]).length < 50) {
-                campaignsByTag[_metadata.tags[i]].push(campaignId);
-                campaignHasTag[campaignId][_metadata.tags[i]] = true;
-            }
-        }
-
         // Index by status and activity
         campaignsByStatus[OfficialStatus.PENDING].push(campaignId);
         campaignsByActiveStatus[true].push(campaignId);
@@ -470,12 +459,6 @@ contract CampaignsModule is BaseModule {
             _removeFromCategory(_campaignId, campaign.metadata.category);
         }
 
-        // Remove from old tags
-        for (uint256 i = 0; i < campaign.metadata.tags.length; i++) {
-            _removeFromTag(_campaignId, campaign.metadata.tags[i]);
-            campaignHasTag[_campaignId][campaign.metadata.tags[i]] = false;
-        }
-
         // Update metadata
         campaign.metadata = _metadata;
         campaign.lastUpdated = block.timestamp;
@@ -483,15 +466,6 @@ contract CampaignsModule is BaseModule {
         // Add to new category - SAFE VERSION
         if (bytes(_metadata.category).length > 0 && bytes(_metadata.category).length < 50) {
             campaignsByCategory[_metadata.category].push(_campaignId);
-        }
-
-        // Add to new tags - SAFE VERSION with limits
-        uint256 maxTags = _metadata.tags.length > 10 ? 10 : _metadata.tags.length;
-        for (uint256 i = 0; i < maxTags; i++) {
-            if (bytes(_metadata.tags[i]).length > 0 && bytes(_metadata.tags[i]).length < 50) {
-                campaignsByTag[_metadata.tags[i]].push(_campaignId);
-                campaignHasTag[_campaignId][_metadata.tags[i]] = true;
-            }
         }
 
         emit CampaignMetadataUpdated(_campaignId, msg.sender);
@@ -874,7 +848,8 @@ contract CampaignsModule is BaseModule {
      * @notice Get campaigns by tag
      */
     function getCampaignsByTag(string calldata _tag) external view returns (uint256[] memory) {
-        return campaignsByTag[_tag];
+        // Removed tag-based indexing, so this function will always return empty
+        return new uint256[](0);
     }
 
     /**
@@ -937,7 +912,135 @@ contract CampaignsModule is BaseModule {
         );
     }
 
-    
+    /**
+     * @notice Get campaigns using custom fee tokens vs default fees
+     * @return customFeeCampaigns Array of campaign IDs using custom fee tokens
+     * @return defaultFeeCampaigns Array of campaign IDs using default fees
+     */
+    function getCampaignsByFeeType() external view returns (
+        uint256[] memory customFeeCampaigns,
+        uint256[] memory defaultFeeCampaigns
+    ) {
+        uint256 customCount = 0;
+        uint256 defaultCount = 0;
+        
+        // First pass: count campaigns by fee type
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                if (campaigns[i].projectAdditionFeeToken != address(0)) {
+                    customCount++;
+                } else {
+                    defaultCount++;
+                }
+            }
+        }
+        
+        // Second pass: populate arrays
+        customFeeCampaigns = new uint256[](customCount);
+        defaultFeeCampaigns = new uint256[](defaultCount);
+        
+        uint256 customIndex = 0;
+        uint256 defaultIndex = 0;
+        
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                if (campaigns[i].projectAdditionFeeToken != address(0)) {
+                    customFeeCampaigns[customIndex++] = i;
+                } else {
+                    defaultFeeCampaigns[defaultIndex++] = i;
+                }
+            }
+        }
+        
+        return (customFeeCampaigns, defaultFeeCampaigns);
+    }
+
+    /**
+     * @notice Get campaign fee configuration
+     * @param _campaignId The campaign ID
+     * @return adminFeePercentage Admin fee percentage
+     * @return feeToken Fee token address
+     * @return projectAdditionFeeToken Project addition fee token
+     * @return projectAdditionFeeAmount Project addition fee amount
+     * @return votingFee Voting fee amount
+     * @return usesCustomFees Whether campaign uses custom fee tokens
+     */
+    function getCampaignFeeConfig(uint256 _campaignId) external view campaignExists(_campaignId) returns (
+        uint256 adminFeePercentage,
+        address feeToken,
+        address projectAdditionFeeToken,
+        uint256 projectAdditionFeeAmount,
+        uint256 votingFee,
+        bool usesCustomFees
+    ) {
+        Campaign storage campaign = campaigns[_campaignId];
+        return (
+            campaign.adminFeePercentage,
+            campaign.feeToken,
+            campaign.projectAdditionFeeToken,
+            campaign.projectAdditionFeeAmount,
+            campaign.votingFee,
+            campaign.projectAdditionFeeToken != address(0)
+        );
+    }
+
+    /**
+     * @notice Update specific campaign fees (admin only)
+     */
+    function updateCampaignFees(
+        uint256 _campaignId,
+        uint256 _adminFeePercentage,
+        address _feeToken,
+        uint256 _projectAdditionFeeAmount,
+        uint256 _votingFee
+    ) external campaignExists(_campaignId) onlyCampaignAdmin(_campaignId) whenActive {
+        Campaign storage campaign = campaigns[_campaignId];
+        
+        // Validate fees
+        require(_adminFeePercentage <= 1000, "CampaignsModule: Admin fee cannot exceed 10%");
+        require(_projectAdditionFeeAmount >= 0, "CampaignsModule: Project addition fee must be non-negative");
+        require(_votingFee >= 0, "CampaignsModule: Voting fee must be non-negative");
+
+        // Update fees
+        campaign.adminFeePercentage = _adminFeePercentage;
+        campaign.feeToken = _feeToken;
+        campaign.projectAdditionFeeAmount = _projectAdditionFeeAmount;
+        campaign.votingFee = _votingFee;
+        campaign.lastUpdated = block.timestamp;
+
+        emit CampaignFeesSet(_campaignId, _projectAdditionFeeAmount, _votingFee);
+    }
+
+    /**
+     * @notice Update project addition fee token (admin only)
+     */
+    function updateProjectAdditionFeeToken(uint256 _campaignId, address _newToken) external campaignExists(_campaignId) onlyCampaignAdmin(_campaignId) whenActive {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(_newToken != address(0), "CampaignsModule: Invalid fee token");
+        campaign.projectAdditionFeeToken = _newToken;
+        campaign.lastUpdated = block.timestamp;
+        emit FeeTokenSet(_campaignId, _newToken);
+    }
+
+    /**
+     * @notice Update project addition fee amount (admin only)
+     */
+    function updateProjectAdditionFeeAmount(uint256 _campaignId, uint256 _newAmount) external campaignExists(_campaignId) onlyCampaignAdmin(_campaignId) whenActive {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(_newAmount >= 0, "CampaignsModule: Fee amount must be non-negative");
+        campaign.projectAdditionFeeAmount = _newAmount;
+        campaign.lastUpdated = block.timestamp;
+    }
+
+    /**
+     * @notice Update voting fee amount (admin only)
+     */
+    function updateVotingFee(uint256 _campaignId, uint256 _newAmount) external campaignExists(_campaignId) onlyCampaignAdmin(_campaignId) whenActive {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(_newAmount >= 0, "CampaignsModule: Fee amount must be non-negative");
+        campaign.votingFee = _newAmount;
+        campaign.lastUpdated = block.timestamp;
+    }
 
     /**
      * @notice Get user max vote amount
@@ -1049,14 +1152,7 @@ contract CampaignsModule is BaseModule {
     }
 
     function _removeFromTag(uint256 _campaignId, string memory _tag) internal {
-        uint256[] storage tagCampaigns = campaignsByTag[_tag];
-        for (uint256 i = 0; i < tagCampaigns.length; i++) {
-            if (tagCampaigns[i] == _campaignId) {
-                tagCampaigns[i] = tagCampaigns[tagCampaigns.length - 1];
-                tagCampaigns.pop();
-                break;
-            }
-        }
+        // Removed tag-based indexing, so this function is no longer needed
     }
 
     function _removeCampaignFromStatus(OfficialStatus _status, uint256 _campaignId) internal {
@@ -1095,6 +1191,7 @@ contract CampaignsModule is BaseModule {
 
     /**
      * @notice Update campaign fees globally (admin only)
+     * @dev Only affects campaigns using default fees. Campaigns with custom fee tokens are unaffected.
      */
     function updateGlobalCampaignFees(
         uint256 _adminFeePercentage,
@@ -1105,9 +1202,9 @@ contract CampaignsModule is BaseModule {
         require(_adminFeePercentage <= 1000, "CampaignsModule: Admin fee cannot exceed 10%");
         require(_defaultFeeToken != address(0), "CampaignsModule: Invalid fee token");
         
-        // Update all existing campaigns with new default fees
+        // Update only campaigns that are using default fees (not custom fee tokens)
         for (uint256 i = 1; i < nextCampaignId; i++) {
-            if (campaigns[i].id != 0) {
+            if (campaigns[i].id != 0 && campaigns[i].projectAdditionFeeToken == address(0)) {
                 campaigns[i].adminFeePercentage = _adminFeePercentage;
                 campaigns[i].feeToken = _defaultFeeToken;
             }
@@ -1118,6 +1215,7 @@ contract CampaignsModule is BaseModule {
 
     /**
      * @notice Update project addition fees globally (admin only)
+     * @dev Only affects campaigns using default fees. Campaigns with custom fee tokens are unaffected.
      */
     function updateGlobalProjectAdditionFees(
         address _defaultProjectAdditionFeeToken,
@@ -1128,9 +1226,9 @@ contract CampaignsModule is BaseModule {
         require(_defaultProjectAdditionFeeToken != address(0), "CampaignsModule: Invalid fee token");
         require(_defaultProjectAdditionFeeAmount >= 0, "CampaignsModule: Fee amount must be non-negative");
         
-        // Update all existing campaigns with new default project addition fees
+        // Update only campaigns that are using default fees (not custom fee tokens)
         for (uint256 i = 1; i < nextCampaignId; i++) {
-            if (campaigns[i].id != 0) {
+            if (campaigns[i].id != 0 && campaigns[i].projectAdditionFeeToken == address(0)) {
                 campaigns[i].projectAdditionFeeToken = _defaultProjectAdditionFeeToken;
                 campaigns[i].projectAdditionFeeAmount = _defaultProjectAdditionFeeAmount;
             }
@@ -1141,14 +1239,15 @@ contract CampaignsModule is BaseModule {
 
     /**
      * @notice Set all fees to zero for testing (admin only)
+     * @dev Only affects campaigns using default fees. Campaigns with custom fee tokens are unaffected.
      */
     function setZeroFeesForTesting() external {
         // Check if caller has admin role through proxy
         require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
         
-        // Update all existing campaigns to have zero fees
+        // Update only campaigns that are using default fees (not custom fee tokens)
         for (uint256 i = 1; i < nextCampaignId; i++) {
-            if (campaigns[i].id != 0) {
+            if (campaigns[i].id != 0 && campaigns[i].projectAdditionFeeToken == address(0)) {
                 campaigns[i].adminFeePercentage = 0;
                 campaigns[i].projectAdditionFeeAmount = 0;
                 campaigns[i].votingFee = 0;
@@ -1160,6 +1259,7 @@ contract CampaignsModule is BaseModule {
 
     /**
      * @notice Set all fees to 0.1 CELO for testing (admin only)
+     * @dev Only affects campaigns using default fees. Campaigns with custom fee tokens are unaffected.
      */
     function setTestFees() external {
         // Check if caller has admin role through proxy
@@ -1167,9 +1267,9 @@ contract CampaignsModule is BaseModule {
         
         uint256 testFeeAmount = 0.1e18; // 0.1 CELO
         
-        // Update all existing campaigns to have test fees
+        // Update only campaigns that are using default fees (not custom fee tokens)
         for (uint256 i = 1; i < nextCampaignId; i++) {
-            if (campaigns[i].id != 0) {
+            if (campaigns[i].id != 0 && campaigns[i].projectAdditionFeeToken == address(0)) {
                 campaigns[i].adminFeePercentage = 50; // 5%
                 campaigns[i].projectAdditionFeeAmount = testFeeAmount;
                 campaigns[i].votingFee = testFeeAmount;
@@ -1177,6 +1277,157 @@ contract CampaignsModule is BaseModule {
         }
         
         emit AllFeesSetToTestAmounts(testFeeAmount);
+    }
+
+    /**
+     * @notice Update campaign JSON metadata (admin only)
+     * @dev Allows admins to update the JSON metadata for flexible expansion
+     */
+    function updateCampaignJsonMetadata(
+        uint256 _campaignId,
+        string calldata _jsonMetadata
+    ) external {
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(bytes(_jsonMetadata).length > 0, "CampaignsModule: JSON metadata cannot be empty");
+        require(bytes(_jsonMetadata).length < 10000, "CampaignsModule: JSON metadata too large"); // 10KB limit
+        
+        campaigns[_campaignId].metadata.jsonMetadata = _jsonMetadata;
+        campaigns[_campaignId].lastUpdated = block.timestamp;
+        
+        emit CampaignMetadataUpdated(_campaignId, msg.sender);
+    }
+
+    /**
+     * @notice Get campaign JSON metadata
+     * @param _campaignId The campaign ID
+     * @return JSON metadata string
+     */
+    function getCampaignJsonMetadata(uint256 _campaignId) external view campaignExists(_campaignId) returns (string memory) {
+        return campaigns[_campaignId].metadata.jsonMetadata;
+    }
+
+    /**
+     * @notice Search campaigns by JSON metadata content
+     * @param _query Search query to look for in JSON metadata
+     * @return Array of campaign IDs matching the query
+     */
+    function searchCampaignsByJsonMetadata(string calldata _query) external view returns (uint256[] memory) {
+        uint256[] memory results = new uint256[](totalCampaigns);
+        uint256 resultCount = 0;
+        
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                string memory jsonMetadata = campaigns[i].metadata.jsonMetadata;
+                if (bytes(jsonMetadata).length > 0 && _containsString(jsonMetadata, _query)) {
+                    results[resultCount] = i;
+                    resultCount++;
+                }
+            }
+        }
+        
+        // Resize array to actual results
+        uint256[] memory finalResults = new uint256[](resultCount);
+        for (uint256 i = 0; i < resultCount; i++) {
+            finalResults[i] = results[i];
+        }
+        
+        return finalResults;
+    }
+
+    /**
+     * @notice Get campaigns by metadata field value
+     * @param _fieldName The JSON field name to search
+     * @param _fieldValue The value to search for
+     * @return Array of campaign IDs with matching field value
+     */
+    function getCampaignsByMetadataField(
+        string calldata _fieldName,
+        string calldata _fieldValue
+    ) external view returns (uint256[] memory) {
+        uint256[] memory results = new uint256[](totalCampaigns);
+        uint256 resultCount = 0;
+        
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                string memory jsonMetadata = campaigns[i].metadata.jsonMetadata;
+                if (bytes(jsonMetadata).length > 0) {
+                    // Simple search for field:value pattern in JSON
+                    string memory searchPattern = string(abi.encodePacked('"', _fieldName, '":"', _fieldValue, '"'));
+                    if (_containsString(jsonMetadata, searchPattern)) {
+                        results[resultCount] = i;
+                        resultCount++;
+                    }
+                }
+            }
+        }
+        
+        // Resize array to actual results
+        uint256[] memory finalResults = new uint256[](resultCount);
+        for (uint256 i = 0; i < resultCount; i++) {
+            finalResults[i] = results[i];
+        }
+        
+        return finalResults;
+    }
+
+    /**
+     * @notice Validate JSON metadata format
+     * @param _jsonMetadata The JSON string to validate
+     * @return isValid Whether the JSON is valid
+     */
+    function validateJsonMetadata(string calldata _jsonMetadata) external pure returns (bool isValid) {
+        // Basic JSON validation - check for balanced braces and quotes
+        uint256 braceCount = 0;
+        uint256 quoteCount = 0;
+        bool inString = false;
+        
+        for (uint256 i = 0; i < bytes(_jsonMetadata).length; i++) {
+            bytes1 char = bytes(_jsonMetadata)[i];
+            
+            if (char == '"' && (i == 0 || bytes(_jsonMetadata)[i-1] != '\\')) {
+                inString = !inString;
+                quoteCount++;
+            } else if (!inString) {
+                if (char == '{') {
+                    braceCount++;
+                } else if (char == '}') {
+                    if (braceCount == 0) return false; // Unmatched closing brace
+                    braceCount--;
+                }
+            }
+        }
+        
+        return braceCount == 0 && quoteCount % 2 == 0;
+    }
+
+    /**
+     * @notice Internal helper function to check if a string contains a substring
+     * @param _source The source string to search in
+     * @param _query The substring to search for
+     * @return contains Whether the source contains the query
+     */
+    function _containsString(string memory _source, string memory _query) internal pure returns (bool contains) {
+        bytes memory sourceBytes = bytes(_source);
+        bytes memory queryBytes = bytes(_query);
+        
+        if (queryBytes.length > sourceBytes.length) {
+            return false;
+        }
+        
+        for (uint256 i = 0; i <= sourceBytes.length - queryBytes.length; i++) {
+            bool found = true;
+            for (uint256 j = 0; j < queryBytes.length; j++) {
+                if (sourceBytes[i + j] != queryBytes[j]) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**

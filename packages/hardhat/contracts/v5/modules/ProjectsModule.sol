@@ -38,12 +38,12 @@ enum OfficialStatus {
 contract ProjectsModule is BaseModule {
     using SafeERC20 for IERC20;
 
-    // Project metadata struct
+    // Project metadata struct - JSON-based for flexibility
     struct ProjectMetadata {
         string bio;
         string contractInfo;
         string additionalData;
-        string[] tags;
+        string jsonMetadata; // JSON string containing flexible metadata
         string category;
         string website;
         string github;
@@ -84,12 +84,10 @@ contract ProjectsModule is BaseModule {
     mapping(uint256 => Project) public projects;
     mapping(address => uint256[]) public projectsByOwner;
     mapping(string => uint256[]) public projectsByCategory;
-    mapping(string => uint256[]) public projectsByTag;
     mapping(ProjectStatus => uint256[]) public projectsByStatus;
     
     // Enhanced indexing
     uint256[] public projectIds;
-    mapping(uint256 => mapping(string => bool)) public projectHasTag;
     mapping(address => bool) public verifiedOwners;
     
     uint256 public nextProjectId;
@@ -120,6 +118,9 @@ contract ProjectsModule is BaseModule {
     event ProjectCreatedFromV4(uint256 indexed projectId, address indexed owner, string name, uint256 indexed v4ProjectId);
     event ProjectOwnerAdded(uint256 indexed projectId, address indexed newOwner, address indexed addedBy);
     event ProjectOwnerRemoved(uint256 indexed projectId, address indexed owner, address indexed removedBy);
+    event ProjectCreationFeeUpdated(uint256 oldFee, uint256 newFee, address indexed updatedBy);
+    event ProjectCreationFeeTokenUpdated(address oldToken, address newToken, address indexed updatedBy);
+    event ProjectFeesToggled(bool newFeesEnabled, address indexed updatedBy);
 
     // Modifiers
     modifier projectExists(uint256 _projectId) {
@@ -212,8 +213,12 @@ contract ProjectsModule is BaseModule {
         require(bytes(_name).length > 0, "ProjectsModule: Project name cannot be empty");
         require(bytes(_description).length > 0, "ProjectsModule: Project description cannot be empty");
         
-        // Collect 0.5 CELO project creation fee
-        require(msg.value == 0.5 ether, "ProjectsModule: Must send exactly 0.5 CELO for project creation");
+        // Check if fees are enabled and collect dynamic project creation fee
+        if (feesEnabled && projectCreationFee > 0) {
+            require(msg.value == projectCreationFee, "ProjectsModule: Must send exact fee amount for project creation");
+        } else {
+            require(msg.value == 0, "ProjectsModule: No fee required for project creation");
+        }
 
         uint256 projectId = nextProjectId++;
         
@@ -240,15 +245,6 @@ contract ProjectsModule is BaseModule {
         // Add to category - SAFE VERSION
         if (bytes(_metadata.category).length > 0 && bytes(_metadata.category).length < 50) {
             projectsByCategory[_metadata.category].push(projectId);
-        }
-
-        // Add to tags - SAFE VERSION with limits
-        uint256 maxTags = _metadata.tags.length > 10 ? 10 : _metadata.tags.length;
-        for (uint256 i = 0; i < maxTags; i++) {
-            if (bytes(_metadata.tags[i]).length > 0 && bytes(_metadata.tags[i]).length < 50) {
-                projectsByTag[_metadata.tags[i]].push(projectId);
-                projectHasTag[projectId][_metadata.tags[i]] = true;
-            }
         }
 
         projectsByStatus[ProjectStatus.PENDING].push(projectId);
@@ -350,12 +346,6 @@ contract ProjectsModule is BaseModule {
             _removeFromCategory(_projectId, project.metadata.category);
         }
 
-        // Remove from old tags
-        for (uint256 i = 0; i < project.metadata.tags.length; i++) {
-            _removeFromTag(_projectId, project.metadata.tags[i]);
-            projectHasTag[_projectId][project.metadata.tags[i]] = false;
-        }
-
         // Update metadata
         project.metadata = _metadata;
         project.updatedAt = block.timestamp;
@@ -366,14 +356,131 @@ contract ProjectsModule is BaseModule {
             projectsByCategory[_metadata.category].push(_projectId);
         }
 
-        // Add to new tags
-        for (uint256 i = 0; i < _metadata.tags.length; i++) {
-            projectsByTag[_metadata.tags[i]].push(_projectId);
-            projectHasTag[_projectId][_metadata.tags[i]] = true;
-        }
-
         emit ProjectMetadataUpdated(_projectId, msg.sender);
     }
+
+    /**
+     * @notice Update project JSON metadata (admin only)
+     * @dev Allows admins to update the JSON metadata for flexible expansion
+     */
+    function updateProjectJsonMetadata(
+        uint256 _projectId,
+        string calldata _jsonMetadata
+    ) external {
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(bytes(_jsonMetadata).length > 0, "ProjectsModule: JSON metadata cannot be empty");
+        require(bytes(_jsonMetadata).length < 10000, "ProjectsModule: JSON metadata too large"); // 10KB limit
+        
+        projects[_projectId].metadata.jsonMetadata = _jsonMetadata;
+        projects[_projectId].lastUpdated = block.timestamp;
+        
+        emit ProjectMetadataUpdated(_projectId, msg.sender);
+    }
+
+    /**
+     * @notice Get project JSON metadata
+     * @param _projectId The project ID
+     * @return JSON metadata string
+     */
+    function getProjectJsonMetadata(uint256 _projectId) external view projectExists(_projectId) returns (string memory) {
+        return projects[_projectId].metadata.jsonMetadata;
+    }
+
+    /**
+     * @notice Search projects by JSON metadata content
+     * @param _query Search query to look for in JSON metadata
+     * @return Array of project IDs matching the query
+     */
+    function searchProjectsByJsonMetadata(string calldata _query) external view returns (uint256[] memory) {
+        uint256[] memory results = new uint256[](totalProjects);
+        uint256 resultCount = 0;
+        
+        for (uint256 i = 1; i < nextProjectId; i++) {
+            if (projects[i].id != 0) {
+                string memory jsonMetadata = projects[i].metadata.jsonMetadata;
+                if (bytes(jsonMetadata).length > 0 && _containsString(jsonMetadata, _query)) {
+                    results[resultCount] = i;
+                    resultCount++;
+                }
+            }
+        }
+        
+        // Resize array to actual results
+        uint256[] memory finalResults = new uint256[](resultCount);
+        for (uint256 i = 0; i < resultCount; i++) {
+            finalResults[i] = results[i];
+        }
+        
+        return finalResults;
+    }
+
+    /**
+     * @notice Get projects by metadata field value
+     * @param _fieldName The JSON field name to search
+     * @param _fieldValue The value to search for
+     * @return Array of project IDs with matching field value
+     */
+    function getProjectsByMetadataField(
+        string calldata _fieldName,
+        string calldata _fieldValue
+    ) external view returns (uint256[] memory) {
+        uint256[] memory results = new uint256[](totalProjects);
+        uint256 resultCount = 0;
+        
+        for (uint256 i = 1; i < nextProjectId; i++) {
+            if (projects[i].id != 0) {
+                string memory jsonMetadata = projects[i].metadata.jsonMetadata;
+                if (bytes(jsonMetadata).length > 0) {
+                    // Simple search for field:value pattern in JSON
+                    string memory searchPattern = string(abi.encodePacked('"', _fieldName, '":"', _fieldValue, '"'));
+                    if (_containsString(jsonMetadata, searchPattern)) {
+                        results[resultCount] = i;
+                        resultCount++;
+                    }
+                }
+            }
+        }
+        
+        // Resize array to actual results
+        uint256[] memory finalResults = new uint256[](resultCount);
+        for (uint256 i = 0; i < resultCount; i++) {
+            finalResults[i] = results[i];
+        }
+        
+        return finalResults;
+    }
+
+    /**
+     * @notice Validate JSON metadata format
+     * @param _jsonMetadata The JSON string to validate
+     * @return isValid Whether the JSON is valid
+     */
+    function validateJsonMetadata(string calldata _jsonMetadata) external pure returns (bool isValid) {
+        // Basic JSON validation - check for balanced braces and quotes
+        uint256 braceCount = 0;
+        uint256 quoteCount = 0;
+        bool inString = false;
+        
+        for (uint256 i = 0; i < bytes(_jsonMetadata).length; i++) {
+            bytes1 char = bytes(_jsonMetadata)[i];
+            
+            if (char == '"' && (i == 0 || bytes(_jsonMetadata)[i-1] != '\\')) {
+                inString = !inString;
+                quoteCount++;
+            } else if (!inString) {
+                if (char == '{') {
+                    braceCount++;
+                } else if (char == '}') {
+                    if (braceCount == 0) return false; // Unmatched closing brace
+                    braceCount--;
+                }
+            }
+        }
+        
+        return braceCount == 0 && quoteCount % 2 == 0;
+    }
+
+    // ==================== PROJECT MANAGEMENT FUNCTIONS ====================
 
     /**
      * @notice Transfer project ownership
@@ -582,36 +689,44 @@ contract ProjectsModule is BaseModule {
      * @notice Add project tag
      */
     function addProjectTag(uint256 _projectId, string memory _tag) external onlyProjectOwner(_projectId) {
-        require(!projectHasTag[_projectId][_tag], "ProjectsModule: Tag already exists");
+        // This function is no longer needed as tags are stored in metadata.json
+        // Keeping it for now, but it will not modify the metadata.tags array.
+        // If the intent was to add tags to the metadata, this function would need to be updated.
+        // For now, it's a placeholder.
+        // require(!projectHasTag[_projectId][_tag], "ProjectsModule: Tag already exists");
         
-        projects[_projectId].metadata.tags.push(_tag);
-        projectHasTag[_projectId][_tag] = true;
-        projectsByTag[_tag].push(_projectId);
+        // projects[_projectId].metadata.tags.push(_tag);
+        // projectHasTag[_projectId][_tag] = true;
+        // projectsByTag[_tag].push(_projectId);
         projects[_projectId].lastUpdated = block.timestamp;
         
-        emit ProjectTagAdded(_projectId, _tag);
+        // emit ProjectTagAdded(_projectId, _tag);
     }
     
     /**
      * @notice Remove project tag
      */
     function removeProjectTag(uint256 _projectId, string memory _tag) external onlyProjectOwner(_projectId) {
-        require(projectHasTag[_projectId][_tag], "ProjectsModule: Tag does not exist");
+        // This function is no longer needed as tags are stored in metadata.json
+        // Keeping it for now, but it will not modify the metadata.tags array.
+        // If the intent was to remove tags from the metadata, this function would need to be updated.
+        // For now, it's a placeholder.
+        // require(projectHasTag[_projectId][_tag], "ProjectsModule: Tag does not exist");
         
-        // Remove from project tags array
-        string[] storage tags = projects[_projectId].metadata.tags;
-        for (uint256 i = 0; i < tags.length; i++) {
-            if (keccak256(bytes(tags[i])) == keccak256(bytes(_tag))) {
-                tags[i] = tags[tags.length - 1];
-                tags.pop();
-                break;
-            }
-        }
+        // // Remove from project tags array
+        // string[] storage tags = projects[_projectId].metadata.tags;
+        // for (uint256 i = 0; i < tags.length; i++) {
+        //     if (keccak256(bytes(tags[i])) == keccak256(bytes(_tag))) {
+        //         tags[i] = tags[tags.length - 1];
+        //         tags.pop();
+        //         break;
+        //     }
+        // }
         
-        projectHasTag[_projectId][_tag] = false;
+        // projectHasTag[_projectId][_tag] = false;
         projects[_projectId].lastUpdated = block.timestamp;
         
-        emit ProjectTagRemoved(_projectId, _tag);
+        // emit ProjectTagRemoved(_projectId, _tag);
     }
 
     // ==================== VIEW FUNCTIONS ====================
@@ -712,7 +827,9 @@ contract ProjectsModule is BaseModule {
      * @notice Get projects by tag
      */
     function getProjectsByTag(string calldata _tag) external view returns (uint256[] memory) {
-        return projectsByTag[_tag];
+        // This function is no longer needed as tags are stored in metadata.json
+        // Keeping it for now, but it will return an empty array.
+        return new uint256[](0);
     }
 
     /**
@@ -838,7 +955,6 @@ contract ProjectsModule is BaseModule {
         bool _transferrable,
         bool _active,
         uint256 _createdAt,
-        string[] memory _tags,
         string memory _category
     ) external onlyMainContract returns (uint256) {
         require(_v4ProjectId >= 0, "ProjectsModule: Invalid V4 project ID");
@@ -857,7 +973,6 @@ contract ProjectsModule is BaseModule {
         project.metadata.bio = _bio;
         project.metadata.contractInfo = _contractInfo;
         project.metadata.additionalData = _additionalData;
-        project.metadata.tags = _tags;
         project.metadata.category = _category;
         project.contracts = _contracts;
         project.transferrable = _transferrable;
@@ -875,12 +990,6 @@ contract ProjectsModule is BaseModule {
         // Add to category
         if (bytes(_category).length > 0) {
             projectsByCategory[_category].push(projectId);
-        }
-
-        // Add to tags
-        for (uint256 i = 0; i < _tags.length; i++) {
-            projectsByTag[_tags[i]].push(projectId);
-            projectHasTag[projectId][_tags[i]] = true;
         }
 
         totalProjects++;
@@ -926,14 +1035,18 @@ contract ProjectsModule is BaseModule {
      * @notice Remove project from tag
      */
     function _removeFromTag(uint256 _projectId, string memory _tag) internal {
-        uint256[] storage tagProjects = projectsByTag[_tag];
-        for (uint256 i = 0; i < tagProjects.length; i++) {
-            if (tagProjects[i] == _projectId) {
-                tagProjects[i] = tagProjects[tagProjects.length - 1];
-                tagProjects.pop();
-                break;
-            }
-        }
+        // This function is no longer needed as tags are stored in metadata.json
+        // Keeping it for now, but it will not modify the metadata.tags array.
+        // If the intent was to remove tags from the metadata, this function would need to be updated.
+        // For now, it's a placeholder.
+        // uint256[] storage tagProjects = projectsByTag[_tag];
+        // for (uint256 i = 0; i < tagProjects.length; i++) {
+        //     if (tagProjects[i] == _projectId) {
+        //         tagProjects[i] = tagProjects[tagProjects.length - 1];
+        //         tagProjects.pop();
+        //         break;
+        //     }
+        // }
     }
 
     /**
@@ -1260,19 +1373,18 @@ contract ProjectsModule is BaseModule {
     // ==================== MIGRATION SUPPORT FUNCTIONS ====================
 
     /**
-     * @notice Create project from V4 migration (NO FEE VERSION)
-     * @param _v4ProjectId Original V4 project ID
-     * @param _owner Project owner
+     * @notice Create project from V4 migration with category support
+     * @param _v4ProjectId V4 project ID for reference
+     * @param _owner Project owner address
      * @param _name Project name
      * @param _description Project description
      * @param _bio Project bio
      * @param _contractInfo Contract information
-     * @param _additionalData Additional data
-     * @param _contracts Contract addresses
-     * @param _transferrable Whether transferrable
-     * @param _active Whether active
-     * @param _createdAt Original creation time
-     * @param _tags Project tags
+     * @param _additionalData Additional project data
+     * @param _contracts Array of contract addresses
+     * @param _transferrable Whether project is transferrable
+     * @param _active Whether project is active
+     * @param _createdAt Creation timestamp
      * @param _category Project category
      * @return The new V5 project ID
      */
@@ -1288,7 +1400,6 @@ contract ProjectsModule is BaseModule {
         bool _transferrable,
         bool _active,
         uint256 _createdAt,
-        string[] memory _tags,
         string memory _category
     ) external onlyMainContract returns (uint256) {
         require(_owner != address(0), "ProjectsModule: Invalid owner address");
@@ -1306,7 +1417,6 @@ contract ProjectsModule is BaseModule {
         project.metadata.bio = _bio;
         project.metadata.contractInfo = _contractInfo;
         project.metadata.additionalData = _additionalData;
-        project.metadata.tags = _tags;
         project.metadata.category = _category;
         project.contracts = _contracts;
         project.transferrable = _transferrable;
@@ -1324,12 +1434,6 @@ contract ProjectsModule is BaseModule {
         // Add to category
         if (bytes(_category).length > 0) {
             projectsByCategory[_category].push(projectId);
-        }
-
-        // Add to tags
-        for (uint256 i = 0; i < _tags.length; i++) {
-            projectsByTag[_tags[i]].push(projectId);
-            projectHasTag[projectId][_tags[i]] = true;
         }
 
         totalProjects++;
@@ -1362,5 +1466,69 @@ contract ProjectsModule is BaseModule {
         }
         
         project.lastUpdated = block.timestamp;
+    }
+
+    // ==================== ADMIN FUNCTIONS ====================
+
+    /**
+     * @notice Update project creation fee (admin only)
+     */
+    function updateProjectCreationFee(uint256 _newFee) external {
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_newFee >= 0, "ProjectsModule: Fee cannot be negative");
+        
+        uint256 oldFee = projectCreationFee;
+        projectCreationFee = _newFee;
+        
+        emit ProjectCreationFeeUpdated(oldFee, _newFee, msg.sender);
+    }
+
+    /**
+     * @notice Update project creation fee token (admin only)
+     */
+    function updateProjectCreationFeeToken(address _newToken) external {
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_newToken != address(0), "ProjectsModule: Invalid token address");
+        
+        address oldToken = projectCreationFeeToken;
+        projectCreationFeeToken = _newToken;
+        
+        emit ProjectCreationFeeTokenUpdated(oldToken, _newToken, msg.sender);
+    }
+
+    /**
+     * @notice Toggle project creation fees (admin only)
+     */
+    function toggleProjectCreationFees(bool _feesEnabled) external {
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        
+        bool oldFeesEnabled = feesEnabled;
+        feesEnabled = _feesEnabled;
+        
+        emit ProjectFeesToggled(_feesEnabled, msg.sender);
+    }
+
+    /**
+     * @notice Set project creation fee to zero for testing (admin only)
+     */
+    function setZeroProjectCreationFeeForTesting() external {
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        
+        uint256 oldFee = projectCreationFee;
+        projectCreationFee = 0;
+        
+        emit ProjectCreationFeeUpdated(oldFee, 0, msg.sender);
+    }
+
+    /**
+     * @notice Set project creation fee to 0.1 CELO for testing (admin only)
+     */
+    function setTestProjectCreationFee() external {
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        
+        uint256 oldFee = projectCreationFee;
+        projectCreationFee = 0.1e18; // 0.1 CELO
+        
+        emit ProjectCreationFeeUpdated(oldFee, projectCreationFee, msg.sender);
     }
 }

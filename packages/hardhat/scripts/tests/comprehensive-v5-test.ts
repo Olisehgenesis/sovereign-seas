@@ -157,7 +157,7 @@ class ComprehensiveV5Test {
     const testId = this.tracker.startScenarioTest(
       "seasDistribution",
       "SEAS Token Distribution",
-      "Distribute SEAS tokens to all test wallets"
+      "Distribute SEAS tokens from first wallet to all other test wallets"
     );
     
     if (!this.deployment.record.contracts.seasToken) {
@@ -165,33 +165,37 @@ class ComprehensiveV5Test {
       throw new Error("❌ SEAS token not found in deployment. Deploy SEAS token first.");
     }
 
-    // Check if first wallet has SEAS tokens already
-    const firstWalletBalance = await this.publicClient.readContract({
+    // Use the first wallet (index 0) as the source wallet for SEAS tokens
+    const sourceWallet = this.wallets[0];
+    console.log(`✅ Using first wallet as source: ${sourceWallet.address}`);
+    
+    // Check if source wallet has SEAS tokens
+    const sourceWalletBalance = await this.publicClient.readContract({
       address: this.deployment.record.contracts.seasToken as `0x${string}`,
       abi: SEAS_TOKEN_ABI,
       functionName: "balanceOf",
-      args: [this.wallets[0].address as `0x${string}`],
+      args: [sourceWallet.address as `0x${string}`],
     });
 
-    if (Number(firstWalletBalance) > 0) {
-      console.log(`✅ First wallet already has ${Number(firstWalletBalance) / 1e18} SEAS tokens`);
+    if (Number(sourceWalletBalance) > 0) {
+      console.log(`✅ Source wallet has ${Number(sourceWalletBalance) / 1e18} SEAS tokens`);
       
-      // Transfer tokens from first wallet to others
-      const firstWalletAccount = privateKeyToAccount(this.wallets[0].privateKey);
-      const firstWalletClient = createWalletClient({
+      // Transfer tokens from source wallet to other test wallets
+      const sourceWalletAccount = privateKeyToAccount(sourceWallet.privateKey);
+      const sourceWalletClient = createWalletClient({
         chain: celoAlfajores,
         transport: http(this.config.rpcUrl),
-        account: firstWalletAccount,
+        account: sourceWalletAccount,
       });
 
       const amountToDistribute = parseEther("10000");
       
-      for (let i = 1; i < this.wallets.length; i++) {
+      for (let i = 1; i < this.wallets.length; i++) { // Start from index 1 (skip source wallet)
         const wallet = this.wallets[i];
         console.log(`💸 Transferring 10,000 SEAS to wallet ${i + 1}: ${wallet.address}`);
         
         try {
-          const hash = await firstWalletClient.writeContract({
+          const hash = await sourceWalletClient.writeContract({
             address: this.deployment.record.contracts.seasToken as `0x${string}`,
             abi: SEAS_TOKEN_ABI,
             functionName: "transfer",
@@ -215,10 +219,13 @@ class ComprehensiveV5Test {
           throw error;
         }
       }
+      
+      console.log("✅ SEAS token distribution completed successfully");
+      
     } else {
-      console.log("❌ First wallet has no SEAS tokens. Cannot distribute.");
+      console.log("❌ Source wallet has no SEAS tokens. Cannot distribute.");
       console.log("💡 You may need to manually send SEAS tokens to the first wallet or use the deployer account.");
-      throw new Error("First wallet has no SEAS tokens to distribute");
+      throw new Error("Source wallet has no SEAS tokens to distribute");
     }
 
     this.state.seasDistributed = true;
@@ -295,21 +302,37 @@ class ComprehensiveV5Test {
         console.log(`   Current project count: ${testCall}`);
   
                 // Prepare the project metadata as individual fields (not JSON string)
-        const metadata = {
+        const projectMetadata = {
           bio: `Bio for ${template.name}`,
           contractInfo: `Contract info for ${template.name}`,
           additionalData: `Additional data for ${template.name}`,
-          tags: [], // Empty array for test
-          category: template.category || "General", // Provide fallback category
-          website: `https://project-${i + 1}.example.com`,
-          github: `https://github.com/project-${i + 1}`,
-          twitter: `@project${i + 1}`,
-          discord: `project${i + 1}`,
-          websiteUrl: `https://project-${i + 1}.example.com`,
-          socialMediaHandle: `@project${i + 1}`
+          jsonMetadata: JSON.stringify({
+            tags: ["general", "testing"],
+            difficulty: "beginner",
+            estimatedTime: "2-4 weeks",
+            techStack: ["solidity", "react"],
+            teamSize: 1,
+            fundingNeeded: "1000 CELO",
+            milestones: [
+              { name: "MVP", description: "Basic functionality", reward: "500 CELO" },
+              { name: "Beta", description: "User testing", reward: "500 CELO" }
+            ],
+            socialLinks: {
+              github: "https://github.com/test",
+              twitter: "@testproject",
+              discord: "test#1234"
+            }
+          }),
+          category: template.category || "General",
+          website: "https://test.com",
+          github: "https://github.com/test",
+          twitter: "@test",
+          discord: "test#1234",
+          websiteUrl: "https://test.com",
+          socialMediaHandle: "@test"
         };
         
-        console.log(`   Using metadata: bio="${metadata.bio}", category="${metadata.category}", tags=${metadata.tags.length}`);
+        console.log(`   Using metadata: bio="${projectMetadata.bio}", category="${projectMetadata.category}"`);
         
         console.log("   Encoding function data...");
         console.log(`   Args: name="${template.name} #${i + 1}", description="${template.description} - Created by test wallet ${i + 1}", metadata struct, contracts=[], transferrable=false`);
@@ -320,7 +343,7 @@ class ComprehensiveV5Test {
           args: [
             `${template.name} #${i + 1}`,
             `${template.description} - Created by test wallet ${i + 1}`,
-            metadata,
+            projectMetadata,
             [], // contracts array (empty for test)
             false // transferrable
           ],
@@ -452,7 +475,14 @@ class ComprehensiveV5Test {
             bio: `Bio for ${template.name}`,
             contractInfo: "",
             additionalData: "",
-            tags: [],
+            jsonMetadata: JSON.stringify({
+              tags: ["general", "testing"],
+              difficulty: "beginner",
+              estimatedTime: "2-4 weeks",
+              techStack: ["solidity"],
+              teamSize: 1,
+              fundingNeeded: "500 CELO"
+            }),
             category: template.category || "General",
             website: "",
             github: "",
@@ -551,15 +581,40 @@ class ComprehensiveV5Test {
         args: [
           "Ocean Innovation Challenge",
           "Supporting innovative ocean-related projects with CELO funding",
-          "Environment",
-          ["ocean", "environment", "innovation"],
-          "https://example.com/ocean-campaign.jpg",
-          parseEther("1000"), // 1000 CELO max budget
-          BigInt(now),
-          BigInt(now + oneDay * 7), // 7 days duration
-          false, // Not ERC20 campaign
-          "0x0000000000000000000000000000000000000000", // No token address
-          BigInt(0), // No minimum token amount
+          {
+            mainInfo: "Ocean Innovation Challenge",
+            additionalInfo: "Supporting innovative ocean-related projects with CELO funding",
+            jsonMetadata: JSON.stringify({
+              tags: ["ocean", "environment", "innovation"],
+              targetAudience: "environmentalists",
+              maxParticipants: 50,
+              rewardStructure: {
+                firstPlace: "500 CELO",
+                secondPlace: "300 CELO",
+                thirdPlace: "200 CELO"
+              },
+              requirements: [
+                "Must be ocean-related",
+                "Must be innovative",
+                "Must have environmental impact"
+              ],
+              categories: ["ocean", "environment", "innovation"]
+            }),
+            category: "Environment",
+            website: "https://example.com/ocean-campaign",
+            logo: "https://example.com/ocean-campaign.jpg",
+            banner: "https://example.com/ocean-campaign-banner.jpg",
+            socialLinks: ["https://twitter.com/oceancampaign"],
+            websiteUrl: "https://example.com/ocean-campaign",
+            socialMediaHandle: "@oceancampaign"
+          },
+          BigInt(now + oneDay), // Start in 1 day
+          BigInt(now + oneDay * 8), // End in 8 days
+          50, // 5% admin fee
+          3, // Max 3 winners
+          0, // Proportional distribution
+          this.deployment.record.contracts.seasToken, // Payout token
+          this.deployment.record.contracts.seasToken // Fee token
         ],
       });
 
@@ -607,26 +662,58 @@ class ComprehensiveV5Test {
     try {
       const functionTestId = this.tracker.startFunctionTest(
         "campaigns",
-        "createCampaign",
+        "createERC20Campaign",
         "Create SEAS campaign",
-        "Create SEAS token-based campaign"
+        "Create SEAS token-based campaign using createERC20Campaign"
       );
       
       const seasCampaignData = encodeFunctionData({
         abi: CAMPAIGNS_MODULE_ABI,
-        functionName: "createCampaign",
+        functionName: "createERC20Campaign",
         args: [
           "SEAS Innovation Fund",
           "SEAS token holders vote on the most innovative projects",
-          "Technology",
-          ["seas", "token", "innovation", "voting"],
-          "https://example.com/seas-campaign.jpg",
-          parseEther("500"), // 500 CELO equivalent max budget
-          BigInt(now),
-          BigInt(now + oneDay * 14), // 14 days duration
-          true, // ERC20 campaign
-          this.deployment.record.contracts.seasToken as `0x${string}`,
-          parseEther("100"), // Minimum 100 SEAS to participate
+          {
+            mainInfo: "SEAS Innovation Fund",
+            additionalInfo: "SEAS token holders vote on the most innovative projects",
+            jsonMetadata: JSON.stringify({
+              tags: ["seas", "token", "innovation", "voting"],
+              targetAudience: "SEAS token holders",
+              maxParticipants: 100,
+              rewardStructure: {
+                firstPlace: "250 SEAS",
+                secondPlace: "150 SEAS",
+                thirdPlace: "100 SEAS"
+              },
+              requirements: [
+                "Must hold SEAS tokens",
+                "Must be innovative",
+                "Must have clear roadmap"
+              ],
+              categories: ["technology", "innovation", "defi"],
+              minSeasRequired: "100 SEAS"
+            }),
+            category: "Technology",
+            website: "https://example.com/seas-campaign",
+            logo: "https://example.com/seas-campaign.jpg",
+            banner: "https://example.com/seas-campaign-banner.jpg",
+            socialLinks: ["https://twitter.com/seascampaign"],
+            websiteUrl: "https://example.com/seas-campaign",
+            socialMediaHandle: "@seascampaign"
+          },
+          BigInt(now + oneDay), // Start in 1 day
+          BigInt(now + oneDay * 15), // End in 15 days
+          50, // 5% admin fee
+          3, // Max 3 winners
+          0, // Proportional distribution
+          "", // Custom distribution data
+          this.deployment.record.contracts.seasToken, // Payout token
+          this.deployment.record.contracts.seasToken, // Fee token
+          2, // TOKEN_ONLY campaign type
+          [this.deployment.record.contracts.seasToken], // Only SEAS tokens allowed
+          [1000], // SEAS token weight (1x)
+          this.deployment.record.contracts.seasToken, // Project addition fee token
+          parseEther("100") // 100 SEAS to add project
         ],
       });
 
@@ -652,12 +739,12 @@ class ComprehensiveV5Test {
         tokenAddress: this.deployment.record.contracts.seasToken,
       });
       
-      console.log("  ✅ SEAS campaign created");
+      console.log("  ✅ SEAS token-based campaign created successfully");
       
       // Mark function test as passed
       this.tracker.completeFunctionTest(
         "campaigns",
-        "createCampaign",
+        "createERC20Campaign",
         functionTestId,
         "passed",
         executionTime,
@@ -676,6 +763,149 @@ class ComprehensiveV5Test {
     
     // Mark scenario as completed successfully
     this.tracker.completeScenarioTest("campaignCreation", testId, "passed", Date.now() - this.testStartTime);
+  }
+
+  private async addProjectsToSeasCampaign() {
+    if (this.shouldSkipStep("add-projects-to-seas-campaign")) return;
+    
+    console.log("\n🔗 Adding projects to SEAS campaign for voting...");
+    
+    // Start tracking project addition test
+    const testId = this.tracker.startScenarioTest(
+      "projectAdditionToSeas",
+      "Project Addition to SEAS Campaign",
+      "Add projects to SEAS campaign and test SEAS token voting"
+    );
+    
+    if (!this.state.campaigns || this.state.campaigns.length < 2) {
+      console.log("❌ SEAS campaign not found. Cannot add projects.");
+      return;
+    }
+    
+    const seasCampaign = this.state.campaigns.find(c => c.isERC20 && c.tokenAddress === this.deployment.record.contracts.seasToken);
+    if (!seasCampaign) {
+      console.log("❌ SEAS campaign not found in state.");
+      return;
+    }
+    
+    console.log(`🎯 Adding projects to SEAS campaign: ${seasCampaign.name}`);
+    
+    // Add first 3 projects to the SEAS campaign
+    if (!this.state.projects || this.state.projects.length === 0) {
+      throw new Error("No projects found. Create projects first.");
+    }
+    
+    for (let i = 0; i < Math.min(3, this.state.projects.length); i++) {
+      const project = this.state.projects[i];
+      if (!project) continue;
+      
+      const wallet = this.wallets[i];
+      if (!wallet) continue;
+      
+      console.log(`📝 Adding project "${project.name}" to SEAS campaign using wallet ${i + 1}`);
+      
+      const account = privateKeyToAccount(wallet.privateKey);
+      const walletClient = createWalletClient({
+        chain: celoAlfajores,
+        transport: http(this.config.rpcUrl),
+        account,
+      });
+      
+      try {
+        // First approve SEAS tokens for the campaign
+        console.log(`   Approving SEAS tokens for project addition...`);
+        const approveHash = await walletClient.writeContract({
+          address: this.deployment.record.contracts.seasToken as `0x${string}`,
+          abi: SEAS_TOKEN_ABI,
+          functionName: "approve",
+          args: [this.deployment.record.contracts.sovereignSeasV5, parseEther("100")],
+        });
+        
+        await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
+        console.log(`   ✅ SEAS tokens approved`);
+        
+        // Add project to campaign
+        const addProjectData = encodeFunctionData({
+          abi: CAMPAIGNS_MODULE_ABI,
+          functionName: "addProjectToCampaign",
+          args: [seasCampaign.id, project.id],
+        });
+        
+        const addProjectHash = await walletClient.writeContract({
+          address: this.deployment.record.contracts.sovereignSeasV5 as `0x${string}`,
+          abi: SOVEREIGN_SEAS_V5_ABI,
+          functionName: "callModule",
+          args: ["campaigns", addProjectData],
+        });
+        
+        console.log(`   ⏳ Adding project transaction: ${addProjectHash}`);
+        await this.publicClient.waitForTransactionReceipt({ hash: addProjectHash });
+        console.log(`   ✅ Project "${project.name}" added to SEAS campaign`);
+        
+      } catch (error) {
+        console.error(`❌ Failed to add project "${project.name}" to SEAS campaign:`, error);
+        throw error;
+      }
+    }
+    
+    // Test SEAS token voting
+    console.log(`🗳️ Testing SEAS token voting...`);
+    
+    // Use wallet 1 to vote for project 1
+    const voterWallet = this.wallets[1];
+    const projectToVoteFor = this.state.projects[0];
+    
+    console.log(`   Wallet 1 voting for project "${projectToVoteFor.name}" with SEAS tokens`);
+    
+    const voterAccount = privateKeyToAccount(voterWallet.privateKey);
+    const voterClient = createWalletClient({
+      chain: celoAlfajores,
+      transport: http(this.config.rpcUrl),
+      account: voterAccount,
+    });
+    
+    try {
+      // Approve SEAS tokens for voting
+      console.log(`   Approving SEAS tokens for voting...`);
+      const approveVoteHash = await voterClient.writeContract({
+        address: this.deployment.record.contracts.seasToken as `0x${string}`,
+        abi: SEAS_TOKEN_ABI,
+        functionName: "approve",
+        args: [this.deployment.record.contracts.sovereignSeasV5, parseEther("1000")],
+      });
+      
+      await this.publicClient.waitForTransactionReceipt({ hash: approveVoteHash });
+      console.log(`   ✅ SEAS tokens approved for voting`);
+      
+      // Vote with SEAS tokens
+      const voteData = encodeFunctionData({
+        abi: VOTING_MODULE_ABI,
+        functionName: "vote",
+        args: [seasCampaign.id, projectToVoteFor.id, this.deployment.record.contracts.seasToken, parseEther("500")],
+      });
+      
+      const voteHash = await voterClient.writeContract({
+        address: this.deployment.record.contracts.sovereignSeasV5 as `0x${string}`,
+        abi: SOVEREIGN_SEAS_V5_ABI,
+        functionName: "callModule",
+        args: ["voting", voteData],
+      });
+      
+      console.log(`   ⏳ Voting transaction: ${voteHash}`);
+      const voteReceipt = await this.publicClient.waitForTransactionReceipt({ hash: voteHash });
+      console.log(`   ✅ Voted successfully with 500 SEAS tokens`);
+      console.log(`   Gas used: ${voteReceipt.gasUsed}`);
+      
+    } catch (error) {
+      console.error(`❌ Failed to vote with SEAS tokens:`, error);
+      throw error;
+    }
+    
+    this.markStepCompleted("add-projects-to-seas-campaign");
+    console.log("✅ Project addition and SEAS voting test completed");
+    
+    // Mark scenario as completed successfully
+    this.tracker.completeScenarioTest("projectAdditionToSeas", testId, "passed", Date.now() - this.testStartTime);
   }
 
   private async testVotingAndDistribution() {
@@ -920,6 +1150,7 @@ class ComprehensiveV5Test {
       await this.distributeSeasTokens();
       await this.createProjects();
       await this.createCampaigns();
+      await this.addProjectsToSeasCampaign(); // Added this line
       await this.testVotingAndDistribution();
       await this.generateReport();
     } catch (error) {

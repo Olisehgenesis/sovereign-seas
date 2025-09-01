@@ -17,6 +17,9 @@ export interface TestState {
   campaignsCreated?: boolean;
   votingCompleted?: boolean;
   distributionCompleted?: boolean;
+  feesTested?: boolean;
+  zeroFeesTested?: boolean;
+  testFeesTested?: boolean;
 }
 
 function ensureDir(dir: string) {

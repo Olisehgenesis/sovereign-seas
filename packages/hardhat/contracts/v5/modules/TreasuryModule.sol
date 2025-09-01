@@ -313,6 +313,7 @@ contract TreasuryModule is BaseModule {
 
     /**
     * @notice Update fee structure (admin only)
+    * @dev All global fees are in CELO. Campaigns can override with their own fee tokens.
     */
     function updateFeeStructure(
         uint256 _platformFeePercentage,
@@ -348,6 +349,7 @@ contract TreasuryModule is BaseModule {
 
     /**
     * @notice Update specific fee amounts (admin only)
+    * @dev All global fees are in CELO. Campaigns can override with their own fee tokens.
     */
     function updateFeeAmounts(
         uint256 _campaignCreationFee,
@@ -387,6 +389,7 @@ contract TreasuryModule is BaseModule {
 
     /**
     * @notice Set fees to zero for testing (admin only)
+    * @dev Sets global CELO fees to zero. Campaigns with custom fee tokens are unaffected.
     */
     function setZeroFeesForTesting() external {
         // Check if caller has admin role through proxy
@@ -407,6 +410,7 @@ contract TreasuryModule is BaseModule {
 
     /**
     * @notice Set fees to 0.1 CELO for testing (admin only)
+    * @dev Sets global CELO fees to 0.1 CELO. Campaigns with custom fee tokens are unaffected.
     */
     function setTestFees() external {
         // Check if caller has admin role through proxy

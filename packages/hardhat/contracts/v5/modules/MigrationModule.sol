@@ -604,7 +604,7 @@ contract MigrationModule is BaseModule {
         
         // Create project metadata - NO FEE MIGRATION VERSION
         bytes memory projectMetadata = abi.encodeWithSignature(
-            "createProjectFromV4Migration(uint256,address,string,string,string,string,string,address[],bool,bool,uint256,string[],string)",
+            "createProjectFromV4Migration(uint256,address,string,string,string,string,string,address[],bool,bool,uint256,string)",
             _v4ProjectId,
             owner,
             name,
@@ -616,7 +616,6 @@ contract MigrationModule is BaseModule {
             transferrable,
             active,
             createdAt,
-            new string[](0), // tags - V4 doesn't have tags
             "" // category - V4 doesn't have category
         );
         
@@ -679,20 +678,24 @@ contract MigrationModule is BaseModule {
         
         // Create campaign metadata
         bytes memory campaignMetadata = abi.encodeWithSignature(
-            "createCampaignFromV4(uint256,address,string,string,uint256,uint256,uint256,bool,bool,address,bool,uint256,uint256[])",
+            "createCampaignFromV4(uint256,address,string,string,string,string,uint256,uint256,uint256,uint256,bool,bool,string,address,bool,uint256,uint256)",
             _v4CampaignId,
             admin,
             name,
             description,
+            "", // mainInfo - V4 doesn't have this
+            "", // additionalInfo - V4 doesn't have this
             startTime,
             endTime,
-            targetAmount,
+            0, // adminFeePercentage - V4 doesn't have this
+            0, // maxWinners - V4 doesn't have this
+            useQuadraticVoting, // useQuadraticDistribution
+            false, // useCustomDistribution - V4 doesn't have this
+            "", // customDistributionData - V4 doesn't have this
+            preferredToken, // payoutToken
             active,
-            verified,
-            preferredToken,
-            useQuadraticVoting,
-            createdAt,
-            v5ProjectIds
+            0, // totalFunds - V4 doesn't have this
+            createdAt
         );
         
         // Call CampaignsModule to create V5 campaign
