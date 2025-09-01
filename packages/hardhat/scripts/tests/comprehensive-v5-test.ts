@@ -1,4 +1,4 @@
-import { createPublicClient, createWalletClient, http, parseEther, encodeFunctionData } from "viem";
+import { createPublicClient, createWalletClient, http, parseEther, encodeFunctionData, decodeAbiParameters } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { celoAlfajores } from "viem/chains";
 import * as fs from "fs";
@@ -379,7 +379,7 @@ class ComprehensiveV5Test {
           functionName: "callModule",
           args: ["projects", createProjectData],
           value: parseEther("0.5"),
-          gas: 1000000n, // Increased gas limit for complex metadata
+          // Let viem estimate gas automatically instead of hard limit
         });
   
         console.log(`  ⏳ Transaction: ${hash}`);
@@ -510,7 +510,7 @@ class ComprehensiveV5Test {
             functionName: "callModule",
             args: ["projects", fallbackData],
             value: parseEther("0.5"),
-            gas: 800000n,
+            // Let viem estimate gas automatically
           });
           
           console.log(`  🔄 Fallback transaction: ${fallbackHash}`);
@@ -827,7 +827,7 @@ class ComprehensiveV5Test {
         // Add project to campaign
         const addProjectData = encodeFunctionData({
           abi: CAMPAIGNS_MODULE_ABI,
-          functionName: "addProjectToCampaign",
+          functionName: "requestProjectParticipation",
           args: [seasCampaign.id, project.id],
         });
         
@@ -841,6 +841,38 @@ class ComprehensiveV5Test {
         console.log(`   ⏳ Adding project transaction: ${addProjectHash}`);
         await this.publicClient.waitForTransactionReceipt({ hash: addProjectHash });
         console.log(`   ✅ Project "${project.name}" added to SEAS campaign`);
+        
+        // Approve the project participation using campaign admin account
+        console.log(`   Approving project participation using campaign admin account...`);
+        const campaignAdminAccount = privateKeyToAccount(this.wallets[0].privateKey);
+        const campaignAdminClient = createWalletClient({
+          chain: celoAlfajores,
+          transport: http(this.config.rpcUrl),
+          account: campaignAdminAccount,
+        });
+        
+        console.log(`   🔍 Campaign admin account: ${campaignAdminAccount.address}`);
+        console.log(`   📋 Campaign ID: ${seasCampaign.id}`);
+        
+        // Campaign admin should now be able to approve projects directly
+        console.log(`   ✅ Campaign admin account ready: ${campaignAdminAccount.address}`);
+        
+        const approveData = encodeFunctionData({
+          abi: CAMPAIGNS_MODULE_ABI,
+          functionName: "finalizeProjectParticipationApproval",
+          args: [seasCampaign.id, project.id, true],
+        });
+        
+        const approveParticipationHash = await campaignAdminClient.writeContract({
+          address: this.deployment.record.contracts.sovereignSeasV5 as `0x${string}`,
+          abi: SOVEREIGN_SEAS_V5_ABI,
+          functionName: "callModule",
+          args: ["campaigns", approveData],
+        });
+        
+        console.log(`   ⏳ Approval transaction: ${approveParticipationHash}`);
+        await this.publicClient.waitForTransactionReceipt({ hash: approveParticipationHash });
+        console.log(`   ✅ Project "${project.name}" approved for SEAS campaign`);
         
       } catch (error) {
         console.error(`❌ Failed to add project "${project.name}" to SEAS campaign:`, error);

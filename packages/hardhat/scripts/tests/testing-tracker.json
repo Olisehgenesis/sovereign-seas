@@ -1,10 +1,10 @@
 {
   "metadata": {
     "version": "1.0.0",
-    "lastUpdated": "2025-09-01T15:37:46.624Z",
-    "description": "Comprehensive testing tracker for SovereignSeas V5 modules and functions",
+    "lastUpdated": "2025-01-27T00:00:00.000Z",
+    "description": "Comprehensive testing tracker for SovereignSeas V5 modules and functions - Fresh Start",
     "totalModules": 6,
-    "totalFunctions": 59
+    "totalFunctions": 60
   },
   "modules": {
     "sovereignSeasV5": {
@@ -103,150 +103,12 @@
     "projects": {
       "name": "ProjectsModule",
       "description": "Project management and metadata handling",
-      "status": "failed",
+      "status": "not_tested",
       "functions": {
         "createProject": {
-          "status": "failed",
-          "testCases": [
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "failed",
-              "executionTime": 4839,
-              "timestamp": "2025-09-01T12:32:29.570Z",
-              "gasUsed": 495764,
-              "error": "Transaction failed"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "failed",
-              "executionTime": 3395,
-              "timestamp": "2025-09-01T14:06:44.449Z",
-              "gasUsed": 495766,
-              "error": "Transaction failed"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "failed",
-              "executionTime": 3300,
-              "timestamp": "2025-09-01T14:07:44.620Z",
-              "gasUsed": 495766,
-              "error": "Transaction failed"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "failed",
-              "executionTime": 4314,
-              "timestamp": "2025-09-01T14:09:36.190Z",
-              "gasUsed": 495766,
-              "error": "Transaction failed"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "failed",
-              "executionTime": 3110,
-              "timestamp": "2025-09-01T14:26:21.190Z",
-              "gasUsed": 495698,
-              "error": "Transaction failed"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "testing",
-              "executionTime": 0,
-              "timestamp": "2025-09-01T14:36:30.829Z"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "failed",
-              "executionTime": 4291,
-              "timestamp": "2025-09-01T15:31:27.632Z",
-              "gasUsed": 495698,
-              "error": "Transaction failed"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "testing",
-              "executionTime": 0,
-              "timestamp": "2025-09-01T15:34:45.859Z"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "testing",
-              "executionTime": 0,
-              "timestamp": "2025-09-01T15:34:52.337Z"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "testing",
-              "executionTime": 0,
-              "timestamp": "2025-09-01T15:35:46.459Z"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "testing",
-              "executionTime": 0,
-              "timestamp": "2025-09-01T15:35:53.257Z"
-            },
-            {
-              "name": "Create project for wallet 1",
-              "description": "Create project \"Ocean Cleanup Initiative\" using wallet 1",
-              "status": "passed",
-              "executionTime": 3426,
-              "timestamp": "2025-09-01T15:37:12.205Z",
-              "gasUsed": 897025
-            },
-            {
-              "name": "Create project for wallet 2",
-              "description": "Create project \"Solar Community Grid\" using wallet 2",
-              "status": "passed",
-              "executionTime": 4226,
-              "timestamp": "2025-09-01T15:37:16.730Z",
-              "gasUsed": 851910
-            },
-            {
-              "name": "Create project for wallet 3",
-              "description": "Create project \"Digital Education Platform\" using wallet 3",
-              "status": "passed",
-              "executionTime": 6333,
-              "timestamp": "2025-09-01T15:37:22.519Z",
-              "gasUsed": 919676
-            },
-            {
-              "name": "Create project for wallet 4",
-              "description": "Create project \"Sustainable Farming Hub\" using wallet 4",
-              "status": "passed",
-              "executionTime": 4180,
-              "timestamp": "2025-09-01T15:37:29.939Z",
-              "gasUsed": 852030
-            },
-            {
-              "name": "Create project for wallet 5",
-              "description": "Create project \"Medical Research DAO\" using wallet 5",
-              "status": "passed",
-              "executionTime": 3182,
-              "timestamp": "2025-09-01T15:37:35.204Z",
-              "gasUsed": 874582
-            },
-            {
-              "name": "Create project for wallet 6",
-              "description": "Create project \"Climate Data Analytics\" using wallet 6",
-              "status": "passed",
-              "executionTime": 6302,
-              "timestamp": "2025-09-01T15:37:39.480Z",
-              "gasUsed": 851994
-            }
-          ],
-          "lastTested": "2025-09-01T15:37:46.624Z",
+          "status": "not_tested",
+          "testCases": [],
+          "lastTested": "",
           "coverage": 0
         },
         "updateProject": {
@@ -311,7 +173,7 @@
         }
       },
       "coverage": 0,
-      "lastTested": "2025-09-01T15:37:46.624Z"
+      "lastTested": ""
     },
     "campaigns": {
       "name": "CampaignsModule",
@@ -373,6 +235,12 @@
           "coverage": 0
         },
         "setCampaignFee": {
+          "status": "not_tested",
+          "testCases": [],
+          "lastTested": "",
+          "coverage": 0
+        },
+        "createERC20Campaign": {
           "status": "not_tested",
           "testCases": [],
           "lastTested": "",
@@ -623,97 +491,6 @@
       "description": "Cross-module integration and communication",
       "testCases": [],
       "lastTested": ""
-    },
-    "projectCreation": {
-      "status": "testing",
-      "description": "projectCreation",
-      "testCases": [
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T12:32:29.116Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T14:06:44.130Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T14:07:44.278Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T14:09:35.844Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T14:26:20.833Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T14:36:30.509Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T15:31:27.319Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T15:34:45.481Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T15:34:52.010Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T15:35:46.085Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T15:35:52.930Z"
-        },
-        {
-          "name": "Project Creation",
-          "description": "Create projects for each test wallet",
-          "status": "testing",
-          "executionTime": 0,
-          "timestamp": "2025-09-01T15:37:11.884Z"
-        }
-      ],
-      "lastTested": "2025-09-01T12:32:29.116Z"
     }
   },
   "testResults": {
@@ -734,20 +511,29 @@
   "deployment": {
     "network": "alfajores",
     "contracts": {
-      "projectsModule": "0xc1C2AF86457088EC99fF2a893F7cCC118F963eF3",
-      "campaignsModule": "0xA2FD29EE8c183cdFC4D246Ec2Db3a72463280190",
-      "votingModule": "0x7785151fc6623349a5c40105b265042D90ea1ea3",
-      "treasuryModule": "0x3D1E8F95ab21a9256Dfd293E1d1Cb3f34ACD3634",
-      "poolsModule": "0x743d9b776AD1531CcF60Db7DC847EDB04D8576dE",
-      "migrationModule": "0xe8370eF57769aaddC5f008EA54E4F4f5fbE9430f",
-      "sovereignSeasV5": "0x748b73Ecb30845085Acc60F64bc4A2454E7581D4"
+      "projectsModule": "0x64422aD508625091B66F6c1B606a503A0a317981",
+      "campaignsModule": "0x82c8fc643e44d5e22B0D0936Dd7F7897e161D8BD",
+      "votingModule": "0x09CB3168e90070949CC58DaBB0005e8aB3b29B3C",
+      "treasuryModule": "0x3A7EA94815C3c60710AC505511b944f12caE0D97",
+      "poolsModule": "0xCf4616171f29FF719C68B065D46f4BF7a95eA0dF",
+      "migrationModule": "0x4ABb8f31eA300eD5D7Ffb3ed273e12bfDe2eDee0",
+      "sovereignSeasV5": "0x4448F279228bf4d2377494D80dB505fA20280949",
+      "seasToken": "0x4dC22da89824f08AeC7e49540A4e430aCDf6F579"
     },
-    "lastDeployed": "2025-09-01T15:37:08.908Z",
-    "deploymentHash": "deployment-hash-placeholder"
+    "lastDeployed": "2025-01-27T00:00:00.000Z",
+    "deploymentHash": "fresh-start-deployment"
   },
   "notes": {
     "knownIssues": [],
     "improvements": [],
-    "nextSteps": []
+    "nextSteps": [
+      "Start with basic functionality tests",
+      "Test module registration and initialization",
+      "Test project creation workflow",
+      "Test campaign creation and management",
+      "Test voting mechanisms",
+      "Test treasury operations",
+      "Test integration between modules"
+    ]
   }
 }

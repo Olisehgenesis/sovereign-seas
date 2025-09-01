@@ -1132,17 +1132,22 @@ contract ProjectsModule is BaseModule {
      * @notice Transfer creation fee to treasury module
      */
     function _transferCreationFeeToTreasury() internal {
-        // Call treasury module to collect the fee
+        uint256 feeAmount = 0.5 ether;
+        
+        // Get treasury module address
+        address treasuryModule = sovereignSeasProxy.getModuleAddress("treasury");
+        require(treasuryModule != address(0), "ProjectsModule: Treasury module not found");
+        
+        // Call treasury module directly with CELO value
         bytes memory treasuryData = abi.encodeWithSignature(
             "collectFee(address,uint256,string)",
             msg.sender,
-            0.5 ether,
+            feeAmount,
             "project_creation"
         );
         
-        try sovereignSeasProxy.delegateToModule("treasury", treasuryData) {
-            // Fee collected successfully
-        } catch {
+        (bool success, ) = treasuryModule.call{value: feeAmount}(treasuryData);
+        if (!success) {
             // If treasury module fails, keep the fee in this contract
             // It can be collected later by admin
         }

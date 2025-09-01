@@ -41,7 +41,7 @@ async function fixModuleInitializationWithEthers() {
 
   // Create proxy contract interface
   const proxyContract = new ethers.Contract(
-    deployment.contracts.SovereignSeasV5,
+    deployment.contracts.sovereignSeasV5,
     [
       'function initializeModule(string _moduleId, bytes _data) external returns (bool)',
       'function initializeModulesBatch(string[] _moduleIds, bytes[] _dataArray) external returns (bool[])',

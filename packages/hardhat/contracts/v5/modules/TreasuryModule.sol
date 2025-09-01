@@ -462,6 +462,52 @@ contract TreasuryModule is BaseModule {
     }
 
     /**
+    * @notice Collect fee from module (called by other modules)
+    * @param _payer The address that paid the fee
+    * @param _amount The amount of fee collected
+    * @param _feeType The type of fee being collected
+    */
+    function collectFee(address _payer, uint256 _amount, string calldata _feeType) external payable {
+        // Allow calls from registered modules or the proxy
+        require(
+            _isRegisteredModule(msg.sender) || msg.sender == address(sovereignSeasProxy), 
+            "TreasuryModule: Only modules or proxy can collect fees"
+        );
+        require(_amount > 0, "TreasuryModule: Fee amount must be positive");
+        require(msg.value >= _amount, "TreasuryModule: Insufficient CELO sent for fee");
+        
+        // Transfer the CELO to this contract (it's already sent with the transaction)
+        // The CELO is now in this contract's balance
+        
+        // Store the fee collection (using address(0) for native CELO)
+        collectedFees[address(0)] += _amount;
+        totalFeesCollected += _amount;
+        
+        // If more CELO was sent than required, refund the excess
+        if (msg.value > _amount) {
+            uint256 excess = msg.value - _amount;
+            (bool success, ) = _payer.call{value: excess}("");
+            require(success, "TreasuryModule: Failed to refund excess CELO");
+        }
+        
+        emit FeeCollected(address(0), _amount, _feeType);
+    }
+
+    /**
+    * @notice Check if an address is a registered module
+    */
+    function _isRegisteredModule(address _module) internal view returns (bool) {
+        // Check if the address matches any of the registered module addresses
+        string[] memory moduleIds = sovereignSeasProxy.getRegisteredModules();
+        for (uint256 i = 0; i < moduleIds.length; i++) {
+            if (sovereignSeasProxy.getModuleAddress(moduleIds[i]) == _module) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
     * @notice Check if user can bypass fees
     */
     function canBypassFees(uint256 _campaignId, address _user) public returns (bool) {

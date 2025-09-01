@@ -347,6 +347,12 @@ contract VotingModule is BaseModule {
 
         // Validate token and amount
         require(votingTokens[_token], "VotingModule: Token not enabled for voting");
+        
+        // Check if token is allowed for this specific campaign
+        bytes memory isAllowedData = callModule("campaigns", abi.encodeWithSignature("isTokenAllowedForCampaign(uint256,address)", _campaignId, _token));
+        bool isTokenAllowed = abi.decode(isAllowedData, (bool));
+        require(isTokenAllowed, "VotingModule: Token not allowed for this campaign");
+        
         require(_amount > 0, "VotingModule: Invalid vote amount");
 
         // Get CELO equivalent through treasury
@@ -1295,11 +1301,12 @@ contract VotingModule is BaseModule {
     }
 
     /**
-    * @notice Set voting token status
+    * @notice Set voting token status (system admin only)
+    * @dev This controls the global token whitelist. Campaign admins should use campaign-specific token settings.
     */
     function setVotingToken(address _token, bool _enabled) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        require(_isAdmin(msg.sender), "VotingModule: System admin role required");
         votingTokens[_token] = _enabled;
     }
 
@@ -1307,8 +1314,10 @@ contract VotingModule is BaseModule {
     * @notice Force update project positions (admin only)
     */
     function forceUpdateProjectPositions(uint256 _campaignId) external {
-        // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        // Check if caller is campaign admin or system admin
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, msg.sender));
+        bool isCampaignAdmin = abi.decode(isAdminData, (bool));
+        require(isCampaignAdmin || _isAdmin(msg.sender), "VotingModule: Campaign admin or system admin role required");
         _updateProjectPositions(_campaignId);
     }
 
@@ -1329,11 +1338,13 @@ contract VotingModule is BaseModule {
     // ==================== CROSS-MODULE / MIGRATION SUPPORT (ADDED) ====================
 
     /**
-    * @notice Initialize participation for a project in a campaign (admin-only, fee-free)
+    * @notice Initialize participation for a project in a campaign (campaign admin or system admin)
     */
     function initializeParticipation(uint256 _campaignId, uint256 _projectId) external whenActive {
-        // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        // Check if caller is campaign admin or system admin
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, msg.sender));
+        bool isCampaignAdmin = abi.decode(isAdminData, (bool));
+        require(isCampaignAdmin || _isAdmin(msg.sender), "VotingModule: Campaign admin or system admin role required");
         _initializeParticipation(_campaignId, _projectId);
     }
 
@@ -1373,11 +1384,13 @@ contract VotingModule is BaseModule {
     }
 
     /**
-    * @notice Remove all votes for a project in a campaign (super admin only)
+    * @notice Remove all votes for a project in a campaign (campaign admin or system admin)
     */
     function removeAllProjectVotes(uint256 _campaignId, uint256 _projectId) external whenActive {
-        // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        // Check if caller is campaign admin or system admin
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, msg.sender));
+        bool isCampaignAdmin = abi.decode(isAdminData, (bool));
+        require(isCampaignAdmin || _isAdmin(msg.sender), "VotingModule: Campaign admin or system admin role required");
         require(projectParticipations[_campaignId][_projectId].projectId != 0, "VotingModule: Project not in campaign");
 
         // Reset counts

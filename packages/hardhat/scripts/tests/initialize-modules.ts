@@ -65,13 +65,13 @@ async function initializeModules() {
   const deployerAccount = privateKeyToAccount(deployerPrivateKey as `0x${string}`);
   const deployerClient = createWalletClient({
     chain: celoAlfajores,
-    transport: http(process.env.CELO_RPC_URL || "https://celo-alfajores.drpc.org"),
+    transport: http("https://alfajores-forno.celo-testnet.org"),
     account: deployerAccount,
   });
 
   const publicClient = createPublicClient({ 
     chain: celoAlfajores, 
-    transport: http(process.env.CELO_RPC_URL || "https://celo-alfajores.drpc.org") 
+    transport: http("https://alfajores-forno.celo-testnet.org") 
   });
 
   try {
@@ -112,21 +112,12 @@ async function initializeModules() {
           console.log(`   ⏳ ${module.name} needs initialization`);
         }
 
-        // Initialize the module
-        const initData = encodeFunctionData({
-          abi: module.abi,
-          functionName: "initialize",
-          args: [deployment.record.contracts.sovereignSeasV5, "0x"], // proxy address + empty data
-        });
-
         console.log(`   📝 Sending initialization transaction...`);
         const hash = await deployerClient.writeContract({
           address: deployment.record.contracts.sovereignSeasV5 as `0x${string}`,
           abi: SOVEREIGN_SEAS_V5_ABI,
-          functionName: "callModule",
-          args: [module.id, initData],
-          chain: celoAlfajores,
-          account: deployerAccount.address,
+          functionName: "initializeModule",
+          args: [module.id, "0x"], // Empty data for default initialization
         });
 
         console.log(`   ⏳ Transaction: ${hash}`);

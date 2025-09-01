@@ -1,14 +1,14 @@
 {
   "network": "alfajores",
   "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
-  "timestamp": "2025-09-01T16:32:05.374Z",
+  "timestamp": "2025-09-01T22:02:41.675Z",
   "contracts": {
-    "projectsModule": "0x513d4A99ee00aCA49E852e075968C3faE836C144",
-    "campaignsModule": "0x2Ee9Ee3662Ebe87ca2561d3060f31172478A9B3d",
-    "votingModule": "0xf932F711040b57F88AA029F291aEDD719Fa72Da0",
-    "treasuryModule": "0x741e50eA8CB009eFeCC1A97b28DDAA79A9f2C8c7",
-    "poolsModule": "0x0EB3b20a60CadFf7386b98C5edFea08072dEEFb1",
-    "migrationModule": "0x625c2e6B83b160Fd9A3dc7d1eFAFb1D31337466B",
-    "sovereignSeasV5": "0x246f69F0C1327b0e354Fdf069834C5676573a341"
+    "projectsModule": "0xDacE75929227e848f34C5079751fDaE7Ae436D8e",
+    "campaignsModule": "0xD21679bBa2dAc19892DFaf6d6aA2102A6EAE4B2F",
+    "votingModule": "0x837484CD3Ad4139c8126858BbB3b6552c873F515",
+    "treasuryModule": "0x60AC3A277f1f59099dC26cBB6C4ec3418c4Fdc45",
+    "poolsModule": "0xd34Fc89be8c9C97B17d324A728554e3364403ACB",
+    "migrationModule": "0x3559081e34885e09F14517E42D9ca1eD8D7f4584",
+    "sovereignSeasV5": "0x58F7eFe375a17cD485A2DfCA411d76fF583A496F"
   }
 }

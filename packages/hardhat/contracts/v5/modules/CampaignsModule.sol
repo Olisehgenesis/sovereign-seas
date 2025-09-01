@@ -1054,8 +1054,17 @@ contract CampaignsModule is BaseModule {
      */
     function isTokenAllowedForCampaign(uint256 _campaignId, address _token) external view returns (bool) {
         Campaign storage campaign = campaigns[_campaignId];
-        if (!campaign.isERC20Campaign) return false;
-        return campaign.allowedVotingTokens[_token];
+        
+        // CELO is always allowed for all campaigns
+        if (_token == address(0)) return true;
+        
+        // For ERC20 campaigns, check if token is in allowed list
+        if (campaign.isERC20Campaign) {
+            return campaign.allowedVotingTokens[_token];
+        }
+        
+        // For standard campaigns, only CELO is allowed
+        return false;
     }
 
     /**
@@ -1063,8 +1072,17 @@ contract CampaignsModule is BaseModule {
      */
     function getTokenWeight(uint256 _campaignId, address _token) external view returns (uint256) {
         Campaign storage campaign = campaigns[_campaignId];
-        if (!campaign.isERC20Campaign) return 0;
-        return campaign.tokenWeights[_token];
+        
+        // CELO has default weight of 1 (100%)
+        if (_token == address(0)) return 1e18; // 1 with 18 decimals
+        
+        // For ERC20 campaigns, return the configured weight
+        if (campaign.isERC20Campaign) {
+            return campaign.tokenWeights[_token];
+        }
+        
+        // For standard campaigns, only CELO is supported
+        return 0;
     }
 
     /**
