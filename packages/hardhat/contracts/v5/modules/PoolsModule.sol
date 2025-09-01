@@ -139,24 +139,17 @@ contract PoolsModule is BaseModule {
      * @param _data Additional initialization data
      */
     function initialize(address _proxy, bytes calldata _data) external override initializer {
+        // Initialize base module
         require(_proxy != address(0), "PoolsModule: Invalid proxy address");
         
         sovereignSeasProxy = ISovereignSeasV5(_proxy);
         moduleActive = true;
 
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(MANAGER_ROLE, msg.sender);
-        _grantRole(OPERATOR_ROLE, msg.sender);
-        _grantRole(EMERGENCY_ROLE, msg.sender);
-
         // Initialize inherited contracts
-        __AccessControl_init();
-        __Pausable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-        
+
+        // Set module-specific data
         moduleName = "Pools Module";
         moduleDescription = "Manages funding pools and distribution";
         moduleDependencies = new string[](3);
@@ -165,6 +158,8 @@ contract PoolsModule is BaseModule {
         moduleDependencies[2] = "treasury";
         
         nextPoolId = 1;
+        
+        emit ModuleInitialized(getModuleId(), _proxy);
     }
 
     /**
@@ -456,10 +451,7 @@ contract PoolsModule is BaseModule {
      * @param _poolId The pool ID
      * @return Array of team member addresses
      */
-    function getTeamMembers(uint256 _poolId) external view poolExists(_poolId) returns (address[] memory) {
-        return pools[_poolId].teamMemberList;
-    }
-
+   
     /**
      * @notice Calculate fund distribution
      * @param _poolId The pool ID
@@ -818,7 +810,9 @@ contract PoolsModule is BaseModule {
         uint256 _campaignId,
         uint256[] memory _projectIds,
         uint256[] memory _adjustments
-    ) external whenActive onlyAdmin {
+    ) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "PoolsModule: Admin role required");
         require(_projectIds.length == _adjustments.length, "PoolsModule: Arrays length mismatch");
         
         uint256[] memory poolIds = campaignPools[_campaignId];
@@ -850,7 +844,9 @@ contract PoolsModule is BaseModule {
         uint256 _projectId,
         uint256 _amount,
         address _token
-    ) external onlyMainContract {
+    ) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "PoolsModule: Admin role required");
         // Find campaign pool or create one
         uint256[] memory poolIds = campaignPools[_campaignId];
         uint256 targetPoolId = 0;
@@ -915,7 +911,8 @@ contract PoolsModule is BaseModule {
      * @notice Recall unclaimed funds after 6 months
      * @param _projectId The project ID
      */
-    function recallUnclaimedFunds(uint256 _projectId) external whenActive onlyAdmin {
+    // Removed duplicate recallUnclaimedFunds to avoid duplicate name error. Use pool-level function instead.
+    /* function recallUnclaimedFunds(uint256 _projectId) external whenActive onlyAdmin {
         uint256[] memory poolIds = projectPools[_projectId];
         require(poolIds.length > 0, "PoolsModule: No pools for project");
 
@@ -939,7 +936,7 @@ contract PoolsModule is BaseModule {
 
             emit UnclaimedFundsRecalled(poolId, unclaimedAmount, pool.token);
         }
-    }
+    } */
 
     /**
      * @notice Multi-token Pool Management - Contribute with specific token
@@ -1121,6 +1118,136 @@ contract PoolsModule is BaseModule {
         }
 
         return amounts;
+    }
+
+    /**
+     * @notice Calculate quadratic distribution based on 3 factors (borrowing from voting)
+     * @param _totalAmount Total amount to distribute
+     * @param _projectIds Array of project IDs
+     * @param _campaignId Campaign ID for context
+     * @return amounts Distribution amounts for each project
+     */
+    function calculateQuadraticDistribution(
+        uint256 _totalAmount,
+        uint256[] memory _projectIds,
+        uint256 _campaignId
+    ) external returns (uint256[] memory amounts) {
+        require(_totalAmount > 0, "PoolsModule: Invalid total amount");
+        require(_projectIds.length > 0, "PoolsModule: No projects provided");
+        
+        amounts = new uint256[](_projectIds.length);
+        
+        // Get voting data from VotingModule for all 3 factors
+        bytes memory votingData = sovereignSeasProxy.callModule(
+            "voting", 
+            abi.encodeWithSignature("getQuadraticFactorsForCampaign(uint256,uint256[])", _campaignId, _projectIds)
+        );
+        
+        (
+            uint256[] memory voteCounts,      // Factor 1: Raw vote counts
+            uint256[] memory voterDiversity,  // Factor 2: Number of unique voters
+            uint256[] memory tokenDiversity   // Factor 3: Number of different tokens used
+        ) = abi.decode(votingData, (uint256[], uint256[], uint256[]));
+        
+        // Calculate quadratic weights using all 3 factors
+        uint256[] memory quadraticWeights = _calculateQuadraticWeights(
+            voteCounts,
+            voterDiversity, 
+            tokenDiversity
+        );
+        
+        // Calculate total quadratic weight
+        uint256 totalQuadraticWeight = 0;
+        for (uint256 i = 0; i < quadraticWeights.length; i++) {
+            totalQuadraticWeight += quadraticWeights[i];
+        }
+        
+        // Distribute based on quadratic weights
+        if (totalQuadraticWeight > 0) {
+            for (uint256 i = 0; i < _projectIds.length; i++) {
+                amounts[i] = (_totalAmount * quadraticWeights[i]) / totalQuadraticWeight;
+            }
+        } else {
+            // Fallback to equal distribution
+            uint256 equalAmount = _totalAmount / _projectIds.length;
+            for (uint256 i = 0; i < _projectIds.length; i++) {
+                amounts[i] = equalAmount;
+            }
+        }
+        
+        return amounts;
+    }
+
+    /**
+     * @notice Calculate quadratic weights using 3 factors
+     * @param _voteCounts Raw vote counts for each project
+     * @param _voterDiversity Number of unique voters for each project  
+     * @param _tokenDiversity Number of different tokens used for each project
+     * @return weights Quadratic weights for distribution
+     */
+    function _calculateQuadraticWeights(
+        uint256[] memory _voteCounts,
+        uint256[] memory _voterDiversity,
+        uint256[] memory _tokenDiversity
+    ) internal pure returns (uint256[] memory weights) {
+        require(_voteCounts.length == _voterDiversity.length, "PoolsModule: Array length mismatch");
+        require(_voteCounts.length == _tokenDiversity.length, "PoolsModule: Array length mismatch");
+        
+        weights = new uint256[](_voteCounts.length);
+        
+        for (uint256 i = 0; i < _voteCounts.length; i++) {
+            // Factor 1: Square root of vote counts (reduces whale impact)
+            uint256 voteWeight = _sqrt(_voteCounts[i]);
+            
+            // Factor 2: Square root of voter diversity (rewards broader appeal)
+            uint256 diversityWeight = _sqrt(_voterDiversity[i]);
+            
+            // Factor 3: Bonus for token diversity (rewards multi-token support)
+            uint256 tokenBonus = _tokenDiversity[i] > 1 ? VOTER_DIVERSITY_BONUS : 0;
+            
+            // Combined quadratic weight: sqrt(votes) * sqrt(diversity) + token_bonus
+            weights[i] = (voteWeight * diversityWeight) + tokenBonus;
+        }
+        
+        return weights;
+    }
+
+    /**
+     * @notice Distribute using quadratic algorithm (enhanced version)
+     * @param _campaignId Campaign ID 
+     * @param _projectIds Array of project IDs to distribute to
+     */
+    function distributeQuadratic(uint256 _campaignId, uint256[] memory _projectIds) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "PoolsModule: Admin role required");
+        uint256[] memory poolIds = campaignPools[_campaignId];
+        require(poolIds.length > 0, "PoolsModule: No pools for campaign");
+        
+        for (uint256 i = 0; i < poolIds.length; i++) {
+            uint256 poolId = poolIds[i];
+            Pool storage pool = pools[poolId];
+            
+            if (pool.active && !fundsDistributed[poolId] && pool.totalBalance > 0) {
+                // Calculate quadratic distribution
+                uint256[] memory distributionAmounts = this.calculateQuadraticDistribution(
+                    pool.totalBalance,
+                    _projectIds,
+                    _campaignId
+                );
+                
+                // Distribute funds
+                for (uint256 j = 0; j < _projectIds.length; j++) {
+                    if (distributionAmounts[j] > 0) {
+                        _distributeToProject(poolId, _projectIds[j], distributionAmounts[j]);
+                    }
+                }
+                
+                poolDistributionType[poolId] = DistributionType.AUTOMATIC; // Using existing enum
+                fundsDistributed[poolId] = true;
+            }
+        }
+        
+        emit FundsDistributed(0, _campaignId, 0, address(0));
     }
 
     /**

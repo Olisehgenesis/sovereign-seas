@@ -5,31 +5,11 @@ import "@openzeppelin/hardhat-upgrades";
 import "@nomicfoundation/hardhat-ethers";
 import "dotenv/config";
 
-// Hardhat Configuration for SovereignSeas V5
-// Default network: Celo Alfajores Testnet (SAFE for testing)
-// Required environment variables:
-// - PRIVATE_KEY: Your deployment wallet private key
-// - CELO_RPC_URL: Celo RPC endpoint (optional, defaults to Ankr)
-// - CELOSCAN_API_KEY: For contract verification (optional)
-// Note: Gas settings are automatically determined by the network
-// 
-// SAFETY: Defaults to testnet to prevent accidental mainnet deployments
-// To deploy to mainnet, explicitly specify: --network celo
 
 const config: HardhatUserConfig = {
   defaultNetwork: "alfajores",
   solidity: {
     compilers: [
-      {
-        version: "0.8.24",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-          viaIR: true,
-        },
-      },
       {
         version: "0.8.28",
         settings: {

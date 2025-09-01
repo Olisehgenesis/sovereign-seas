@@ -19,3 +19,7 @@ node_modules
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
 pnpm-lock.yaml
+ 
+# Test wallet and state files (do not commit secrets)
+packages/hardhat/wallets/
+packages/hardhat/tests-state/

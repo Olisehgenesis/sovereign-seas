@@ -12,7 +12,7 @@ import "./interfaces/IModule.sol";
 /**
  * @title SovereignSeasV5
  * @notice Main proxy contract for SovereignSeas V5 modular architecture
- * @dev Uses UUPS upgradeable pattern with module routing system
+ * @dev Uses UUPS upgradeable pattern with centralized access control and call forwarding
  */
 contract SovereignSeasV5 is 
     ISovereignSeasV5,
@@ -22,11 +22,19 @@ contract SovereignSeasV5 is
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
-    // Role definitions
+    // Role definitions - Centralized access control
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
+    
+    // Module-specific roles
+    bytes32 public constant PROJECTS_ADMIN_ROLE = keccak256("PROJECTS_ADMIN_ROLE");
+    bytes32 public constant CAMPAIGNS_ADMIN_ROLE = keccak256("CAMPAIGNS_ADMIN_ROLE");
+    bytes32 public constant VOTING_ADMIN_ROLE = keccak256("VOTING_ADMIN_ROLE");
+    bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
+    bytes32 public constant POOLS_ADMIN_ROLE = keccak256("POOLS_ADMIN_ROLE");
+    bytes32 public constant MIGRATION_ADMIN_ROLE = keccak256("MIGRATION_ADMIN_ROLE");
 
     // Module management
     mapping(string => address) public modules;
@@ -45,6 +53,8 @@ contract SovereignSeasV5 is
     event SystemUnpaused(address indexed by);
     event ModuleCall(string indexed moduleId, address indexed caller, bytes data);
     event ModuleCallResult(string indexed moduleId, bool success, bytes result);
+    event ValueForwarded(string indexed moduleId, address indexed caller, uint256 value);
+    event ModuleInitialized(string indexed moduleId, address indexed moduleAddress);
 
     // Modifiers
     modifier onlyAdmin() {
@@ -95,6 +105,14 @@ contract SovereignSeasV5 is
         _grantRole(MANAGER_ROLE, _admin);
         _grantRole(OPERATOR_ROLE, _admin);
         _grantRole(EMERGENCY_ROLE, _admin);
+        
+        // Grant module-specific admin roles to main admin
+        _grantRole(PROJECTS_ADMIN_ROLE, _admin);
+        _grantRole(CAMPAIGNS_ADMIN_ROLE, _admin);
+        _grantRole(VOTING_ADMIN_ROLE, _admin);
+        _grantRole(TREASURY_ADMIN_ROLE, _admin);
+        _grantRole(POOLS_ADMIN_ROLE, _admin);
+        _grantRole(MIGRATION_ADMIN_ROLE, _admin);
 
         // Initialize inherited contracts
         __AccessControl_init();
@@ -104,13 +122,128 @@ contract SovereignSeasV5 is
     }
 
     /**
-     * @notice Call a function on a specific module
+     * @notice Initialize a module through the proxy
+     * @param _moduleId The module identifier
+     * @param _data Additional initialization data for the module
+     * @return True if initialization was successful
+     */
+    function initializeModule(string calldata _moduleId, bytes calldata _data) 
+        external 
+        onlyAdmin 
+        moduleExists(_moduleId) 
+        returns (bool) 
+    {
+        address moduleAddress = modules[_moduleId];
+        
+        // Create interface for the module
+        IModule module = IModule(moduleAddress);
+        
+        // Call initialize on the module with this proxy's address
+        try module.initialize(address(this), _data) {
+            // Verify the module was initialized correctly
+            if (module.isActive()) {
+                emit ModuleInitialized(_moduleId, moduleAddress);
+                return true;
+            } else {
+                revert("SovereignSeasV5: Module initialization failed - not active");
+            }
+        } catch Error(string memory reason) {
+            revert(string(abi.encodePacked("SovereignSeasV5: Module initialization failed - ", reason)));
+        } catch {
+            revert("SovereignSeasV5: Module initialization failed - unknown error");
+        }
+    }
+
+    /**
+     * @notice Initialize multiple modules in batch
+     * @param _moduleIds Array of module identifiers to initialize
+     * @param _dataArray Array of initialization data for each module (can be empty for default)
+     * @return Array of boolean results for each module initialization
+     */
+    function initializeModulesBatch(
+        string[] calldata _moduleIds, 
+        bytes[] calldata _dataArray
+    ) 
+        external 
+        onlyAdmin 
+        returns (bool[] memory) 
+    {
+        require(_moduleIds.length > 0, "SovereignSeasV5: Empty module array");
+        require(_dataArray.length == _moduleIds.length || _dataArray.length == 0, 
+                "SovereignSeasV5: Data array length mismatch");
+        
+        bool[] memory results = new bool[](_moduleIds.length);
+        
+        for (uint256 i = 0; i < _moduleIds.length; i++) {
+            string calldata moduleId = _moduleIds[i];
+            
+            // Check if module exists
+            if (modules[moduleId] == address(0)) {
+                results[i] = false;
+                continue;
+            }
+            
+            // Try to initialize the module directly
+            bytes memory initData = _dataArray.length > 0 ? _dataArray[i] : bytes("");
+            try IModule(modules[moduleId]).initialize(address(this), initData) {
+                // Verify the module was initialized correctly
+                if (IModule(modules[moduleId]).isActive()) {
+                    emit ModuleInitialized(moduleId, modules[moduleId]);
+                    results[i] = true;
+                } else {
+                    results[i] = false;
+                }
+            } catch Error(string memory reason) {
+                results[i] = false;
+            } catch {
+                results[i] = false;
+            }
+        }
+        
+        return results;
+    }
+
+    /**
+     * @notice Get initialization status for multiple modules
+     * @param _moduleIds Array of module identifiers to check
+     * @return Array of boolean results indicating if modules are initialized
+     */
+    function getModulesInitializationStatus(string[] calldata _moduleIds) 
+        external 
+        view 
+        returns (bool[] memory) 
+    {
+        bool[] memory statuses = new bool[](_moduleIds.length);
+        
+        for (uint256 i = 0; i < _moduleIds.length; i++) {
+            string calldata moduleId = _moduleIds[i];
+            
+            // Check if module exists
+            if (modules[moduleId] == address(0)) {
+                statuses[i] = false;
+                continue;
+            }
+            
+            // Check if module is initialized by checking if it's active
+            try IModule(modules[moduleId]).isActive() returns (bool isActive) {
+                statuses[i] = isActive;
+            } catch {
+                statuses[i] = false;
+            }
+        }
+        
+        return statuses;
+    }
+
+    /**
+     * @notice Call a function on a specific module with value forwarding
      * @param _moduleId The module identifier
      * @param _data The function call data
      * @return The return data from the module call
      */
     function callModule(string calldata _moduleId, bytes calldata _data) 
         external 
+        payable
         override 
         whenNotPaused 
         moduleExists(_moduleId) 
@@ -119,13 +252,16 @@ contract SovereignSeasV5 is
         returns (bytes memory) 
     {
         emit ModuleCall(_moduleId, msg.sender, _data);
+        if (msg.value > 0) {
+            emit ValueForwarded(_moduleId, msg.sender, msg.value);
+        }
 
         address moduleAddress = modules[_moduleId];
         bool success;
         bytes memory result;
 
-        // Delegate call to the module
-        (success, result) = moduleAddress.delegatecall(_data);
+        // Forward the call to the module with value and context
+        (success, result) = moduleAddress.call{value: msg.value}(_data);
 
         emit ModuleCallResult(_moduleId, success, result);
 
@@ -140,7 +276,7 @@ contract SovereignSeasV5 is
     }
 
     /**
-     * @notice Delegate a call to a module (for internal use)
+     * @notice Delegate a call to a module (for internal use by modules)
      * @param _moduleId The module identifier
      * @param _data The function call data
      * @return The return data from the module call
@@ -153,12 +289,15 @@ contract SovereignSeasV5 is
         moduleActiveModifier(_moduleId) 
         returns (bytes memory) 
     {
+        // Only allow calls from registered modules
+        require(_isModuleCaller(msg.sender), "SovereignSeasV5: Only modules can delegate calls");
+
         address moduleAddress = modules[_moduleId];
         bool success;
         bytes memory result;
 
-        // Delegate call to the module
-        (success, result) = moduleAddress.delegatecall(_data);
+        // Forward the call to the module
+        (success, result) = moduleAddress.call(_data);
 
         if (!success) {
             // Revert with the error from the module
@@ -168,6 +307,50 @@ contract SovereignSeasV5 is
         }
 
         return result;
+    }
+
+    /**
+     * @notice Static call a module (view-only)
+     * @param _moduleId The module identifier
+     * @param _data The function call data
+     * @return The return data from the module call
+     */
+    function staticCallModule(string calldata _moduleId, bytes calldata _data)
+        external
+        view
+        override
+        whenNotPaused
+        moduleExists(_moduleId)
+        moduleActiveModifier(_moduleId)
+        returns (bytes memory)
+    {
+        address moduleAddress = modules[_moduleId];
+        bool success;
+        bytes memory result;
+
+        (success, result) = moduleAddress.staticcall(_data);
+
+        if (!success) {
+            assembly {
+                revert(add(result, 32), mload(result))
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * @notice Check if caller is a registered module
+     * @param _caller The address to check
+     * @return True if the caller is a registered module
+     */
+    function _isModuleCaller(address _caller) internal view returns (bool) {
+        for (uint256 i = 0; i < registeredModules.length; i++) {
+            if (modules[registeredModules[i]] == _caller) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -318,73 +501,6 @@ contract SovereignSeasV5 is
     }
 
     /**
-     * @notice Authorize upgrade (UUPS pattern)
-     * @dev Only callable by admin role
-     */
-    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {
-        // Upgrade logic here if needed
-    }
-
-    /**
-     * @notice Fallback function for automatic module routing
-     * @dev Routes calls to appropriate modules based on function signature
-     */
-    fallback() external whenNotPaused {
-        // Extract function selector from calldata
-        bytes4 selector = msg.sig;
-        
-        // Route to appropriate module based on function selector
-        // This is a simplified routing - in practice, you'd have a more sophisticated mapping
-        string memory moduleId = _getModuleForSelector(selector);
-        
-        if (bytes(moduleId).length > 0 && modules[moduleId] != address(0) && moduleActive[moduleId]) {
-            address moduleAddress = modules[moduleId];
-            
-            // Delegate call to the module
-            (bool success, bytes memory result) = moduleAddress.delegatecall(msg.data);
-            
-            if (success) {
-                assembly {
-                    return(add(result, 32), mload(result))
-                }
-            } else {
-                assembly {
-                    revert(add(result, 32), mload(result))
-                }
-            }
-        } else {
-            revert("SovereignSeasV5: Function not found or module not available");
-        }
-    }
-
-    /**
-     * @notice Get the module for a given function selector
-     * @param _selector The function selector
-     * @return The module identifier
-     */
-    function _getModuleForSelector(bytes4 _selector) internal pure returns (string memory) {
-        // This is a simplified mapping - in practice, you'd have a comprehensive mapping
-        // of function selectors to module IDs
-        
-        // Example mappings (these would be expanded based on actual function signatures)
-        if (_selector == bytes4(keccak256("createProject(string,string,string)"))) {
-            return "projects";
-        } else if (_selector == bytes4(keccak256("createCampaign(string,string,uint256,uint256)"))) {
-            return "campaigns";
-        } else if (_selector == bytes4(keccak256("vote(uint256,uint256,address,uint256)"))) {
-            return "voting";
-        } else if (_selector == bytes4(keccak256("collectFee(address,uint256,string)"))) {
-            return "treasury";
-        } else if (_selector == bytes4(keccak256("distributeFunds(uint256)"))) {
-            return "pools";
-        } else if (_selector == bytes4(keccak256("migrateProject(uint256)"))) {
-            return "migration";
-        }
-        
-        return "";
-    }
-
-    /**
      * @notice Grant role to address
      * @param _role The role to grant
      * @param _account The account to grant the role to
@@ -409,5 +525,42 @@ contract SovereignSeasV5 is
      */
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         return super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @notice Check if an account has a specific role
+     * @param _role The role to check
+     * @param _account The account to check
+     * @return True if the account has the role
+     */
+    function hasRole(bytes32 _role, address _account) public view override(AccessControlUpgradeable, ISovereignSeasV5) returns (bool) {
+        return super.hasRole(_role, _account);
+    }
+
+    /**
+     * @notice Authorize upgrade (UUPS pattern)
+     * @dev Only callable by admin role
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {
+        // Upgrade logic here if needed
+    }
+
+    /**
+     * @notice Receive function to accept CELO
+     */
+    receive() external payable {
+        // Allow the contract to receive CELO
+    }
+
+    /**
+     * @notice Emergency withdrawal function
+     * @dev Only callable by admin role
+     */
+    function emergencyWithdraw() external onlyAdmin {
+        uint256 balance = address(this).balance;
+        if (balance > 0) {
+            (bool success, ) = payable(msg.sender).call{value: balance}("");
+            require(success, "SovereignSeasV5: Withdrawal failed");
+        }
     }
 }

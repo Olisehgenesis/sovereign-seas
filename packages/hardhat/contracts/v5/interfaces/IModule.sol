@@ -55,4 +55,5 @@ interface IModule {
         string memory description,
         string[] memory dependencies
     );
+
 }

@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "../base/BaseModule.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // Interface for main contract communication
-interface ISovereignSeasV5 {
+interface IProxyInterface {
     function hasModuleAccess(address _user, bytes32 _role) external view returns (bool);
     function callModule(string memory _moduleName, bytes memory _data) external returns (bytes memory);
 }
@@ -37,14 +33,9 @@ enum OfficialStatus {
  * @title ProjectsModule - Enhanced SovereignSeasV5 Projects Management
  * @notice Manages projects submitted by users in SovereignSeas V5
  * @dev Handles project creation, updates, ownership transfers, and status management with V4 compatibility
+ * All access control is managed centrally by the proxy
  */
-contract ProjectsModule is 
-    Initializable, 
-    ReentrancyGuardUpgradeable, 
-    PausableUpgradeable, 
-    AccessControlUpgradeable, 
-    UUPSUpgradeable 
-{
+contract ProjectsModule is BaseModule {
     using SafeERC20 for IERC20;
 
     // Project metadata struct
@@ -90,8 +81,6 @@ contract ProjectsModule is
     }
     
     // State variables
-    ISovereignSeasV5 public sovereignSeasProxy;
-    
     mapping(uint256 => Project) public projects;
     mapping(address => uint256[]) public projectsByOwner;
     mapping(string => uint256[]) public projectsByCategory;
@@ -108,18 +97,10 @@ contract ProjectsModule is
     uint256 public verifiedProjects;
     uint256 public activeProjects;
 
-    // Module configuration
-    string public moduleName;
-    string public moduleDescription;
-    string[] public moduleDependencies;
-    bool public moduleActive;
-
-    // Role constants
-    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
+    // Dynamic fee configuration
+    uint256 public projectCreationFee = 0.5e18; // Default 0.5 CELO
+    address public projectCreationFeeToken; // Token for project creation fee
+    bool public feesEnabled = true;
 
     // Events
     event ProjectCreated(uint256 indexed projectId, address indexed owner, string name);
@@ -165,26 +146,6 @@ contract ProjectsModule is
         _;
     }
 
-    modifier whenActive() {
-        require(moduleActive, "ProjectsModule: Module is not active");
-        _;
-    }
-
-    modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), "ProjectsModule: Admin role required");
-        _;
-    }
-
-    modifier onlyMainContract() {
-        require(msg.sender == address(sovereignSeasProxy), "ProjectsModule: Only main contract can call");
-        _;
-    }
-    
-    modifier hasRole(bytes32 role) {
-        require(sovereignSeasProxy.hasModuleAccess(msg.sender, role), "ProjectsModule: Access denied");
-        _;
-    }
-
     modifier activeProject(uint256 _projectId) {
         require(projects[_projectId].active, "ProjectsModule: Project is not active");
         _;
@@ -195,37 +156,32 @@ contract ProjectsModule is
      * @param _proxy The main proxy contract address
      * @param _data Additional initialization data
      */
-    function initialize(address _proxy, bytes calldata _data) external initializer {
+    function initialize(address _proxy, bytes calldata _data) external override initializer {
+        // Initialize base module
         require(_proxy != address(0), "ProjectsModule: Invalid proxy address");
         
         sovereignSeasProxy = ISovereignSeasV5(_proxy);
         moduleActive = true;
 
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(MANAGER_ROLE, msg.sender);
-        _grantRole(OPERATOR_ROLE, msg.sender);
-        _grantRole(EMERGENCY_ROLE, msg.sender);
-
         // Initialize inherited contracts
-        __AccessControl_init();
-        __Pausable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-        
+
+        // Set module-specific data
         moduleName = "Projects Module";
         moduleDescription = "Manages project creation, updates, and lifecycle";
         moduleDependencies = new string[](0);
         
         nextProjectId = 1;
+        
+        emit ModuleInitialized(getModuleId(), _proxy);
     }
 
     /**
      * @notice Get the module's unique identifier
      * @return The module identifier string
      */
-    function getModuleId() public pure returns (string memory) {
+    function getModuleId() public pure override returns (string memory) {
         return "projects";
     }
 
@@ -233,7 +189,7 @@ contract ProjectsModule is
      * @notice Get the module's version
      * @return The module version string
      */
-    function getModuleVersion() public pure returns (string memory) {
+    function getModuleVersion() public pure override returns (string memory) {
         return "5.0.0";
     }
 
@@ -281,15 +237,18 @@ contract ProjectsModule is
         projectIds.push(projectId);
         projectsByOwner[msg.sender].push(projectId);
 
-        // Add to category
-        if (bytes(_metadata.category).length > 0) {
+        // Add to category - SAFE VERSION
+        if (bytes(_metadata.category).length > 0 && bytes(_metadata.category).length < 50) {
             projectsByCategory[_metadata.category].push(projectId);
         }
 
-        // Add to tags
-        for (uint256 i = 0; i < _metadata.tags.length; i++) {
-            projectsByTag[_metadata.tags[i]].push(projectId);
-            projectHasTag[projectId][_metadata.tags[i]] = true;
+        // Add to tags - SAFE VERSION with limits
+        uint256 maxTags = _metadata.tags.length > 10 ? 10 : _metadata.tags.length;
+        for (uint256 i = 0; i < maxTags; i++) {
+            if (bytes(_metadata.tags[i]).length > 0 && bytes(_metadata.tags[i]).length < 50) {
+                projectsByTag[_metadata.tags[i]].push(projectId);
+                projectHasTag[projectId][_metadata.tags[i]] = true;
+            }
         }
 
         projectsByStatus[ProjectStatus.PENDING].push(projectId);
@@ -448,7 +407,9 @@ contract ProjectsModule is
     function setProjectStatus(
         uint256 _projectId,
         ProjectStatus _status
-    ) external projectExists(_projectId) onlyAdmin whenActive {
+    ) external projectExists(_projectId) whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
         Project storage project = projects[_projectId];
         ProjectStatus oldStatus = project.status;
         
@@ -487,7 +448,9 @@ contract ProjectsModule is
         uint256 _projectId,
         ProjectStatus _newStatus,
         string memory _reason
-    ) external hasRole(ADMIN_ROLE) projectExists(_projectId) {
+    ) external projectExists(_projectId) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
         Project storage project = projects[_projectId];
         ProjectStatus oldStatus = project.status;
         
@@ -506,7 +469,9 @@ contract ProjectsModule is
     /**
      * @notice Verify project (admin only)
      */
-    function verifyProject(uint256 _projectId) external hasRole(ADMIN_ROLE) projectExists(_projectId) {
+    function verifyProject(uint256 _projectId) external projectExists(_projectId) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
         projects[_projectId].verified = true;
         projects[_projectId].status = ProjectStatus.VERIFIED;
         projects[_projectId].lastUpdated = block.timestamp;
@@ -925,26 +890,7 @@ contract ProjectsModule is
         return projectId;
     }
 
-    /**
-     * @notice Set project campaign participation from V4 migration
-     */
-    function setProjectCampaignParticipationFromV4(
-        uint256 _projectId,
-        uint256[] memory _campaignIds
-    ) external onlyMainContract projectExists(_projectId) {
-        Project storage project = projects[_projectId];
-        
-        // Add campaign IDs and set participation
-        for (uint256 i = 0; i < _campaignIds.length; i++) {
-            uint256 campaignId = _campaignIds[i];
-            if (!project.campaignParticipation[campaignId]) {
-                project.campaignIds.push(campaignId);
-                project.campaignParticipation[campaignId] = true;
-            }
-        }
-        
-        project.lastUpdated = block.timestamp;
-    }
+
 
     // ==================== INTERNAL HELPER FUNCTIONS ====================
 
@@ -1070,35 +1016,351 @@ contract ProjectsModule is
     }
 
     /**
-     * @notice Transfer creation fee to treasury
+     * @notice Transfer creation fee to treasury module
      */
     function _transferCreationFeeToTreasury() internal {
-        // Transfer fee to treasury module
-        try sovereignSeasProxy.callModule("treasury", abi.encodeWithSignature("receiveProjectCreationFee()")) {
-            // Fee transferred successfully
+        // Call treasury module to collect the fee
+        bytes memory treasuryData = abi.encodeWithSignature(
+            "collectFee(address,uint256,string)",
+            msg.sender,
+            0.5 ether,
+            "project_creation"
+        );
+        
+        try sovereignSeasProxy.delegateToModule("treasury", treasuryData) {
+            // Fee collected successfully
         } catch {
-            // Treasury module not available, fee remains in contract
+            // If treasury module fails, keep the fee in this contract
+            // It can be collected later by admin
         }
     }
 
     /**
      * @notice Authorize upgrade (required by UUPSUpgradeable)
      */
-    function _authorizeUpgrade(address newImplementation) internal override hasRole(DEFAULT_ADMIN_ROLE) {
-        // Only admin can authorize upgrades
+    function _authorizeUpgrade(address newImplementation) internal override {
+        // Only proxy can upgrade modules
+        require(msg.sender == address(sovereignSeasProxy), "ProjectsModule: Only proxy can upgrade");
     }
 
     /**
      * @notice Emergency pause function
      */
-    function emergencyPause() external hasRole(EMERGENCY_ROLE) {
-        _pause();
+    function emergencyPause() external {
+        // Check if caller has emergency role through proxy
+        require(_isEmergency(msg.sender), "ProjectsModule: Emergency role required");
+        modulePaused = true;
     }
 
     /**
      * @notice Emergency unpause function
      */
-    function emergencyUnpause() external hasRole(EMERGENCY_ROLE) {
-        _unpause();
+    function emergencyUnpause() external {
+        // Check if caller has emergency role through proxy
+        require(_isEmergency(msg.sender), "ProjectsModule: Emergency role required");
+        modulePaused = false;
+    }
+
+    // ==================== PROJECT PARTICIPATION SYSTEM ====================
+
+    /**
+     * @notice Request project participation in campaign
+     * @param _projectId The project ID
+     * @param _campaignId The campaign ID
+     */
+    function requestCampaignParticipation(uint256 _projectId, uint256 _campaignId) external onlyProjectOwner(_projectId) whenActive {
+        require(projects[_projectId].status == ProjectStatus.VERIFIED, "ProjectsModule: Project must be verified");
+        
+        // Call CampaignsModule to request participation
+        bytes memory participationData = abi.encodeWithSignature(
+            "requestProjectParticipation(uint256,uint256)",
+            _campaignId,
+            _projectId
+        );
+        
+        sovereignSeasProxy.callModule("campaigns", participationData);
+    }
+
+    /**
+     * @notice Approve project participation (called by campaign admin or contract admin)
+     * @param _projectId The project ID
+     * @param _campaignId The campaign ID
+     * @param _approved Whether to approve or deny
+     */
+    function approveProjectParticipation(uint256 _projectId, uint256 _campaignId, bool _approved) external {
+        // Check if caller is campaign admin or contract admin
+        bytes memory adminCheckData = abi.encodeWithSignature(
+            "isCampaignAdminOrContractAdmin(uint256,address)",
+            _campaignId,
+            msg.sender
+        );
+        
+        bytes memory result = sovereignSeasProxy.callModule("campaigns", adminCheckData);
+        bool isAuthorized = abi.decode(result, (bool));
+        require(isAuthorized, "ProjectsModule: Not authorized to approve participation");
+        
+        // Only verified projects can be approved for participation
+        require(projects[_projectId].status == ProjectStatus.VERIFIED, "ProjectsModule: Project must be verified");
+        
+        if (_approved) {
+            // Add project to campaign
+            projects[_projectId].campaignIds.push(_campaignId);
+            projects[_projectId].campaignParticipation[_campaignId] = true;
+            projects[_projectId].lastUpdated = block.timestamp;
+            
+            emit ProjectAddedToCampaign(_projectId, _campaignId);
+        }
+        
+        // Call CampaignsModule to finalize approval
+        bytes memory approvalData = abi.encodeWithSignature(
+            "finalizeProjectParticipationApproval(uint256,uint256,bool)",
+            _campaignId,
+            _projectId,
+            _approved
+        );
+        
+        sovereignSeasProxy.callModule("campaigns", approvalData);
+    }
+
+    /**
+     * @notice Set project verification status (only contract admin)
+     * @param _projectId The project ID
+     * @param _verified Whether project is officially verified
+     */
+    function setProjectVerification(uint256 _projectId, bool _verified) external projectExists(_projectId) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        projects[_projectId].verified = _verified;
+        
+        if (_verified) {
+            projects[_projectId].status = ProjectStatus.VERIFIED;
+            verifiedProjects++;
+            verifiedOwners[projects[_projectId].owner] = true;
+        } else {
+            if (projects[_projectId].status == ProjectStatus.VERIFIED) {
+                verifiedProjects--;
+            }
+            projects[_projectId].status = ProjectStatus.PENDING;
+        }
+        
+        projects[_projectId].lastUpdated = block.timestamp;
+        emit ProjectVerified(_projectId, msg.sender);
+    }
+
+    /**
+     * @notice Suspend project (only contract admin) - projects are only denied if flagged/suspended/deleted
+     * @param _projectId The project ID
+     * @param _reason Reason for suspension
+     */
+    function suspendProject(uint256 _projectId, string memory _reason) external projectExists(_projectId) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        ProjectStatus oldStatus = projects[_projectId].status;
+        projects[_projectId].status = ProjectStatus.SUSPENDED;
+        projects[_projectId].active = false;
+        projects[_projectId].lastUpdated = block.timestamp;
+        
+        if (oldStatus == ProjectStatus.VERIFIED) {
+            verifiedProjects--;
+        }
+        activeProjects--;
+        
+        emit ProjectStatusChanged(_projectId, oldStatus, ProjectStatus.SUSPENDED);
+    }
+
+    /**
+     * @notice Flag project for review (only contract admin)
+     * @param _projectId The project ID
+     * @param _reason Reason for flagging
+     */
+    function flagProject(uint256 _projectId, string memory _reason) external projectExists(_projectId) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        ProjectStatus oldStatus = projects[_projectId].status;
+        projects[_projectId].status = ProjectStatus.FLAGGED;
+        projects[_projectId].lastUpdated = block.timestamp;
+        
+        emit ProjectStatusChanged(_projectId, oldStatus, ProjectStatus.FLAGGED);
+    }
+
+    /**
+     * @notice Remove votes from project (only super admin)
+     * @param _projectId The project ID
+     * @param _campaignId The campaign ID
+     */
+    function removeProjectVotes(uint256 _projectId, uint256 _campaignId) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        // Call VotingModule to remove all votes for this project in this campaign
+        bytes memory removeVotesData = abi.encodeWithSignature(
+            "removeAllProjectVotes(uint256,uint256)",
+            _campaignId,
+            _projectId
+        );
+        
+        sovereignSeasProxy.callModule("voting", removeVotesData);
+    }
+
+    /**
+     * @notice Check if project can participate in campaigns
+     * @param _projectId The project ID
+     * @return canParticipate Whether project can participate
+     */
+    function canProjectParticipate(uint256 _projectId) external view projectExists(_projectId) returns (bool canParticipate) {
+        Project storage project = projects[_projectId];
+        
+        // Project can participate if:
+        // 1. It's verified OR pending (not flagged/suspended/archived)
+        // 2. It's active
+        // 3. Owner is not banned
+        
+        canParticipate = (
+            (project.status == ProjectStatus.VERIFIED || project.status == ProjectStatus.PENDING) &&
+            project.active &&
+            project.owner != address(0)
+        );
+        
+        return canParticipate;
+    }
+
+    /**
+     * @notice Get project participation status in campaign
+     * @param _projectId The project ID
+     * @param _campaignId The campaign ID
+     * @return isParticipating Whether project is participating
+     * @return approvalStatus Approval status
+     */
+    function getProjectParticipationStatus(uint256 _projectId, uint256 _campaignId) external view projectExists(_projectId) returns (
+        bool isParticipating,
+        string memory approvalStatus
+    ) {
+        isParticipating = projects[_projectId].campaignParticipation[_campaignId];
+        
+        if (isParticipating) {
+            if (projects[_projectId].status == ProjectStatus.VERIFIED) {
+                approvalStatus = "approved_verified";
+            } else {
+                approvalStatus = "approved_pending";
+            }
+        } else {
+            if (projects[_projectId].status == ProjectStatus.FLAGGED) {
+                approvalStatus = "denied_flagged";
+            } else if (projects[_projectId].status == ProjectStatus.SUSPENDED) {
+                approvalStatus = "denied_suspended";
+            } else if (!projects[_projectId].active) {
+                approvalStatus = "denied_inactive";
+            } else {
+                approvalStatus = "not_requested";
+            }
+        }
+        
+        return (isParticipating, approvalStatus);
+    }
+
+    // ==================== MIGRATION SUPPORT FUNCTIONS ====================
+
+    /**
+     * @notice Create project from V4 migration (NO FEE VERSION)
+     * @param _v4ProjectId Original V4 project ID
+     * @param _owner Project owner
+     * @param _name Project name
+     * @param _description Project description
+     * @param _bio Project bio
+     * @param _contractInfo Contract information
+     * @param _additionalData Additional data
+     * @param _contracts Contract addresses
+     * @param _transferrable Whether transferrable
+     * @param _active Whether active
+     * @param _createdAt Original creation time
+     * @param _tags Project tags
+     * @param _category Project category
+     * @return The new V5 project ID
+     */
+    function createProjectFromV4Migration(
+        uint256 _v4ProjectId,
+        address payable _owner,
+        string memory _name,
+        string memory _description,
+        string memory _bio,
+        string memory _contractInfo,
+        string memory _additionalData,
+        address[] memory _contracts,
+        bool _transferrable,
+        bool _active,
+        uint256 _createdAt,
+        string[] memory _tags,
+        string memory _category
+    ) external onlyMainContract returns (uint256) {
+        require(_owner != address(0), "ProjectsModule: Invalid owner address");
+        require(bytes(_name).length > 0, "ProjectsModule: Name cannot be empty");
+        
+        uint256 projectId = nextProjectId++;
+        
+        Project storage project = projects[projectId];
+        project.id = projectId;
+        project.owner = _owner;
+        project.owners[_owner] = true;
+        project.ownerList.push(_owner);
+        project.name = _name;
+        project.description = _description;
+        project.metadata.bio = _bio;
+        project.metadata.contractInfo = _contractInfo;
+        project.metadata.additionalData = _additionalData;
+        project.metadata.tags = _tags;
+        project.metadata.category = _category;
+        project.contracts = _contracts;
+        project.transferrable = _transferrable;
+        project.active = _active;
+        project.createdAt = _createdAt > 0 ? _createdAt : block.timestamp;
+        project.updatedAt = block.timestamp;
+        project.lastUpdated = block.timestamp;
+        project.status = ProjectStatus.PENDING; // Migrated projects start as pending
+        
+        // Add to indexes
+        projectIds.push(projectId);
+        projectsByOwner[_owner].push(projectId);
+        projectsByStatus[ProjectStatus.PENDING].push(projectId);
+
+        // Add to category
+        if (bytes(_category).length > 0) {
+            projectsByCategory[_category].push(projectId);
+        }
+
+        // Add to tags
+        for (uint256 i = 0; i < _tags.length; i++) {
+            projectsByTag[_tags[i]].push(projectId);
+            projectHasTag[projectId][_tags[i]] = true;
+        }
+
+        totalProjects++;
+        if (_active) activeProjects++;
+        
+        // NO FEE FOR MIGRATION
+        emit ProjectCreatedFromV4(projectId, _owner, _name, _v4ProjectId);
+        return projectId;
+    }
+
+    /**
+     * @notice Set project campaign participation from V4 migration
+     * @param _projectId V5 project ID
+     * @param _campaignIds Array of V4 campaign IDs (will be mapped to V5)
+     */
+    function setProjectCampaignParticipationFromV4(
+        uint256 _projectId,
+        uint256[] memory _campaignIds
+    ) external onlyMainContract projectExists(_projectId) {
+        Project storage project = projects[_projectId];
+        
+        // Note: Campaign IDs need to be mapped from V4 to V5 by the migration module
+        // This function assumes the mapping has already been done
+        for (uint256 i = 0; i < _campaignIds.length; i++) {
+            uint256 campaignId = _campaignIds[i];
+            if (!project.campaignParticipation[campaignId]) {
+                project.campaignIds.push(campaignId);
+                project.campaignParticipation[campaignId] = true;
+            }
+        }
+        
+        project.lastUpdated = block.timestamp;
     }
 }

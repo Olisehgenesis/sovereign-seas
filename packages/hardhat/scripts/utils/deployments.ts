@@ -13,6 +13,7 @@ export interface DeploymentRecord {
     poolsModule: string;
     migrationModule: string;
     sovereignSeasV5: string;
+    seasToken?: string;
   };
 }
 

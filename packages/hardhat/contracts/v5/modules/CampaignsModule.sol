@@ -162,6 +162,10 @@ contract CampaignsModule is BaseModule {
     event CampaignTagRemoved(uint256 indexed campaignId, string tag);
     event CampaignFeatured(uint256 indexed campaignId, bool featured, address indexed updatedBy);
     event UserMaxVoteAmountSet(uint256 indexed campaignId, address indexed user, uint256 maxAmount);
+    event GlobalCampaignFeesUpdated(uint256 adminFeePercentage, address defaultFeeToken);
+    event GlobalProjectAdditionFeesUpdated(address defaultProjectAdditionFeeToken, uint256 defaultProjectAdditionFeeAmount);
+    event AllFeesSetToZeroForTesting();
+    event AllFeesSetToTestAmounts(uint256 testFeeAmount);
 
     // Modifiers
     modifier campaignExists(uint256 _campaignId) {
@@ -173,7 +177,7 @@ contract CampaignsModule is BaseModule {
         require(
             campaigns[_campaignId].admin == msg.sender || 
             campaigns[_campaignId].campaignAdmins[msg.sender] || 
-            hasRole(ADMIN_ROLE, msg.sender),
+            _isAdmin(msg.sender),
             "CampaignsModule: Only campaign admin can call this function"
         );
         _;
@@ -200,30 +204,25 @@ contract CampaignsModule is BaseModule {
      * @param _data Additional initialization data
      */
     function initialize(address _proxy, bytes calldata _data) external override initializer {
+        // Initialize base module
         require(_proxy != address(0), "CampaignsModule: Invalid proxy address");
         
         sovereignSeasProxy = ISovereignSeasV5(_proxy);
         moduleActive = true;
 
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(MANAGER_ROLE, msg.sender);
-        _grantRole(OPERATOR_ROLE, msg.sender);
-        _grantRole(EMERGENCY_ROLE, msg.sender);
-
         // Initialize inherited contracts
-        __AccessControl_init();
-        __Pausable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-        
+
+        // Set module-specific data
         moduleName = "Campaigns Module";
         moduleDescription = "Manages funding campaigns and their lifecycle";
         moduleDependencies = new string[](1);
         moduleDependencies[0] = "projects";
         
         nextCampaignId = 1;
+        
+        emit ModuleInitialized(getModuleId(), _proxy);
     }
 
     /**
@@ -408,15 +407,18 @@ contract CampaignsModule is BaseModule {
         // Add to admin's campaigns
         campaignsByAdmin[_admin].push(campaignId);
 
-        // Add to category
-        if (bytes(_metadata.category).length > 0) {
+        // Add to category - SAFE VERSION
+        if (bytes(_metadata.category).length > 0 && bytes(_metadata.category).length < 50) {
             campaignsByCategory[_metadata.category].push(campaignId);
         }
 
-        // Add to tags
-        for (uint256 i = 0; i < _metadata.tags.length; i++) {
-            campaignsByTag[_metadata.tags[i]].push(campaignId);
-            campaignHasTag[campaignId][_metadata.tags[i]] = true;
+        // Add to tags - SAFE VERSION with limits
+        uint256 maxTags = _metadata.tags.length > 10 ? 10 : _metadata.tags.length;
+        for (uint256 i = 0; i < maxTags; i++) {
+            if (bytes(_metadata.tags[i]).length > 0 && bytes(_metadata.tags[i]).length < 50) {
+                campaignsByTag[_metadata.tags[i]].push(campaignId);
+                campaignHasTag[campaignId][_metadata.tags[i]] = true;
+            }
         }
 
         // Index by status and activity
@@ -478,15 +480,18 @@ contract CampaignsModule is BaseModule {
         campaign.metadata = _metadata;
         campaign.lastUpdated = block.timestamp;
 
-        // Add to new category
-        if (bytes(_metadata.category).length > 0) {
+        // Add to new category - SAFE VERSION
+        if (bytes(_metadata.category).length > 0 && bytes(_metadata.category).length < 50) {
             campaignsByCategory[_metadata.category].push(_campaignId);
         }
 
-        // Add to new tags
-        for (uint256 i = 0; i < _metadata.tags.length; i++) {
-            campaignsByTag[_metadata.tags[i]].push(_campaignId);
-            campaignHasTag[_campaignId][_metadata.tags[i]] = true;
+        // Add to new tags - SAFE VERSION with limits
+        uint256 maxTags = _metadata.tags.length > 10 ? 10 : _metadata.tags.length;
+        for (uint256 i = 0; i < maxTags; i++) {
+            if (bytes(_metadata.tags[i]).length > 0 && bytes(_metadata.tags[i]).length < 50) {
+                campaignsByTag[_metadata.tags[i]].push(_campaignId);
+                campaignHasTag[_campaignId][_metadata.tags[i]] = true;
+            }
         }
 
         emit CampaignMetadataUpdated(_campaignId, msg.sender);
@@ -568,7 +573,9 @@ contract CampaignsModule is BaseModule {
         uint256 _campaignId,
         OfficialStatus _newStatus,
         string calldata _reason
-    ) external campaignExists(_campaignId) onlyAdmin whenActive {
+    ) external campaignExists(_campaignId) whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
         Campaign storage campaign = campaigns[_campaignId];
         OfficialStatus oldStatus = campaign.officialStatus;
 
@@ -630,7 +637,9 @@ contract CampaignsModule is BaseModule {
     /**
      * @notice Set featured campaign status (admin only)
      */
-    function setCampaignFeatured(uint256 _campaignId, bool _featured) external campaignExists(_campaignId) onlyAdmin whenActive {
+    function setCampaignFeatured(uint256 _campaignId, bool _featured) external campaignExists(_campaignId) whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
         campaigns[_campaignId].featuredCampaign = _featured;
         campaigns[_campaignId].lastUpdated = block.timestamp;
         emit CampaignFeatured(_campaignId, _featured, msg.sender);
@@ -643,7 +652,9 @@ contract CampaignsModule is BaseModule {
         uint256 _campaignId,
         address _token,
         uint256 _amount
-    ) external onlyModule {
+    ) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
         Campaign storage campaign = campaigns[_campaignId];
         
         campaign.tokenAmounts[_token] += _amount;
@@ -682,7 +693,9 @@ contract CampaignsModule is BaseModule {
         bool _active,
         uint256 _totalFunds,
         uint256 _createdAt
-    ) external onlyAdmin returns (uint256) {
+    ) external returns (uint256) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
         require(_v4CampaignId >= 0, "CampaignsModule: Invalid V4 campaign ID");
         require(_admin != address(0), "CampaignsModule: Invalid admin address");
         require(bytes(_name).length > 0, "CampaignsModule: Name cannot be empty");
@@ -730,7 +743,9 @@ contract CampaignsModule is BaseModule {
         uint256 _campaignId,
         address[] calldata _tokens,
         uint256[] calldata _amounts
-    ) external onlyAdmin campaignExists(_campaignId) {
+    ) external campaignExists(_campaignId) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
         require(_tokens.length == _amounts.length, "CampaignsModule: Array length mismatch");
         
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -809,6 +824,36 @@ contract CampaignsModule is BaseModule {
      */
     function getCampaignMetadata(uint256 _campaignId) external view campaignExists(_campaignId) returns (CampaignMetadata memory metadata) {
         return campaigns[_campaignId].metadata;
+    }
+
+    // ==================== CROSS-MODULE HELPERS (ADDED) ====================
+
+    function isCampaignAdmin(uint256 _campaignId, address _user) external view returns (bool) {
+        Campaign storage c = campaigns[_campaignId];
+        if (c.id == 0) return false;
+        return c.admin == _user || c.campaignAdmins[_user] || _isAdmin(_user);
+    }
+
+    function isCampaignAdminOrContractAdmin(uint256 _campaignId, address _user) external view returns (bool) {
+        Campaign storage c = campaigns[_campaignId];
+        if (c.id == 0) return false;
+        return c.admin == _user || c.campaignAdmins[_user] || _isAdmin(_user) || _isAdmin(_user);
+    }
+
+    function requestProjectParticipation(uint256 _campaignId, uint256 _projectId) external whenActive campaignExists(_campaignId) {
+        // Only project owner can request - validated in ProjectsModule. Here we just acknowledge.
+        Campaign storage c = campaigns[_campaignId];
+        require(c.active, "CampaignsModule: Campaign not active");
+        // No state to store here; VotingModule will initialize participation when approved.
+    }
+
+    function finalizeProjectParticipationApproval(uint256 _campaignId, uint256 _projectId, bool _approved) external whenActive campaignExists(_campaignId) {
+        // Only campaign admin or contract admin should be able to finalize; validated via proxy caller in ProjectsModule
+        if (_approved) {
+            // Initialize participation in VotingModule
+            callModule("voting", abi.encodeWithSignature("initializeParticipation(uint256,uint256)", _campaignId, _projectId));
+            callModule("voting", abi.encodeWithSignature("approveProject(uint256,uint256)", _campaignId, _projectId));
+        }
     }
 
     /**
@@ -892,15 +937,7 @@ contract CampaignsModule is BaseModule {
         );
     }
 
-    /**
-     * @notice Check if user is campaign admin
-     */
-    function isCampaignAdmin(uint256 _campaignId, address _admin) external view returns (bool) {
-        if (_campaignId >= nextCampaignId) return false;
-        return campaigns[_campaignId].admin == _admin || 
-               campaigns[_campaignId].campaignAdmins[_admin] || 
-               hasRole(ADMIN_ROLE, _admin);
-    }
+    
 
     /**
      * @notice Get user max vote amount
@@ -1053,4 +1090,96 @@ contract CampaignsModule is BaseModule {
         }
         return false;
     }
+
+    // ==================== ADMIN FUNCTIONS ====================
+
+    /**
+     * @notice Update campaign fees globally (admin only)
+     */
+    function updateGlobalCampaignFees(
+        uint256 _adminFeePercentage,
+        address _defaultFeeToken
+    ) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_adminFeePercentage <= 1000, "CampaignsModule: Admin fee cannot exceed 10%");
+        require(_defaultFeeToken != address(0), "CampaignsModule: Invalid fee token");
+        
+        // Update all existing campaigns with new default fees
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                campaigns[i].adminFeePercentage = _adminFeePercentage;
+                campaigns[i].feeToken = _defaultFeeToken;
+            }
+        }
+        
+        emit GlobalCampaignFeesUpdated(_adminFeePercentage, _defaultFeeToken);
+    }
+
+    /**
+     * @notice Update project addition fees globally (admin only)
+     */
+    function updateGlobalProjectAdditionFees(
+        address _defaultProjectAdditionFeeToken,
+        uint256 _defaultProjectAdditionFeeAmount
+    ) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_defaultProjectAdditionFeeToken != address(0), "CampaignsModule: Invalid fee token");
+        require(_defaultProjectAdditionFeeAmount >= 0, "CampaignsModule: Fee amount must be non-negative");
+        
+        // Update all existing campaigns with new default project addition fees
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                campaigns[i].projectAdditionFeeToken = _defaultProjectAdditionFeeToken;
+                campaigns[i].projectAdditionFeeAmount = _defaultProjectAdditionFeeAmount;
+            }
+        }
+        
+        emit GlobalProjectAdditionFeesUpdated(_defaultProjectAdditionFeeToken, _defaultProjectAdditionFeeAmount);
+    }
+
+    /**
+     * @notice Set all fees to zero for testing (admin only)
+     */
+    function setZeroFeesForTesting() external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        
+        // Update all existing campaigns to have zero fees
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                campaigns[i].adminFeePercentage = 0;
+                campaigns[i].projectAdditionFeeAmount = 0;
+                campaigns[i].votingFee = 0;
+            }
+        }
+        
+        emit AllFeesSetToZeroForTesting();
+    }
+
+    /**
+     * @notice Set all fees to 0.1 CELO for testing (admin only)
+     */
+    function setTestFees() external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        
+        uint256 testFeeAmount = 0.1e18; // 0.1 CELO
+        
+        // Update all existing campaigns to have test fees
+        for (uint256 i = 1; i < nextCampaignId; i++) {
+            if (campaigns[i].id != 0) {
+                campaigns[i].adminFeePercentage = 50; // 5%
+                campaigns[i].projectAdditionFeeAmount = testFeeAmount;
+                campaigns[i].votingFee = testFeeAmount;
+            }
+        }
+        
+        emit AllFeesSetToTestAmounts(testFeeAmount);
+    }
+
+    /**
+     * @notice Update specific campaign fees (admin only)
+     */
 }

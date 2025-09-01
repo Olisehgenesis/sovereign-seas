@@ -13,7 +13,7 @@ interface ISovereignSeasV5 {
      * @param _data The function call data
      * @return The return data from the module call
      */
-    function callModule(string calldata _moduleId, bytes calldata _data) external returns (bytes memory);
+    function callModule(string calldata _moduleId, bytes calldata _data) external payable returns (bytes memory);
 
     /**
      * @notice Delegate a call to a module (for internal use)
@@ -22,6 +22,7 @@ interface ISovereignSeasV5 {
      * @return The return data from the module call
      */
     function delegateToModule(string calldata _moduleId, bytes calldata _data) external returns (bytes memory);
+    function staticCallModule(string calldata _moduleId, bytes calldata _data) external view returns (bytes memory);
 
     /**
      * @notice Register a new module
@@ -30,6 +31,29 @@ interface ISovereignSeasV5 {
      * @param _dependencies Array of module dependencies
      */
     function registerModule(string calldata _moduleId, address _moduleAddress, string[] calldata _dependencies) external;
+
+    /**
+     * @notice Initialize a module through the proxy
+     * @param _moduleId The module identifier
+     * @param _data Additional initialization data for the module
+     * @return True if initialization was successful
+     */
+    function initializeModule(string calldata _moduleId, bytes calldata _data) external returns (bool);
+
+    /**
+     * @notice Initialize multiple modules in batch
+     * @param _moduleIds Array of module identifiers to initialize
+     * @param _dataArray Array of initialization data for each module (can be empty for default)
+     * @return Array of boolean results for each module initialization
+     */
+    function initializeModulesBatch(string[] calldata _moduleIds, bytes[] calldata _dataArray) external returns (bool[] memory);
+
+    /**
+     * @notice Get initialization status for multiple modules
+     * @param _moduleIds Array of module identifiers to check
+     * @return Array of boolean results indicating if modules are initialized
+     */
+    function getModulesInitializationStatus(string[] calldata _moduleIds) external view returns (bool[] memory);
 
     /**
      * @notice Unregister a module
@@ -88,4 +112,12 @@ interface ISovereignSeasV5 {
      * @dev Only callable by admin role
      */
     function unpauseSystem() external;
+
+    /**
+     * @notice Check if an account has a specific role
+     * @param _role The role to check
+     * @param _account The account to check
+     * @return True if the account has the role
+     */
+    function hasRole(bytes32 _role, address _account) external view returns (bool);
 }

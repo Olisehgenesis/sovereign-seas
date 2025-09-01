@@ -5,6 +5,85 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../base/BaseModule.sol";
 
+// ==================== V4 CONTRACT INTEGRATION ====================
+
+/**
+ * @title IV4Contract - Complete V4 Contract Interface
+ * @notice Interface for reading all necessary data from V4 contract
+ */
+interface IV4Contract {
+    // Project functions
+    function nextProjectId() external view returns (uint256);
+    function getProject(uint256 _projectId) external view returns (
+        address owner,
+        string memory name,
+        string memory description,
+        string memory bio,
+        string memory contractInfo,
+        string memory additionalData,
+        address[] memory contracts,
+        bool transferrable,
+        bool active,
+        uint256 createdAt
+    );
+    function isProjectOwner(uint256 _projectId, address _user) external view returns (bool);
+    function getProjectCampaigns(uint256 _projectId) external view returns (uint256[] memory);
+    
+    // Campaign functions
+    function nextCampaignId() external view returns (uint256);
+    function getCampaign(uint256 _campaignId) external view returns (
+        address admin,
+        string memory name,
+        string memory description,
+        uint256 startTime,
+        uint256 endTime,
+        uint256 targetAmount,
+        uint256 raisedAmount,
+        bool active,
+        bool verified,
+        address preferredToken,
+        bool useQuadraticVoting,
+        uint256 createdAt
+    );
+    function getCampaignProjects(uint256 _campaignId) external view returns (uint256[] memory);
+    function getCampaignTokens(uint256 _campaignId) external view returns (address[] memory);
+    function getCampaignTokenAmount(uint256 _campaignId, address _token) external view returns (uint256);
+    
+    // Voting functions
+    function getParticipation(uint256 _campaignId, uint256 _projectId) external view returns (
+        bool approved,
+        uint256 voteCount,
+        uint256 tokenAmount
+    );
+    function getCampaignVotedTokens(uint256 _campaignId) external view returns (address[] memory);
+    function getProjectVotes(uint256 _campaignId, uint256 _projectId) external view returns (uint256);
+    function getProjectTokenVotes(uint256 _campaignId, uint256 _projectId, address _token) external view returns (uint256);
+    function hasUserVoted(uint256 _campaignId, uint256 _projectId, address _user) external view returns (bool);
+    function getUserVoteAmount(uint256 _campaignId, uint256 _projectId, address _user, address _token) external view returns (uint256);
+    
+    // Treasury and fee functions
+    function getSupportedTokens() external view returns (address[] memory);
+    function collectedFees(address _token) external view returns (uint256);
+    function getTokenExchangeProvider(address _token) external view returns (address);
+    function getTokenBalance(address _token) external view returns (uint256);
+    function isTokenSupported(address _token) external view returns (bool);
+    
+    // User and admin functions
+    function isAdmin(address _user) external view returns (bool);
+    function isCampaignAdmin(address _user) external view returns (bool);
+    function getUserProjectCount(address _user) external view returns (uint256);
+    function getUserProjects(address _user) external view returns (uint256[] memory);
+    
+    // Data structure version
+    function getDataStructureVersion(string memory _dataType) external view returns (uint256);
+    
+    // Additional utility functions
+    function isProjectActive(uint256 _projectId) external view returns (bool);
+    function isCampaignActive(uint256 _campaignId) external view returns (bool);
+    function getProjectMetadata(uint256 _projectId) external view returns (string memory);
+    function getCampaignMetadata(uint256 _campaignId) external view returns (string memory);
+}
+
 /**
  * @title MigrationModule
  * @notice Handles migration from V4 to V5 in SovereignSeas
@@ -55,21 +134,38 @@ contract MigrationModule is BaseModule {
     }
 
     // State variables
-    address public v4Contract;
+    IV4Contract public v4Contract;
+    address public v4ContractAddress;
+    
     mapping(MigrationStep => MigrationRecord) public migrationRecords;
     mapping(uint256 => MigrationBatch) public migrationBatches;
     mapping(MigrationStep => bool) public stepCompleted;
     mapping(uint256 => bool) public migratedProjects;
     mapping(uint256 => bool) public migratedCampaigns;
     mapping(address => bool) public migratedUsers;
+    mapping(uint256 => uint256) public v4ToV5ProjectMapping; // v4Id => v5Id
+    mapping(uint256 => uint256) public v4ToV5CampaignMapping; // v4Id => v5Id
+    mapping(uint256 => uint256) public v5ToV4ProjectMapping; // v5Id => v4Id
+    mapping(uint256 => uint256) public v5ToV4CampaignMapping; // v5Id => v4Id
+    
+    // Batch processing
+    mapping(MigrationStep => uint256) public batchSize;
+    mapping(MigrationStep => uint256[]) public failedItems;
+    mapping(string => bytes) public rollbackData; // step => data for rollback
     
     uint256 public nextBatchId;
     uint256 public totalBatches;
     uint256 public completedBatches;
+    uint256 public failedBatches;
     MigrationStatus public migrationStatus;
     uint256 public migrationStartTime;
     uint256 public migrationEndTime;
     string public migrationVersion;
+    
+    // Constants
+    uint256 public constant DEFAULT_BATCH_SIZE = 50;
+    uint256 public constant MAX_BATCH_SIZE = 200;
+    uint256 public constant MIGRATION_TIMEOUT = 7 days;
 
     // Events
     event MigrationStarted(uint256 indexed migrationId, uint256 startTime);
@@ -112,24 +208,17 @@ contract MigrationModule is BaseModule {
      * @param _data Additional initialization data
      */
     function initialize(address _proxy, bytes calldata _data) external override initializer {
+        // Initialize base module
         require(_proxy != address(0), "MigrationModule: Invalid proxy address");
         
         sovereignSeasProxy = ISovereignSeasV5(_proxy);
         moduleActive = true;
 
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(MANAGER_ROLE, msg.sender);
-        _grantRole(OPERATOR_ROLE, msg.sender);
-        _grantRole(EMERGENCY_ROLE, msg.sender);
-
         // Initialize inherited contracts
-        __AccessControl_init();
-        __Pausable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-        
+
+        // Set module-specific data
         moduleName = "Migration Module";
         moduleDescription = "Handles migration from V4 to V5";
         moduleDependencies = new string[](5);
@@ -142,6 +231,8 @@ contract MigrationModule is BaseModule {
         nextBatchId = 1;
         migrationStatus = MigrationStatus.NOT_STARTED;
         migrationVersion = "1.0.0";
+        
+        emit ModuleInitialized(getModuleId(), _proxy);
     }
 
     /**
@@ -164,10 +255,12 @@ contract MigrationModule is BaseModule {
      * @notice Start the migration process
      * @param _v4Contract The V4 contract address
      */
-    function startMigration(address _v4Contract) external onlyAdmin whenActive migrationNotStarted {
+    function startMigration(address _v4Contract) external whenActive migrationNotStarted {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         require(_v4Contract != address(0), "MigrationModule: Invalid V4 contract address");
 
-        v4Contract = _v4Contract;
+        v4Contract = IV4Contract(_v4Contract);
         migrationStatus = MigrationStatus.IN_PROGRESS;
         migrationStartTime = block.timestamp;
 
@@ -178,7 +271,9 @@ contract MigrationModule is BaseModule {
      * @notice Migrate projects from V4 to V5
      * @param _projectIds Array of V4 project IDs to migrate
      */
-    function migrateProjects(uint256[] calldata _projectIds) external onlyAdmin whenActive migrationInProgress stepNotCompleted(MigrationStep.PROJECTS) {
+    function migrateProjects(uint256[] calldata _projectIds) external whenActive migrationInProgress stepNotCompleted(MigrationStep.PROJECTS) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         MigrationRecord storage record = migrationRecords[MigrationStep.PROJECTS];
         record.step = MigrationStep.PROJECTS;
         record.startTime = block.timestamp;
@@ -216,7 +311,9 @@ contract MigrationModule is BaseModule {
      * @notice Migrate campaigns from V4 to V5
      * @param _campaignIds Array of V4 campaign IDs to migrate
      */
-    function migrateCampaigns(uint256[] calldata _campaignIds) external onlyAdmin whenActive migrationInProgress stepNotCompleted(MigrationStep.CAMPAIGNS) {
+    function migrateCampaigns(uint256[] calldata _campaignIds) external whenActive migrationInProgress stepNotCompleted(MigrationStep.CAMPAIGNS) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         MigrationRecord storage record = migrationRecords[MigrationStep.CAMPAIGNS];
         record.step = MigrationStep.CAMPAIGNS;
         record.startTime = block.timestamp;
@@ -254,7 +351,9 @@ contract MigrationModule is BaseModule {
      * @notice Migrate voting data from V4 to V5
      * @param _campaignIds Array of V4 campaign IDs to migrate voting data for
      */
-    function migrateVotingData(uint256[] calldata _campaignIds) external onlyAdmin whenActive migrationInProgress stepNotCompleted(MigrationStep.VOTING_DATA) {
+    function migrateVotingData(uint256[] calldata _campaignIds) external whenActive migrationInProgress stepNotCompleted(MigrationStep.VOTING_DATA) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         MigrationRecord storage record = migrationRecords[MigrationStep.VOTING_DATA];
         record.step = MigrationStep.VOTING_DATA;
         record.startTime = block.timestamp;
@@ -290,7 +389,9 @@ contract MigrationModule is BaseModule {
     /**
      * @notice Migrate treasury data from V4 to V5
      */
-    function migrateTreasuryData() external onlyAdmin whenActive migrationInProgress stepNotCompleted(MigrationStep.TREASURY_DATA) {
+    function migrateTreasuryData() external whenActive migrationInProgress stepNotCompleted(MigrationStep.TREASURY_DATA) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         MigrationRecord storage record = migrationRecords[MigrationStep.TREASURY_DATA];
         record.step = MigrationStep.TREASURY_DATA;
         record.startTime = block.timestamp;
@@ -347,7 +448,9 @@ contract MigrationModule is BaseModule {
      * @return isValid Whether the migration is valid
      * @return validationMessage Validation message
      */
-    function validateMigration() external onlyAdmin whenActive migrationCompleted returns (bool isValid, string memory validationMessage) {
+    function validateMigration() external whenActive migrationCompleted returns (bool isValid, string memory validationMessage) {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         // This would perform comprehensive validation
         isValid = true;
         validationMessage = "Migration validation passed";
@@ -360,7 +463,9 @@ contract MigrationModule is BaseModule {
     /**
      * @notice Rollback migration to V4
      */
-    function rollbackMigration() external onlyEmergency whenActive {
+    function rollbackMigration() external whenActive {
+        // Check if caller has emergency role through proxy
+        require(_isEmergency(msg.sender), "MigrationModule: Emergency role required");
         require(migrationStatus == MigrationStatus.IN_PROGRESS || migrationStatus == MigrationStatus.COMPLETED, "MigrationModule: Cannot rollback");
 
         migrationStatus = MigrationStatus.ROLLED_BACK;
@@ -377,14 +482,18 @@ contract MigrationModule is BaseModule {
     /**
      * @notice Pause migration process
      */
-    function pauseMigration() external onlyAdmin whenActive migrationInProgress {
+    function pauseMigration() external whenActive migrationInProgress {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         // This would pause the migration without losing progress
     }
 
     /**
      * @notice Resume paused migration
      */
-    function resumeMigration() external onlyAdmin whenActive {
+    function resumeMigration() external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         // This would resume a paused migration
     }
 
@@ -400,7 +509,9 @@ contract MigrationModule is BaseModule {
     /**
      * @notice Complete migration process
      */
-    function completeMigration() external onlyAdmin whenActive migrationInProgress {
+    function completeMigration() external whenActive migrationInProgress {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         // Check if all steps are completed
         bool allCompleted = true;
         for (uint256 i = 0; i < 6; i++) {
@@ -422,9 +533,20 @@ contract MigrationModule is BaseModule {
      * @notice Set V4 contract address
      * @param _v4Contract The V4 contract address
      */
-    function setV4Contract(address _v4Contract) external onlyAdmin whenActive {
+    function setV4Contract(address _v4Contract) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
         require(_v4Contract != address(0), "MigrationModule: Invalid V4 contract address");
-        v4Contract = _v4Contract;
+        v4Contract = IV4Contract(_v4Contract);
+        v4ContractAddress = _v4Contract;
+        
+        // Initialize batch sizes
+        batchSize[MigrationStep.PROJECTS] = DEFAULT_BATCH_SIZE;
+        batchSize[MigrationStep.CAMPAIGNS] = DEFAULT_BATCH_SIZE;
+        batchSize[MigrationStep.VOTING_DATA] = DEFAULT_BATCH_SIZE;
+        batchSize[MigrationStep.TREASURY_DATA] = 1;
+        batchSize[MigrationStep.USER_DATA] = DEFAULT_BATCH_SIZE;
+        batchSize[MigrationStep.VALIDATION] = 1;
     }
 
     /**
@@ -456,26 +578,463 @@ contract MigrationModule is BaseModule {
         );
     }
 
-    // Internal helper functions (external for try-catch)
+    // ==================== ACTUAL MIGRATION LOGIC ====================
+    
+    /**
+     * @notice Migrate single project from V4 to V5 (external for try-catch)
+     * @param _v4ProjectId V4 project ID to migrate
+     */
     function _migrateSingleProject(uint256 _v4ProjectId) external {
-        // This would migrate a single project from V4 to V5
-        // Integration with ProjectsModule would happen here
-        emit ProjectMigrated(0, _v4ProjectId, 0);
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        require(msg.sender == address(this), "MigrationModule: Internal function");
+        
+        // Read project data from V4
+        (
+            address owner,
+            string memory name,
+            string memory description,
+            string memory bio,
+            string memory contractInfo,
+            string memory additionalData,
+            address[] memory contracts,
+            bool transferrable,
+            bool active,
+            uint256 createdAt
+        ) = v4Contract.getProject(_v4ProjectId);
+        
+        // Create project metadata - NO FEE MIGRATION VERSION
+        bytes memory projectMetadata = abi.encodeWithSignature(
+            "createProjectFromV4Migration(uint256,address,string,string,string,string,string,address[],bool,bool,uint256,string[],string)",
+            _v4ProjectId,
+            owner,
+            name,
+            description,
+            bio,
+            contractInfo,
+            additionalData,
+            contracts,
+            transferrable,
+            active,
+            createdAt,
+            new string[](0), // tags - V4 doesn't have tags
+            "" // category - V4 doesn't have category
+        );
+        
+        // Call ProjectsModule to create V5 project (fee-free migration)
+        bytes memory result = sovereignSeasProxy.callModule("projects", projectMetadata);
+        uint256 v5ProjectId = abi.decode(result, (uint256));
+        
+        // Migrate project campaign participations
+        uint256[] memory v4CampaignIds = v4Contract.getProjectCampaigns(_v4ProjectId);
+        if (v4CampaignIds.length > 0) {
+            bytes memory participationData = abi.encodeWithSignature(
+                "setProjectCampaignParticipationFromV4(uint256,uint256[])",
+                v5ProjectId,
+                v4CampaignIds
+            );
+            sovereignSeasProxy.callModule("projects", participationData);
+        }
+        
+        // Store mapping
+        v4ToV5ProjectMapping[_v4ProjectId] = v5ProjectId;
+        v5ToV4ProjectMapping[v5ProjectId] = _v4ProjectId;
+        migratedProjects[_v4ProjectId] = true;
+        
+        emit ProjectMigrated(_v4ProjectId, _v4ProjectId, v5ProjectId);
     }
 
+    /**
+     * @notice Migrate single campaign from V4 to V5 (external for try-catch)
+     * @param _v4CampaignId V4 campaign ID to migrate
+     */
     function _migrateSingleCampaign(uint256 _v4CampaignId) external {
-        // This would migrate a single campaign from V4 to V5
-        // Integration with CampaignsModule would happen here
-        emit CampaignMigrated(0, _v4CampaignId, 0);
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        require(msg.sender == address(this), "MigrationModule: Internal function");
+        
+        // Read campaign data from V4
+        (
+            address admin,
+            string memory name,
+            string memory description,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 targetAmount,
+            uint256 raisedAmount,
+            bool active,
+            bool verified,
+            address preferredToken,
+            bool useQuadraticVoting,
+            uint256 createdAt
+        ) = v4Contract.getCampaign(_v4CampaignId);
+        
+        // Get campaign projects
+        uint256[] memory v4ProjectIds = v4Contract.getCampaignProjects(_v4CampaignId);
+        uint256[] memory v5ProjectIds = new uint256[](v4ProjectIds.length);
+        
+        // Map V4 project IDs to V5 project IDs
+        for (uint256 i = 0; i < v4ProjectIds.length; i++) {
+            v5ProjectIds[i] = v4ToV5ProjectMapping[v4ProjectIds[i]];
+            require(v5ProjectIds[i] != 0, "MigrationModule: Project not migrated yet");
+        }
+        
+        // Create campaign metadata
+        bytes memory campaignMetadata = abi.encodeWithSignature(
+            "createCampaignFromV4(uint256,address,string,string,uint256,uint256,uint256,bool,bool,address,bool,uint256,uint256[])",
+            _v4CampaignId,
+            admin,
+            name,
+            description,
+            startTime,
+            endTime,
+            targetAmount,
+            active,
+            verified,
+            preferredToken,
+            useQuadraticVoting,
+            createdAt,
+            v5ProjectIds
+        );
+        
+        // Call CampaignsModule to create V5 campaign
+        bytes memory result = sovereignSeasProxy.callModule("campaigns", campaignMetadata);
+        uint256 v5CampaignId = abi.decode(result, (uint256));
+        
+        // Store mapping
+        v4ToV5CampaignMapping[_v4CampaignId] = v5CampaignId;
+        v5ToV4CampaignMapping[v5CampaignId] = _v4CampaignId;
+        migratedCampaigns[_v4CampaignId] = true;
+        
+        emit CampaignMigrated(_v4CampaignId, _v4CampaignId, v5CampaignId);
     }
 
     function _migrateVotingDataForCampaign(uint256 _v4CampaignId) external {
-        // This would migrate voting data for a campaign from V4 to V5
-        // Integration with VotingModule would happen here
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        require(msg.sender == address(this), "MigrationModule: Internal function");
+        
+        uint256 v5CampaignId = v4ToV5CampaignMapping[_v4CampaignId];
+        require(v5CampaignId != 0, "MigrationModule: Campaign not migrated yet");
+        
+        // Get campaign projects
+        uint256[] memory v4ProjectIds = v4Contract.getCampaignProjects(_v4CampaignId);
+        
+        // Migrate voting data for each project
+        for (uint256 i = 0; i < v4ProjectIds.length; i++) {
+            uint256 v4ProjectId = v4ProjectIds[i];
+            uint256 v5ProjectId = v4ToV5ProjectMapping[v4ProjectId];
+            
+            if (v5ProjectId != 0) {
+                // Get participation data
+                (bool approved, uint256 voteCount, uint256 tokenAmount) = v4Contract.getParticipation(_v4CampaignId, v4ProjectId);
+                
+                if (approved && voteCount > 0) {
+                    // Migrate participation data - NO FEE VERSION
+                    bytes memory participationData = abi.encodeWithSignature(
+                        "setProjectParticipationFromV4Migration(uint256,uint256,bool,uint256,uint256)",
+                        v5CampaignId,
+                        v5ProjectId,
+                        approved,
+                        voteCount,
+                        tokenAmount
+                    );
+                    
+                    sovereignSeasProxy.callModule("voting", participationData);
+                    
+                    // Migrate individual voter data for this project
+                    _migrateProjectVoterData(_v4CampaignId, v4ProjectId, v5CampaignId, v5ProjectId);
+                }
+            }
+        }
     }
 
     function _migrateTreasuryData() external {
-        // This would migrate treasury data from V4 to V5
-        // Integration with TreasuryModule would happen here
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        require(msg.sender == address(this), "MigrationModule: Internal function");
+        
+        // Get supported tokens from V4
+        address[] memory supportedTokens = v4Contract.getSupportedTokens();
+        
+        // Migrate token support settings
+        for (uint256 i = 0; i < supportedTokens.length; i++) {
+            address token = supportedTokens[i];
+            
+            // Get V4 token data
+            uint256 collectedFees = v4Contract.collectedFees(token);
+            address exchangeProvider = v4Contract.getTokenExchangeProvider(token);
+            
+            // Add token support in V5
+            bytes memory tokenData = abi.encodeWithSignature(
+                "addSupportedTokenFromV4(address,address,uint256)",
+                token,
+                exchangeProvider,
+                collectedFees
+            );
+            
+            sovereignSeasProxy.callModule("treasury", tokenData);
+        }
+    }
+
+    // ==================== BATCH PROCESSING FUNCTIONS ====================
+
+    /**
+     * @notice Batch migrate projects with size control
+     * @param _projectIds Array of V4 project IDs to migrate
+     * @param _batchSize Maximum batch size for processing
+     */
+    function batchMigrateProjects(uint256[] calldata _projectIds, uint256 _batchSize) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
+        require(_batchSize > 0 && _batchSize <= MAX_BATCH_SIZE, "MigrationModule: Invalid batch size");
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        
+        uint256 totalToProcess = _projectIds.length;
+        uint256 batchCount = (totalToProcess + _batchSize - 1) / _batchSize;
+        
+        for (uint256 batch = 0; batch < batchCount; batch++) {
+            uint256 start = batch * _batchSize;
+            uint256 end = start + _batchSize;
+            if (end > totalToProcess) {
+                end = totalToProcess;
+            }
+            
+            uint256 batchId = nextBatchId++;
+            uint256[] memory batchProjectIds = new uint256[](end - start);
+            
+            for (uint256 i = start; i < end; i++) {
+                batchProjectIds[i - start] = _projectIds[i];
+            }
+            
+            MigrationBatch storage batch_ = migrationBatches[batchId];
+            batch_.id = batchId;
+            batch_.step = MigrationStep.PROJECTS;
+            batch_.recordIds = batchProjectIds;
+            batch_.processed = false;
+            
+            _processBatchProjects(batchId, batchProjectIds);
+        }
+        
+        totalBatches += batchCount;
+    }
+
+    /**
+     * @notice Process batch of projects
+     */
+    function _processBatchProjects(uint256 _batchId, uint256[] memory _projectIds) internal {
+        uint256 successCount = 0;
+        
+        for (uint256 i = 0; i < _projectIds.length; i++) {
+            try this._migrateSingleProject(_projectIds[i]) {
+                successCount++;
+            } catch Error(string memory) {
+                failedItems[MigrationStep.PROJECTS].push(_projectIds[i]);
+            }
+        }
+        
+        MigrationBatch storage batch = migrationBatches[_batchId];
+        batch.processed = true;
+        batch.processedAt = block.timestamp;
+        
+        if (successCount == _projectIds.length) {
+            completedBatches++;
+        } else {
+            failedBatches++;
+        }
+        
+        emit BatchProcessed(_batchId, MigrationStep.PROJECTS, successCount);
+    }
+
+    // ==================== DATA VALIDATION FUNCTIONS ====================
+
+    /**
+     * @notice Validate migration integrity
+     * @return isValid Whether migration integrity is valid
+     * @return report Detailed validation report
+     */
+    function validateMigrationIntegrity() external view returns (bool isValid, string memory report) {
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        
+        uint256 v4ProjectCount = v4Contract.nextProjectId();
+        uint256 migratedProjectCount = 0;
+        for (uint256 i = 0; i < v4ProjectCount; i++) {
+            if (migratedProjects[i]) {
+                migratedProjectCount++;
+            }
+        }
+        
+        uint256 v4CampaignCount = v4Contract.nextCampaignId();
+        uint256 migratedCampaignCount = 0;
+        for (uint256 i = 0; i < v4CampaignCount; i++) {
+            if (migratedCampaigns[i]) {
+                migratedCampaignCount++;
+            }
+        }
+        
+        isValid = (migratedProjectCount == v4ProjectCount - 1) && (migratedCampaignCount == v4CampaignCount - 1);
+        
+        if (isValid) {
+            report = "Migration integrity validation passed";
+        } else {
+            report = "Migration integrity validation failed";
+        }
+        
+        return (isValid, report);
+    }
+
+    // ==================== ROLLBACK CAPABILITY ====================
+
+    /**
+     * @notice Rollback specific migration step
+     * @param _step Migration step to rollback
+     */
+    function rollbackStep(MigrationStep _step) external whenActive {
+        // Check if caller has emergency role through proxy
+        require(_isEmergency(msg.sender), "MigrationModule: Emergency role required");
+        require(stepCompleted[_step], "MigrationModule: Step not completed");
+        
+        rollbackData[_stepToString(_step)] = abi.encode(block.timestamp, msg.sender);
+        stepCompleted[_step] = false;
+        
+        emit MigrationStepFailed(_step, "Step rolled back by admin");
+    }
+
+    /**
+     * @notice Convert migration step to string
+     */
+    function _stepToString(MigrationStep _step) internal pure returns (string memory) {
+        if (_step == MigrationStep.PROJECTS) return "projects";
+        if (_step == MigrationStep.CAMPAIGNS) return "campaigns";
+        if (_step == MigrationStep.VOTING_DATA) return "voting_data";
+        if (_step == MigrationStep.TREASURY_DATA) return "treasury_data";
+        if (_step == MigrationStep.USER_DATA) return "user_data";
+        if (_step == MigrationStep.VALIDATION) return "validation";
+        return "unknown";
+    }
+
+    /**
+     * @notice Get V4 to V5 project mapping
+     */
+    function getProjectMapping(uint256 _v4ProjectId) external view returns (uint256 v5ProjectId) {
+        return v4ToV5ProjectMapping[_v4ProjectId];
+    }
+
+    /**
+     * @notice Get V4 to V5 campaign mapping
+     */
+    function getCampaignMapping(uint256 _v4CampaignId) external view returns (uint256 v5CampaignId) {
+        return v4ToV5CampaignMapping[_v4CampaignId];
+    }
+
+    /**
+     * @notice Check if project is migrated
+     */
+    function isProjectMigrated(uint256 _v4ProjectId) external view returns (bool) {
+        return migratedProjects[_v4ProjectId];
+    }
+
+    /**
+     * @notice Check if campaign is migrated
+     */
+    function isCampaignMigrated(uint256 _v4CampaignId) external view returns (bool) {
+        return migratedCampaigns[_v4CampaignId];
+    }
+
+    /**
+     * @notice Migrate individual voter data for a project (internal helper)
+     * @param _v4CampaignId V4 campaign ID
+     * @param _v4ProjectId V4 project ID
+     * @param _v5CampaignId V5 campaign ID
+     * @param _v5ProjectId V5 project ID
+     */
+    function _migrateProjectVoterData(
+        uint256 _v4CampaignId,
+        uint256 _v4ProjectId,
+        uint256 _v5CampaignId,
+        uint256 _v5ProjectId
+    ) internal {
+        // Get supported tokens from V4
+        address[] memory supportedTokens = v4Contract.getSupportedTokens();
+        
+        // For each token, we need to reconstruct voter data
+        // This is a simplified approach - in practice you'd need to track individual voters
+        for (uint256 i = 0; i < supportedTokens.length; i++) {
+            address token = supportedTokens[i];
+            
+            // Get total token votes for this project
+            uint256 tokenVotes = v4Contract.getProjectTokenVotes(_v4CampaignId, _v4ProjectId, token);
+            
+            if (tokenVotes > 0) {
+                // Create aggregated vote data - NO FEES for migration
+                bytes memory voteData = abi.encodeWithSignature(
+                    "migrateAggregatedVoteFromV4(uint256,uint256,address,uint256)",
+                    _v5CampaignId,
+                    _v5ProjectId,
+                    token,
+                    tokenVotes
+                );
+                
+                sovereignSeasProxy.callModule("voting", voteData);
+            }
+        }
+    }
+
+    /**
+     * @notice Enhanced migration function that handles comprehensive project data
+     * @param _v4ProjectId V4 project ID to migrate with all related data
+     */
+    function migrateProjectComprehensive(uint256 _v4ProjectId) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        
+        // 1. Migrate the project itself
+        try this._migrateSingleProject(_v4ProjectId) {
+            // 2. Get all campaigns this project participated in
+            uint256[] memory participatedCampaigns = v4Contract.getProjectCampaigns(_v4ProjectId);
+            
+            // 3. For each campaign, ensure it's migrated and then migrate voting data
+            for (uint256 i = 0; i < participatedCampaigns.length; i++) {
+                uint256 v4CampaignId = participatedCampaigns[i];
+                
+                // Ensure campaign is migrated first
+                if (!migratedCampaigns[v4CampaignId]) {
+                    try this._migrateSingleCampaign(v4CampaignId) {
+                        // Campaign migrated successfully
+                    } catch {
+                        // Skip this campaign if migration fails
+                        continue;
+                    }
+                }
+                
+                // Migrate voting data for this specific project in this campaign
+                uint256 v5CampaignId = v4ToV5CampaignMapping[v4CampaignId];
+                uint256 v5ProjectId = v4ToV5ProjectMapping[_v4ProjectId];
+                
+                if (v5CampaignId != 0 && v5ProjectId != 0) {
+                    _migrateProjectVoterData(v4CampaignId, _v4ProjectId, v5CampaignId, v5ProjectId);
+                }
+            }
+            
+        } catch Error(string memory reason) {
+            // Log failure but don't revert
+            failedItems[MigrationStep.PROJECTS].push(_v4ProjectId);
+        }
+    }
+
+    /**
+     * @notice Migrate all data for a batch of projects comprehensively
+     * @param _projectIds Array of V4 project IDs to migrate completely
+     */
+    function batchMigrateProjectsComprehensive(uint256[] calldata _projectIds) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "MigrationModule: Admin role required");
+        require(address(v4Contract) != address(0), "MigrationModule: V4 contract not set");
+        
+        for (uint256 i = 0; i < _projectIds.length; i++) {
+            try this.migrateProjectComprehensive(_projectIds[i]) {
+                // Project migrated successfully with all data
+            } catch {
+                // Continue with next project if one fails
+                failedItems[MigrationStep.PROJECTS].push(_projectIds[i]);
+            }
+        }
     }
 }

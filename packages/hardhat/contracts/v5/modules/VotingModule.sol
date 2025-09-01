@@ -163,24 +163,17 @@ contract VotingModule is BaseModule {
     event CampaignRankingsUpdated(uint256 indexed campaignId, uint256 timestamp);
 
     function initialize(address _proxy, bytes calldata _data) external override initializer {
+        // Initialize base module
         require(_proxy != address(0), "VotingModule: Invalid proxy address");
         
         sovereignSeasProxy = ISovereignSeasV5(_proxy);
         moduleActive = true;
 
-        // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(MANAGER_ROLE, msg.sender);
-        _grantRole(OPERATOR_ROLE, msg.sender);
-        _grantRole(EMERGENCY_ROLE, msg.sender);
-
         // Initialize inherited contracts
-        __AccessControl_init();
-        __Pausable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-        
+
+        // Set module-specific data
         moduleName = "Enhanced Voting Module";
         moduleDescription = "Handles voting, project participation, position tracking, and V4 migration";
         moduleDependencies = new string[](3);
@@ -189,6 +182,8 @@ contract VotingModule is BaseModule {
         moduleDependencies[2] = "treasury";
         
         nextVotingSessionId = 1;
+        
+        emit ModuleInitialized(getModuleId(), _proxy);
     }
 
     function getModuleId() public pure override returns (string memory) {
@@ -533,7 +528,7 @@ contract VotingModule is BaseModule {
      */
     function _calculateTimeWeight(uint256 _campaignId) internal view returns (uint256) {
         // Get campaign timing from campaigns module
-        bytes memory campaignData = callModule("campaigns", abi.encodeWithSignature("getCampaignTiming(uint256)", _campaignId));
+        bytes memory campaignData = callModuleView("campaigns", abi.encodeWithSignature("getCampaignTiming(uint256)", _campaignId));
         if (campaignData.length == 0) return 1000; // Default weight
         
         (uint256 startTime, uint256 endTime) = abi.decode(campaignData, (uint256, uint256));
@@ -687,643 +682,801 @@ contract VotingModule is BaseModule {
 
     // ==================== VIEW FUNCTIONS - ENHANCED ====================
 
-/**
- * @notice Get sorted projects by voting power with position data
- */
-function getSortedProjectsWithPositions(uint256 _campaignId) external view returns (
-    uint256[] memory projectIds,
-    uint256[] memory votingPowers,
-    uint256[] memory positions,
-    uint256[] memory positionChanges,
-    bool[] memory isRising,
-    uint256[] memory percentageChanges
-) {
-    uint256[] memory rankings = campaignProjectRankings[_campaignId];
-    uint256 length = rankings.length;
-    
-    projectIds = new uint256[](length);
-    votingPowers = new uint256[](length);
-    positions = new uint256[](length);
-    positionChanges = new uint256[](length);
-    isRising = new bool[](length);
-    percentageChanges = new uint256[](length);
-    
-    for (uint256 i = 0; i < length; i++) {
-        uint256 projectId = rankings[i];
-        ProjectParticipation storage participation = projectParticipations[_campaignId][projectId];
-        ProjectPosition storage position = projectPositions[_campaignId][projectId];
+    /**
+    * @notice Get sorted projects by voting power with position data
+    */
+    function getSortedProjectsWithPositions(uint256 _campaignId) external view returns (
+        uint256[] memory projectIds,
+        uint256[] memory votingPowers,
+        uint256[] memory positions,
+        uint256[] memory positionChanges,
+        bool[] memory isRising,
+        uint256[] memory percentageChanges
+    ) {
+        uint256[] memory rankings = campaignProjectRankings[_campaignId];
+        uint256 length = rankings.length;
         
-        projectIds[i] = projectId;
-        votingPowers[i] = participation.votingPower;
-        positions[i] = participation.currentPosition;
-        positionChanges[i] = participation.positionChange;
-        isRising[i] = position.isRising;
-        percentageChanges[i] = position.percentageChange;
-    }
-    
-    return (projectIds, votingPowers, positions, positionChanges, isRising, percentageChanges);
-}
-
-/**
- * @notice Get project participation details with position tracking
- */
-function getParticipationWithPosition(uint256 _campaignId, uint256 _projectId) external view returns (
-    bool approved,
-    uint256 voteCount,
-    uint256 votingPower,
-    uint256 fundsReceived,
-    uint256 uniqueVoters,
-    uint256 currentPosition,
-    uint256 previousPosition,
-    uint256 positionChange,
-    uint256 percentageChange,
-    bool isRising
-) {
-    ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
-    ProjectPosition storage position = projectPositions[_campaignId][_projectId];
-    
-    return (
-        participation.approved,
-        participation.voteCount,
-        participation.votingPower,
-        participation.fundsReceived,
-        participation.uniqueVoters,
-        participation.currentPosition,
-        participation.previousPosition,
-        participation.positionChange,
-        position.percentageChange,
-        position.isRising
-    );
-}
-
-/**
- * @notice Get user votes for project with specific token (enhanced)
- */
-function getUserVotesForProjectWithTokenEnhanced(
-    uint256 _campaignId,
-    address _user,
-    uint256 _projectId,
-    address _token
-) external view returns (
-    uint256 amount,
-    uint256 votingPower,
-    uint256 celoEquivalent,
-    uint256 timestamp,
-    uint256 timeWeight,
-    uint256 diversityBonus,
-    bool active
-) {
-    Vote storage vote = userVotes[_campaignId][_user][_projectId][_token];
-    return (
-        vote.amount,
-        vote.votingPower,
-        vote.celoEquivalent,
-        vote.timestamp,
-        vote.timeWeight,
-        vote.diversityBonus,
-        vote.active
-    );
-}
-
-/**
- * @notice Get project position history and trends
- */
-function getProjectPositionTrends(uint256 _campaignId, uint256 _projectId) external view returns (
-    uint256 currentPosition,
-    uint256 previousPosition,
-    uint256 positionChange,
-    uint256 percentageChange,
-    bool isRising,
-    uint256 lastUpdate,
-    uint256 trendDirection // 0=stable, 1=rising, 2=falling
-) {
-    ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
-    ProjectPosition storage position = projectPositions[_campaignId][_projectId];
-    
-    uint256 direction = 0;
-    if (participation.currentPosition < participation.previousPosition) {
-        direction = 1; // Rising
-    } else if (participation.currentPosition > participation.previousPosition) {
-        direction = 2; // Falling
-    }
-    
-    return (
-        participation.currentPosition,
-        participation.previousPosition,
-        participation.positionChange,
-        position.percentageChange,
-        position.isRising,
-        position.lastUpdate,
-        direction
-    );
-}
-
-/**
- * @notice Get campaign rankings with metadata
- */
-function getCampaignRankingsWithMetadata(uint256 _campaignId) external view returns (
-    uint256[] memory projectIds,
-    uint256[] memory votingPowers,
-    uint256[] memory uniqueVoters,
-    uint256[] memory positionChanges,
-    uint256 lastUpdate,
-    uint256 totalProjects
-) {
-    uint256[] memory rankings = campaignProjectRankings[_campaignId];
-    uint256 length = rankings.length;
-    
-    projectIds = new uint256[](length);
-    votingPowers = new uint256[](length);
-    uniqueVoters = new uint256[](length);
-    positionChanges = new uint256[](length);
-    
-    for (uint256 i = 0; i < length; i++) {
-        uint256 projectId = rankings[i];
-        ProjectParticipation storage participation = projectParticipations[_campaignId][projectId];
+        projectIds = new uint256[](length);
+        votingPowers = new uint256[](length);
+        positions = new uint256[](length);
+        positionChanges = new uint256[](length);
+        isRising = new bool[](length);
+        percentageChanges = new uint256[](length);
         
-        projectIds[i] = projectId;
-        votingPowers[i] = participation.votingPower;
-        uniqueVoters[i] = participation.uniqueVoters;
-        positionChanges[i] = participation.positionChange;
-    }
-    
-    return (
-        projectIds,
-        votingPowers,
-        uniqueVoters,
-        positionChanges,
-        lastRankingUpdate[_campaignId],
-        length
-    );
-}
-
-/**
- * @notice Get enhanced voting statistics with position data
- */
-function getEnhancedVotingStatistics(uint256 _campaignId) external view returns (
-    uint256 totalVotes,
-    uint256 totalVotingPower,
-    uint256 uniqueVoters,
-    uint256 totalProjects,
-    uint256 activeProjects,
-    uint256 averageVotingPower,
-    uint256 lastRankingUpdate
-) {
-    uint256[] memory rankings = campaignProjectRankings[_campaignId];
-    uint256 activeProjectCount = 0;
-    uint256 totalProjectVotingPower = 0;
-    
-    for (uint256 i = 0; i < rankings.length; i++) {
-        ProjectParticipation storage participation = projectParticipations[_campaignId][rankings[i]];
-        if (participation.approved && participation.votingPower > 0) {
-            activeProjectCount++;
-            totalProjectVotingPower += participation.votingPower;
-        }
-    }
-    
-    uint256 avgVotingPower = activeProjectCount > 0 ? totalProjectVotingPower / activeProjectCount : 0;
-    
-    return (
-        totalVotes,
-        totalVotingPower,
-        campaignTotalVoters[_campaignId],
-        rankings.length,
-        activeProjectCount,
-        avgVotingPower,
-        lastRankingUpdate[_campaignId]
-    );
-}
-
-/**
- * @notice Calculate voting power preview (without casting vote)
- */
-function previewVotingPower(
-    uint256 _campaignId,
-    uint256 _projectId,
-    uint256 _amount
-) external view returns (
-    uint256 votingPower,
-    uint256 timeWeight,
-    uint256 diversityWeight,
-    uint256 breakdown
-) {
-    timeWeight = _calculateTimeWeight(_campaignId);
-    diversityWeight = _calculateDiversityWeight(_campaignId, _projectId);
-    votingPower = _calculateEnhancedQuadraticVoting(_amount, timeWeight, diversityWeight);
-    
-    // Breakdown: encode components as single uint256
-    // First 16 bits: amount component, next 16: diversity, next 16: time, rest: total
-    uint256 amountComponent = (_sqrt(_amount * 1e18) / 1e9 * AMOUNT_WEIGHT) / 10000;
-    uint256 diversityComponent = (diversityWeight * DIVERSITY_WEIGHT) / 10000;
-    uint256 timeComponent = (timeWeight * TIME_WEIGHT) / 10000;
-    
-    breakdown = (amountComponent << 48) | (diversityComponent << 32) | (timeComponent << 16) | votingPower;
-    
-    return (votingPower, timeWeight, diversityWeight, breakdown);
-}
-
-/**
- * @notice Get user's enhanced vote history with analytics
- */
-function getUserVoteHistoryEnhanced(address _user, uint256 _limit, uint256 _offset) external view returns (
-    Vote[] memory votes,
-    uint256 totalVotes,
-    uint256 totalVotingPower,
-    uint256 averageTimeWeight,
-    uint256 uniqueCampaigns
-) {
-    Vote[] storage allVotes = userVoteHistory[_user];
-    uint256 totalCount = allVotes.length;
-    
-    if (_offset >= totalCount) {
-        return (new Vote[](0), 0, 0, 0, 0);
-    }
-    
-    uint256 endIndex = _offset + _limit;
-    if (endIndex > totalCount) {
-        endIndex = totalCount;
-    }
-    
-    uint256 returnLength = endIndex - _offset;
-    votes = new Vote[](returnLength);
-    
-    uint256 sumTimeWeights = 0;
-    uint256 sumVotingPower = 0;
-    mapping(uint256 => bool) seenCampaigns;
-    uint256 campaignCount = 0;
-    
-    for (uint256 i = 0; i < returnLength; i++) {
-        votes[i] = allVotes[_offset + i];
-        if (votes[i].active) {
-            sumVotingPower += votes[i].votingPower;
-            sumTimeWeights += votes[i].timeWeight;
+        for (uint256 i = 0; i < length; i++) {
+            uint256 projectId = rankings[i];
+            ProjectParticipation storage participation = projectParticipations[_campaignId][projectId];
+            ProjectPosition storage position = projectPositions[_campaignId][projectId];
             
-            if (!seenCampaigns[votes[i].campaignId]) {
-                seenCampaigns[votes[i].campaignId] = true;
+            projectIds[i] = projectId;
+            votingPowers[i] = participation.votingPower;
+            positions[i] = participation.currentPosition;
+            positionChanges[i] = participation.positionChange;
+            isRising[i] = position.isRising;
+            percentageChanges[i] = position.percentageChange;
+        }
+        
+        return (projectIds, votingPowers, positions, positionChanges, isRising, percentageChanges);
+    }
+
+    /**
+    * @notice Get project participation details with position tracking
+    */
+    function getParticipationWithPosition(uint256 _campaignId, uint256 _projectId) external view returns (
+        bool approved,
+        uint256 voteCount,
+        uint256 votingPower,
+        uint256 fundsReceived,
+        uint256 uniqueVoters,
+        uint256 currentPosition,
+        uint256 previousPosition,
+        uint256 positionChange,
+        uint256 percentageChange,
+        bool isRising
+    ) {
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        ProjectPosition storage position = projectPositions[_campaignId][_projectId];
+        
+        return (
+            participation.approved,
+            participation.voteCount,
+            participation.votingPower,
+            participation.fundsReceived,
+            participation.uniqueVoters,
+            participation.currentPosition,
+            participation.previousPosition,
+            participation.positionChange,
+            position.percentageChange,
+            position.isRising
+        );
+    }
+
+    /**
+    * @notice Get user votes for project with specific token (enhanced)
+    */
+    function getUserVotesForProjectWithTokenEnhanced(
+        uint256 _campaignId,
+        address _user,
+        uint256 _projectId,
+        address _token
+    ) external view returns (
+        uint256 amount,
+        uint256 votingPower,
+        uint256 celoEquivalent,
+        uint256 timestamp,
+        uint256 timeWeight,
+        uint256 diversityBonus,
+        bool active
+    ) {
+        Vote storage vote = userVotes[_campaignId][_user][_projectId][_token];
+        return (
+            vote.amount,
+            vote.votingPower,
+            vote.celoEquivalent,
+            vote.timestamp,
+            vote.timeWeight,
+            vote.diversityBonus,
+            vote.active
+        );
+    }
+
+    /**
+    * @notice Get project position history and trends
+    */
+    function getProjectPositionTrends(uint256 _campaignId, uint256 _projectId) external view returns (
+        uint256 currentPosition,
+        uint256 previousPosition,
+        uint256 positionChange,
+        uint256 percentageChange,
+        bool isRising,
+        uint256 lastUpdate,
+        uint256 trendDirection // 0=stable, 1=rising, 2=falling
+    ) {
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        ProjectPosition storage position = projectPositions[_campaignId][_projectId];
+        
+        uint256 direction = 0;
+        if (participation.currentPosition < participation.previousPosition) {
+            direction = 1; // Rising
+        } else if (participation.currentPosition > participation.previousPosition) {
+            direction = 2; // Falling
+        }
+        
+        return (
+            participation.currentPosition,
+            participation.previousPosition,
+            participation.positionChange,
+            position.percentageChange,
+            position.isRising,
+            position.lastUpdate,
+            direction
+        );
+    }
+
+    /**
+    * @notice Get campaign rankings with metadata
+    */
+    function getCampaignRankingsWithMetadata(uint256 _campaignId) external view returns (
+        uint256[] memory projectIds,
+        uint256[] memory votingPowers,
+        uint256[] memory uniqueVoters,
+        uint256[] memory positionChanges,
+        uint256 lastUpdate,
+        uint256 totalProjects
+    ) {
+        uint256[] memory rankings = campaignProjectRankings[_campaignId];
+        uint256 length = rankings.length;
+        
+        projectIds = new uint256[](length);
+        votingPowers = new uint256[](length);
+        uniqueVoters = new uint256[](length);
+        positionChanges = new uint256[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            uint256 projectId = rankings[i];
+            ProjectParticipation storage participation = projectParticipations[_campaignId][projectId];
+            
+            projectIds[i] = projectId;
+            votingPowers[i] = participation.votingPower;
+            uniqueVoters[i] = participation.uniqueVoters;
+            positionChanges[i] = participation.positionChange;
+        }
+        
+        return (
+            projectIds,
+            votingPowers,
+            uniqueVoters,
+            positionChanges,
+            lastRankingUpdate[_campaignId],
+            length
+        );
+    }
+
+    /**
+    * @notice Get enhanced voting statistics with position data
+    */
+    function getEnhancedVotingStatistics(uint256 _campaignId) external view returns (
+        uint256 totalVotes,
+        uint256 totalVotingPower,
+        uint256 uniqueVoters,
+        uint256 totalProjects,
+        uint256 activeProjects,
+        uint256 averageVotingPower,
+        uint256 lastUpdate
+    ) {
+        uint256[] memory rankings = campaignProjectRankings[_campaignId];
+        uint256 activeProjectCount = 0;
+        uint256 totalProjectVotingPower = 0;
+        
+        for (uint256 i = 0; i < rankings.length; i++) {
+            ProjectParticipation storage participation = projectParticipations[_campaignId][rankings[i]];
+            if (participation.approved && participation.votingPower > 0) {
+                activeProjectCount++;
+                totalProjectVotingPower += participation.votingPower;
+            }
+        }
+        
+        uint256 avgVotingPower = activeProjectCount > 0 ? totalProjectVotingPower / activeProjectCount : 0;
+        
+        return (
+            totalVotes,
+            totalVotingPower,
+            campaignTotalVoters[_campaignId],
+            rankings.length,
+            activeProjectCount,
+            avgVotingPower,
+            lastRankingUpdate[_campaignId]
+        );
+    }
+
+    /**
+    * @notice Calculate voting power preview (without casting vote)
+    */
+    function previewVotingPower(
+        uint256 _campaignId,
+        uint256 _projectId,
+        uint256 _amount
+    ) external view returns (
+        uint256 votingPower,
+        uint256 timeWeight,
+        uint256 diversityWeight,
+        uint256 breakdown
+    ) {
+        timeWeight = _calculateTimeWeight(_campaignId);
+        diversityWeight = _calculateDiversityWeight(_campaignId, _projectId);
+        votingPower = _calculateEnhancedQuadraticVoting(_amount, timeWeight, diversityWeight);
+        
+        // Breakdown: encode components as single uint256
+        // First 16 bits: amount component, next 16: diversity, next 16: time, rest: total
+        uint256 amountComponent = (_sqrt(_amount * 1e18) / 1e9 * AMOUNT_WEIGHT) / 10000;
+        uint256 diversityComponent = (diversityWeight * DIVERSITY_WEIGHT) / 10000;
+        uint256 timeComponent = (timeWeight * TIME_WEIGHT) / 10000;
+        
+        breakdown = (amountComponent << 48) | (diversityComponent << 32) | (timeComponent << 16) | votingPower;
+        
+        return (votingPower, timeWeight, diversityWeight, breakdown);
+    }
+
+    /**
+    * @notice Get user's enhanced vote history with analytics
+    */
+    function getUserVoteHistoryEnhanced(address _user, uint256 _limit, uint256 _offset) external view returns (
+        Vote[] memory votes,
+        uint256 totalVotes,
+        uint256 totalVotingPower,
+        uint256 averageTimeWeight,
+        uint256 uniqueCampaigns
+    ) {
+        Vote[] storage allVotes = userVoteHistory[_user];
+        uint256 totalCount = allVotes.length;
+        
+        if (_offset >= totalCount) {
+            return (new Vote[](0), 0, 0, 0, 0);
+        }
+        
+        uint256 endIndex = _offset + _limit;
+        if (endIndex > totalCount) {
+            endIndex = totalCount;
+        }
+        
+        uint256 returnLength = endIndex - _offset;
+        votes = new Vote[](returnLength);
+        
+        uint256 sumTimeWeights = 0;
+        uint256 sumVotingPower = 0;
+        uint256 campaignCount = 0;
+        
+        for (uint256 i = 0; i < returnLength; i++) {
+            votes[i] = allVotes[_offset + i];
+            if (votes[i].active) {
+                sumVotingPower += votes[i].votingPower;
+                sumTimeWeights += votes[i].timeWeight;
+                
                 campaignCount++;
             }
         }
+        
+        uint256 avgTimeWeight = returnLength > 0 ? sumTimeWeights / returnLength : 0;
+        
+        return (votes, totalCount, sumVotingPower, avgTimeWeight, campaignCount);
     }
-    
-    uint256 avgTimeWeight = returnLength > 0 ? sumTimeWeights / returnLength : 0;
-    
-    return (votes, totalCount, sumVotingPower, avgTimeWeight, campaignCount);
-}
 
-/**
- * @notice Get project competitor analysis
- */
-function getProjectCompetitorAnalysis(uint256 _campaignId, uint256 _projectId, uint256 _range) external view returns (
-    uint256[] memory competitorIds,
-    uint256[] memory votingPowerDifferences,
-    uint256[] memory positionDifferences,
-    uint256 competitiveIndex
-) {
-    ProjectParticipation storage targetProject = projectParticipations[_campaignId][_projectId];
-    uint256 targetPosition = targetProject.currentPosition;
-    uint256 targetVotingPower = targetProject.votingPower;
-    
-    if (targetPosition == 0) return (new uint256[](0), new uint256[](0), new uint256[](0), 0);
-    
-    uint256[] memory rankings = campaignProjectRankings[_campaignId];
-    uint256 rangeStart = targetPosition > _range ? targetPosition - _range : 1;
-    uint256 rangeEnd = targetPosition + _range;
-    if (rangeEnd > rankings.length) rangeEnd = rankings.length;
-    
-    uint256 competitorCount = 0;
-    for (uint256 i = rangeStart; i <= rangeEnd; i++) {
-        if (i != targetPosition) competitorCount++;
+    /**
+    * @notice Get project competitor analysis
+    */
+    function getProjectCompetitorAnalysis(uint256 _campaignId, uint256 _projectId, uint256 _range) external view returns (
+        uint256[] memory competitorIds,
+        uint256[] memory votingPowerDifferences,
+        uint256[] memory positionDifferences,
+        uint256 competitiveIndex
+    ) {
+        ProjectParticipation storage targetProject = projectParticipations[_campaignId][_projectId];
+        uint256 targetPosition = targetProject.currentPosition;
+        uint256 targetVotingPower = targetProject.votingPower;
+        
+        if (targetPosition == 0) return (new uint256[](0), new uint256[](0), new uint256[](0), 0);
+        
+        uint256[] memory rankings = campaignProjectRankings[_campaignId];
+        uint256 rangeStart = targetPosition > _range ? targetPosition - _range : 1;
+        uint256 rangeEnd = targetPosition + _range;
+        if (rangeEnd > rankings.length) rangeEnd = rankings.length;
+        
+        uint256 competitorCount = 0;
+        for (uint256 i = rangeStart; i <= rangeEnd; i++) {
+            if (i != targetPosition) competitorCount++;
+        }
+        
+        competitorIds = new uint256[](competitorCount);
+        votingPowerDifferences = new uint256[](competitorCount);
+        positionDifferences = new uint256[](competitorCount);
+        
+        uint256 index = 0;
+        uint256 totalVotingPowerDiff = 0;
+        
+        for (uint256 i = rangeStart; i <= rangeEnd; i++) {
+            if (i != targetPosition && i <= rankings.length) {
+                uint256 competitorId = rankings[i - 1];
+                ProjectParticipation storage competitor = projectParticipations[_campaignId][competitorId];
+                
+                competitorIds[index] = competitorId;
+                
+                if (competitor.votingPower > targetVotingPower) {
+                    votingPowerDifferences[index] = competitor.votingPower - targetVotingPower;
+                } else {
+                    votingPowerDifferences[index] = targetVotingPower - competitor.votingPower;
+                }
+                
+                if (i > targetPosition) {
+                    positionDifferences[index] = i - targetPosition;
+                } else {
+                    positionDifferences[index] = targetPosition - i;
+                }
+                
+                totalVotingPowerDiff += votingPowerDifferences[index];
+                index++;
+            }
+        }
+        
+        // Calculate competitive index (0-100, higher = more competitive)
+        competitiveIndex = competitorCount > 0 ? (totalVotingPowerDiff * 100) / (targetVotingPower * competitorCount) : 0;
+        if (competitiveIndex > 100) competitiveIndex = 100;
+        
+        return (competitorIds, votingPowerDifferences, positionDifferences, competitiveIndex);
     }
-    
-    competitorIds = new uint256[](competitorCount);
-    votingPowerDifferences = new uint256[](competitorCount);
-    positionDifferences = new uint256[](competitorCount);
-    
-    uint256 index = 0;
-    uint256 totalVotingPowerDiff = 0;
-    
-    for (uint256 i = rangeStart; i <= rangeEnd; i++) {
-        if (i != targetPosition && i <= rankings.length) {
-            uint256 competitorId = rankings[i - 1];
-            ProjectParticipation storage competitor = projectParticipations[_campaignId][competitorId];
-            
-            competitorIds[index] = competitorId;
-            
-            if (competitor.votingPower > targetVotingPower) {
-                votingPowerDifferences[index] = competitor.votingPower - targetVotingPower;
-            } else {
-                votingPowerDifferences[index] = targetVotingPower - competitor.votingPower;
-            }
-            
-            if (i > targetPosition) {
-                positionDifferences[index] = i - targetPosition;
-            } else {
-                positionDifferences[index] = targetPosition - i;
-            }
-            
-            totalVotingPowerDiff += votingPowerDifferences[index];
-            index++;
+
+    // ==================== VOTING SESSION MANAGEMENT ====================
+
+    /**
+    * @notice Create a voting session with enhanced parameters
+    */
+    function createVotingSession(
+        uint256 _campaignId,
+        uint256 _startTime,
+        uint256 _endTime,
+        VotingScheme _scheme
+    ) external whenActive returns (uint256) {
+        require(_startTime > block.timestamp, "VotingModule: Start time must be in the future");
+        require(_endTime > _startTime, "VotingModule: End time must be after start time");
+
+        uint256 sessionId = nextVotingSessionId++;
+        
+        VotingSession storage session = votingSessions[sessionId];
+        session.id = sessionId;
+        session.campaignId = _campaignId;
+        session.startTime = _startTime;
+        session.endTime = _endTime;
+        session.active = true;
+        session.scheme = _scheme;
+
+        activeVotingSessions++;
+
+        emit VotingSessionCreated(sessionId, _campaignId, _startTime, _endTime);
+        
+        return sessionId;
+    }
+
+    /**
+    * @notice End a voting session
+    */
+    function endVotingSession(uint256 _sessionId) external whenActive {
+        VotingSession storage session = votingSessions[_sessionId];
+        require(session.active, "VotingModule: Session is not active");
+        require(block.timestamp >= session.endTime, "VotingModule: Session has not ended yet");
+
+        session.active = false;
+        activeVotingSessions--;
+
+        emit VotingSessionEnded(_sessionId, session.campaignId);
+    }
+
+    /**
+    * @notice Remove a vote (enhanced)
+    */
+    function removeVote(
+        uint256 _campaignId,
+        uint256 _projectId,
+        address _token
+    ) external whenActive {
+        Vote storage vote = userVotes[_campaignId][msg.sender][_projectId][_token];
+        require(vote.active, "VotingModule: No active vote found");
+
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+
+        // Update totals
+        totalUserVotesInCampaign[_campaignId][msg.sender] -= vote.amount;
+        participation.voteCount -= vote.amount;
+        participation.votingPower -= vote.votingPower;
+        participation.tokenVotes[_token] -= vote.amount;
+        totalVotes -= vote.amount;
+        totalVotingPower -= vote.votingPower;
+        lastProjectUpdateTs[_campaignId][_projectId] = block.timestamp;
+
+        // Mark vote as inactive
+        vote.active = false;
+
+        // Update project positions
+        _updateProjectPositions(_campaignId);
+
+        emit VoteRemoved(msg.sender, _campaignId, _projectId);
+        emit ProjectTotalsUpdated(
+            _campaignId,
+            _projectId,
+            participation.voteCount,
+            participation.votingPower,
+            totalVotes,
+            totalVotingPower,
+            block.timestamp
+        );
+    }
+
+    // ==================== V4 MIGRATION FUNCTIONS ====================
+
+    /**
+    * @notice Create project participation from V4 migration
+    */
+    function createProjectParticipationFromV4(
+        uint256 _campaignId,
+        uint256 _projectId,
+        bool _approved,
+        uint256 _voteCount,
+        uint256 _fundsReceived
+    ) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        participation.projectId = _projectId;
+        participation.campaignId = _campaignId;
+        participation.approved = _approved;
+        participation.voteCount = _voteCount;
+        participation.fundsReceived = _fundsReceived;
+        participation.currentPosition = 0;
+        participation.previousPosition = 0;
+        participation.positionChange = 0;
+
+        // Add to campaign rankings for position tracking
+        campaignProjectRankings[_campaignId].push(_projectId);
+        
+        // Initialize position tracking
+        ProjectPosition storage position = projectPositions[_campaignId][_projectId];
+        position.projectId = _projectId;
+        position.position = campaignProjectRankings[_campaignId].length;
+        position.votingPower = 0;
+        position.percentageChange = 0;
+        position.isRising = false;
+        position.lastUpdate = block.timestamp;
+
+        if (_approved) {
+            emit ProjectApproved(_campaignId, _projectId, msg.sender);
         }
     }
-    
-    // Calculate competitive index (0-100, higher = more competitive)
-    competitiveIndex = competitorCount > 0 ? (totalVotingPowerDiff * 100) / (targetVotingPower * competitorCount) : 0;
-    if (competitiveIndex > 100) competitiveIndex = 100;
-    
-    return (competitorIds, votingPowerDifferences, positionDifferences, competitiveIndex);
-}
 
-// ==================== VOTING SESSION MANAGEMENT ====================
+    /**
+    * @notice Add vote from V4 migration (enhanced)
+    */
+    function addVoteFromV4(
+        address _voter,
+        uint256 _campaignId,
+        uint256 _projectId,
+        address _token,
+        uint256 _amount,
+        uint256 _celoEquivalent,
+        uint256 _timestamp
+    ) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        // Calculate voting power using current enhanced formula
+        uint256 timeWeight = 1000; // Default weight for migrated votes
+        uint256 diversityWeight = 1000; // Default weight for migrated votes
+        uint256 votingPower = _calculateEnhancedQuadraticVoting(_amount, timeWeight, diversityWeight);
+        
+        // Create vote struct
+        Vote memory newVote = Vote({
+            voter: _voter,
+            campaignId: _campaignId,
+            projectId: _projectId,
+            token: _token,
+            amount: _amount,
+            votingPower: votingPower,
+            celoEquivalent: _celoEquivalent,
+            timestamp: _timestamp > 0 ? _timestamp : block.timestamp,
+            timeWeight: timeWeight,
+            diversityBonus: diversityWeight,
+            active: true
+        });
 
-/**
- * @notice Create a voting session with enhanced parameters
- */
-function createVotingSession(
-    uint256 _campaignId,
-    uint256 _startTime,
-    uint256 _endTime,
-    VotingScheme _scheme
-) external whenActive returns (uint256) {
-    require(_startTime > block.timestamp, "VotingModule: Start time must be in the future");
-    require(_endTime > _startTime, "VotingModule: End time must be after start time");
+        // Add to user vote history
+        userVoteHistory[_voter].push(newVote);
 
-    uint256 sessionId = nextVotingSessionId++;
-    
-    VotingSession storage session = votingSessions[sessionId];
-    session.id = sessionId;
-    session.campaignId = _campaignId;
-    session.startTime = _startTime;
-    session.endTime = _endTime;
-    session.active = true;
-    session.scheme = _scheme;
+        // Update vote mapping
+        userVotes[_campaignId][_voter][_projectId][_token] = newVote;
 
-    activeVotingSessions++;
+        // Update totals
+        totalUserVotesInCampaign[_campaignId][_voter] += _celoEquivalent;
+        projectParticipations[_campaignId][_projectId].voteCount += _amount;
+        projectParticipations[_campaignId][_projectId].votingPower += votingPower;
 
-    emit VotingSessionCreated(sessionId, _campaignId, _startTime, _endTime);
-    
-    return sessionId;
-}
+        // Add to campaign voters if not already present
+        if (!campaignVoterParticipated[_campaignId][_voter]) {
+            campaignVoterParticipated[_campaignId][_voter] = true;
+            campaignVoters[_campaignId].push(_voter);
+            campaignTotalVoters[_campaignId]++;
+        }
 
-/**
- * @notice End a voting session
- */
-function endVotingSession(uint256 _sessionId) external whenActive {
-    VotingSession storage session = votingSessions[_sessionId];
-    require(session.active, "VotingModule: Session is not active");
-    require(block.timestamp >= session.endTime, "VotingModule: Session has not ended yet");
+        emit VoteCast(_voter, _campaignId, _projectId, _token, _amount, votingPower);
+    }
 
-    session.active = false;
-    activeVotingSessions--;
+    // ==================== INTERNAL HELPER FUNCTIONS ====================
 
-    emit VotingSessionEnded(_sessionId, session.campaignId);
-}
+    function _validateVotingConditions(uint256 _campaignId, uint256 _projectId) internal {
+        // Validate campaign timing and status
+        bytes memory campaignData = callModule("campaigns", abi.encodeWithSignature("getCampaign(uint256)", _campaignId));
+        require(campaignData.length > 0, "VotingModule: Campaign not found");
 
-/**
- * @notice Remove a vote (enhanced)
- */
-function removeVote(
-    uint256 _campaignId,
-    uint256 _projectId,
-    address _token
-) external whenActive {
-    Vote storage vote = userVotes[_campaignId][msg.sender][_projectId][_token];
-    require(vote.active, "VotingModule: No active vote found");
+        // Validate project participation and approval
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        require(participation.projectId != 0, "VotingModule: Project not in campaign");
+        require(participation.approved, "VotingModule: Project not approved");
+    }
 
-    ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+    function _checkProjectAdditionPermission(uint256 _campaignId, uint256 _projectId, address _user) internal returns (bool) {
+        // Check if user is project owner
+        bytes memory projectData = callModule("projects", abi.encodeWithSignature("getProject(uint256)", _projectId));
+        if (projectData.length > 0) {
+            (,address owner,,,,,) = abi.decode(projectData, (uint256,address,string,string,bool,bool,uint256));
+            if (owner == _user) return true;
+        }
 
-    // Update totals
-    totalUserVotesInCampaign[_campaignId][msg.sender] -= vote.amount;
-    participation.voteCount -= vote.amount;
-    participation.votingPower -= vote.votingPower;
-    participation.tokenVotes[_token] -= vote.amount;
-    totalVotes -= vote.amount;
-    totalVotingPower -= vote.votingPower;
-    lastProjectUpdateTs[_campaignId][_projectId] = block.timestamp;
+        // Check if user is campaign admin
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, _user));
+        if (isAdminData.length > 0) {
+            bool isAdmin = abi.decode(isAdminData, (bool));
+            if (isAdmin) return true;
+        }
 
-    // Mark vote as inactive
-    vote.active = false;
+        // Check if user has admin role through proxy
+        return _isAdmin(_user);
+    }
 
-    // Update project positions
-    _updateProjectPositions(_campaignId);
+    function _checkVoteLimits(uint256 _campaignId, uint256 _celoEquivalent) internal {
+        // Get campaign vote limits
+        bytes memory campaignData = callModule("campaigns", abi.encodeWithSignature("getCampaignEnhancedInfo(uint256)", _campaignId));
+        // Basic validation
+        require(_celoEquivalent >= 0.01 ether, "VotingModule: Vote amount too small");
 
-    emit VoteRemoved(msg.sender, _campaignId, _projectId);
-    emit ProjectTotalsUpdated(
-        _campaignId,
-        _projectId,
-        participation.voteCount,
-        participation.votingPower,
-        totalVotes,
-        totalVotingPower,
-        block.timestamp
-    );
-}
+        // Check user-specific max vote amount
+        bytes memory userMaxData = callModule("campaigns", abi.encodeWithSignature("getUserMaxVoteAmount(uint256,address)", _campaignId, msg.sender));
+        uint256 userMaxVoteAmount = abi.decode(userMaxData, (uint256));
 
-// ==================== V4 MIGRATION FUNCTIONS ====================
+        if (userMaxVoteAmount > 0) {
+            uint256 currentUserVotes = totalUserVotesInCampaign[_campaignId][msg.sender];
+            require(currentUserVotes + _celoEquivalent <= userMaxVoteAmount, "VotingModule: Exceeds user max vote amount");
+        }
+    }
 
-/**
- * @notice Create project participation from V4 migration
- */
-function createProjectParticipationFromV4(
+    function _updateVoterReputation(address _voter, uint256 _campaignId) internal {
+        VoterReputation storage reputation = voterReputations[_voter];
+        
+        if (!reputation.votedInCampaigns[_campaignId]) {
+            reputation.totalVotes++;
+            reputation.votedInCampaigns[_campaignId] = true;
+        }
+        
+        reputation.lastVoteTime = block.timestamp;
+        reputation.consecutiveVotes++;
+        
+        // Enhanced reputation calculation with early voter bonus
+        uint256 timeWeight = _calculateTimeWeight(_campaignId);
+        if (timeWeight > 1200) { // Early voter bonus threshold
+            reputation.earlyVoterBonus += 5;
+        }
+        
+        reputation.reputationScore = reputation.totalVotes * 10 + reputation.consecutiveVotes * 5 + reputation.earlyVoterBonus;
+
+        emit VoterReputationUpdated(_voter, reputation.reputationScore);
+    }
+
+    /**
+    * @notice Improved square root function with better precision
+    */
+    function _sqrt(uint256 _x) internal pure returns (uint256) {
+        if (_x == 0) return 0;
+        if (_x <= 3) return 1;
+        
+        // Use Newton's method for better precision
+        uint256 z = (_x + 1) / 2;
+        uint256 y = _x;
+        
+        while (z < y) {
+            y = z;
+            z = (_x / z + z) / 2;
+        }
+        
+        return y;
+    }
+
+    /**
+    * @notice Set voting token status
+    */
+    function setVotingToken(address _token, bool _enabled) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        votingTokens[_token] = _enabled;
+    }
+
+    /**
+    * @notice Force update project positions (admin only)
+    */
+    function forceUpdateProjectPositions(uint256 _campaignId) external {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        _updateProjectPositions(_campaignId);
+    }
+
+    /**
+    * @notice Get campaign project count
+    */
+    function getCampaignProjectCount(uint256 _campaignId) external view returns (uint256) {
+        return campaignProjectRankings[_campaignId].length;
+    }
+
+    /**
+    * @notice Check if project is in campaign
+    */
+    function isProjectInCampaign(uint256 _campaignId, uint256 _projectId) external view returns (bool) {
+        return projectParticipations[_campaignId][_projectId].projectId != 0;
+    }
+    // (keep contract open for cross-module helpers below)
+    // ==================== CROSS-MODULE / MIGRATION SUPPORT (ADDED) ====================
+
+    /**
+    * @notice Initialize participation for a project in a campaign (admin-only, fee-free)
+    */
+    function initializeParticipation(uint256 _campaignId, uint256 _projectId) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        _initializeParticipation(_campaignId, _projectId);
+    }
+
+    function _initializeParticipation(uint256 _campaignId, uint256 _projectId) internal {
+        require(projectParticipations[_campaignId][_projectId].projectId == 0, "VotingModule: Already initialized");
+
+        // Verify campaign exists
+        bytes memory campaignData = callModule("campaigns", abi.encodeWithSignature("getCampaign(uint256)", _campaignId));
+        require(campaignData.length > 0, "VotingModule: Campaign not found");
+
+        // Verify project exists
+        bytes memory projectData = callModule("projects", abi.encodeWithSignature("getProject(uint256)", _projectId));
+        require(projectData.length > 0, "VotingModule: Project not found");
+
+        ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
+        participation.projectId = _projectId;
+        participation.campaignId = _campaignId;
+        participation.approved = false;
+        participation.voteCount = 0;
+        participation.votingPower = 0;
+        participation.fundsReceived = 0;
+        participation.uniqueVoters = 0;
+        participation.currentPosition = 0;
+        participation.previousPosition = 0;
+        participation.positionChange = 0;
+        participation.lastPositionUpdate = block.timestamp;
+
+        // Rankings
+        campaignProjectRankings[_campaignId].push(_projectId);
+        ProjectPosition storage position = projectPositions[_campaignId][_projectId];
+        position.projectId = _projectId;
+        position.position = campaignProjectRankings[_campaignId].length;
+        position.votingPower = 0;
+        position.percentageChange = 0;
+        position.isRising = false;
+        position.lastUpdate = block.timestamp;
+    }
+
+    /**
+    * @notice Remove all votes for a project in a campaign (super admin only)
+    */
+    function removeAllProjectVotes(uint256 _campaignId, uint256 _projectId) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        require(projectParticipations[_campaignId][_projectId].projectId != 0, "VotingModule: Project not in campaign");
+
+        // Reset counts
+        uint256 previousVotes = projectParticipations[_campaignId][_projectId].voteCount;
+        uint256 previousPower = projectParticipations[_campaignId][_projectId].votingPower;
+
+        projectParticipations[_campaignId][_projectId].voteCount = 0;
+        projectParticipations[_campaignId][_projectId].votingPower = 0;
+
+        // Update aggregates if needed
+        if (projectVoteCount[_campaignId][_projectId] >= previousVotes) {
+            projectVoteCount[_campaignId][_projectId] -= previousVotes;
+        } else {
+            projectVoteCount[_campaignId][_projectId] = 0;
+        }
+        if (projectVotingPower[_campaignId][_projectId] >= previousPower) {
+            projectVotingPower[_campaignId][_projectId] -= previousPower;
+        } else {
+            projectVotingPower[_campaignId][_projectId] = 0;
+        }
+
+        // Update position tracking
+        _updateProjectPositions(_campaignId);
+    }
+
+    /**
+    * @notice Return quadratic distribution factors for campaign and set of projects
+    */
+    function getQuadraticFactorsForCampaign(
+        uint256 _campaignId,
+        uint256[] memory _projectIds
+    ) external view returns (uint256[] memory voteCounts, uint256[] memory voterDiversity, uint256[] memory tokenDiversity) {
+        voteCounts = new uint256[](_projectIds.length);
+        voterDiversity = new uint256[](_projectIds.length);
+        tokenDiversity = new uint256[](_projectIds.length);
+
+        // Get allowed tokens list from campaigns module
+        bytes memory info = callModuleView("campaigns", abi.encodeWithSignature("getCampaignEnhancedInfo(uint256)", _campaignId));
+        // (CampaignType type, bool isERC20, address[] allowedTokens, uint256[] tokenWeights, address feeToken, uint256 feeAmount)
+        (,, address[] memory allowedTokens,,,) = abi.decode(info, (uint256, bool, address[], uint256[], address, uint256));
+
+        for (uint256 i = 0; i < _projectIds.length; i++) {
+            uint256 pid = _projectIds[i];
+            voteCounts[i] = projectVoteCount[_campaignId][pid];
+            voterDiversity[i] = projectUniqueVoters[_campaignId][pid];
+
+            // Count tokens with non-zero votes
+            uint256 tokenCount = 0;
+            for (uint256 t = 0; t < allowedTokens.length; t++) {
+                if (projectParticipations[_campaignId][pid].tokenVotes[allowedTokens[t]] > 0) {
+                    tokenCount++;
+                }
+            }
+            tokenDiversity[i] = tokenCount;
+        }
+
+        return (voteCounts, voterDiversity, tokenDiversity);
+    }
+
+    /**
+    * @notice Set project participation from V4 migration (admin-only, fee-free)
+    */
+    function setProjectParticipationFromV4Migration(
     uint256 _campaignId,
     uint256 _projectId,
     bool _approved,
     uint256 _voteCount,
-    uint256 _fundsReceived
-) external onlyAdmin {
-    ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
-    participation.projectId = _projectId;
-    participation.campaignId = _campaignId;
-    participation.approved = _approved;
-    participation.voteCount = _voteCount;
-    participation.fundsReceived = _fundsReceived;
-    participation.currentPosition = 0;
-    participation.previousPosition = 0;
-    participation.positionChange = 0;
+    uint256 _tokenAmount
+) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        // Initialize if missing
+        if (projectParticipations[_campaignId][_projectId].projectId == 0) {
+            _initializeParticipation(_campaignId, _projectId);
+        }
+        ProjectParticipation storage p = projectParticipations[_campaignId][_projectId];
+        p.approved = _approved;
+        p.voteCount = _voteCount;
+        p.votingPower = _tokenAmount; // treat as aggregated power when migrating
 
-    // Add to campaign rankings for position tracking
-    campaignProjectRankings[_campaignId].push(_projectId);
-    
-    // Initialize position tracking
-    ProjectPosition storage position = projectPositions[_campaignId][_projectId];
-    position.projectId = _projectId;
-    position.position = campaignProjectRankings[_campaignId].length;
-    position.votingPower = 0;
-    position.percentageChange = 0;
-    position.isRising = false;
-    position.lastUpdate = block.timestamp;
+        projectVoteCount[_campaignId][_projectId] = _voteCount;
+        projectVotingPower[_campaignId][_projectId] = _tokenAmount;
 
-    if (_approved) {
-        emit ProjectApproved(_campaignId, _projectId, msg.sender);
+        _updateProjectPositions(_campaignId);
     }
-}
 
-/**
- * @notice Add vote from V4 migration (enhanced)
- */
-function addVoteFromV4(
-    address _voter,
+    /**
+    * @notice Migrate aggregated vote amount for a specific token (no fees)
+    */
+    function migrateAggregatedVoteFromV4(
     uint256 _campaignId,
     uint256 _projectId,
     address _token,
-    uint256 _amount,
-    uint256 _celoEquivalent,
-    uint256 _timestamp
-) external onlyAdmin {
-    // Calculate voting power using current enhanced formula
-    uint256 timeWeight = 1000; // Default weight for migrated votes
-    uint256 diversityWeight = 1000; // Default weight for migrated votes
-    uint256 votingPower = _calculateEnhancedQuadraticVoting(_amount, timeWeight, diversityWeight);
-    
-    // Create vote struct
-    Vote memory newVote = Vote({
-        voter: _voter,
-        campaignId: _campaignId,
-        projectId: _projectId,
-        token: _token,
-        amount: _amount,
-        votingPower: votingPower,
-        celoEquivalent: _celoEquivalent,
-        timestamp: _timestamp > 0 ? _timestamp : block.timestamp,
-        timeWeight: timeWeight,
-        diversityBonus: diversityWeight,
-        active: true
-    });
-
-    // Add to user vote history
-    userVoteHistory[_voter].push(newVote);
-
-    // Update vote mapping
-    userVotes[_campaignId][_voter][_projectId][_token] = newVote;
-
-    // Update totals
-    totalUserVotesInCampaign[_campaignId][_voter] += _celoEquivalent;
-    projectParticipations[_campaignId][_projectId].voteCount += _amount;
-    projectParticipations[_campaignId][_projectId].votingPower += votingPower;
-
-    // Add to campaign voters if not already present
-    if (!campaignVoterParticipated[_campaignId][_voter]) {
-        campaignVoterParticipated[_campaignId][_voter] = true;
-        campaignVoters[_campaignId].push(_voter);
-        campaignTotalVoters[_campaignId]++;
+    uint256 _amount
+) external whenActive {
+        // Check if caller has admin role through proxy
+        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        require(projectParticipations[_campaignId][_projectId].projectId != 0, "VotingModule: Not initialized");
+        projectParticipations[_campaignId][_projectId].tokenVotes[_token] += _amount;
     }
 
-    emit VoteCast(_voter, _campaignId, _projectId, _token, _amount, votingPower);
-}
-
-// ==================== INTERNAL HELPER FUNCTIONS ====================
-
-function _validateVotingConditions(uint256 _campaignId, uint256 _projectId) internal {
-    // Validate campaign timing and status
-    bytes memory campaignData = callModule("campaigns", abi.encodeWithSignature("getCampaign(uint256)", _campaignId));
-    require(campaignData.length > 0, "VotingModule: Campaign not found");
-
-    // Validate project participation and approval
-    ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
-    require(participation.projectId != 0, "VotingModule: Project not in campaign");
-    require(participation.approved, "VotingModule: Project not approved");
-}
-
-function _checkProjectAdditionPermission(uint256 _campaignId, uint256 _projectId, address _user) internal returns (bool) {
-    // Check if user is project owner
-    bytes memory projectData = callModule("projects", abi.encodeWithSignature("getProject(uint256)", _projectId));
-    if (projectData.length > 0) {
-        (,address owner,,,,,) = abi.decode(projectData, (uint256,address,string,string,bool,bool,uint256));
-        if (owner == _user) return true;
-    }
-
-    // Check if user is campaign admin
-    bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, _user));
-    if (isAdminData.length > 0) {
-        bool isAdmin = abi.decode(isAdminData, (bool));
-        if (isAdmin) return true;
-    }
-
-    // Check if user has admin role
-    return hasRole(ADMIN_ROLE, _user);
-}
-
-function _checkVoteLimits(uint256 _campaignId, uint256 _celoEquivalent) internal {
-    // Get campaign vote limits
-    bytes memory campaignData = callModule("campaigns", abi.encodeWithSignature("getCampaignEnhancedInfo(uint256)", _campaignId));
-    // Basic validation
-    require(_celoEquivalent >= 0.01 ether, "VotingModule: Vote amount too small");
-
-    // Check user-specific max vote amount
-    bytes memory userMaxData = callModule("campaigns", abi.encodeWithSignature("getUserMaxVoteAmount(uint256,address)", _campaignId, msg.sender));
-    uint256 userMaxVoteAmount = abi.decode(userMaxData, (uint256));
-
-    if (userMaxVoteAmount > 0) {
-        uint256 currentUserVotes = totalUserVotesInCampaign[_campaignId][msg.sender];
-        require(currentUserVotes + _celoEquivalent <= userMaxVoteAmount, "VotingModule: Exceeds user max vote amount");
-    }
-}
-
-function _updateVoterReputation(address _voter, uint256 _campaignId) internal {
-    VoterReputation storage reputation = voterReputations[_voter];
-    
-    if (!reputation.votedInCampaigns[_campaignId]) {
-        reputation.totalVotes++;
-        reputation.votedInCampaigns[_campaignId] = true;
-    }
-    
-    reputation.lastVoteTime = block.timestamp;
-    reputation.consecutiveVotes++;
-    
-    // Enhanced reputation calculation with early voter bonus
-    uint256 timeWeight = _calculateTimeWeight(_campaignId);
-    if (timeWeight > 1200) { // Early voter bonus threshold
-        reputation.earlyVoterBonus += 5;
-    }
-    
-    reputation.reputationScore = reputation.totalVotes * 10 + reputation.consecutiveVotes * 5 + reputation.earlyVoterBonus;
-
-    emit VoterReputationUpdated(_voter, reputation.reputationScore);
-}
-
-/**
- * @notice Improved square root function with better precision
- */
-function _sqrt(uint256 _x) internal pure returns (uint256) {
-    if (_x == 0) return 0;
-    if (_x <= 3) return 1;
-    
-    // Use Newton's method for better precision
-    uint256 z = (_x + 1) / 2;
-    uint256 y = _x;
-    
-    while (z < y) {
-        y = z;
-        z = (_x / z + z) / 2;
-    }
-    
-    return y;
-}
-
-/**
- * @notice Set voting token status
- */
-function setVotingToken(address _token, bool _enabled) external onlyAdmin {
-    votingTokens[_token] = _enabled;
-}
-
-/**
- * @notice Force update project positions (admin only)
- */
-function forceUpdateProjectPositions(uint256 _campaignId) external onlyAdmin {
-    _updateProjectPositions(_campaignId);
-}
-
-/**
- * @notice Get campaign project count
- */
-function getCampaignProjectCount(uint256 _campaignId) external view returns (uint256) {
-    return campaignProjectRankings[_campaignId].length;
-}
-
-/**
- * @notice Check if project is in campaign
- */
-function isProjectInCampaign(uint256 _campaignId, uint256 _projectId) external view returns (bool) {
-    return projectParticipations[_campaignId][_projectId].projectId != 0;
-}
 }
