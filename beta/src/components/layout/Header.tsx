@@ -52,6 +52,7 @@ export default function Header() {
   const { isConnected, address } = useAccount();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isScrollingDown, setIsScrollingDown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -60,11 +61,28 @@ export default function Header() {
   const { authenticated, logout, ready } = usePrivy();
   const { login } = useLogin();
 
-  // Handle scroll effect - header reduces size when scrolling
+  // Handle scroll effect - header shows/hides based on scroll direction
   useEffect(() => {
+    let lastScrollY = window.scrollY;
+    
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      const currentScrollY = window.scrollY;
+      
+      // Check if scrolled past a threshold
+      setIsScrolled(currentScrollY > 20);
+      
+      // Determine scroll direction
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down
+        setIsScrollingDown(true);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up
+        setIsScrollingDown(false);
+      }
+      
+      lastScrollY = currentScrollY;
     };
+    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -110,13 +128,21 @@ export default function Header() {
   }, [location.pathname]);
 
   return (
-    <div className="relative z-50">
-      <header className={`fixed w-full top-0 z-50 transition-all duration-300 ${
+    <div className="relative z-10">
+      <header className={`fixed w-full z-10 transition-all duration-500 ease-in-out ${
+        isScrollingDown 
+          ? '-translate-y-full' 
+          : 'translate-y-0'
+      } ${
         isScrolled 
-          ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200' 
-          : 'bg-white/90 backdrop-blur-sm border-b border-gray-100'
+          ? 'bg-white/90 backdrop-blur-sm shadow-sm' 
+          : 'bg-transparent'
       }`}>
-        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8">
+        {/* Transparent overlay when not scrolled */}
+        <div className={`absolute inset-0 transition-opacity duration-500 ${
+          isScrolled ? 'opacity-0' : 'opacity-30'
+        } bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200`}></div>
+        <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 relative z-10">
           <div className={`flex items-center justify-between transition-all duration-300 ${
             isScrolled ? 'h-16' : 'h-20'
           }`}>
@@ -127,7 +153,7 @@ export default function Header() {
                 src="/images/logo_bl.png" 
                 alt="Sov Seas" 
                 className={`transition-all duration-300 ${
-                  isScrolled ? 'h-24 w-auto' : 'h-32 w-auto'
+                  isScrolled ? 'h-48 w-auto' : 'h-64 w-auto'
                 }`}
               />
             </Link>
