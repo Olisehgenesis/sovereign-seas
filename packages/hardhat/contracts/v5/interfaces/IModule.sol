@@ -34,13 +34,13 @@ interface IModule {
 
     /**
      * @notice Pause the module (emergency function)
-     * @dev Only callable by emergency role
+     * @dev Only callable by proxy
      */
     function pause() external;
 
     /**
      * @notice Unpause the module
-     * @dev Only callable by admin role
+     * @dev Only callable by proxy
      */
     function unpause() external;
 
@@ -55,5 +55,23 @@ interface IModule {
         string memory description,
         string[] memory dependencies
     );
+
+    /**
+     * @notice Set the original caller (only callable by proxy)
+     * @param _caller The original caller address
+     */
+    function setOriginalCaller(address _caller) external;
+
+    /**
+     * @notice Get the original caller address
+     * @return The original caller address
+     */
+    function getOriginalCaller() external view returns (address);
+
+    /**
+     * @notice Get the effective caller (original caller if set, otherwise msg.sender)
+     * @return The effective caller address
+     */
+    function getEffectiveCaller() external view returns (address);
 
 }

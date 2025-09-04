@@ -53,7 +53,31 @@ export function saveState(network: string, state: Partial<TestState>) {
     return value;
   }));
   
-  fs.writeFileSync(p, JSON.stringify(serializableState, null, 2));
+  // Add debugging information
+  const debugInfo = {
+    ...serializableState,
+    debug: {
+      lastSaved: new Date().toISOString(),
+      network: network,
+      totalProjects: serializableState.projects?.length || 0,
+      totalCampaigns: serializableState.campaigns?.length || 0,
+      completedSteps: serializableState.completedSteps || [],
+      campaignDetails: serializableState.campaigns?.map(campaign => ({
+        id: campaign.id,
+        name: campaign.name,
+        isERC20: campaign.isERC20,
+        tokenAddress: campaign.tokenAddress
+      })) || [],
+      projectDetails: serializableState.projects?.map(project => ({
+        id: project.id,
+        name: project.name,
+        owner: project.owner
+      })) || []
+    }
+  };
+  
+  fs.writeFileSync(p, JSON.stringify(debugInfo, null, 2));
+  console.log(`💾 Test state saved with debug info: ${p}`);
   return next;
 }
 

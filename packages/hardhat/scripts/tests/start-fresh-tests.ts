@@ -37,7 +37,7 @@ class FreshTestRunner {
     this.testStartTime = Date.now();
     
     // Verify deployment exists
-    const deploymentPath = path.join(__dirname, "..", "..", "deployments", `${this.config.network}-deployment.json`);
+    const deploymentPath = path.join(__dirname, "..", "..", "deployments", this.config.network, "latest.json");
     if (!fs.existsSync(deploymentPath)) {
       throw new Error(`❌ Deployment file missing: ${deploymentPath}`);
     }
@@ -45,7 +45,7 @@ class FreshTestRunner {
     // Verify wallets exist
     const walletsPath = path.join(__dirname, "..", "..", "wallets", `${this.config.network}-wallets.json`);
     if (!fs.existsSync(walletsPath)) {
-      throw new Error(`❌ Wallet file missing: ${walletsPath}. Run 'yarn test:gen-wallets' first.`);
+      throw new Error(`❌ Wallet file missing: ${walletsPath}. Run 'pnpm run test:gen-wallets' first.`);
     }
     
     console.log(`✅ Environment verified`);
@@ -59,7 +59,7 @@ class FreshTestRunner {
     
     try {
       const deployment = JSON.parse(fs.readFileSync(
-        path.join(__dirname, "..", "..", "deployments", `${this.config.network}-deployment.json`), 
+        path.join(__dirname, "..", "..", "deployments", this.config.network, "latest.json"), 
         "utf8"
       ));
       
@@ -88,7 +88,7 @@ class FreshTestRunner {
     
     try {
       const deployment = JSON.parse(fs.readFileSync(
-        path.join(__dirname, "..", "..", "deployments", `${this.config.network}-deployment.json`), 
+        path.join(__dirname, "..", "..", "deployments", this.config.network, "latest.json"), 
         "utf8"
       ));
       

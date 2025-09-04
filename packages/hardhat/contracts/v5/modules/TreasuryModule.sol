@@ -73,6 +73,34 @@ contract TreasuryModule is BaseModule {
     // Mento Integration (from V4)
     IERC20 public celoToken;
     address public mentoTokenBroker;
+    
+    // Manual Token Rate System (NEW)
+    mapping(address => uint256) public manualTokenRates;     // token => CELO rate (in wei)
+    mapping(address => bool) public useManualRate;          // whether to use manual rate
+    mapping(address => uint256) public lastRateUpdate;      // timestamp of last rate update
+    mapping(address => uint256) public mentoFailures;       // Track Mento failures
+    mapping(address => uint256) public manualRateUsage;     // Track manual rate usage
+    mapping(address => uint256) public lastMentoAttempt;    // Last Mento attempt timestamp
+
+    // Project Tipping System (NEW)
+    struct ProjectTip {
+        uint256 projectId;
+        address tipper;
+        address token;
+        uint256 amount;
+        string message;
+        uint256 timestamp;
+        bool claimed;
+    }
+    
+    mapping(uint256 => ProjectTip[]) public projectTips;           // projectId => tips array
+    mapping(uint256 => mapping(address => uint256)) public projectTokenBalances; // projectId => token => balance
+    mapping(uint256 => uint256) public totalTipsReceived;          // projectId => total tips count
+    mapping(address => uint256) public totalTipsGiven;             // tipper => total tips given
+    mapping(address => uint256) public totalTipsByToken;           // token => total tips in this token
+    
+    uint256 public totalTipsCount;
+    ProjectTip[] public allTips;
 
     // Platform constants (from V4)
     uint256 public constant PLATFORM_FEE = 15;
@@ -114,6 +142,19 @@ contract TreasuryModule is BaseModule {
     event FeeAmountUpdated(string feeType, uint256 previousAmount, uint256 newAmount);
     event BrokerUpdated(address indexed newBroker);
     event SlippageToleranceUpdated(uint256 oldSlippage, uint256 newSlippage);
+    
+    // Manual Rate System Events (NEW)
+    event ManualRateSet(address indexed token, uint256 celoRate);
+    event ManualRateRemoved(address indexed token);
+    event EmergencyRateSet(address indexed token, uint256 celoRate);
+    
+    // Tipping Events
+    event ProjectTipped(uint256 indexed projectId, address indexed tipper, address indexed token, uint256 amount, string message);
+    event ProjectTipsClaimed(uint256 indexed projectId, address indexed projectOwner, address indexed token, uint256 amount);
+    event ProjectTipsWithdrawn(uint256 indexed projectId, address indexed projectOwner, address indexed token, uint256 amount);
+    event MentoConversionFailed(address indexed token, uint256 amount, string reason);
+    event ManualRateUsed(address indexed token, uint256 amount, uint256 rate);
+    event ConversionMethodUsed(address indexed token, string method, uint256 result);
     event FundsDistributedToProject(uint256 indexed campaignId, uint256 indexed projectId, uint256 amount, address token);
     event FundsDistributed(uint256 indexed campaignId);
     event CustomFundsDistributed(uint256 indexed campaignId, string distributionDetails);
@@ -185,7 +226,7 @@ contract TreasuryModule is BaseModule {
     */
     function updateBroker(address _newBroker) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         require(_newBroker != address(0), "TreasuryModule: Invalid broker address");
         mentoTokenBroker = _newBroker;
         emit BrokerUpdated(_newBroker);
@@ -196,7 +237,7 @@ contract TreasuryModule is BaseModule {
     */
     function setCeloToken(address _celoToken) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         require(_celoToken != address(0), "TreasuryModule: Invalid CELO token address");
         celoToken = IERC20(_celoToken);
         
@@ -214,16 +255,35 @@ contract TreasuryModule is BaseModule {
     function getTokenToCeloEquivalent(address _token, uint256 _amount) public view returns (uint256) {
         if (_token == address(celoToken)) return _amount;
         
+        // Try Mento broker first
         TokenExchangeProvider storage provider = tokenExchangeProviders[_token];
-        require(provider.active, "TreasuryModule: No active exchange provider for token");
+        if (provider.active) {
+            try IBroker(mentoTokenBroker).getAmountOut(
+                provider.provider,
+                provider.exchangeId,
+                _token,
+                address(celoToken),
+                _amount
+            ) returns (uint256 mentoAmount) {
+                // Mento succeeded
+                return mentoAmount;
+            } catch {
+                // Mento failed, try manual rate
+                if (useManualRate[_token]) {
+                    return (_amount * manualTokenRates[_token]) / 1e18;
+                }
+                // Both failed
+                revert("TreasuryModule: No conversion rate available for token");
+            }
+        }
         
-        return IBroker(mentoTokenBroker).getAmountOut(
-            provider.provider,
-            provider.exchangeId,
-            _token,
-            address(celoToken),
-            _amount
-        );
+        // No Mento provider, try manual rate
+        if (useManualRate[_token]) {
+            return (_amount * manualTokenRates[_token]) / 1e18;
+        }
+        
+        // Both failed
+        revert("TreasuryModule: No conversion rate available for token");
     }
 
     /**
@@ -250,7 +310,7 @@ contract TreasuryModule is BaseModule {
         
         // Check if contract has enough tokens
         if (IERC20(_fromToken).balanceOf(address(this)) < _amount) {
-            IERC20(_fromToken).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20(_fromToken).safeTransferFrom(getEffectiveCaller(), address(this), _amount);
         }
         
         uint256 receivedAmount = IBroker(mentoTokenBroker).swapIn(
@@ -273,7 +333,7 @@ contract TreasuryModule is BaseModule {
     */
     function addSupportedToken(address _token) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         require(_token != address(0), "TreasuryModule: Invalid token address");
         require(!supportedTokens[_token], "TreasuryModule: Token already supported");
         
@@ -292,7 +352,7 @@ contract TreasuryModule is BaseModule {
         bytes32 _exchangeId
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         require(supportedTokens[_token], "TreasuryModule: Token not supported");
         require(_provider != address(0), "TreasuryModule: Invalid provider address");
         
@@ -323,7 +383,7 @@ contract TreasuryModule is BaseModule {
         bool _feesEnabled
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         require(_platformFeePercentage <= MAX_PLATFORM_FEE_PERCENTAGE, "TreasuryModule: Platform fee too high");
         
         uint256 oldPlatformFee = feeStructure.platformFeePercentage;
@@ -357,7 +417,7 @@ contract TreasuryModule is BaseModule {
         uint256 _projectCreationFee
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         
         uint256 oldCampaignFee = feeStructure.campaignCreationFee;
         uint256 oldProjectAdditionFee = feeStructure.projectAdditionFee;
@@ -379,7 +439,7 @@ contract TreasuryModule is BaseModule {
     */
     function toggleFees(bool _feesEnabled) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         
         bool oldFeesEnabled = feeStructure.feesEnabled;
         feeStructure.feesEnabled = _feesEnabled;
@@ -393,7 +453,7 @@ contract TreasuryModule is BaseModule {
     */
     function setZeroFeesForTesting() external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         
         uint256 oldCampaignFee = feeStructure.campaignCreationFee;
         uint256 oldProjectAdditionFee = feeStructure.projectAdditionFee;
@@ -414,7 +474,7 @@ contract TreasuryModule is BaseModule {
     */
     function setTestFees() external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         
         uint256 oldCampaignFee = feeStructure.campaignCreationFee;
         uint256 oldProjectAdditionFee = feeStructure.projectAdditionFee;
@@ -813,7 +873,7 @@ contract TreasuryModule is BaseModule {
         uint256 _projectAdditionFee
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         celoToken = IERC20(_celoToken);
         mentoTokenBroker = _mentoTokenBroker;
         
@@ -833,7 +893,7 @@ contract TreasuryModule is BaseModule {
         bytes32 _exchangeId
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         if (!supportedTokens[_token]) {
             supportedTokens[_token] = true;
             supportedTokensList.push(_token);
@@ -855,7 +915,7 @@ contract TreasuryModule is BaseModule {
     */
     function setCollectedFeesFromV4(address _token, uint256 _amount) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "TreasuryModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin role required");
         if (_amount > 0) {
             collectedFees[_token] = _amount;
         }
@@ -902,6 +962,187 @@ contract TreasuryModule is BaseModule {
 
     function getCollectedFees(address _token) external view returns (uint256) {
         return collectedFees[_token];
+    }
+
+    // ==================== MANUAL RATE SYSTEM FUNCTIONS ====================
+
+    /**
+    * @notice Set manual token rate for CELO conversion
+    * @param _token Token address
+    * @param _celoRate Rate in wei (1 token = _celoRate wei CELO)
+    */
+    function setManualTokenRate(address _token, uint256 _celoRate) external {
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin required");
+        require(_celoRate > 0, "TreasuryModule: Rate must be positive");
+        
+        manualTokenRates[_token] = _celoRate;
+        useManualRate[_token] = true;
+        lastRateUpdate[_token] = block.timestamp;
+        
+        emit ManualRateSet(_token, _celoRate);
+    }
+
+    /**
+    * @notice Remove manual token rate
+    * @param _token Token address
+    */
+    function removeManualTokenRate(address _token) external {
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin required");
+        
+        useManualRate[_token] = false;
+        emit ManualRateRemoved(_token);
+    }
+
+    /**
+    * @notice Emergency set token rate (overrides Mento)
+    * @param _token Token address
+    * @param _celoRate Rate in wei
+    */
+    function emergencySetTokenRate(address _token, uint256 _celoRate) external {
+        require(_isAdmin(getEffectiveCaller()), "TreasuryModule: Admin required");
+        require(_celoRate > 0, "TreasuryModule: Rate must be positive");
+        
+        // Force set manual rate even if Mento is active
+        manualTokenRates[_token] = _celoRate;
+        useManualRate[_token] = true;
+        lastRateUpdate[_token] = block.timestamp;
+        
+        emit EmergencyRateSet(_token, _celoRate);
+    }
+
+    /**
+    * @notice Enhanced conversion with logging and fallback
+    * @param _token Token address
+    * @param _amount Token amount
+    * @return CELO equivalent amount
+    */
+    function getTokenToCeloEquivalentWithLogging(address _token, uint256 _amount) public returns (uint256) {
+        if (_token == address(celoToken)) return _amount;
+        
+        uint256 result;
+        string memory method;
+        
+        // Try Mento broker first
+        TokenExchangeProvider storage provider = tokenExchangeProviders[_token];
+        if (provider.active) {
+            lastMentoAttempt[_token] = block.timestamp;
+            
+            try IBroker(mentoTokenBroker).getAmountOut(
+                provider.provider,
+                provider.exchangeId,
+                _token,
+                address(celoToken),
+                _amount
+            ) returns (uint256 mentoAmount) {
+                // Mento succeeded
+                result = mentoAmount;
+                method = "mento";
+                emit ConversionMethodUsed(_token, method, result);
+                return result;
+            } catch Error(string memory reason) {
+                // Mento failed with specific error
+                mentoFailures[_token]++;
+                emit MentoConversionFailed(_token, _amount, reason);
+                
+                // Try manual rate fallback
+                if (useManualRate[_token]) {
+                    result = (_amount * manualTokenRates[_token]) / 1e18;
+                    method = "manual_fallback";
+                    manualRateUsage[_token]++;
+                    emit ManualRateUsed(_token, _amount, manualTokenRates[_token]);
+                    emit ConversionMethodUsed(_token, method, result);
+                    return result;
+                }
+                
+                revert(string(abi.encodePacked("Mento failed: ", reason, " and no manual rate set")));
+            } catch {
+                // Mento failed with unknown error
+                mentoFailures[_token]++;
+                emit MentoConversionFailed(_token, _amount, "Unknown error");
+                
+                // Try manual rate fallback
+                if (useManualRate[_token]) {
+                    result = (_amount * manualTokenRates[_token]) / 1e18;
+                    method = "manual_fallback";
+                    manualRateUsage[_token]++;
+                    emit ManualRateUsed(_token, _amount, manualTokenRates[_token]);
+                    emit ConversionMethodUsed(_token, method, result);
+                    return result;
+                }
+                
+                revert("Mento failed with unknown error and no manual rate set");
+            }
+        }
+        
+        // No Mento provider, try manual rate
+        if (useManualRate[_token]) {
+            result = (_amount * manualTokenRates[_token]) / 1e18;
+            method = "manual_only";
+            manualRateUsage[_token]++;
+            emit ManualRateUsed(_token, _amount, manualTokenRates[_token]);
+            emit ConversionMethodUsed(_token, method, result);
+            return result;
+        }
+        
+        revert("No Mento provider and no manual rate set");
+    }
+
+    /**
+    * @notice Get token conversion information
+    * @param _token Token address
+    * @return hasMentoProvider Whether token has active Mento provider
+    * @return hasManualRate Whether token has manual rate set
+    * @return manualRate Manual rate value
+    * @return mentoFailuresCount Number of Mento failures
+    * @return manualUsageCount Number of manual rate usages
+    * @return lastMentoAttemptTime Timestamp of last Mento attempt
+    */
+    function getTokenConversionInfo(address _token) external view returns (
+        bool hasMentoProvider,
+        bool hasManualRate,
+        uint256 manualRate,
+        uint256 mentoFailuresCount,
+        uint256 manualUsageCount,
+        uint256 lastMentoAttemptTime
+    ) {
+        TokenExchangeProvider storage provider = tokenExchangeProviders[_token];
+        return (
+            provider.active,
+            useManualRate[_token],
+            manualTokenRates[_token],
+            mentoFailures[_token],
+            manualRateUsage[_token],
+            lastMentoAttempt[_token]
+        );
+    }
+
+    /**
+    * @notice Get conversion health status
+    * @param _token Token address
+    * @return isHealthy Whether conversion is healthy
+    * @return status Status description
+    * @return failureRate Failure rate percentage
+    */
+    function getConversionHealth(address _token) external view returns (
+        bool isHealthy,
+        string memory status,
+        uint256 failureRate
+    ) {
+        uint256 totalAttempts = mentoFailures[_token] + manualRateUsage[_token];
+        
+        if (totalAttempts == 0) {
+            return (true, "No conversion attempts", 0);
+        }
+        
+        failureRate = (mentoFailures[_token] * 100) / totalAttempts;
+        
+        if (failureRate > 50) {
+            return (false, "High failure rate", failureRate);
+        } else if (failureRate > 20) {
+            return (false, "Moderate failure rate", failureRate);
+        } else {
+            return (true, "Healthy", failureRate);
+        }
     }
 
     receive() external payable {

@@ -26,6 +26,9 @@ abstract contract BaseModule is
     string public moduleName;
     string public moduleDescription;
     string[] public moduleDependencies;
+    
+    // Track original caller for proxy calls
+    address private _originalCaller;
 
     // Events
     event ModuleInitialized(string indexed moduleId, address indexed proxy);
@@ -225,5 +228,29 @@ abstract contract BaseModule is
      */
     function _isEmergency(address _account) internal view returns (bool) {
         return _hasRole(keccak256("EMERGENCY_ROLE"), _account);
+    }
+
+    /**
+     * @notice Set the original caller (only callable by proxy)
+     * @param _caller The original caller address
+     */
+    function setOriginalCaller(address _caller) external onlyProxyCaller {
+        _originalCaller = _caller;
+    }
+
+    /**
+     * @notice Get the original caller address
+     * @return The original caller address
+     */
+    function getOriginalCaller() public view returns (address) {
+        return _originalCaller;
+    }
+
+    /**
+     * @notice Get the effective caller (original caller if set, otherwise msg.sender)
+     * @return The effective caller address
+     */
+    function getEffectiveCaller() public view returns (address) {
+        return _originalCaller != address(0) ? _originalCaller : msg.sender;
     }
 }

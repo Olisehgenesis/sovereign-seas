@@ -189,6 +189,7 @@ async function main() {
       [c.treasuryModule, []],
       [c.poolsModule, []],
       [c.migrationModule, []],
+      [c.dataAggregatorModule, []],
       [c.sovereignSeasV5, []],
     ] as ContractTuple[]
   ).filter((t) => isContractTuple(t) && t[0]);

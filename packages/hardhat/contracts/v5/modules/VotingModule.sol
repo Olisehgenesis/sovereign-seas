@@ -213,15 +213,15 @@ contract VotingModule is BaseModule {
         require(projectData.length > 0, "VotingModule: Project does not exist");
 
         // Check permissions - project owner or campaign admin
-        bool isAuthorized = _checkProjectAdditionPermission(_campaignId, _projectId, msg.sender);
+        bool isAuthorized = _checkProjectAdditionPermission(_campaignId, _projectId, getEffectiveCaller());
         require(isAuthorized, "VotingModule: Not authorized to add project to campaign");
 
         // Check if already participating
         require(projectParticipations[_campaignId][_projectId].projectId == 0, "VotingModule: Project already in campaign");
 
         // Get and validate fee
-        bytes memory feeConfigData = callModule("campaigns", abi.encodeWithSignature("getProjectAdditionFeeConfig(uint256)", _campaignId));
-        (address requiredFeeToken, uint256 feeAmount) = abi.decode(feeConfigData, (address, uint256));
+        bytes memory feeConfigData = callModule("campaigns", abi.encodeWithSignature("getCampaignFeeConfig(uint256)", _campaignId));
+        (, , address requiredFeeToken, uint256 feeAmount, , ) = abi.decode(feeConfigData, (uint256, address, address, uint256, uint256, bool));
         
         require(_feeToken == requiredFeeToken, "VotingModule: Invalid fee token");
 
@@ -229,7 +229,7 @@ contract VotingModule is BaseModule {
         if (feeAmount > 0) {
             bytes memory feeValidation = callModule("treasury", abi.encodeWithSignature(
                 "validateAndCollectFee(address,uint256,string,uint256,address)",
-                _feeToken, feeAmount, "projectAddition", _campaignId, msg.sender
+                _feeToken, feeAmount, "projectAddition", _campaignId, getEffectiveCaller()
             ));
             require(abi.decode(feeValidation, (bool)), "VotingModule: Fee collection failed");
         }
@@ -274,7 +274,7 @@ contract VotingModule is BaseModule {
         require(projectParticipations[_campaignId][_projectId].voteCount == 0, "VotingModule: Project has votes, cannot remove");
 
         // Check permissions
-        bool isAuthorized = _checkProjectAdditionPermission(_campaignId, _projectId, msg.sender);
+        bool isAuthorized = _checkProjectAdditionPermission(_campaignId, _projectId, getEffectiveCaller());
         require(isAuthorized, "VotingModule: Not authorized to remove project from campaign");
 
         // Remove from projects module
@@ -295,7 +295,7 @@ contract VotingModule is BaseModule {
      */
     function approveProject(uint256 _campaignId, uint256 _projectId) external whenActive {
         // Check if sender is campaign admin
-        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, msg.sender));
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, getEffectiveCaller()));
         bool isCampaignAdmin = abi.decode(isAdminData, (bool));
         require(isCampaignAdmin, "VotingModule: Only campaign admin can approve projects");
 
@@ -304,7 +304,7 @@ contract VotingModule is BaseModule {
 
         projectParticipations[_campaignId][_projectId].approved = true;
 
-        emit ProjectApproved(_campaignId, _projectId, msg.sender);
+        emit ProjectApproved(_campaignId, _projectId, getEffectiveCaller());
     }
 
     // ==================== ENHANCED VOTING FUNCTIONS ====================
@@ -334,7 +334,7 @@ contract VotingModule is BaseModule {
     }
 
     /**
-     * @notice Internal vote with token logic
+     * @notice Internal vote with token logic (Enhanced with new token systems)
      */
     function _voteWithToken(
         uint256 _campaignId,
@@ -355,18 +355,58 @@ contract VotingModule is BaseModule {
         
         require(_amount > 0, "VotingModule: Invalid vote amount");
 
-        // Get CELO equivalent through treasury
-        bytes memory celoEquivData = callModule("treasury", abi.encodeWithSignature("getTokenToCeloEquivalent(address,uint256)", _token, _amount));
-        uint256 celoEquivalent = abi.decode(celoEquivData, (uint256));
+        uint256 celoEquivalent;
+        uint256 votingPower;
+        
+        // Check if campaign has custom token configuration (ERC20 campaigns)
+        bytes memory isERC20Data = callModule("campaigns", abi.encodeWithSignature("getCampaignType(uint256)", _campaignId));
+        bool isERC20Campaign = abi.decode(isERC20Data, (bool));
+        
+        if (isERC20Campaign) {
+            // Get campaign token weight
+            bytes memory weightData = callModule("campaigns", abi.encodeWithSignature("getCampaignTokenWeight(uint256,address)", _campaignId, _token));
+            uint256 tokenWeight = abi.decode(weightData, (uint256));
+            
+            if (tokenWeight > 0) {
+                // Get conversion mode
+                bytes memory conversionData = callModule("campaigns", abi.encodeWithSignature("getCampaignTokenConversionMode(uint256,address)", _campaignId, _token));
+                bool useCeloConversion = abi.decode(conversionData, (bool));
+                
+                if (useCeloConversion) {
+                    // Convert to CELO equivalent using campaign weight
+                    celoEquivalent = (_amount * tokenWeight) / 1e18;
+                    votingPower = celoEquivalent;
+                } else {
+                    // 1:1 voting (1 token = 1 vote)
+                    celoEquivalent = _amount; // For minimum check only
+                    votingPower = _amount;    // Actual voting power
+                }
+            } else {
+                // No campaign weight, fallback to treasury conversion
+                bytes memory celoEquivData = callModule("treasury", abi.encodeWithSignature("getTokenToCeloEquivalent(address,uint256)", _token, _amount));
+                celoEquivalent = abi.decode(celoEquivData, (uint256));
+                votingPower = celoEquivalent;
+            }
+        } else {
+            // CELO campaigns use enhanced treasury conversion with fallback
+            try this.getTokenToCeloEquivalentWithLogging(_token, _amount) returns (uint256 result) {
+                celoEquivalent = result;
+                votingPower = celoEquivalent;
+            } catch Error(string memory reason) {
+                revert(string(abi.encodePacked("Token conversion failed: ", reason)));
+            } catch {
+                revert("Token conversion failed with unknown error");
+            }
+        }
 
-        // Check vote limits
+        // Check vote limits (using CELO equivalent for minimum requirements)
         _checkVoteLimits(_campaignId, celoEquivalent);
 
         // Transfer tokens to main contract
-        IERC20(_token).safeTransferFrom(msg.sender, address(sovereignSeasProxy), _amount);
+        IERC20(_token).safeTransferFrom(getEffectiveCaller(), address(sovereignSeasProxy), _amount);
 
-        // Update vote data with enhanced calculations
-        _updateVoteDataEnhanced(_campaignId, _projectId, _token, _amount, celoEquivalent);
+        // Update vote data with actual voting power
+        _updateVoteDataEnhanced(_campaignId, _projectId, _token, _amount, votingPower);
 
         // Update campaign funding
         callModule("campaigns", abi.encodeWithSignature("fundCampaign(uint256,address,uint256)", _campaignId, _token, _amount));
@@ -422,13 +462,13 @@ contract VotingModule is BaseModule {
         uint256 votingPower = _calculateEnhancedQuadraticVoting(_amount, timeWeight, diversityWeight);
 
         // Create or update vote
-        Vote storage vote = userVotes[_campaignId][msg.sender][_projectId][_token];
+        Vote storage vote = userVotes[_campaignId][getEffectiveCaller()][_projectId][_token];
         
         bool isNewVote = !vote.active;
         
         if (vote.active) {
             // Update existing vote - adjust totals
-            totalUserVotesInCampaign[_campaignId][msg.sender] = totalUserVotesInCampaign[_campaignId][msg.sender] - vote.amount + _amount;
+            totalUserVotesInCampaign[_campaignId][getEffectiveCaller()] = totalUserVotesInCampaign[_campaignId][getEffectiveCaller()] - vote.amount + _amount;
             participation.voteCount = participation.voteCount - vote.amount + _amount;
             participation.votingPower = participation.votingPower - vote.votingPower + votingPower;
             participation.tokenVotes[_token] = participation.tokenVotes[_token] - vote.amount + _amount;
@@ -444,7 +484,7 @@ contract VotingModule is BaseModule {
             vote.diversityBonus = diversityWeight;
         } else {
             // Create new vote
-            vote.voter = msg.sender;
+            vote.voter = getEffectiveCaller();
             vote.campaignId = _campaignId;
             vote.projectId = _projectId;
             vote.token = _token;
@@ -457,7 +497,7 @@ contract VotingModule is BaseModule {
             vote.active = true;
 
             // Update totals
-            totalUserVotesInCampaign[_campaignId][msg.sender] += _amount;
+            totalUserVotesInCampaign[_campaignId][getEffectiveCaller()] += _amount;
             participation.voteCount += _amount;
             participation.votingPower += votingPower;
             participation.tokenVotes[_token] += _amount;
@@ -465,9 +505,9 @@ contract VotingModule is BaseModule {
             totalVotingPower += votingPower;
 
             // Track unique voter
-            if (!campaignVoterParticipated[_campaignId][msg.sender]) {
-                campaignVoterParticipated[_campaignId][msg.sender] = true;
-                campaignVoters[_campaignId].push(msg.sender);
+            if (!campaignVoterParticipated[_campaignId][getEffectiveCaller()]) {
+                campaignVoterParticipated[_campaignId][getEffectiveCaller()] = true;
+                campaignVoters[_campaignId].push(getEffectiveCaller());
                 campaignTotalVoters[_campaignId]++;
             }
 
@@ -476,11 +516,11 @@ contract VotingModule is BaseModule {
             participation.uniqueVoters = projectUniqueVoters[_campaignId][_projectId];
 
             // Add to vote history
-            userVoteHistory[msg.sender].push(vote);
+            userVoteHistory[getEffectiveCaller()].push(vote);
         }
 
         // Update voter reputation
-        _updateVoterReputation(msg.sender, _campaignId);
+        _updateVoterReputation(getEffectiveCaller(), _campaignId);
 
         // Update project stats in projects module
         callModule("projects", abi.encodeWithSignature("updateProjectStats(uint256,uint256,uint256)", _projectId, 0, _celoEquivalent));
@@ -488,7 +528,7 @@ contract VotingModule is BaseModule {
         // Update project positions
         _updateProjectPositions(_campaignId);
 
-        emit VoteCast(msg.sender, _campaignId, _projectId, _token, _amount, votingPower);
+        emit VoteCast(getEffectiveCaller(), _campaignId, _projectId, _token, _amount, votingPower);
         emit ProjectTotalsUpdated(
             _campaignId,
             _projectId,
@@ -1083,13 +1123,13 @@ contract VotingModule is BaseModule {
         uint256 _projectId,
         address _token
     ) external whenActive {
-        Vote storage vote = userVotes[_campaignId][msg.sender][_projectId][_token];
+        Vote storage vote = userVotes[_campaignId][getEffectiveCaller()][_projectId][_token];
         require(vote.active, "VotingModule: No active vote found");
 
         ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
 
         // Update totals
-        totalUserVotesInCampaign[_campaignId][msg.sender] -= vote.amount;
+        totalUserVotesInCampaign[_campaignId][getEffectiveCaller()] -= vote.amount;
         participation.voteCount -= vote.amount;
         participation.votingPower -= vote.votingPower;
         participation.tokenVotes[_token] -= vote.amount;
@@ -1103,7 +1143,7 @@ contract VotingModule is BaseModule {
         // Update project positions
         _updateProjectPositions(_campaignId);
 
-        emit VoteRemoved(msg.sender, _campaignId, _projectId);
+        emit VoteRemoved(getEffectiveCaller(), _campaignId, _projectId);
         emit ProjectTotalsUpdated(
             _campaignId,
             _projectId,
@@ -1128,7 +1168,7 @@ contract VotingModule is BaseModule {
         uint256 _fundsReceived
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "VotingModule: Admin role required");
         ProjectParticipation storage participation = projectParticipations[_campaignId][_projectId];
         participation.projectId = _projectId;
         participation.campaignId = _campaignId;
@@ -1152,7 +1192,7 @@ contract VotingModule is BaseModule {
         position.lastUpdate = block.timestamp;
 
         if (_approved) {
-            emit ProjectApproved(_campaignId, _projectId, msg.sender);
+            emit ProjectApproved(_campaignId, _projectId, getEffectiveCaller());
         }
     }
 
@@ -1169,7 +1209,7 @@ contract VotingModule is BaseModule {
         uint256 _timestamp
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "VotingModule: Admin role required");
         // Calculate voting power using current enhanced formula
         uint256 timeWeight = 1000; // Default weight for migrated votes
         uint256 diversityWeight = 1000; // Default weight for migrated votes
@@ -1228,7 +1268,7 @@ contract VotingModule is BaseModule {
         // Check if user is project owner
         bytes memory projectData = callModule("projects", abi.encodeWithSignature("getProject(uint256)", _projectId));
         if (projectData.length > 0) {
-            (,address owner,,,,,) = abi.decode(projectData, (uint256,address,string,string,bool,bool,uint256));
+            (address owner,,,,,,) = abi.decode(projectData, (address,string,string,uint8,bool,uint256,uint256));
             if (owner == _user) return true;
         }
 
@@ -1250,11 +1290,11 @@ contract VotingModule is BaseModule {
         require(_celoEquivalent >= 0.01 ether, "VotingModule: Vote amount too small");
 
         // Check user-specific max vote amount
-        bytes memory userMaxData = callModule("campaigns", abi.encodeWithSignature("getUserMaxVoteAmount(uint256,address)", _campaignId, msg.sender));
+        bytes memory userMaxData = callModule("campaigns", abi.encodeWithSignature("getUserMaxVoteAmount(uint256,address)", _campaignId, getEffectiveCaller()));
         uint256 userMaxVoteAmount = abi.decode(userMaxData, (uint256));
 
         if (userMaxVoteAmount > 0) {
-            uint256 currentUserVotes = totalUserVotesInCampaign[_campaignId][msg.sender];
+            uint256 currentUserVotes = totalUserVotesInCampaign[_campaignId][getEffectiveCaller()];
             require(currentUserVotes + _celoEquivalent <= userMaxVoteAmount, "VotingModule: Exceeds user max vote amount");
         }
     }
@@ -1306,7 +1346,7 @@ contract VotingModule is BaseModule {
     */
     function setVotingToken(address _token, bool _enabled) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: System admin role required");
+        require(_isAdmin(getEffectiveCaller()), "VotingModule: System admin role required");
         votingTokens[_token] = _enabled;
     }
 
@@ -1315,9 +1355,9 @@ contract VotingModule is BaseModule {
     */
     function forceUpdateProjectPositions(uint256 _campaignId) external {
         // Check if caller is campaign admin or system admin
-        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, msg.sender));
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, getEffectiveCaller()));
         bool isCampaignAdmin = abi.decode(isAdminData, (bool));
-        require(isCampaignAdmin || _isAdmin(msg.sender), "VotingModule: Campaign admin or system admin role required");
+        require(isCampaignAdmin || _isAdmin(getEffectiveCaller()), "VotingModule: Campaign admin or system admin role required");
         _updateProjectPositions(_campaignId);
     }
 
@@ -1342,9 +1382,9 @@ contract VotingModule is BaseModule {
     */
     function initializeParticipation(uint256 _campaignId, uint256 _projectId) external whenActive {
         // Check if caller is campaign admin or system admin
-        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, msg.sender));
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, getEffectiveCaller()));
         bool isCampaignAdmin = abi.decode(isAdminData, (bool));
-        require(isCampaignAdmin || _isAdmin(msg.sender), "VotingModule: Campaign admin or system admin role required");
+        require(isCampaignAdmin || _isAdmin(getEffectiveCaller()), "VotingModule: Campaign admin or system admin role required");
         _initializeParticipation(_campaignId, _projectId);
     }
 
@@ -1388,9 +1428,9 @@ contract VotingModule is BaseModule {
     */
     function removeAllProjectVotes(uint256 _campaignId, uint256 _projectId) external whenActive {
         // Check if caller is campaign admin or system admin
-        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, msg.sender));
+        bytes memory isAdminData = callModule("campaigns", abi.encodeWithSignature("isCampaignAdmin(uint256,address)", _campaignId, getEffectiveCaller()));
         bool isCampaignAdmin = abi.decode(isAdminData, (bool));
-        require(isCampaignAdmin || _isAdmin(msg.sender), "VotingModule: Campaign admin or system admin role required");
+        require(isCampaignAdmin || _isAdmin(getEffectiveCaller()), "VotingModule: Campaign admin or system admin role required");
         require(projectParticipations[_campaignId][_projectId].projectId != 0, "VotingModule: Project not in campaign");
 
         // Reset counts
@@ -1461,7 +1501,7 @@ contract VotingModule is BaseModule {
     uint256 _tokenAmount
 ) external whenActive {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "VotingModule: Admin role required");
         // Initialize if missing
         if (projectParticipations[_campaignId][_projectId].projectId == 0) {
             _initializeParticipation(_campaignId, _projectId);
@@ -1487,9 +1527,21 @@ contract VotingModule is BaseModule {
     uint256 _amount
 ) external whenActive {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "VotingModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "VotingModule: Admin role required");
         require(projectParticipations[_campaignId][_projectId].projectId != 0, "VotingModule: Not initialized");
         projectParticipations[_campaignId][_projectId].tokenVotes[_token] += _amount;
+    }
+
+    /**
+    * @notice Enhanced token conversion with logging and fallback (delegates to TreasuryModule)
+    * @param _token Token address
+    * @param _amount Token amount
+    * @return CELO equivalent amount
+    */
+    function getTokenToCeloEquivalentWithLogging(address _token, uint256 _amount) external returns (uint256) {
+        // Delegate to TreasuryModule
+        bytes memory result = callModule("treasury", abi.encodeWithSignature("getTokenToCeloEquivalentWithLogging(address,uint256)", _token, _amount));
+        return abi.decode(result, (uint256));
     }
 
 }

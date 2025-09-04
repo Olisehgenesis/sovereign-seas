@@ -124,7 +124,7 @@ contract PoolsModule is BaseModule {
     }
 
     modifier onlyTeamMember(uint256 _poolId) {
-        require(pools[_poolId].teamMembers[msg.sender], "PoolsModule: Only team member can call this function");
+        require(pools[_poolId].teamMembers[getEffectiveCaller()], "PoolsModule: Only team member can call this function");
         _;
     }
 
@@ -260,13 +260,13 @@ contract PoolsModule is BaseModule {
         require(_amount > 0, "PoolsModule: Amount must be greater than 0");
         require(_token == pools[_poolId].token, "PoolsModule: Token mismatch");
 
-        require(IERC20(_token).transferFrom(msg.sender, address(this), _amount), "PoolsModule: Transfer failed");
+        require(IERC20(_token).transferFrom(getEffectiveCaller(), address(this), _amount), "PoolsModule: Transfer failed");
 
         Pool storage pool = pools[_poolId];
         pool.totalBalance += _amount;
         pool.tokenBalances[_token] += _amount;
 
-        emit PoolFunded(_poolId, msg.sender, _token, _amount);
+        emit PoolFunded(_poolId, getEffectiveCaller(), _token, _amount);
     }
 
     /**
@@ -380,9 +380,9 @@ contract PoolsModule is BaseModule {
         pool.unclaimedAmount -= _amount;
         pool.tokenBalances[pool.token] -= _amount;
 
-        require(IERC20(pool.token).transfer(msg.sender, _amount), "PoolsModule: Transfer failed");
+        require(IERC20(pool.token).transfer(getEffectiveCaller(), _amount), "PoolsModule: Transfer failed");
 
-        emit FundsClaimed(_poolId, msg.sender, _amount, pool.token);
+        emit FundsClaimed(_poolId, getEffectiveCaller(), _amount, pool.token);
     }
 
     /**
@@ -398,7 +398,7 @@ contract PoolsModule is BaseModule {
         pool.tokenBalances[pool.token] -= unclaimedAmount;
 
         // This would typically go back to the campaign admin or treasury
-        require(IERC20(pool.token).transfer(msg.sender, unclaimedAmount), "PoolsModule: Transfer failed");
+        require(IERC20(pool.token).transfer(getEffectiveCaller(), unclaimedAmount), "PoolsModule: Transfer failed");
 
         emit UnclaimedFundsRecalled(_poolId, unclaimedAmount, pool.token);
     }
@@ -812,7 +812,7 @@ contract PoolsModule is BaseModule {
         uint256[] memory _adjustments
     ) external whenActive {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "PoolsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "PoolsModule: Admin role required");
         require(_projectIds.length == _adjustments.length, "PoolsModule: Arrays length mismatch");
         
         uint256[] memory poolIds = campaignPools[_campaignId];
@@ -846,7 +846,7 @@ contract PoolsModule is BaseModule {
         address _token
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "PoolsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "PoolsModule: Admin role required");
         // Find campaign pool or create one
         uint256[] memory poolIds = campaignPools[_campaignId];
         uint256 targetPoolId = 0;
@@ -866,7 +866,7 @@ contract PoolsModule is BaseModule {
             require(address(this).balance >= _amount, "PoolsModule: Insufficient balance");
         } else {
             // ERC20 token
-            IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20(_token).safeTransferFrom(getEffectiveCaller(), address(this), _amount);
         }
 
         // Update balances
@@ -891,19 +891,19 @@ contract PoolsModule is BaseModule {
             uint256 poolId = poolIds[i];
             Pool storage pool = pools[poolId];
             
-            require(isTeamMember[poolId][msg.sender], "PoolsModule: Not a team member");
+            require(isTeamMember[poolId][getEffectiveCaller()], "PoolsModule: Not a team member");
             
-            uint256 claimableAmount = _calculateClaimableAmount(poolId, msg.sender);
+            uint256 claimableAmount = _calculateClaimableAmount(poolId, getEffectiveCaller());
             require(claimableAmount > 0, "PoolsModule: No funds to claim");
 
             // Update last claim time
             lastClaimTime[poolId] = block.timestamp;
-            _updateMemberClaimTime(poolId, msg.sender);
+            _updateMemberClaimTime(poolId, getEffectiveCaller());
 
             // Transfer funds
-            _transferToMember(poolId, msg.sender, claimableAmount, pool.token);
+            _transferToMember(poolId, getEffectiveCaller(), claimableAmount, pool.token);
 
-            emit FundsClaimed(poolId, msg.sender, claimableAmount, pool.token);
+            emit FundsClaimed(poolId, getEffectiveCaller(), claimableAmount, pool.token);
         }
     }
 
@@ -932,7 +932,7 @@ contract PoolsModule is BaseModule {
 
             // Transfer unclaimed funds to admin
             pool.unclaimedAmount = 0;
-            _transferToMember(poolId, msg.sender, unclaimedAmount, pool.token);
+            _transferToMember(poolId, getEffectiveCaller(), unclaimedAmount, pool.token);
 
             emit UnclaimedFundsRecalled(poolId, unclaimedAmount, pool.token);
         }
@@ -970,14 +970,14 @@ contract PoolsModule is BaseModule {
             require(msg.value == _amount, "PoolsModule: Incorrect native amount");
         } else {
             // ERC20 token
-            IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20(_token).safeTransferFrom(getEffectiveCaller(), address(this), _amount);
         }
 
         // Update balances
         tokenBalances[targetPoolId][_token] += _amount;
         pool.totalBalance += _amount;
 
-        emit PoolFunded(targetPoolId, msg.sender, _token, _amount);
+        emit PoolFunded(targetPoolId, getEffectiveCaller(), _token, _amount);
     }
 
     // ==================== INTERNAL HELPER FUNCTIONS ====================
@@ -1219,7 +1219,7 @@ contract PoolsModule is BaseModule {
      */
     function distributeQuadratic(uint256 _campaignId, uint256[] memory _projectIds) external whenActive {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "PoolsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "PoolsModule: Admin role required");
         uint256[] memory poolIds = campaignPools[_campaignId];
         require(poolIds.length > 0, "PoolsModule: No pools for campaign");
         

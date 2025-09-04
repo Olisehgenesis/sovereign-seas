@@ -13,6 +13,7 @@ interface DeploymentConfig {
     treasuryModule: string;
     poolsModule: string;
     migrationModule: string;
+    dataAggregatorModule: string;
     sovereignSeasV5: string;
   };
 }
@@ -97,6 +98,7 @@ async function main() {
         treasuryModule: "",
         poolsModule: "",
         migrationModule: "",
+        dataAggregatorModule: "",
         sovereignSeasV5: "",
       },
     };
@@ -135,6 +137,7 @@ async function checkOnChainStatus(
     { name: "treasuryModule", factory: "TreasuryModule" },
     { name: "poolsModule", factory: "PoolsModule" },
     { name: "migrationModule", factory: "MigrationModule" },
+    { name: "dataAggregatorModule", factory: "DataAggregatorModule" },
     { name: "sovereignSeasV5", factory: "SovereignSeasV5" }
   ];
   
@@ -220,6 +223,7 @@ async function deployMissingContracts(
     { name: "treasuryModule", factory: "TreasuryModule" },
     { name: "poolsModule", factory: "PoolsModule" },
     { name: "migrationModule", factory: "MigrationModule" },
+    { name: "dataAggregatorModule", factory: "DataAggregatorModule" },
     { name: "sovereignSeasV5", factory: "SovereignSeasV5" }
   ];
   
@@ -321,7 +325,8 @@ async function registerMissingModules(
     { id: "voting", address: deploymentConfig.contracts.votingModule, dependencies: ["projects", "campaigns"] },
     { id: "treasury", address: deploymentConfig.contracts.treasuryModule, dependencies: [] },
     { id: "pools", address: deploymentConfig.contracts.poolsModule, dependencies: ["projects", "campaigns", "treasury"] },
-    { id: "migration", address: deploymentConfig.contracts.migrationModule, dependencies: ["projects", "campaigns", "voting", "treasury", "pools"] }
+    { id: "migration", address: deploymentConfig.contracts.migrationModule, dependencies: ["projects", "campaigns", "voting", "treasury", "pools"] },
+    { id: "dataAggregator", address: deploymentConfig.contracts.dataAggregatorModule, dependencies: ["projects", "campaigns", "migration"] }
   ];
   
   for (const module of modules) {
@@ -360,7 +365,7 @@ async function initializeMissingModules(
     deployer
   );
   
-  const modules = ["projects", "campaigns", "voting", "treasury", "pools", "migration"];
+  const modules = ["projects", "campaigns", "voting", "treasury", "pools", "migration", "dataAggregator"];
   
   try {
     // Try batch initialization first
@@ -368,10 +373,8 @@ async function initializeMissingModules(
     // Use empty bytes array for proper type compatibility with Solidity
     const initDataArray = new Array(modules.length).fill("0x");
     
-    // Add gas limit and better error handling
-    const tx = await proxyContract.initializeModulesBatch(modules, initDataArray, {
-      gasLimit: 5000000 // 5M gas limit for batch operation
-    });
+    // Add better error handling
+    const tx = await proxyContract.initializeModulesBatch(modules, initDataArray);
     
     console.log(`⏳ Waiting for batch initialization transaction: ${tx.hash}`);
     const receipt = await tx.wait();
@@ -432,9 +435,7 @@ async function initializeFailedModulesIndividually(
         console.log(`⚠️ Could not check ${moduleId} status, proceeding with initialization...`);
       }
       
-      const tx = await proxyContract.initializeModule(moduleId, "0x", {
-        gasLimit: 1000000 // 1M gas limit for individual initialization
-      });
+      const tx = await proxyContract.initializeModule(moduleId, "0x");
       
       console.log(`⏳ Waiting for ${moduleId} initialization: ${tx.hash}`);
       await tx.wait();

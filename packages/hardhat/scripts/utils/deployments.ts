@@ -12,6 +12,7 @@ export interface DeploymentRecord {
     treasuryModule: string;
     poolsModule: string;
     migrationModule: string;
+    dataAggregatorModule: string;
     sovereignSeasV5: string;
     seasToken?: string;
   };

@@ -1,0 +1,46 @@
+{
+  "v4ContractAddress": "0x1F3c0902e2c05D53Af2Cd00bd3F0a62EC4000942",
+  "v5ContractAddress": "0xB837E7Ff9618280462D5f0eFaB2C1abc95C31d1A",
+  "migrationModuleAddress": "0x686C1c7ad48b5f9DE9b03F5a341fb91106C65436",
+  "testWallets": [
+    {
+      "index": 1,
+      "address": "0xe99E0C70b870ce0F1a04A58FD19812087A368003",
+      "privateKey": "0x1ad3fa1739c4a5e7fb6bed7354894413e5f4c7344bd7d42a24a57b4a109c9ea7"
+    },
+    {
+      "index": 2,
+      "address": "0x94Dae5Be9903164A050d64b62bA977a179fDCda4",
+      "privateKey": "0x8b8d5f219b09a24557ae9f5f9cc47419cec8961225ae2d071b548667936d6e6d"
+    },
+    {
+      "index": 3,
+      "address": "0x2955d21eE52b47D5a08fa19dc7019E2Be4841a19",
+      "privateKey": "0x1b483b6e9e3c62d22ece53dd4a11b00ee12f5a64728bf1d310981cb46af9a1f1"
+    },
+    {
+      "index": 4,
+      "address": "0x1493a16475024215205e7A08dDE992dd04C77392",
+      "privateKey": "0xfaa88148526139e7b75a60712dbcfcd53cd21d82aa6075d8314c95d969c9f9f7"
+    },
+    {
+      "index": 5,
+      "address": "0x03Ef7026a245F28D9b240a3437092061dc5ad1CD",
+      "privateKey": "0xcdbed2482229274a48e5fe7fef0083334e01636bf90638e75470acb40f2049df"
+    },
+    {
+      "index": 6,
+      "address": "0xE1f9Cf7Ce087a16EA1b483Fd97D70bBD546C07E0",
+      "privateKey": "0x917e14ce28ff9110e8d9dd7ee33e30e24d6705a5d8c99fc7ac0251ffcc2e5685"
+    }
+  ],
+  "projects": {},
+  "campaigns": {},
+  "votes": [],
+  "migrationResults": {
+    "projectsMigrated": 0,
+    "campaignsMigrated": 0,
+    "votingDataMigrated": false,
+    "validationPassed": false
+  }
+}

@@ -1,0 +1,100 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_projectId",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_ipfs",
+        "type": "string"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint32",
+            "name": "nftType",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint16[]",
+            "name": "validEvents",
+            "type": "uint16[]"
+          },
+          {
+            "internalType": "uint128[]",
+            "name": "rewardPerEvent",
+            "type": "uint128[]"
+          },
+          {
+            "internalType": "address",
+            "name": "manager",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "membersValidator",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "uniquenessValidator",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "rewardToken",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "allowRewardOverride",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct IDirectPaymentsFactory.PoolSettings",
+        "name": "_settings",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "maxTotalPerMonth",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxMemberPerMonth",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maxMemberPerDay",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IDirectPaymentsFactory.SafetyLimits",
+        "name": "_limits",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_managerFeeBps",
+        "type": "uint32"
+      }
+    ],
+    "name": "createPool",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 120
+  },
+ "linter": {
+    "rules": {
+      "suspicious": {
+        "noImplicitAnyLet": "off"
+      },
+      "correctness": {
+        "noChildrenProp": "off"
+      }
+    }
+  },
+  "organizeImports": {
+    "enabled": true
+  }
+}

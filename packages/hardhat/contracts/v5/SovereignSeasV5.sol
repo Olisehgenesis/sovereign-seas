@@ -260,8 +260,22 @@ contract SovereignSeasV5 is
         bool success;
         bytes memory result;
 
+        // Set the original caller in the module before making the call
+        try IModule(moduleAddress).setOriginalCaller(msg.sender) {
+            // Original caller set successfully
+        } catch {
+            // Module doesn't support original caller tracking, continue
+        }
+
         // Forward the call to the module with value and context
         (success, result) = moduleAddress.call{value: msg.value}(_data);
+
+        // Clear the original caller after the call completes
+        try IModule(moduleAddress).setOriginalCaller(address(0)) {
+            // Original caller cleared successfully
+        } catch {
+            // Module doesn't support clearing, continue
+        }
 
         emit ModuleCallResult(_moduleId, success, result);
 

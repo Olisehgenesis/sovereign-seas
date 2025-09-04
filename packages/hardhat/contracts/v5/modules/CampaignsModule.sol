@@ -94,6 +94,10 @@ contract CampaignsModule is BaseModule {
         // Project Addition Fee Configuration
         address projectAdditionFeeToken; // Token to pay for adding projects (CELO or campaign token)
         uint256 projectAdditionFeeAmount; // Amount required to add projects
+        
+        // Token Weight Configuration (NEW)
+        mapping(address => bool) useCeloConversion;      // token => use CELO conversion (true) or 1:1 voting (false)
+        mapping(address => uint256) tokenWeightHistory;  // For tracking weight changes
     }
 
     // Campaign metadata struct - JSON-based for flexibility
@@ -110,6 +114,15 @@ contract CampaignsModule is BaseModule {
         string socialMediaHandle;
     }
 
+    // ERC20 Campaign Configuration struct (NEW)
+    struct ERC20CampaignConfig {
+        address[] allowedTokens;
+        uint256[] tokenWeights;        // Weight per token (in wei)
+        bool[] useCeloConversion;      // true = convert to CELO, false = 1:1 voting
+        address feeToken;
+        uint256 projectAdditionFee;
+    }
+
     // State variables
     mapping(uint256 => Campaign) public campaigns;
     mapping(address => uint256[]) public campaignsByAdmin;
@@ -119,6 +132,31 @@ contract CampaignsModule is BaseModule {
     uint256 public totalCampaigns;
     uint256 public activeCampaigns;
     uint256 public completedCampaigns;
+    
+    // Smart ID Management
+    uint256 public v5CampaignIdStart = 100; // V5 campaigns start from 100
+    bool public smartIdEnabled = false;
+    mapping(uint256 => bool) public v4CampaignIds; // Track V4 campaign IDs
+    
+    // Migration Status Enum
+    enum MigrationStatus {
+        V4_ONLY,        // 0: Campaign exists only in V4
+        MIGRATED,       // 1: Campaign migrated from V4 to V5
+        V5_ONLY         // 2: Campaign created directly in V5
+    }
+    
+    // Migration Data Structure
+    struct MigrationData {
+        MigrationStatus status;
+        uint256 v4Id;           // Original V4 ID (if applicable)
+        uint256 v5Id;           // V5 ID (if applicable)
+        address migratedBy;     // Who performed the migration
+        uint256 migratedAt;     // When migration occurred
+        address newAdmin;       // New admin for migrated campaigns (if different)
+    }
+    
+    // Migration tracking
+    mapping(uint256 => MigrationData) public campaignMigrationData;
 
     // Enhanced indexing
     mapping(OfficialStatus => uint256[]) public campaignsByStatus;
@@ -164,6 +202,15 @@ contract CampaignsModule is BaseModule {
     event GlobalProjectAdditionFeesUpdated(address defaultProjectAdditionFeeToken, uint256 defaultProjectAdditionFeeAmount);
     event AllFeesSetToZeroForTesting();
     event AllFeesSetToTestAmounts(uint256 testFeeAmount);
+    
+    // Smart ID Management Events
+    event SmartIdManagementEnabled(uint256 v5CampaignIdStart);
+    event SmartIdManagementDisabled();
+    
+    // Token Weight System Events (NEW)
+    event TokenWeightUpdated(uint256 indexed campaignId, address indexed token, uint256 oldWeight, uint256 newWeight, address indexed updatedBy);
+    event TokenConversionModeUpdated(uint256 indexed campaignId, address indexed token, bool useCeloConversion, address indexed updatedBy);
+    event ERC20CampaignConfigUpdated(uint256 indexed campaignId, address[] tokens, uint256[] weights, bool[] conversionModes, address indexed updatedBy);
 
     // Modifiers
     modifier campaignExists(uint256 _campaignId) {
@@ -172,17 +219,19 @@ contract CampaignsModule is BaseModule {
     }
 
     modifier onlyCampaignAdmin(uint256 _campaignId) {
+        address caller = getEffectiveCaller();
         require(
-            campaigns[_campaignId].admin == msg.sender || 
-            campaigns[_campaignId].campaignAdmins[msg.sender] || 
-            _isAdmin(msg.sender),
+            campaigns[_campaignId].admin == caller || 
+            campaigns[_campaignId].campaignAdmins[caller] || 
+            _isAdmin(caller),
             "CampaignsModule: Only campaign admin can call this function"
         );
         _;
     }
 
     modifier onlyCampaignOwner(uint256 _campaignId) {
-        require(campaigns[_campaignId].admin == msg.sender, "CampaignsModule: Only campaign owner can call this function");
+        address caller = getEffectiveCaller();
+        require(campaigns[_campaignId].admin == caller, "CampaignsModule: Only campaign owner can call this function");
         _;
     }
 
@@ -273,10 +322,11 @@ contract CampaignsModule is BaseModule {
             "",
             _payoutToken,
             _feeToken,
-            msg.sender,
+            getEffectiveCaller(),
             CampaignType.STANDARD,
             new address[](0),
             new uint256[](0),
+            new bool[](0),
             address(0),
             0
         );
@@ -300,10 +350,12 @@ contract CampaignsModule is BaseModule {
         CampaignType _campaignType,
         address[] calldata _allowedTokens,
         uint256[] calldata _tokenWeights,
+        bool[] calldata _useCeloConversion,
         address _projectAdditionFeeToken,
         uint256 _projectAdditionFeeAmount
     ) external whenActive returns (uint256) {
-        require(_allowedTokens.length == _tokenWeights.length, "CampaignsModule: Arrays length mismatch");
+        require(_allowedTokens.length == _tokenWeights.length, "CampaignsModule: Token arrays length mismatch");
+        require(_allowedTokens.length == _useCeloConversion.length, "CampaignsModule: Conversion arrays length mismatch");
         require(_allowedTokens.length > 0, "CampaignsModule: Must specify at least one token");
         require(_campaignType != CampaignType.STANDARD, "CampaignsModule: Use createCampaign for standard campaigns");
         
@@ -328,10 +380,11 @@ contract CampaignsModule is BaseModule {
             _customDistributionData,
             _payoutToken,
             _feeToken,
-            msg.sender,
+            getEffectiveCaller(),
             _campaignType,
             _allowedTokens,
             _tokenWeights,
+            _useCeloConversion,
             _projectAdditionFeeToken,
             _projectAdditionFeeAmount
         );
@@ -356,10 +409,11 @@ contract CampaignsModule is BaseModule {
         CampaignType _campaignType,
         address[] memory _allowedTokens,
         uint256[] memory _tokenWeights,
+        bool[] memory _useCeloConversion,
         address _projectAdditionFeeToken,
         uint256 _projectAdditionFeeAmount
     ) internal returns (uint256) {
-        uint256 campaignId = nextCampaignId++;
+        uint256 campaignId = _generateNextCampaignId();
         
         Campaign storage campaign = campaigns[campaignId];
         campaign.id = campaignId;
@@ -392,6 +446,7 @@ contract CampaignsModule is BaseModule {
             for (uint256 i = 0; i < _allowedTokens.length; i++) {
                 campaign.allowedVotingTokens[_allowedTokens[i]] = true;
                 campaign.tokenWeights[_allowedTokens[i]] = _tokenWeights[i];
+                campaign.useCeloConversion[_allowedTokens[i]] = _useCeloConversion[i];
                 campaign.allowedVotingTokensList.push(_allowedTokens[i]);
                 
                 // Index by token
@@ -418,6 +473,16 @@ contract CampaignsModule is BaseModule {
         uint256 monthTimestamp = (_startTime / 30 days) * 30 days;
         campaignsByMonth[monthTimestamp].push(campaignId);
 
+        // Set migration data for V5-only campaign
+        campaignMigrationData[campaignId] = MigrationData({
+            status: MigrationStatus.V5_ONLY,
+            v4Id: 0,
+            v5Id: campaignId,
+            migratedBy: address(0),
+            migratedAt: 0,
+            newAdmin: address(0)
+        });
+
         totalCampaigns++;
         activeCampaigns++;
 
@@ -442,7 +507,7 @@ contract CampaignsModule is BaseModule {
         campaign.description = _description;
         campaign.lastUpdated = block.timestamp;
 
-        emit CampaignUpdated(_campaignId, msg.sender);
+        emit CampaignUpdated(_campaignId, getEffectiveCaller());
     }
 
     /**
@@ -468,7 +533,7 @@ contract CampaignsModule is BaseModule {
             campaignsByCategory[_metadata.category].push(_campaignId);
         }
 
-        emit CampaignMetadataUpdated(_campaignId, msg.sender);
+        emit CampaignMetadataUpdated(_campaignId, getEffectiveCaller());
     }
 
     /**
@@ -513,7 +578,7 @@ contract CampaignsModule is BaseModule {
         }
         
         campaign.lastUpdated = block.timestamp;
-        emit CampaignTokensUpdated(_campaignId, _newTokens, _newWeights, msg.sender);
+        emit CampaignTokensUpdated(_campaignId, _newTokens, _newWeights, getEffectiveCaller());
     }
 
     /**
@@ -549,7 +614,7 @@ contract CampaignsModule is BaseModule {
         string calldata _reason
     ) external campaignExists(_campaignId) whenActive {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         Campaign storage campaign = campaigns[_campaignId];
         OfficialStatus oldStatus = campaign.officialStatus;
 
@@ -562,7 +627,7 @@ contract CampaignsModule is BaseModule {
         // Add to new status array
         campaignsByStatus[_newStatus].push(_campaignId);
 
-        emit CampaignStatusUpdated(_campaignId, oldStatus, _newStatus, msg.sender, _reason);
+        emit CampaignStatusUpdated(_campaignId, oldStatus, _newStatus, getEffectiveCaller(), _reason);
     }
 
     /**
@@ -613,10 +678,10 @@ contract CampaignsModule is BaseModule {
      */
     function setCampaignFeatured(uint256 _campaignId, bool _featured) external campaignExists(_campaignId) whenActive {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         campaigns[_campaignId].featuredCampaign = _featured;
         campaigns[_campaignId].lastUpdated = block.timestamp;
-        emit CampaignFeatured(_campaignId, _featured, msg.sender);
+        emit CampaignFeatured(_campaignId, _featured, getEffectiveCaller());
     }
 
     /**
@@ -628,7 +693,7 @@ contract CampaignsModule is BaseModule {
         uint256 _amount
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         Campaign storage campaign = campaigns[_campaignId];
         
         campaign.tokenAmounts[_token] += _amount;
@@ -644,6 +709,110 @@ contract CampaignsModule is BaseModule {
         emit CampaignFunded(_campaignId, tx.origin, _token, _amount);
     }
 
+    // ==================== SMART ID MANAGEMENT ====================
+    
+    /**
+     * @notice Generate next available campaign ID with smart ID management
+     * @return campaignId The next available campaign ID
+     */
+    function _generateNextCampaignId() internal returns (uint256 campaignId) {
+        if (smartIdEnabled) {
+            // Use smart ID management - start from v5CampaignIdStart and avoid V4 conflicts
+            campaignId = v5CampaignIdStart;
+            
+            // Find next available ID that doesn't conflict with V4
+            while (v4CampaignIds[campaignId]) {
+                campaignId++;
+            }
+            
+            // Update nextCampaignId to avoid conflicts in future
+            if (campaignId >= nextCampaignId) {
+                nextCampaignId = campaignId + 1;
+            }
+        } else {
+            // Use standard sequential ID generation
+            campaignId = nextCampaignId++;
+        }
+        
+        return campaignId;
+    }
+    
+    /**
+     * @notice Enable smart ID management
+     * @param _v5CampaignIdStart Starting ID for V5 campaigns (default 100)
+     */
+    function enableSmartIdManagement(uint256 _v5CampaignIdStart) external onlyMainContract {
+        require(_v5CampaignIdStart > 0, "CampaignsModule: Invalid start ID");
+        
+        v5CampaignIdStart = _v5CampaignIdStart;
+        smartIdEnabled = true;
+        
+        emit SmartIdManagementEnabled(_v5CampaignIdStart);
+    }
+    
+    /**
+     * @notice Disable smart ID management
+     */
+    function disableSmartIdManagement() external onlyMainContract {
+        smartIdEnabled = false;
+        emit SmartIdManagementDisabled();
+    }
+    
+    /**
+     * @notice Check if campaign ID is available for V5
+     * @param _campaignId Campaign ID to check
+     * @return available True if ID is available for V5
+     */
+    function isCampaignIdAvailableForV5(uint256 _campaignId) external view returns (bool available) {
+        // Check if ID is already used in V5
+        if (campaigns[_campaignId].id != 0) {
+            return false; // Already used in V5
+        }
+        
+        // Check if ID is already used in V4
+        if (v4CampaignIds[_campaignId]) {
+            return false; // Already used in V4
+        }
+        
+        return true;
+    }
+    
+    /**
+     * @notice Get migration data for a campaign
+     * @param _campaignId Campaign ID
+     * @return migrationData Migration data
+     */
+    function getCampaignMigrationData(uint256 _campaignId) external view returns (MigrationData memory migrationData) {
+        return campaignMigrationData[_campaignId];
+    }
+    
+    /**
+     * @notice Check if campaign is V4 only
+     * @param _campaignId Campaign ID
+     * @return isV4Only True if campaign exists only in V4
+     */
+    function isCampaignV4Only(uint256 _campaignId) external view returns (bool isV4Only) {
+        return campaignMigrationData[_campaignId].status == MigrationStatus.V4_ONLY;
+    }
+    
+    /**
+     * @notice Check if campaign is migrated
+     * @param _campaignId Campaign ID
+     * @return isMigrated True if campaign is migrated
+     */
+    function isCampaignMigrated(uint256 _campaignId) external view returns (bool isMigrated) {
+        return campaignMigrationData[_campaignId].status == MigrationStatus.MIGRATED;
+    }
+    
+    /**
+     * @notice Check if campaign is V5 only
+     * @param _campaignId Campaign ID
+     * @return isV5Only True if campaign exists only in V5
+     */
+    function isCampaignV5Only(uint256 _campaignId) external view returns (bool isV5Only) {
+        return campaignMigrationData[_campaignId].status == MigrationStatus.V5_ONLY;
+    }
+    
     // ==================== V4 MIGRATION FUNCTIONS ====================
     
     /**
@@ -669,7 +838,7 @@ contract CampaignsModule is BaseModule {
         uint256 _createdAt
     ) external returns (uint256) {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         require(_v4CampaignId >= 0, "CampaignsModule: Invalid V4 campaign ID");
         require(_admin != address(0), "CampaignsModule: Invalid admin address");
         require(bytes(_name).length > 0, "CampaignsModule: Name cannot be empty");
@@ -702,7 +871,17 @@ contract CampaignsModule is BaseModule {
         campaignsByActiveStatus[_active].push(campaignId);
         campaignsByStatus[OfficialStatus.PENDING].push(campaignId);
         
-       totalCampaigns++;
+               // Set migration data for migrated campaign
+        campaignMigrationData[campaignId] = MigrationData({
+            status: MigrationStatus.MIGRATED,
+            v4Id: _v4CampaignId,
+            v5Id: campaignId,
+            migratedBy: getEffectiveCaller(),
+            migratedAt: block.timestamp,
+            newAdmin: _admin
+        });
+
+        totalCampaigns++;
         if (_active) activeCampaigns++;
         
         emit CampaignCreated(campaignId, _admin, _name);
@@ -719,7 +898,7 @@ contract CampaignsModule is BaseModule {
         uint256[] calldata _amounts
     ) external campaignExists(_campaignId) {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         require(_tokens.length == _amounts.length, "CampaignsModule: Array length mismatch");
         
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -1216,7 +1395,7 @@ contract CampaignsModule is BaseModule {
         address _defaultFeeToken
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         require(_adminFeePercentage <= 1000, "CampaignsModule: Admin fee cannot exceed 10%");
         require(_defaultFeeToken != address(0), "CampaignsModule: Invalid fee token");
         
@@ -1240,7 +1419,7 @@ contract CampaignsModule is BaseModule {
         uint256 _defaultProjectAdditionFeeAmount
     ) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         require(_defaultProjectAdditionFeeToken != address(0), "CampaignsModule: Invalid fee token");
         require(_defaultProjectAdditionFeeAmount >= 0, "CampaignsModule: Fee amount must be non-negative");
         
@@ -1261,7 +1440,7 @@ contract CampaignsModule is BaseModule {
      */
     function setZeroFeesForTesting() external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         
         // Update only campaigns that are using default fees (not custom fee tokens)
         for (uint256 i = 1; i < nextCampaignId; i++) {
@@ -1281,7 +1460,7 @@ contract CampaignsModule is BaseModule {
      */
     function setTestFees() external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         
         uint256 testFeeAmount = 0.1e18; // 0.1 CELO
         
@@ -1305,14 +1484,14 @@ contract CampaignsModule is BaseModule {
         uint256 _campaignId,
         string calldata _jsonMetadata
     ) external {
-        require(_isAdmin(msg.sender), "CampaignsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "CampaignsModule: Admin role required");
         require(bytes(_jsonMetadata).length > 0, "CampaignsModule: JSON metadata cannot be empty");
         require(bytes(_jsonMetadata).length < 10000, "CampaignsModule: JSON metadata too large"); // 10KB limit
         
         campaigns[_campaignId].metadata.jsonMetadata = _jsonMetadata;
         campaigns[_campaignId].lastUpdated = block.timestamp;
         
-        emit CampaignMetadataUpdated(_campaignId, msg.sender);
+        emit CampaignMetadataUpdated(_campaignId, getEffectiveCaller());
     }
 
     /**
@@ -1446,6 +1625,120 @@ contract CampaignsModule is BaseModule {
         }
         
         return false;
+    }
+
+    // ==================== TOKEN WEIGHT MANAGEMENT FUNCTIONS ====================
+
+    /**
+    * @notice Update campaign token weight (campaign admin or super admin)
+    * @param _campaignId Campaign ID
+    * @param _token Token address
+    * @param _newWeight New weight value
+    */
+    function updateCampaignTokenWeight(uint256 _campaignId, address _token, uint256 _newWeight) external {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.id != 0, "CampaignsModule: Campaign does not exist");
+        address caller = getEffectiveCaller();
+        require(
+            campaign.admin == caller || 
+            campaign.campaignAdmins[caller] || 
+            _isAdmin(caller),
+            "CampaignsModule: Unauthorized"
+        );
+        require(_newWeight > 0, "CampaignsModule: Weight must be positive");
+        require(campaign.allowedVotingTokens[_token], "CampaignsModule: Token not allowed in campaign");
+        
+        uint256 oldWeight = campaign.tokenWeights[_token];
+        
+        // Store old weight for history
+        campaign.tokenWeightHistory[_token] = oldWeight;
+        
+        // Update weight (doesn't affect existing votes)
+        campaign.tokenWeights[_token] = _newWeight;
+        
+        emit TokenWeightUpdated(_campaignId, _token, oldWeight, _newWeight, getEffectiveCaller());
+    }
+
+    /**
+    * @notice Update token conversion mode (campaign admin or super admin)
+    * @param _campaignId Campaign ID
+    * @param _token Token address
+    * @param _useCeloConversion Whether to use CELO conversion (true) or 1:1 voting (false)
+    */
+    function updateTokenConversionMode(uint256 _campaignId, address _token, bool _useCeloConversion) external {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.id != 0, "CampaignsModule: Campaign does not exist");
+        address caller = getEffectiveCaller();
+        require(
+            campaign.admin == caller || 
+            campaign.campaignAdmins[caller] || 
+            _isAdmin(caller),
+            "CampaignsModule: Unauthorized"
+        );
+        require(campaign.allowedVotingTokens[_token], "CampaignsModule: Token not allowed in campaign");
+        
+        campaign.useCeloConversion[_token] = _useCeloConversion;
+        
+        emit TokenConversionModeUpdated(_campaignId, _token, _useCeloConversion, getEffectiveCaller());
+    }
+
+    /**
+    * @notice Get campaign token weight
+    * @param _campaignId Campaign ID
+    * @param _token Token address
+    * @return Weight value
+    */
+    function getCampaignTokenWeight(uint256 _campaignId, address _token) external view returns (uint256) {
+        return campaigns[_campaignId].tokenWeights[_token];
+    }
+
+    /**
+    * @notice Get campaign token conversion mode
+    * @param _campaignId Campaign ID
+    * @param _token Token address
+    * @return Whether token uses CELO conversion
+    */
+    function getCampaignTokenConversionMode(uint256 _campaignId, address _token) external view returns (bool) {
+        return campaigns[_campaignId].useCeloConversion[_token];
+    }
+
+    /**
+    * @notice Get campaign token configuration
+    * @param _campaignId Campaign ID
+    * @return tokens Array of allowed tokens
+    * @return weights Array of token weights
+    * @return conversionModes Array of conversion modes
+    */
+    function getCampaignTokenConfiguration(uint256 _campaignId) external view returns (
+        address[] memory tokens,
+        uint256[] memory weights,
+        bool[] memory conversionModes
+    ) {
+        Campaign storage campaign = campaigns[_campaignId];
+        require(campaign.id != 0, "CampaignsModule: Campaign does not exist");
+        
+        uint256 tokenCount = campaign.allowedVotingTokensList.length;
+        tokens = new address[](tokenCount);
+        weights = new uint256[](tokenCount);
+        conversionModes = new bool[](tokenCount);
+        
+        for (uint256 i = 0; i < tokenCount; i++) {
+            address token = campaign.allowedVotingTokensList[i];
+            tokens[i] = token;
+            weights[i] = campaign.tokenWeights[token];
+            conversionModes[i] = campaign.useCeloConversion[token];
+        }
+        
+        return (tokens, weights, conversionModes);
+    }
+
+    /**
+    * @notice Check if campaign is ERC20-based
+    * @param _campaignId Campaign ID
+    * @return Whether campaign is ERC20-based
+    */
+    function getCampaignType(uint256 _campaignId) external view returns (bool) {
+        return campaigns[_campaignId].isERC20Campaign;
     }
 
     /**

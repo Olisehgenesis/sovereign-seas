@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "../base/BaseModule.sol";
+import "../interfaces/IV4Reader.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -94,6 +95,41 @@ contract ProjectsModule is BaseModule {
     uint256 public totalProjects;
     uint256 public verifiedProjects;
     uint256 public activeProjects;
+    
+    // V4 Integration
+    IV4Reader public v4Reader;
+    address public v4ContractAddress;
+    bool public v4IntegrationEnabled;
+    uint256 public v4MaxProjectId; // Highest project ID used in V4
+    
+    // Smart ID Management
+    uint256 public v5ProjectIdStart = 100; // V5 projects start from 100
+    bool public smartIdEnabled = false;
+    mapping(uint256 => bool) public v4ProjectIds; // Track V4 project IDs
+    
+    // Migration Status Enum
+    enum MigrationStatus {
+        V4_ONLY,        // 0: Project exists only in V4
+        MIGRATED,       // 1: Project migrated from V4 to V5
+        V5_ONLY         // 2: Project created directly in V5
+    }
+    
+    // Migration Data Structure
+    struct MigrationData {
+        MigrationStatus status;
+        uint256 v4Id;           // Original V4 ID (if applicable)
+        uint256 v5Id;           // V5 ID (if applicable)
+        address migratedBy;     // Who performed the migration
+        uint256 migratedAt;     // When migration occurred
+        address newAdmin;       // New admin for migrated projects (if different)
+    }
+    
+    // Migration tracking
+    mapping(uint256 => MigrationData) public projectMigrationData;
+    
+    // V5 Reader Support (for V4 to read V5)
+    mapping(address => bool) public authorizedV4Readers; // V4 contracts that can read V5
+    bool public v5ReaderEnabled;
 
     // Dynamic fee configuration
     uint256 public projectCreationFee = 0.5e18; // Default 0.5 CELO
@@ -116,11 +152,22 @@ contract ProjectsModule is BaseModule {
     event ProjectVerified(uint256 indexed projectId, address indexed verifiedBy);
     event ProjectStatsUpdated(uint256 indexed projectId, uint256 totalFundsRaised, uint256 totalVotesReceived);
     event ProjectCreatedFromV4(uint256 indexed projectId, address indexed owner, string name, uint256 indexed v4ProjectId);
+    event ProjectCreatedWithV4Id(uint256 indexed projectId, address indexed owner, string name, uint256 indexed v4ProjectId);
     event ProjectOwnerAdded(uint256 indexed projectId, address indexed newOwner, address indexed addedBy);
     event ProjectOwnerRemoved(uint256 indexed projectId, address indexed owner, address indexed removedBy);
     event ProjectCreationFeeUpdated(uint256 oldFee, uint256 newFee, address indexed updatedBy);
     event ProjectCreationFeeTokenUpdated(address oldToken, address newToken, address indexed updatedBy);
     event ProjectFeesToggled(bool newFeesEnabled, address indexed updatedBy);
+    
+    // V4 Integration Events
+    event V4IntegrationEnabled(address indexed v4Contract);
+    event V4IntegrationDisabled();
+    event V4ProjectIdsSynced(uint256 v4MaxId, uint256 v5NextId);
+    event V4SyncFailed(string reason);
+    
+    // Smart ID Management Events
+    event SmartIdManagementEnabled(uint256 v5ProjectIdStart);
+    event SmartIdManagementDisabled();
 
     // Modifiers
     modifier projectExists(uint256 _projectId) {
@@ -130,8 +177,8 @@ contract ProjectsModule is BaseModule {
 
     modifier onlyProjectOwner(uint256 _projectId) {
         require(
-            projects[_projectId].owner == msg.sender || 
-            projects[_projectId].owners[msg.sender], 
+            projects[_projectId].owner == getEffectiveCaller() || 
+            projects[_projectId].owners[getEffectiveCaller()], 
             "ProjectsModule: Only project owner can call this function"
         );
         _;
@@ -174,6 +221,10 @@ contract ProjectsModule is BaseModule {
         moduleDependencies = new string[](0);
         
         nextProjectId = 1;
+        v4IntegrationEnabled = false;
+        v4MaxProjectId = 0;
+        smartIdEnabled = false;
+        v5ReaderEnabled = false;
         
         emit ModuleInitialized(getModuleId(), _proxy);
     }
@@ -220,13 +271,13 @@ contract ProjectsModule is BaseModule {
             require(msg.value == 0, "ProjectsModule: No fee required for project creation");
         }
 
-        uint256 projectId = nextProjectId++;
+        uint256 projectId = _generateNextProjectId();
         
         Project storage project = projects[projectId];
         project.id = projectId;
-        project.owner = payable(msg.sender);
-        project.owners[msg.sender] = true;
-        project.ownerList.push(msg.sender);
+        project.owner = payable(getEffectiveCaller());
+        project.owners[getEffectiveCaller()] = true;
+        project.ownerList.push(getEffectiveCaller());
         project.name = _name;
         project.description = _description;
         project.metadata = _metadata;
@@ -238,9 +289,19 @@ contract ProjectsModule is BaseModule {
         project.updatedAt = block.timestamp;
         project.lastUpdated = block.timestamp;
 
+        // Set migration data for V5-only project
+        projectMigrationData[projectId] = MigrationData({
+            status: MigrationStatus.V5_ONLY,
+            v4Id: 0,
+            v5Id: projectId,
+            migratedBy: address(0),
+            migratedAt: 0,
+            newAdmin: address(0)
+        });
+
         // Add to indexes
         projectIds.push(projectId);
-        projectsByOwner[msg.sender].push(projectId);
+        projectsByOwner[getEffectiveCaller()].push(projectId);
 
         // Add to category - SAFE VERSION
         if (bytes(_metadata.category).length > 0 && bytes(_metadata.category).length < 50) {
@@ -255,7 +316,7 @@ contract ProjectsModule is BaseModule {
         // Transfer fee to treasury
         _transferCreationFeeToTreasury();
 
-        emit ProjectCreated(projectId, msg.sender, _name);
+        emit ProjectCreated(projectId, getEffectiveCaller(), _name);
         
         return projectId;
     }
@@ -329,7 +390,7 @@ contract ProjectsModule is BaseModule {
         project.updatedAt = block.timestamp;
         project.lastUpdated = block.timestamp;
 
-        emit ProjectUpdated(_projectId, msg.sender);
+        emit ProjectUpdated(_projectId, getEffectiveCaller());
     }
 
     /**
@@ -356,7 +417,7 @@ contract ProjectsModule is BaseModule {
             projectsByCategory[_metadata.category].push(_projectId);
         }
 
-        emit ProjectMetadataUpdated(_projectId, msg.sender);
+        emit ProjectMetadataUpdated(_projectId, getEffectiveCaller());
     }
 
     /**
@@ -367,14 +428,14 @@ contract ProjectsModule is BaseModule {
         uint256 _projectId,
         string calldata _jsonMetadata
     ) external {
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         require(bytes(_jsonMetadata).length > 0, "ProjectsModule: JSON metadata cannot be empty");
         require(bytes(_jsonMetadata).length < 10000, "ProjectsModule: JSON metadata too large"); // 10KB limit
         
         projects[_projectId].metadata.jsonMetadata = _jsonMetadata;
         projects[_projectId].lastUpdated = block.timestamp;
         
-        emit ProjectMetadataUpdated(_projectId, msg.sender);
+        emit ProjectMetadataUpdated(_projectId, getEffectiveCaller());
     }
 
     /**
@@ -516,7 +577,7 @@ contract ProjectsModule is BaseModule {
         ProjectStatus _status
     ) external projectExists(_projectId) whenActive {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         Project storage project = projects[_projectId];
         ProjectStatus oldStatus = project.status;
         
@@ -557,7 +618,7 @@ contract ProjectsModule is BaseModule {
         string memory _reason
     ) external projectExists(_projectId) {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         Project storage project = projects[_projectId];
         ProjectStatus oldStatus = project.status;
         
@@ -570,7 +631,7 @@ contract ProjectsModule is BaseModule {
         // Add to new status array
         projectsByStatus[_newStatus].push(_projectId);
         
-        emit ProjectStatusUpdated(_projectId, oldStatus, _newStatus, msg.sender, _reason);
+        emit ProjectStatusUpdated(_projectId, oldStatus, _newStatus, getEffectiveCaller(), _reason);
     }
 
     /**
@@ -578,7 +639,7 @@ contract ProjectsModule is BaseModule {
      */
     function verifyProject(uint256 _projectId) external projectExists(_projectId) {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         projects[_projectId].verified = true;
         projects[_projectId].status = ProjectStatus.VERIFIED;
         projects[_projectId].lastUpdated = block.timestamp;
@@ -586,7 +647,7 @@ contract ProjectsModule is BaseModule {
         // Update owner as verified
         verifiedOwners[projects[_projectId].owner] = true;
         
-        emit ProjectVerified(_projectId, msg.sender);
+        emit ProjectVerified(_projectId, getEffectiveCaller());
     }
 
     /**
@@ -659,7 +720,7 @@ contract ProjectsModule is BaseModule {
         projects[_projectId].ownerList.push(_newOwner);
         projects[_projectId].lastUpdated = block.timestamp;
         
-        emit ProjectOwnerAdded(_projectId, _newOwner, msg.sender);
+        emit ProjectOwnerAdded(_projectId, _newOwner, getEffectiveCaller());
     }
     
     /**
@@ -682,7 +743,7 @@ contract ProjectsModule is BaseModule {
             }
         }
         
-        emit ProjectOwnerRemoved(_projectId, _owner, msg.sender);
+        emit ProjectOwnerRemoved(_projectId, _owner, getEffectiveCaller());
     }
 
     /**
@@ -1141,7 +1202,7 @@ contract ProjectsModule is BaseModule {
         // Call treasury module directly with CELO value
         bytes memory treasuryData = abi.encodeWithSignature(
             "collectFee(address,uint256,string)",
-            msg.sender,
+            getEffectiveCaller(),
             feeAmount,
             "project_creation"
         );
@@ -1166,7 +1227,7 @@ contract ProjectsModule is BaseModule {
      */
     function emergencyPause() external {
         // Check if caller has emergency role through proxy
-        require(_isEmergency(msg.sender), "ProjectsModule: Emergency role required");
+        require(_isEmergency(getEffectiveCaller()), "ProjectsModule: Emergency role required");
         modulePaused = true;
     }
 
@@ -1175,7 +1236,7 @@ contract ProjectsModule is BaseModule {
      */
     function emergencyUnpause() external {
         // Check if caller has emergency role through proxy
-        require(_isEmergency(msg.sender), "ProjectsModule: Emergency role required");
+        require(_isEmergency(getEffectiveCaller()), "ProjectsModule: Emergency role required");
         modulePaused = false;
     }
 
@@ -1210,7 +1271,7 @@ contract ProjectsModule is BaseModule {
         bytes memory adminCheckData = abi.encodeWithSignature(
             "isCampaignAdminOrContractAdmin(uint256,address)",
             _campaignId,
-            msg.sender
+            getEffectiveCaller()
         );
         
         bytes memory result = sovereignSeasProxy.callModule("campaigns", adminCheckData);
@@ -1247,7 +1308,7 @@ contract ProjectsModule is BaseModule {
      */
     function setProjectVerification(uint256 _projectId, bool _verified) external projectExists(_projectId) {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         projects[_projectId].verified = _verified;
         
         if (_verified) {
@@ -1262,7 +1323,7 @@ contract ProjectsModule is BaseModule {
         }
         
         projects[_projectId].lastUpdated = block.timestamp;
-        emit ProjectVerified(_projectId, msg.sender);
+        emit ProjectVerified(_projectId, getEffectiveCaller());
     }
 
     /**
@@ -1272,7 +1333,7 @@ contract ProjectsModule is BaseModule {
      */
     function suspendProject(uint256 _projectId, string memory _reason) external projectExists(_projectId) {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         ProjectStatus oldStatus = projects[_projectId].status;
         projects[_projectId].status = ProjectStatus.SUSPENDED;
         projects[_projectId].active = false;
@@ -1293,7 +1354,7 @@ contract ProjectsModule is BaseModule {
      */
     function flagProject(uint256 _projectId, string memory _reason) external projectExists(_projectId) {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         ProjectStatus oldStatus = projects[_projectId].status;
         projects[_projectId].status = ProjectStatus.FLAGGED;
         projects[_projectId].lastUpdated = block.timestamp;
@@ -1308,7 +1369,7 @@ contract ProjectsModule is BaseModule {
      */
     function removeProjectVotes(uint256 _projectId, uint256 _campaignId) external {
         // Check if caller has admin role through proxy
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         // Call VotingModule to remove all votes for this project in this campaign
         bytes memory removeVotesData = abi.encodeWithSignature(
             "removeAllProjectVotes(uint256,uint256)",
@@ -1479,61 +1540,365 @@ contract ProjectsModule is BaseModule {
      * @notice Update project creation fee (admin only)
      */
     function updateProjectCreationFee(uint256 _newFee) external {
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         require(_newFee >= 0, "ProjectsModule: Fee cannot be negative");
         
         uint256 oldFee = projectCreationFee;
         projectCreationFee = _newFee;
         
-        emit ProjectCreationFeeUpdated(oldFee, _newFee, msg.sender);
+        emit ProjectCreationFeeUpdated(oldFee, _newFee, getEffectiveCaller());
     }
 
     /**
      * @notice Update project creation fee token (admin only)
      */
     function updateProjectCreationFeeToken(address _newToken) external {
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         require(_newToken != address(0), "ProjectsModule: Invalid token address");
         
         address oldToken = projectCreationFeeToken;
         projectCreationFeeToken = _newToken;
         
-        emit ProjectCreationFeeTokenUpdated(oldToken, _newToken, msg.sender);
+        emit ProjectCreationFeeTokenUpdated(oldToken, _newToken, getEffectiveCaller());
     }
 
     /**
      * @notice Toggle project creation fees (admin only)
      */
     function toggleProjectCreationFees(bool _feesEnabled) external {
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         
         bool oldFeesEnabled = feesEnabled;
         feesEnabled = _feesEnabled;
         
-        emit ProjectFeesToggled(_feesEnabled, msg.sender);
+        emit ProjectFeesToggled(_feesEnabled, getEffectiveCaller());
     }
 
     /**
      * @notice Set project creation fee to zero for testing (admin only)
      */
     function setZeroProjectCreationFeeForTesting() external {
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         
         uint256 oldFee = projectCreationFee;
         projectCreationFee = 0;
         
-        emit ProjectCreationFeeUpdated(oldFee, 0, msg.sender);
+        emit ProjectCreationFeeUpdated(oldFee, 0, getEffectiveCaller());
     }
 
     /**
      * @notice Set project creation fee to 0.1 CELO for testing (admin only)
      */
     function setTestProjectCreationFee() external {
-        require(_isAdmin(msg.sender), "ProjectsModule: Admin role required");
+        require(_isAdmin(getEffectiveCaller()), "ProjectsModule: Admin role required");
         
         uint256 oldFee = projectCreationFee;
         projectCreationFee = 0.1e18; // 0.1 CELO
         
-        emit ProjectCreationFeeUpdated(oldFee, projectCreationFee, msg.sender);
+        emit ProjectCreationFeeUpdated(oldFee, projectCreationFee, getEffectiveCaller());
+    }
+
+    // ==================== SMART ID MANAGEMENT ====================
+    
+    /**
+     * @notice Generate next available project ID with smart ID management
+     * @return projectId The next available project ID
+     */
+    function _generateNextProjectId() internal returns (uint256 projectId) {
+        if (smartIdEnabled && v4IntegrationEnabled) {
+            // Use smart ID management - start from v5ProjectIdStart and avoid V4 conflicts
+            projectId = v5ProjectIdStart;
+            
+            // Find next available ID that doesn't conflict with V4
+            while (projectId <= v4MaxProjectId || v4ProjectIds[projectId]) {
+                projectId++;
+            }
+            
+            // Update nextProjectId to avoid conflicts in future
+            if (projectId >= nextProjectId) {
+                nextProjectId = projectId + 1;
+            }
+        } else {
+            // Use standard sequential ID generation
+            projectId = nextProjectId++;
+        }
+        
+        return projectId;
+    }
+    
+    /**
+     * @notice Enable smart ID management
+     * @param _v5ProjectIdStart Starting ID for V5 projects (default 100)
+     */
+    function enableSmartIdManagement(uint256 _v5ProjectIdStart) external onlyMainContract {
+        require(_v5ProjectIdStart > 0, "ProjectsModule: Invalid start ID");
+        require(v4IntegrationEnabled, "ProjectsModule: V4 integration must be enabled first");
+        
+        v5ProjectIdStart = _v5ProjectIdStart;
+        smartIdEnabled = true;
+        
+        emit SmartIdManagementEnabled(_v5ProjectIdStart);
+    }
+    
+    /**
+     * @notice Disable smart ID management
+     */
+    function disableSmartIdManagement() external onlyMainContract {
+        smartIdEnabled = false;
+        emit SmartIdManagementDisabled();
+    }
+    
+    /**
+     * @notice Check if project ID is available for V5
+     * @param _projectId Project ID to check
+     * @return available True if ID is available for V5
+     */
+    function isProjectIdAvailableForV5(uint256 _projectId) external view returns (bool available) {
+        if (!v4IntegrationEnabled) {
+            return true; // If no V4 integration, all IDs are available
+        }
+        
+        // Check if ID exists in V4
+        try v4Reader.projectExists(_projectId) returns (bool v4Exists) {
+            if (v4Exists) {
+                return false; // ID exists in V4
+            }
+        } catch {
+            // V4 not available, assume available
+        }
+        
+        // Check if ID is already used in V5
+        if (projects[_projectId].active) {
+            return false; // Already used in V5
+        }
+        
+        return true;
+    }
+    
+    /**
+     * @notice Get migration data for a project
+     * @param _projectId Project ID
+     * @return migrationData Migration data
+     */
+    function getProjectMigrationData(uint256 _projectId) external view returns (MigrationData memory migrationData) {
+        return projectMigrationData[_projectId];
+    }
+    
+    /**
+     * @notice Check if project is V4 only
+     * @param _projectId Project ID
+     * @return isV4Only True if project exists only in V4
+     */
+    function isProjectV4Only(uint256 _projectId) external view returns (bool isV4Only) {
+        return projectMigrationData[_projectId].status == MigrationStatus.V4_ONLY;
+    }
+    
+    /**
+     * @notice Check if project is migrated
+     * @param _projectId Project ID
+     * @return isMigrated True if project is migrated
+     */
+    function isProjectMigrated(uint256 _projectId) external view returns (bool isMigrated) {
+        return projectMigrationData[_projectId].status == MigrationStatus.MIGRATED;
+    }
+    
+    /**
+     * @notice Check if project is V5 only
+     * @param _projectId Project ID
+     * @return isV5Only True if project exists only in V5
+     */
+    function isProjectV5Only(uint256 _projectId) external view returns (bool isV5Only) {
+        return projectMigrationData[_projectId].status == MigrationStatus.V5_ONLY;
+    }
+    
+    // ==================== V4 INTEGRATION FUNCTIONS ====================
+
+    /**
+     * @notice Enable V4 integration and sync V4 project IDs
+     * @param _v4ContractAddress Address of the V4 contract
+     */
+    function enableV4Integration(address _v4ContractAddress) external onlyMainContract {
+        require(_v4ContractAddress != address(0), "ProjectsModule: Invalid V4 contract address");
+        
+        v4Reader = IV4Reader(_v4ContractAddress);
+        v4ContractAddress = _v4ContractAddress;
+        v4IntegrationEnabled = true;
+        
+        // Sync V4 project IDs to prevent conflicts
+        _syncV4ProjectIds();
+        
+        emit V4IntegrationEnabled(_v4ContractAddress);
+    }
+
+    /**
+     * @notice Disable V4 integration
+     */
+    function disableV4Integration() external onlyMainContract {
+        v4IntegrationEnabled = false;
+        v4ContractAddress = address(0);
+        v4Reader = IV4Reader(address(0));
+        
+        emit V4IntegrationDisabled();
+    }
+
+    /**
+     * @notice Sync V4 project IDs to prevent conflicts
+     */
+    function _syncV4ProjectIds() internal {
+        if (!v4IntegrationEnabled || address(v4Reader) == address(0)) {
+            return;
+        }
+        
+        try v4Reader.nextProjectId() returns (uint256 v4NextId) {
+            if (v4NextId > 0) {
+                v4MaxProjectId = v4NextId - 1; // V4 uses 0-based indexing
+                
+                // Mark all V4 project IDs as used
+                for (uint256 i = 0; i < v4NextId; i++) {
+                    v4ProjectIds[i] = true;
+                }
+                
+                // Set V5 nextProjectId to start after V4 max ID
+                if (nextProjectId <= v4MaxProjectId) {
+                    nextProjectId = v4MaxProjectId + 1;
+                }
+                
+                emit V4ProjectIdsSynced(v4MaxProjectId, nextProjectId);
+            }
+        } catch {
+            // If V4 contract doesn't support nextProjectId, try alternative method
+            _syncV4ProjectIdsAlternative();
+        }
+    }
+
+    /**
+     * @notice Alternative method to sync V4 project IDs
+     */
+    function _syncV4ProjectIdsAlternative() internal {
+        try v4Reader.getMaxUsedProjectId() returns (uint256 maxId) {
+            v4MaxProjectId = maxId;
+            
+            // Mark V4 project IDs as used
+            for (uint256 i = 0; i <= maxId; i++) {
+                v4ProjectIds[i] = true;
+            }
+            
+            // Set V5 nextProjectId to start after V4 max ID
+            if (nextProjectId <= v4MaxProjectId) {
+                nextProjectId = v4MaxProjectId + 1;
+            }
+            
+            emit V4ProjectIdsSynced(v4MaxProjectId, nextProjectId);
+        } catch {
+            emit V4SyncFailed("Failed to sync V4 project IDs");
+        }
+    }
+
+    /**
+     * @notice Check if a project ID is used in V4
+     * @param _projectId Project ID to check
+     * @return True if ID is used in V4
+     */
+    function isV4ProjectId(uint256 _projectId) external view returns (bool) {
+        return v4ProjectIds[_projectId];
+    }
+
+    /**
+     * @notice Get V4 integration status
+     * @return enabled True if V4 integration is enabled
+     * @return v4Contract V4 contract address
+     * @return v4MaxId Maximum V4 project ID
+     * @return v5NextId Next V5 project ID
+     */
+    function getV4IntegrationStatus() external view returns (
+        bool enabled,
+        address v4Contract,
+        uint256 v4MaxId,
+        uint256 v5NextId
+    ) {
+        return (
+            v4IntegrationEnabled,
+            v4ContractAddress,
+            v4MaxProjectId,
+            nextProjectId
+        );
+    }
+
+    /**
+     * @notice Create project with same ID as V4 (for migration)
+     * @param _v4ProjectId V4 project ID to preserve
+     * @param _owner Project owner address
+     * @param _name Project name
+     * @param _description Project description
+     * @param _metadata Project metadata
+     * @param _contracts Array of contract addresses
+     * @param _transferrable Whether project is transferrable
+     * @return projectId The created project ID (same as V4)
+     */
+    function createProjectWithV4Id(
+        uint256 _v4ProjectId,
+        address payable _owner,
+        string memory _name,
+        string memory _description,
+        ProjectMetadata memory _metadata,
+        address[] calldata _contracts,
+        bool _transferrable
+    ) external onlyMainContract returns (uint256) {
+        require(_owner != address(0), "ProjectsModule: Invalid owner address");
+        require(bytes(_name).length > 0, "ProjectsModule: Project name cannot be empty");
+        require(bytes(_description).length > 0, "ProjectsModule: Project description cannot be empty");
+        require(!projects[_v4ProjectId].active, "ProjectsModule: Project ID already exists in V5");
+        
+        // Use the V4 project ID directly (preserve original ID)
+        uint256 projectId = _v4ProjectId;
+        
+        Project storage project = projects[projectId];
+        project.id = projectId;
+        project.owner = _owner;
+        project.owners[_owner] = true;
+        project.ownerList.push(_owner);
+        project.name = _name;
+        project.description = _description;
+        project.metadata = _metadata;
+        project.contracts = _contracts;
+        project.transferrable = _transferrable;
+        project.status = ProjectStatus.PENDING;
+        project.active = true;
+        project.createdAt = block.timestamp;
+        project.updatedAt = block.timestamp;
+        project.lastUpdated = block.timestamp;
+
+        // Set migration data for migrated project
+        projectMigrationData[projectId] = MigrationData({
+            status: MigrationStatus.MIGRATED,
+            v4Id: _v4ProjectId,
+            v5Id: projectId,
+            migratedBy: getEffectiveCaller(),
+            migratedAt: block.timestamp,
+            newAdmin: _owner
+        });
+
+        // Add to indexes
+        projectIds.push(projectId);
+        projectsByOwner[_owner].push(projectId);
+
+        // Add to category - SAFE VERSION
+        if (bytes(_metadata.category).length > 0 && bytes(_metadata.category).length < 50) {
+            projectsByCategory[_metadata.category].push(projectId);
+        }
+
+        projectsByStatus[ProjectStatus.PENDING].push(projectId);
+
+        totalProjects++;
+        activeProjects++;
+
+        // Update nextProjectId if necessary
+        if (nextProjectId <= projectId) {
+            nextProjectId = projectId + 1;
+        }
+
+        emit ProjectCreatedWithV4Id(projectId, _owner, _name, _v4ProjectId);
+        
+        return projectId;
     }
 }

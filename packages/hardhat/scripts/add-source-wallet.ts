@@ -2,11 +2,11 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Script to add the source wallet (0x4dC22da89824f08AeC7e49540A4e430aCDf6F579) 
+ * Script to add the source wallet (0x53eaF4CD171842d8144e45211308e5D90B4b0088) 
  * to the test wallets file for SEAS token distribution
  */
 
-const SOURCE_WALLET_ADDRESS = "0x4dC22da89824f08AeC7e49540A4e430aCDf6F579";
+const SOURCE_WALLET_ADDRESS = "0x53eaF4CD171842d8144e45211308e5D90B4b0088";
 const NETWORK = "alfajores";
 
 async function addSourceWallet() {
