@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import { AppProvider } from '@/providers/AppProvider'
 import Layout from '@/components/layout/Layout'
-import HomePage from './pages/index/page'
+import HomePage from '@/pages/index/page'
+import ProjectView from '@/pages/explorer/project/<id>/page'
 
 globalThis.Buffer = Buffer
 
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout><HomePage /></Layout>} />
+          <Route path="/explorer/project/:id" element={<Layout><ProjectView /></Layout>} />
         </Routes>
       </BrowserRouter>
     </AppProvider>

@@ -52,7 +52,6 @@ export default function Header() {
   const { isConnected, address } = useAccount();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isScrollingDown, setIsScrollingDown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,28 +60,11 @@ export default function Header() {
   const { authenticated, logout, ready } = usePrivy();
   const { login } = useLogin();
 
-  // Handle scroll effect - header shows/hides based on scroll direction
+  // Handle scroll effect - header reduces size when scrolling
   useEffect(() => {
-    let lastScrollY = window.scrollY;
-    
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      // Check if scrolled past a threshold
-      setIsScrolled(currentScrollY > 20);
-      
-      // Determine scroll direction
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down
-        setIsScrollingDown(true);
-      } else if (currentScrollY < lastScrollY) {
-        // Scrolling up
-        setIsScrollingDown(false);
-      }
-      
-      lastScrollY = currentScrollY;
+      setIsScrolled(window.scrollY > 20);
     };
-    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -128,20 +110,12 @@ export default function Header() {
   }, [location.pathname]);
 
   return (
-    <div className="relative z-10">
-      <header className={`fixed w-full z-10 transition-all duration-500 ease-in-out ${
-        isScrollingDown 
-          ? '-translate-y-full' 
-          : 'translate-y-0'
-      } ${
+    <div className="relative z-20">
+      <header className={`fixed w-full top-0 z-20 transition-all duration-300 ${
         isScrolled 
-          ? 'bg-white/90 backdrop-blur-sm shadow-sm' 
+          ? 'bg-white shadow-sm' 
           : 'bg-transparent'
       }`}>
-        {/* Transparent overlay when not scrolled */}
-        <div className={`absolute inset-0 transition-opacity duration-500 ${
-          isScrolled ? 'opacity-0' : 'opacity-30'
-        } bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200`}></div>
         <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 relative z-10">
           <div className={`flex items-center justify-between transition-all duration-300 ${
             isScrolled ? 'h-16' : 'h-20'
@@ -152,8 +126,8 @@ export default function Header() {
               <img 
                 src="/images/logo_bl.png" 
                 alt="Sov Seas" 
-                className={`transition-all duration-300 ${
-                  isScrolled ? 'h-48 w-auto' : 'h-64 w-auto'
+                className={`transition-all duration-300 object-contain ${
+                  isScrolled ? 'h-16 sm:h-48 w-auto' : 'h-20 sm:h-64 w-auto'
                 }`}
               />
             </Link>
@@ -285,7 +259,7 @@ export default function Header() {
                 <Button 
                   onClick={handleLogin}
                   disabled={!ready} 
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-3 sm:px-6 py-1.5 sm:py-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
                   <span>Connect Wallet</span>
@@ -435,7 +409,7 @@ export default function Header() {
                               setMobileMenuOpen(false);
                             }}
                             disabled={!ready}
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 rounded-xl"
+                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 rounded-xl text-xs"
                           >
                             <Wallet className="w-4 h-4 mr-2" />
                             Connect Wallet
