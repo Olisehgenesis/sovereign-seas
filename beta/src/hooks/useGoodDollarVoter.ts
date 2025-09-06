@@ -2,11 +2,9 @@ import { useState, useCallback } from 'react';
 import { 
   parseUnits, 
   parseAbi,
-  formatUnits,
-  Address,
-  Hash,
-  TransactionReceipt
+  formatUnits
 } from 'viem';
+import type { Address, Hash, TransactionReceipt } from 'viem';
 import { getContract } from 'viem';
 import { useReadContract } from 'wagmi';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';

@@ -64,9 +64,10 @@ import {
 
 import { useProjectDetails, useProjectCampaigns } from '@/hooks/useProjectMethods';
 import { formatIpfsUrl } from '@/utils/imageUtils';
-import ProjectCampaignsModal from '@/components/ProjectCampaignsModal';
+import ProjectCampaignsModal from '@/components/modals/ProjectCampaignsModal';
 import PhoneFrame from '@/components/PhoneFrame';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import TruncatedText from '@/components/TruncatedText';
 
 // ==================== TYPES ====================
 
@@ -472,6 +473,7 @@ export default function ProjectView() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
+  const [showAdvancedStats, setShowAdvancedStats] = useState(false);
   
   // Data
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -585,87 +587,137 @@ export default function ProjectView() {
   return (
     <div className="min-h-screen relative overflow-x-hidden">
       {/* New Hero Section */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 items-start">
           {/* Left Part */}
-          <div className="space-y-6 mt-[15%]">
+          <div className="space-y-3 sm:space-y-6 mt-[2%] sm:mt-[15%] relative">
+            {/* Project Logo - Mobile Only */}
+            <div className="absolute top-0 right-0 sm:hidden">
+              <div className="border border-gray-300 rounded-full p-1">
+                <ProjectLogo 
+                  logo={project.metadata?.logo} 
+                  name={project.name} 
+                  verified={true}
+                  size="sm"
+                />
+              </div>
+            </div>
+
             {/* Project Name and Creator */}
-            <div className="flex items-center gap-4 mb-2">
-              <h1 className="text-4xl font-bold text-gray-900 capitalize">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mb-2">
+              <h1 className="text-sm sm:text-3xl font-bold text-gray-900 capitalize">
                 {project.name}
               </h1>
-              <span className="text-2xl text-gray-600 font-bold">
+              <span className="text-sm sm:text-2xl text-gray-600 font-bold">
                 by {project.metadata?.teamMembers?.[0]?.name || 'Anonymous'}
               </span>
             </div>
 
             {/* Project Tagline */}
-            <p className="text-2xl italic text-gray-800">
+            <p className="text-xs sm:text-xl italic text-gray-800">
               {project.metadata?.tagline || project.description}
             </p>
 
-            {/* Project Description */}
-            <p className="text-lg text-gray-600 leading-relaxed">
-              {project.description}
-            </p>
+            {/* Mobile Stats - Hidden on Desktop */}
+            <div className="sm:hidden space-y-1">
+              {/* CELO Amount */}
+              <div className="flex justify-end">
+                <div className="text-xs text-blue-600 font-medium">
+                  ${projectCampaigns ? 
+                    projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
+                      .reduce((sum, c) => 
+                        sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
+                      ).toFixed(2) 
+                    : '0.00'} CELO received
+                </div>
+              </div>
+
+              {/* Stats in one line */}
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">
+                  Tips: <span className="font-bold text-black">
+                    {projectCampaigns ? 
+                      projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
+                        .reduce((sum, c) => 
+                          sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
+                        ).toFixed(1) 
+                      : '0.0'}
+                  </span>
+                </span>
+                <span className="text-gray-600">
+                  Campaigns: <span className="font-bold text-black">
+                    {project.campaignIds?.length || 0}
+                  </span>
+                </span>
+                <span className="text-gray-600">
+                  Votes: <span className="font-bold text-black">
+                    {projectCampaigns ? 
+                      projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
+                        .reduce((sum, c) => 
+                          sum + parseFloat(formatEther(c.participation?.voteCount || 0n)), 0
+                        ).toFixed(0) 
+                      : '0'}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            {/* Project Description - Desktop Only */}
+            <div className="hidden sm:block">
+              <TruncatedText
+                text={project.description}
+                maxLength={200}
+                className="text-xs sm:text-lg text-gray-600 leading-relaxed"
+                showIcon={true}
+                expandText="Show more"
+                collapseText="Show less"
+              />
+            </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-medium transition-colors text-sm flex items-center justify-center">
-                <Coins className="h-4 w-4 mr-2" />
-                Tip Project
+            <div className="flex flex-row gap-2 sm:gap-4">
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-6 py-1.5 sm:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none">
+                <Coins className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Tip Project</span>
+                <span className="sm:hidden">Tip</span>
               </button>
               {(project.metadata?.website || project.metadata?.demoUrl) && (
                 <a
                   href={project.metadata?.website || project.metadata?.demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-6 py-3 rounded-full font-medium transition-colors text-sm flex items-center justify-center"
+                  className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-2 sm:px-6 py-1.5 sm:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none"
                 >
                   {project.metadata?.website ? (
                     <>
-                      <Globe className="h-4 w-4 mr-2" />
-                      Visit Project
+                      <Globe className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Visit Project</span>
+                      <span className="sm:hidden">Visit</span>
                     </>
                   ) : (
                     <>
-                  <Play className="h-4 w-4 mr-2" />
-                      Demo Project
+                  <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Demo Project</span>
+                      <span className="sm:hidden">Demo</span>
                     </>
                   )}
                 </a>
               )}
             </div>
 
-            {/* Key Features */}
-            {project.metadata?.keyFeatures && project.metadata.keyFeatures.length > 0 && (
-              <div className="mt-6">
-                <div className="flex flex-wrap gap-4">
-                  {project.metadata.keyFeatures.slice(0, 2).map((feature, idx) => (
-                    <span
-                      key={idx}
-                      className="px-6 py-3 bg-gray-100 text-gray-700 text-lg rounded-full"
-                    >
-                      {feature}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Created Date */}
-            <div className="mt-4">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Calendar className="h-4 w-4" />
-                <span className="text-sm font-medium">
+            <div className="mt-1 sm:mt-4">
+              <div className="flex items-center gap-1 sm:gap-2 text-gray-600">
+                <Calendar className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm font-medium">
                   Created {formatDate(project.createdAt)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right Part - Phone Mockup */}
-          <div className="flex justify-center lg:justify-end mt-[10%] relative">
+          {/* Right Part - Phone Mockup - Hidden on mobile */}
+          <div className="hidden lg:flex justify-center lg:justify-end mt-[10%] relative">
             {/* Overlay Card */}
             <div className="absolute top-[80%] left-[40%] transform -translate-x-1/2 z-10 rounded-lg shadow-lg border overflow-hidden w-[75%]">
               <div className="flex items-center justify-between h-full">
@@ -783,9 +835,9 @@ export default function ProjectView() {
 
      
  
-        {/* Navigation Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabId)} className="mb-6 sm:mb-8">
-          <TabsList className="bg-white/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-2 w-full justify-start h-20">
+        {/* Navigation Tabs - Hidden on Mobile */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabId)} className="mb-2 sm:mb-8">
+          <TabsList className="hidden sm:flex bg-white/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-2 w-full justify-start h-20">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
@@ -810,33 +862,33 @@ export default function ProjectView() {
           {/* Main Content */}
           <div className="space-y-8">
             {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-8">
-              {/* Single Transparent Card with Professional Description */}
-              <div className="bg-white/30 backdrop-blur-md rounded-3xl shadow-xl border border-white/20 p-8 sm:p-12 relative">
+            <TabsContent value="overview" className="space-y-4 sm:space-y-8">
+              {/* Mobile: No Card, Desktop: Card */}
+              <div className="sm:bg-white/30 sm:backdrop-blur-md sm:rounded-3xl sm:shadow-xl sm:border sm:border-white/20 sm:p-8 sm:p-12 relative">
                 {/* Social Media Icons - Top Right Corner */}
                 {(project.metadata?.twitter || project.metadata?.linkedin || project.metadata?.discord || 
                   project.metadata?.telegram || project.metadata?.youtube || project.metadata?.instagram || 
                   project.metadata?.contactEmail) && (
-                  <div className="absolute top-6 right-6 flex gap-2">
+                  <div className="absolute top-2 right-2 sm:top-6 sm:right-6 flex gap-1 sm:gap-2">
                     {project.metadata?.twitter && (
                       <a 
                         href={project.metadata.twitter}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-10 h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
                         title="Follow on Twitter"
                       >
-                        <Twitter className="h-5 w-5" />
+                        <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                     
                     {project.metadata?.contactEmail && (
                       <a 
                         href={`mailto:${project.metadata.contactEmail}`}
-                        className="flex items-center justify-center w-10 h-10 bg-gray-500 hover:bg-gray-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-gray-500 hover:bg-gray-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
                         title="Contact via Email"
                       >
-                        <Mail className="h-5 w-5" />
+                        <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                     
@@ -845,10 +897,10 @@ export default function ProjectView() {
                         href={project.metadata.linkedin}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
                         title="Connect on LinkedIn"
                       >
-                        <Linkedin className="h-5 w-5" />
+                        <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
                         </a>
                       )}
                     
@@ -857,10 +909,10 @@ export default function ProjectView() {
                         href={project.metadata.discord}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-10 h-10 bg-purple-500 hover:bg-purple-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-purple-500 hover:bg-purple-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
                         title="Join Discord"
                       >
-                        <MessageCircle className="h-5 w-5" />
+                        <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                     
@@ -869,10 +921,10 @@ export default function ProjectView() {
                         href={project.metadata.telegram}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-10 h-10 bg-blue-400 hover:bg-blue-500 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-400 hover:bg-blue-500 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
                         title="Join Telegram"
                       >
-                        <Send className="h-5 w-5" />
+                        <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
 
@@ -881,10 +933,10 @@ export default function ProjectView() {
                         href={project.metadata.youtube}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
                         title="Subscribe on YouTube"
                       >
-                        <Video className="h-5 w-5" />
+                        <Video className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
 
@@ -893,17 +945,17 @@ export default function ProjectView() {
                         href={project.metadata.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-10 h-10 bg-pink-500 hover:bg-pink-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-pink-500 hover:bg-pink-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
                         title="Follow on Instagram"
                       >
-                        <Camera className="h-5 w-5" />
+                        <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
                       </a>
                     )}
                   </div>
                 )}
 
-                <div className="prose prose-lg prose-gray max-w-none">
-                  <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                <div className="prose prose-sm sm:prose-lg prose-gray max-w-none">
+                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                     <strong>{project.name}</strong> has participated in <strong>{project.campaignIds?.length || 0} campaign{project.campaignIds?.length === 1 ? '' : 's'}</strong> and has raised <strong>{projectCampaigns ? 
                       projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
                         .reduce((sum, c) => 
@@ -913,55 +965,61 @@ export default function ProjectView() {
                   </p>
                   
                   {project.metadata?.category && project.metadata?.projectType && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       It is a <strong>{project.metadata.projectType}</strong> under the <strong>{project.metadata.category}</strong> category.
                     </p>
                   )}
                   
                   {project.metadata?.maturityLevel && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       The project has reached a <strong>{project.metadata.maturityLevel}</strong> maturity level.
                     </p>
                   )}
                   
                   {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       Built with <strong>{project.metadata.techStack.join(', ')}</strong> technology stack.
                     </p>
                   )}
                   
+                  {project.metadata?.keyFeatures && project.metadata.keyFeatures.length > 0 && (
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
+                      <strong>The key features include but are not limited to </strong> {project.metadata.keyFeatures.join(', ')}.
+                    </p>
+                  )}
+                  
                   {project.transferrable !== undefined && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       The project is <strong>{project.transferrable ? 'transferrable' : 'non-transferrable'}</strong> and is currently <strong>{project.active ? 'active' : 'inactive'}</strong>.
                     </p>
                   )}
                   
                   {project.metadata?.innovation && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       <strong>Innovation:</strong> {project.metadata.innovation}
                     </p>
                   )}
                   
                   {project.metadata?.targetAudience && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       <strong>Target Audience:</strong> {project.metadata.targetAudience}
                     </p>
                   )}
                   
                   {project.metadata?.useCases && project.metadata.useCases.length > 0 && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       <strong>Use Cases:</strong> {project.metadata.useCases.join(', ')}.
                     </p>
                   )}
                   
                   {project.metadata?.establishedDate && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       <strong>Established:</strong> {formatYear(project.metadata.establishedDate)}
                     </p>
                   )}
                   
                   {project.metadata?.milestones && project.metadata.milestones.length > 0 && (
-                    <p className="text-gray-800 leading-relaxed text-lg mb-6">
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
                       <strong>Current Milestones:</strong> {project.metadata.milestones.filter(m => m.status === 'in-progress').length > 0 ? 
                         project.metadata.milestones.filter(m => m.status === 'in-progress').map(m => m.title).join(', ') + ' in progress' :
                         'No active milestones at this time'
@@ -973,53 +1031,54 @@ export default function ProjectView() {
             </TabsContent>
  
             {/* Campaigns Tab */}
-            <TabsContent value="campaigns" className="space-y-6">
+            <TabsContent value="campaigns" className="space-y-4 sm:space-y-6">
                 {projectCampaigns && projectCampaigns.length > 0 ? (
-                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">
-                    <SectionHeader 
-                      icon={Trophy}
-                      title="Campaign Participation"
-                      subtitle={`Participating in ${projectCampaigns.length} campaign${projectCampaigns.length !== 1 ? 's' : ''}`}
-                    />
-                    
-                    <div className="space-y-6">
+                  <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-8">
+                    <div className="space-y-4 sm:space-y-6">
                       {projectCampaigns?.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null).map((campaign) => {
                         const styling = getCampaignStatusStyling(campaign.status);
                         
                         return (
                           <div
                             key={campaign.id.toString()}
-                            className={`p-6 rounded-xl border ${styling.bgClass} hover:shadow-lg transition-all duration-200 backdrop-blur-sm`}
+                            className={`p-3 sm:p-6 sm:rounded-xl sm:border ${styling.bgClass} sm:hover:shadow-lg transition-all duration-200 sm:backdrop-blur-sm border-b border-gray-200 sm:border-b-0`}
                           >
-                            <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-start justify-between mb-3 sm:mb-4">
                               <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="font-bold text-gray-900 text-lg">{campaign.name}</h3>
-                                  <div className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 ${styling.textClass} bg-white/50`}>
+                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                                  <h3 className="font-bold text-gray-900 text-base sm:text-lg">{campaign.name}</h3>
+                                  <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 sm:gap-1.5 ${styling.textClass} bg-white/50`}>
                                     <styling.icon className="w-3 h-3" />
                                     {styling.label}
                                   </div>
                                 </div>
-                                <p className="text-gray-600 mb-4 leading-relaxed">{campaign.description}</p>
+                                <TruncatedText
+                                  text={campaign.description}
+                                  maxLength={250}
+                                  className="text-gray-600 mb-3 sm:mb-4 leading-relaxed text-sm sm:text-base"
+                                  showIcon={true}
+                                  expandText="Read more"
+                                  collapseText="Read less"
+                                />
                               </div>
                             </div>
                             
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
                               <div className="text-center">
                                 <p className="text-xs text-gray-500 mb-1">Total Funds</p>
-                                <p className="font-bold text-green-600 text-lg">
+                                <p className="font-bold text-green-600 text-sm sm:text-lg">
                                   {parseFloat(formatEther(campaign.totalFunds)).toFixed(2)} CELO
                                 </p>
                               </div>
                               <div className="text-center">
                                 <p className="text-xs text-gray-500 mb-1">Your Votes</p>
-                                <p className="font-bold text-blue-600 text-lg">
+                                <p className="font-bold text-blue-600 text-sm sm:text-lg">
                                   {parseFloat(formatEther(campaign.participation?.voteCount || 0n)).toFixed(1)}
                                 </p>
                               </div>
                               <div className="text-center">
                                 <p className="text-xs text-gray-500 mb-1">Max Winners</p>
-                                <p className="font-bold text-purple-600 text-lg">
+                                <p className="font-bold text-purple-600 text-sm sm:text-lg">
                                   {Number(campaign.maxWinners) || 'All'}
                                 </p>
                               </div>
@@ -1045,10 +1104,10 @@ export default function ProjectView() {
                               </div>
                             </div>
                             
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                               <button
                                 onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-gray-200 text-gray-700 rounded-lg hover:bg-white hover:shadow-md transition-all duration-200 font-medium"
+                                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-white/80 border border-gray-200 text-gray-700 rounded-lg hover:bg-white hover:shadow-md transition-all duration-200 font-medium text-sm sm:text-base"
                               >
                                 <Eye className="h-4 w-4" />
                                 View Campaign
@@ -1056,7 +1115,7 @@ export default function ProjectView() {
                               {campaign.status === 'active' && (
                                 <button
                                   onClick={() => openVoteModal(campaign.id.toString())}
-                                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md text-sm sm:text-base"
                                 >
                                   <ChevronRight className="h-4 w-4" />
                                   Go to Campaign
@@ -1069,17 +1128,17 @@ export default function ProjectView() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Trophy className="h-12 w-12 text-gray-400" />
+                  <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-12 text-center p-6">
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                      <Trophy className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">No Active Campaigns</h3>
-                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">No Active Campaigns</h3>
+                    <p className="text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
                       This project hasn't joined any campaigns yet. Check back later for funding opportunities.
                     </p>
                     <button
                       onClick={() => navigate('/campaigns')}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium"
+                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium text-sm sm:text-base"
                     >
                       <Search className="h-4 w-4" />
                       Browse Campaigns
@@ -1089,143 +1148,186 @@ export default function ProjectView() {
             </TabsContent>
  
             {/* Technical Tab */}
-            <TabsContent value="technical" className="space-y-8">
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">
-                  <SectionHeader 
-                    icon={Code}
-                    title="Technical Specifications"
-                    subtitle="Architecture and implementation details"
-                  />
-                  
-                  {/* Tech Stats Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    {project.metadata?.blockchain && (
-                      <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <Network className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <span className="font-semibold text-blue-900">Blockchain</span>
-                        </div>
-                        <p className="text-blue-800 font-medium">{project.metadata.blockchain}</p>
-                      </div>
-                    )}
-                    
-                    {project.metadata?.developmentStage && (
-                      <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-green-100 rounded-lg">
-                            <Gauge className="h-5 w-5 text-green-600" />
-                          </div>
-                          <span className="font-semibold text-green-900">Development Stage</span>
-                        </div>
-                        <p className="text-green-800 font-medium">{project.metadata.developmentStage}</p>
-                      </div>
-                    )}
-                    
-                    {project.metadata?.license && (
-                      <div className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-100">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-purple-100 rounded-lg">
-                            <Shield className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <span className="font-semibold text-purple-900">License</span>
-                        </div>
-                        <p className="text-purple-800 font-medium">{project.metadata.license}</p>
-                      </div>
-                    )}
-                    
-                    <div className="p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border border-red-100">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-red-100 rounded-lg">
-                          <Heart className="h-5 w-5 text-red-600" />
-                        </div>
-                        <span className="font-semibold text-red-900">Open Source</span>
-                      </div>
-                      <p className="text-red-800 font-medium">{project.metadata?.openSource ? 'Yes' : 'No'}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Tech Stack */}
-                  {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
-                    <div className="mb-8">
-                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Code className="h-4 w-4 text-blue-600" />
-                        </div>
-                        Technology Stack
-                      </h3>
-                      <div className="flex flex-wrap gap-3">
-                        {project.metadata.techStack.map((tech, idx) => (
-                          <span
-                            key={idx}
-                            className="px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-full text-sm font-medium border border-blue-200 hover:from-blue-200 hover:to-indigo-200 transition-colors"
-                          >
-                            {tech}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+            <TabsContent value="technical" className="space-y-4 sm:space-y-8">
+              {/* Mobile: No Card, Desktop: Card */}
+              <div className="sm:bg-white/30 sm:backdrop-blur-md sm:rounded-3xl sm:shadow-xl sm:border sm:border-white/20 sm:p-8 sm:p-12 relative">
+                {/* Advanced Stats Button */}
+                <div className="absolute top-2 right-2 sm:top-6 sm:right-6">
+                  <button
+                    onClick={() => setShowAdvancedStats(!showAdvancedStats)}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 text-xs sm:text-sm font-medium"
+                  >
+                    <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">{showAdvancedStats ? 'Hide Advanced' : 'View Advanced Stats'}</span>
+                    <span className="sm:hidden">{showAdvancedStats ? 'Hide' : 'Advanced'}</span>
+                  </button>
+                </div>
+
+                <div className="prose prose-sm sm:prose-lg prose-gray max-w-none">
+                  {/* Project Type Analysis */}
+                  {project.metadata?.projectType && (
+                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
+                      This is a <strong>{project.metadata.projectType}</strong> project
+                      {project.metadata?.category && <> in the <strong>{project.metadata.category}</strong> category</>}
+                      {project.metadata?.maturityLevel && <> with <strong>{project.metadata.maturityLevel}</strong> maturity level</>}.
+                    </p>
                   )}
                   
-                  {/* Smart Contracts */}
-                  {project.metadata?.smartContracts && project.metadata.smartContracts.length > 0 && (
-                    <div className="mb-8">
-                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <Terminal className="h-4 w-4 text-green-600" />
+                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
+                    We build on the <strong>{project.metadata?.blockchain || 'blockchain'}</strong> and are currently in the <strong>{project.metadata?.developmentStage || 'development'}</strong> stage. 
+                    {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
+                      <> We built with <strong>{project.metadata.techStack.join(', ')}</strong> technologies</>
+                    )}
+                    {project.metadata?.openSource !== undefined && (
+                      <> and we are <strong>{project.metadata.openSource ? 'open source' : 'proprietary'}</strong></>
+                    )}.
+                  </p>
+                  
+                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
+                    The project operates under a <strong>{project.metadata?.license || 'license'}</strong> and we have <strong>{project.metadata?.smartContracts?.length || project.contracts?.length || 0} smart contract{(project.metadata?.smartContracts?.length || project.contracts?.length || 0) === 1 ? '' : 's'}</strong>
+                    {project.metadata?.auditReports && project.metadata.auditReports.length > 0 ? (
+                      <> and have done <strong>{project.metadata.auditReports.length} security audit{project.metadata.auditReports.length === 1 ? '' : 's'}</strong></>
+                    ) : (
+                      <> and have <strong>not done security audits</strong></>
+                    )}.
+                  </p>
+                  
+                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
+                    The project is <strong>{project.metadata?.kycCompliant ? 'KYC compliant' : 'not KYC compliant'}</strong>
+                    {project.metadata?.regulatoryCompliance && project.metadata.regulatoryCompliance.length > 0 && (
+                      <> but it complies with <strong>{project.metadata.regulatoryCompliance.join(', ')}</strong> regulations</>
+                    )}.
+                  </p>
+
+                  {/* Advanced Stats Section */}
+                  {showAdvancedStats && (
+                    <div className="mt-4 sm:mt-8 p-3 sm:p-6 sm:bg-gray-50/50 sm:rounded-2xl sm:border sm:border-gray-200/50">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+                          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
-                        Smart Contracts
+                        Advanced Technical Stats
                       </h3>
-                      <div className="space-y-3">
-                        {project.metadata.smartContracts.map((contract, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-4 bg-gray-50/80 rounded-xl border border-gray-200 font-mono text-sm group hover:bg-gray-100/80 transition-colors">
-                            <div className="p-1.5 bg-gray-200 rounded-lg">
-                              <Terminal className="h-4 w-4 text-gray-600" />
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                        {/* Left Side - Tech Stack */}
+                        {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
+                          <div className="space-y-2 sm:space-y-3">
+                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+                              <Code className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                              Technology Stack
+                            </h4>
+                            <div className="space-y-1 sm:space-y-2">
+                              {project.metadata.techStack.map((tech, idx) => (
+                                <div key={idx} className="flex items-center gap-2 p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
+                                  <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
+                                  <span className="text-xs sm:text-sm font-medium text-gray-700 flex-1">{tech}</span>
+                                </div>
+                              ))}
                             </div>
-                            <span className="text-gray-700 break-all flex-1">{contract}</span>
-                            <button
-                              onClick={() => navigator.clipboard.writeText(contract)}
-                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                              title="Copy address"
-                            >
-                              <Copy className="h-4 w-4 text-gray-500" />
-                            </button>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
- 
-                  {/* Registered Contracts */}
-                  {project.contracts && project.contracts.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 rounded-lg">
-                          <Database className="h-4 w-4 text-indigo-600" />
+                        )}
+
+                        {/* Right Side - Combined Contracts */}
+                        {((project.metadata?.smartContracts && project.metadata.smartContracts.length > 0) || 
+                          (project.contracts && project.contracts.length > 0)) && (
+                          <div className="space-y-2 sm:space-y-3">
+                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+                              <Terminal className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                              Smart Contracts
+                            </h4>
+                            <div className="space-y-1 sm:space-y-2">
+                              {/* Combine and deduplicate contracts */}
+                              {(() => {
+                                const allContracts = [
+                                  ...(project.metadata?.smartContracts || []),
+                                  ...(project.contracts || [])
+                                ];
+                                const uniqueContracts = [...new Set(allContracts)];
+                                
+                                return uniqueContracts.map((contract, idx) => (
+                                  <div key={idx} className="flex items-center gap-2 p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
+                                    <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
+                                    <span className="text-xs sm:text-sm font-mono text-gray-700 break-all flex-1">{contract}</span>
+                                    <button
+                                      onClick={() => navigator.clipboard.writeText(contract)}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      title="Copy address"
+                                    >
+                                      <Copy className="h-3 w-3 text-gray-500" />
+                                    </button>
+                                  </div>
+                                ));
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Audit Reports */}
+                        {project.metadata?.auditReports && project.metadata.auditReports.length > 0 && (
+                          <div className="space-y-2 sm:space-y-3">
+                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+                              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
+                              Security Audit Reports
+                            </h4>
+                            <div className="space-y-1 sm:space-y-2">
+                              {project.metadata.auditReports.map((report, idx) => (
+                                <div key={idx} className="p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
+                                    <span className="text-xs sm:text-sm font-mono text-gray-700 break-all flex-1">{report}</span>
+                                    <button
+                                      onClick={() => navigator.clipboard.writeText(report)}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      title="Copy report URL"
+                                    >
+                                      <Copy className="h-3 w-3 text-gray-500" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Technical Metrics */}
+                        <div className="space-y-2 sm:space-y-3">
+                          <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+                            <Gauge className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600" />
+                            Technical Metrics
+                          </h4>
+                          <div className="space-y-1 sm:space-y-2">
+                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
+                              <span className="text-xs sm:text-sm text-gray-600">Total Contracts</span>
+                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                                {(() => {
+                                  const allContracts = [
+                                    ...(project.metadata?.smartContracts || []),
+                                    ...(project.contracts || [])
+                                  ];
+                                  return [...new Set(allContracts)].length;
+                                })()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
+                              <span className="text-xs sm:text-sm text-gray-600">Security Audits</span>
+                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                                {project.metadata?.auditReports?.length || 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
+                              <span className="text-xs sm:text-sm text-gray-600">Compliance Items</span>
+                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                                {project.metadata?.regulatoryCompliance?.length || 0}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        Registered Contracts
-                      </h3>
-                      <div className="space-y-3">
-                        {project.contracts.map((contract, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-4 bg-indigo-50/80 rounded-xl border border-indigo-200 font-mono text-sm group hover:bg-indigo-100/80 transition-colors">
-                            <div className="p-1.5 bg-indigo-200 rounded-lg">
-                              <Database className="h-4 w-4 text-indigo-600" />
-                            </div>
-                            <span className="text-indigo-700 break-all flex-1">{contract}</span>
-                            <button
-                              onClick={() => navigator.clipboard.writeText(contract)}
-                              className="p-2 hover:bg-indigo-200 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                              title="Copy address"
-                            >
-                              <Copy className="h-4 w-4 text-indigo-500" />
-                            </button>
-                          </div>
-                        ))}
                       </div>
                     </div>
                   )}
                 </div>
+              </div>
             </TabsContent>
  
             {/* Analytics Tab */}
@@ -1381,22 +1483,22 @@ export default function ProjectView() {
      
 
      {/* Bottom Navigation for Mobile */}
-     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-gray-200/50 shadow-lg flex justify-around items-center py-2 px-2 md:hidden">
+     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-gray-200/50 shadow-lg flex justify-around items-center py-1 px-1 md:hidden">
        {tabs.map((tab) => (
          <button
            key={tab.id}
            onClick={() => setActiveTab(tab.id)}
-           className={`flex flex-col items-center justify-center flex-1 px-2 py-1 transition-all duration-200 ${
+           className={`flex flex-col items-center justify-center flex-1 px-1 py-0.5 transition-all duration-200 ${
              activeTab === tab.id ? 'text-blue-600' : 'text-gray-500'
            }`}
            aria-label={tab.label}
          >
-           <div className={`p-2 rounded-full ${activeTab === tab.id ? 'bg-blue-100' : 'bg-gray-100'}`}> 
-             <tab.icon className="h-5 w-5" />
+           <div className={`p-1 rounded-full ${activeTab === tab.id ? 'bg-blue-100' : 'bg-gray-100'}`}> 
+             <tab.icon className="h-2.5 w-2.5" />
            </div>
-           <span className="text-xs mt-1 font-medium">{tab.label}</span>
+           <span className="text-[10px] mt-0.5 font-medium">{tab.label}</span>
            {tab.badge !== undefined && tab.badge > 0 && (
-             <span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full font-semibold mt-0.5">
+             <span className="bg-blue-100 text-blue-600 text-[8px] px-1 py-0.5 rounded-full font-semibold mt-0.5">
                {tab.badge}
              </span>
            )}
