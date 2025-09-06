@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount, injected } from 'wagmi';
-import { Menu, X, ChevronDown, Globe, Award, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User, Bell } from 'lucide-react';
+import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User } from 'lucide-react';
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import WalletModal from '@/components/modals/walletModal';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -8,7 +8,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -18,16 +17,10 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
-const navigation = [
-  { name: 'Explorer', href: '/explorer', icon: Compass },
-  { name: 'Campaigns', href: '/campaigns', icon: Globe },
-  { name: 'Campaign Pools', href: '/campaign-pools', icon: Award },
-  { name: 'Projects', href: '/projects', icon: Ship },
-];
 
 const explorerOptions = [
-  { name: 'Projects', href: '/projects', icon: Ship },
-  { name: 'Campaigns', href: '/campaigns', icon: Globe },
+  { name: 'Projects', href: '/explorer/projects', icon: Ship },
+  { name: 'Campaigns', href: '/explorer/campaigns', icon: Globe },
 ];
 
 const createOptions = [
@@ -35,20 +28,18 @@ const createOptions = [
     name: 'Start a Campaign',
     href: '/app/campaign/start',
     icon: Ship,
-    description: 'Launch a new governance campaign',
   },
   {
     name: 'Launch a Project',
     href: '/app/project/start',
     icon: Compass,
-    description: 'Begin a new project',
   }
 ];
 
 export default function Header() {
   const [hideConnectBtn, setHideConnectBtn] = useState(false);
   const { connect } = useConnect();
-  const { isConnected, address } = useAccount();
+  const { address } = useAccount();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -177,13 +168,10 @@ export default function Header() {
                       <DropdownMenuItem key={option.name} asChild>
                         <Link 
                           to={option.href} 
-                          className="flex items-start w-full cursor-pointer"
+                          className="flex items-center w-full cursor-pointer"
                         >
-                          <OptionIcon className="h-4 w-4 text-gray-500 mr-3 mt-0.5" />
-                          <div>
-                            <div className="font-medium text-sm">{option.name}</div>
-                            <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
-                          </div>
+                          <OptionIcon className="h-4 w-4 text-gray-500 mr-3" />
+                          <span className="font-medium text-sm">{option.name}</span>
                         </Link>
                       </DropdownMenuItem>
                     );
@@ -206,22 +194,9 @@ export default function Header() {
                     <DropdownMenuItem asChild>
                       <Link to="/app/me" className="flex items-center w-full cursor-pointer">
                         <User className="mr-3 h-4 w-4 text-gray-500" />
-                        My Profile
+                        Profile
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/myprojects" className="flex items-center w-full cursor-pointer">
-                        <Ship className="mr-3 h-4 w-4 text-gray-500" />
-                        My Projects
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/campaign/mycampaigns" className="flex items-center w-full cursor-pointer">
-                        <Globe className="mr-3 h-4 w-4 text-gray-500" />
-                        My Campaigns
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={logout}
                       className="text-red-600 cursor-pointer"
@@ -320,13 +295,10 @@ export default function Header() {
                               key={item.href}
                               to={item.href}
                               onClick={() => setMobileMenuOpen(false)}
-                              className="flex items-start px-3 py-3 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                              className="flex items-center px-3 py-3 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
                             >
-                              <Icon className="w-5 h-5 mr-3 mt-0.5" />
-                              <div>
-                                <div className="font-medium text-sm">{item.name}</div>
-                                <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
-                              </div>
+                              <Icon className="w-5 h-5 mr-3" />
+                              <span className="font-medium text-sm">{item.name}</span>
                             </Link>
                           );
                         })}

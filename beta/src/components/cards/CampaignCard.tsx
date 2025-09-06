@@ -1,5 +1,5 @@
-import React from 'react';
-import { Trophy, CheckCircle, Timer, Activity, ChevronRight, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, CheckCircle, Timer, Activity, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { capitalizeWords } from '@/utils/textUtils';
 
@@ -10,6 +10,9 @@ interface CampaignCardProps {
   status?: 'upcoming' | 'active' | 'ended' | 'paused';
   className?: string;
   campaignId?: string;
+  descriptionTruncateSize?: number;
+  startTime?: number;
+  endTime?: number;
 }
 
 const CampaignCard: React.FC<CampaignCardProps> = ({
@@ -18,11 +21,56 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   logo,
   status = 'active',
   className = '',
-  campaignId
+  campaignId,
+  descriptionTruncateSize = 40,
+  startTime,
+  endTime
 }) => {
   const navigate = useNavigate();
+  const [timeLeft, setTimeLeft] = useState('');
+  const [currentStatus, setCurrentStatus] = useState(status);
+
+  // Countdown effect
+  useEffect(() => {
+    if (!startTime || !endTime) return;
+
+    const updateCountdown = () => {
+      const now = Math.floor(Date.now() / 1000);
+      const hasStarted = now >= startTime;
+      const hasEnded = now >= endTime;
+
+      if (hasEnded) {
+        setTimeLeft('Ended');
+        setCurrentStatus('ended');
+        return;
+      }
+
+      if (!hasStarted) {
+        const diff = startTime - now;
+        const days = Math.floor(diff / 86400);
+        const hours = Math.floor((diff % 86400) / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+        setCurrentStatus('upcoming');
+      } else {
+        const diff = endTime - now;
+        const days = Math.floor(diff / 86400);
+        const hours = Math.floor((diff % 86400) / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+        setCurrentStatus('active');
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [startTime, endTime]);
+
   const getStatusInfo = () => {
-    switch (status) {
+    switch (currentStatus) {
       case 'upcoming':
         return { class: 'bg-cyan-400 text-black', text: 'Coming Soon', icon: Timer };
       case 'active':
@@ -102,16 +150,24 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
               {/* Spacer to push description down */}
               <div className="flex-1"></div>
               
-              {/* Description - Max 40 characters, aligned above button */}
-              <p className="text-gray-600 text-xs leading-relaxed mb-1">
-                {description.length > 40 ? `${description.substring(0, 40)}...` : description}
+              {/* Countdown Timer */}
+              {timeLeft && timeLeft !== 'Ended' && (
+                <div className="mb-2 px-2 py-1 bg-blue-500/10 text-blue-700 text-xs rounded-full text-center">
+                  <Timer className="h-3 w-3 inline mr-1" />
+                  {timeLeft}
+                </div>
+              )}
+
+              {/* Description - Configurable truncation size, aligned above button */}
+              <p className="text-gray-600 text-sm leading-relaxed mb-1">
+                {description.length > descriptionTruncateSize ? `${description.substring(0, descriptionTruncateSize)}...` : description}
               </p>
             </div>
           </div>
         </div>
 
         {/* Bottom Card - Desktop only, Square, same dimensions, stacked effect */}
-        <div className="hidden sm:block absolute top-0 w-full h-28 sm:h-48 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border-2 border-blue-300 translate-y-10 p-3 sm:p-6 group-hover:opacity-40 transition-opacity duration-500">
+        <div className="hidden sm:block absolute top-0 w-full h-32 sm:h-56 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border-2 border-blue-300 translate-y-10 p-3 sm:p-6 group-hover:opacity-40 transition-opacity duration-500">
           {/* Small Button in Bottom Right Corner */}
           <button 
             onClick={() => campaignId && navigate(`/explorer/campaign/${campaignId}`)}
@@ -136,9 +192,17 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             {/* Spacer to push description down */}
             <div className="flex-1"></div>
             
-            {/* Description - Max 70 characters, aligned above button */}
-            <p className="text-gray-600 text-xs leading-relaxed mb-1 sm:mb-2">
-              {description.length > 40 ? `${description.substring(0, 40)}...` : description}
+            {/* Countdown Timer */}
+            {timeLeft && timeLeft !== 'Ended' && (
+              <div className="mb-2 px-2 py-1 bg-blue-500/10 text-blue-700 text-xs rounded-full text-center">
+                <Timer className="h-3 w-3 inline mr-1" />
+                {timeLeft}
+              </div>
+            )}
+            
+            {/* Description - Configurable truncation size, aligned above button */}
+            <p className="text-gray-600 text-sm leading-relaxed mb-1 sm:mb-2">
+              {description.length > descriptionTruncateSize ? `${description.substring(0, descriptionTruncateSize)}...` : description}
             </p>
           </div>
         </div>

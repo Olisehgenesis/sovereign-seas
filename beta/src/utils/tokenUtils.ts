@@ -1,4 +1,4 @@
-import { Address } from 'viem';
+import { type Address } from 'viem';
 
 // Common token addresses on Celo
 export const KNOWN_TOKENS: { [key: string]: TokenInfo } = {
