@@ -41,8 +41,6 @@ import {
   Zap,
   Heart,
   Briefcase,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { useCreateProject } from '@/hooks/useProjectMethods';
 import { uploadToIPFS } from '@/utils/imageUtils';
@@ -53,8 +51,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -64,31 +60,28 @@ import {
 } from '@/components/ui/select';
 
 interface SectionProps {
-  id: string;
   title: string;
   icon: LucideIcon;
   children: React.ReactNode;
   required?: boolean;
-  expandedSection: string;
-  toggleSection: (section: string) => void;
 }
 
 const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection, isVisible = true }: SectionProps & { isVisible?: boolean }) => {
   if (!isVisible) return null;
   
   return (
-    <Card className="mb-6 bg-transparent border-blue-100">
-      <CardHeader>
+    <Card className="mb-4 bg-transparent border-blue-100">
+      <CardHeader className="pb-4">
         <div className="flex items-center">
-          <Icon className="h-6 w-6 text-blue-600 mr-3" />
-          <CardTitle className="text-xl">
+          <Icon className="h-5 w-5 text-blue-600 mr-2" />
+          <CardTitle className="text-lg">
             {title}
             {required && <span className="text-red-500 ml-1">*</span>}
           </CardTitle>
         </div>
       </CardHeader>
       
-      <CardContent>
+      <CardContent className="pt-0">
         {children}
       </CardContent>
     </Card>
@@ -752,27 +745,27 @@ export default function CreateProject() {
   return (
     <div className="min-h-screen text-gray-800">
       
-      <div className="container mx-auto px-6 py-12 relative z-10">
-        <div className="max-w-4xl mx-auto">
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        <div className="max-w-3xl mx-auto">
           {/* Main Content */}
           <div>
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-6">
             
           </div>
 
           {/* Success/Error Messages */}
           {successMessage && (
-            <div className="mb-6 bg-transparent backdrop-blur-sm rounded-xl p-4 border border-emerald-200 flex items-start">
-              <CheckCircle className="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0 mt-0.5" />
-              <p className="text-emerald-700">{successMessage}</p>
+            <div className="mb-4 bg-transparent backdrop-blur-sm rounded-xl p-3 border border-emerald-200 flex items-start">
+              <CheckCircle className="h-4 w-4 text-emerald-500 mr-2 flex-shrink-0 mt-0.5" />
+              <p className="text-emerald-700 text-sm">{successMessage}</p>
             </div>
           )}
           
           {errorMessage && (
-            <div className="mb-6 bg-transparent backdrop-blur-sm rounded-xl p-4 border border-red-200 flex items-start">
-              <XCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700">{errorMessage}</p>
+            <div className="mb-4 bg-transparent backdrop-blur-sm rounded-xl p-3 border border-red-200 flex items-start">
+              <XCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+              <p className="text-red-700 text-sm">{errorMessage}</p>
             </div>
           )}
 
@@ -788,9 +781,9 @@ export default function CreateProject() {
               toggleSection={toggleSection}
               isVisible={currentCardIndex === 0}
             >
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Project Name & Tagline */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center text-blue-700 font-medium">
                       <Hash className="h-4 w-4 mr-2" />
@@ -837,7 +830,7 @@ export default function CreateProject() {
                 </div>
                 
                 {/* Category & Type */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center text-blue-700 font-medium">
                       <Tag className="h-4 w-4 mr-2" />
@@ -918,7 +911,7 @@ export default function CreateProject() {
                 </div>
                 
                 {/* Location & Dates */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center text-blue-700 font-medium">
                       <MapPin className="h-4 w-4 mr-2" />
@@ -973,16 +966,16 @@ export default function CreateProject() {
               toggleSection={toggleSection}
               isVisible={currentCardIndex === 1}
             >
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Logo Upload */}
                 <div>
-                  <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                  <label className="block text-blue-700 font-medium mb-2 flex items-center">
                     <ImageIcon className="h-4 w-4 mr-2" />
                     Project Logo
                   </label>
                   
                   {logoPreview && (
-                    <div className="mb-4 flex justify-center">
+                    <div className="mb-3 flex justify-center">
                       <div className="relative">
                         <img
                           src={logoPreview}
@@ -1007,7 +1000,7 @@ export default function CreateProject() {
                     </div>
                   )}
                   
-                  <div className="border-2 border-dashed border-blue-200 rounded-xl p-6 text-center hover:border-blue-300 transition-colors">
+                  <div className="border-2 border-dashed border-blue-200 rounded-xl p-4 text-center hover:border-blue-300 transition-colors">
                     <input
                       type="file"
                       ref={logoFileInputRef}
@@ -1016,7 +1009,7 @@ export default function CreateProject() {
                     
                       className="hidden"
                     />
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                         <Upload className="h-8 w-8 text-blue-500" />
                       </div>
@@ -1038,7 +1031,7 @@ export default function CreateProject() {
 
                 {/* Demo Video Link */}
                 <div>
-                  <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                  <label className="block text-blue-700 font-medium mb-2 flex items-center">
                     <Video className="h-4 w-4 mr-2" />
                     Demo Video Link
                   </label>
@@ -1053,9 +1046,9 @@ export default function CreateProject() {
                 </div>
 
                 {/* Repository Links */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Github className="h-4 w-4 mr-2" />
                       GitHub Repository *
                     </label>
@@ -1070,7 +1063,7 @@ export default function CreateProject() {
                   </div>
                   
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Globe className="h-4 w-4 mr-2" />
                       Demo URL
                     </label>
@@ -1085,9 +1078,9 @@ export default function CreateProject() {
                 </div>
 
                 {/* Additional Links */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <FileText className="h-4 w-4 mr-2" />
                       Documentation
                     </label>
@@ -1101,7 +1094,7 @@ export default function CreateProject() {
                   </div>
                   
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Award className="h-4 w-4 mr-2" />
                       Karma GAP Profile
                     </label>
@@ -1117,11 +1110,11 @@ export default function CreateProject() {
 
                 {/* Social Media Links */}
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+                  <h3 className="text-lg font-semibold text-blue-700 mb-3 flex items-center">
                     <Globe2 className="h-5 w-5 mr-2" />
                     Social Media & Community
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-blue-700 font-medium mb-3 flex items-center">
                         <Twitter className="h-4 w-4 mr-2" />
@@ -1192,16 +1185,16 @@ export default function CreateProject() {
               toggleSection={toggleSection}
               isVisible={currentCardIndex === 2}
             >
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {/* Contact Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+                  <h3 className="text-lg font-semibold text-blue-700 mb-3 flex items-center">
                     <Mail className="h-5 w-5 mr-2" />
                     Contact Information
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-blue-700 font-medium mb-3">Contact Email *</label>
+                      <label className="block text-blue-700 font-medium mb-2">Contact Email *</label>
                       <input
                         type="email"
                         value={project.contactEmail}
@@ -1213,7 +1206,7 @@ export default function CreateProject() {
                     </div>
                     
                     <div>
-                      <label className="block text-blue-700 font-medium mb-3">Business Email</label>
+                      <label className="block text-blue-700 font-medium mb-2">Business Email</label>
                       <input
                         type="email"
                         value={project.businessEmail}
@@ -1227,13 +1220,13 @@ export default function CreateProject() {
 
                 {/* Team Members */}
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+                  <h3 className="text-lg font-semibold text-blue-700 mb-3 flex items-center">
                     <Users className="h-5 w-5 mr-2" />
                     Team Members
                   </h3>
                   {project.teamMembers.map((member, index) => (
-                    <div key={index} className="bg-gray-50 rounded-xl p-6 mb-4 border border-gray-200">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div key={index} className="bg-gray-50 rounded-xl p-4 mb-3 border border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <input
                           type="text"
                           value={member.name}
@@ -1257,7 +1250,7 @@ export default function CreateProject() {
                           placeholder="Role/Position"
                         />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <input
                           type="email"
                           value={member.email}
@@ -1334,11 +1327,11 @@ export default function CreateProject() {
               toggleSection={toggleSection}
               isVisible={currentCardIndex === 3}
             >
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {/* Blockchain & Tech Stack */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Zap className="h-4 w-4 mr-2" />
                       Primary Blockchain
                     </label>
@@ -1355,7 +1348,7 @@ export default function CreateProject() {
                   </div>
                   
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Award className="h-4 w-4 mr-2" />
                       Development Stage
                     </label>
@@ -1374,12 +1367,12 @@ export default function CreateProject() {
 
                 {/* Tech Stack */}
                 <div>
-                  <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                  <label className="block text-blue-700 font-medium mb-2 flex items-center">
                     <Code className="h-4 w-4 mr-2" />
                     Technology Stack *
                   </label>
                   {project.techStack.map((tech, index) => (
-                    <div key={index} className="flex mb-3">
+                    <div key={index} className="flex mb-2">
                       <select
                         value={tech}
                         onChange={(e) => updateArrayItem('techStack', index, e.target.value)}
@@ -1414,12 +1407,12 @@ export default function CreateProject() {
 
                 {/* Smart Contracts */}
                 <div>
-                  <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                  <label className="block text-blue-700 font-medium mb-2 flex items-center">
                     <Code className="h-4 w-4 mr-2" />
                     Smart Contract Addresses
                   </label>
                   {project.smartContracts.map((contract, index) => (
-                    <div key={index} className="flex mb-3">
+                    <div key={index} className="flex mb-2">
                       <input
                         type="text"
                         value={contract}
@@ -1449,9 +1442,9 @@ export default function CreateProject() {
                 </div>
 
                 {/* License & Open Source */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Shield className="h-4 w-4 mr-2" />
                       License
                     </label>
@@ -1468,11 +1461,11 @@ export default function CreateProject() {
                   </div>
                   
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Heart className="h-4 w-4 mr-2" />
                       Open Source
                     </label>
-                    <div className="flex items-center space-x-4 mt-3">
+                    <div className="flex items-center space-x-4 mt-2">
                       <label className="flex items-center">
                         <input
                           type="radio"
@@ -1499,12 +1492,12 @@ export default function CreateProject() {
 
                 {/* Key Features */}
                 <div>
-                  <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                  <label className="block text-blue-700 font-medium mb-2 flex items-center">
                     <Star className="h-4 w-4 mr-2" />
                     Key Features *
                   </label>
                   {project.keyFeatures.map((feature, index) => (
-                    <div key={index} className="flex mb-3">
+                    <div key={index} className="flex mb-2">
                       <input
                         type="text"
                         value={feature}
@@ -1535,9 +1528,9 @@ export default function CreateProject() {
                 </div>
 
                 {/* Innovation & Use Cases */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Lightbulb className="h-4 w-4 mr-2" />
                       Innovation Statement
                     </label>
@@ -1551,7 +1544,7 @@ export default function CreateProject() {
                   </div>
                   
                   <div>
-                    <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                    <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Target className="h-4 w-4 mr-2" />
                       Target Audience
                     </label>
@@ -1567,12 +1560,12 @@ export default function CreateProject() {
 
                 {/* Use Cases */}
                 <div>
-                  <label className="block text-blue-700 font-medium mb-3 flex items-center">
+                  <label className="block text-blue-700 font-medium mb-2 flex items-center">
                     <Target className="h-4 w-4 mr-2" />
                     Use Cases
                   </label>
                   {project.useCases.map((useCase, index) => (
-                    <div key={index} className="flex mb-3">
+                    <div key={index} className="flex mb-2">
                       <input
                         type="text"
                         value={useCase}
@@ -1612,22 +1605,22 @@ export default function CreateProject() {
              toggleSection={toggleSection}
              isVisible={currentCardIndex === 4}
            >
-             <div className="space-y-8">
-               <div className="text-center mb-8">
-                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full mb-4">
-                   <CheckCircle className="h-8 w-8 text-white" />
+             <div className="space-y-6">
+               <div className="text-center mb-6">
+                 <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full mb-3">
+                   <CheckCircle className="h-6 w-6 text-white" />
                  </div>
-                 <h3 className="text-2xl font-bold text-gray-800 mb-2">Project Summary</h3>
-                 <p className="text-gray-600">Review your project details before submission</p>
+                 <h3 className="text-xl font-bold text-gray-800 mb-2">Project Summary</h3>
+                 <p className="text-gray-600 text-sm">Review your project details before submission</p>
                </div>
 
                {/* Basic Information Summary */}
-               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                 <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                   <Info className="h-5 w-5 mr-2 text-blue-500" />
+               <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                 <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                   <Info className="h-4 w-4 mr-2 text-blue-500" />
                    Basic Information
                  </h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                    <div>
                      <span className="font-medium text-gray-600">Project Name:</span>
                      <p className="text-gray-800">{project.name || 'Not specified'}</p>
@@ -1658,12 +1651,12 @@ export default function CreateProject() {
                </div>
 
                {/* Technical Summary */}
-               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                 <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                   <Code className="h-5 w-5 mr-2 text-blue-500" />
+               <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                 <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                   <Code className="h-4 w-4 mr-2 text-blue-500" />
                    Technical Details
                  </h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                    <div>
                      <span className="font-medium text-gray-600">Blockchain:</span>
                      <p className="text-gray-800">{project.blockchain || 'Not specified'}</p>
@@ -1688,12 +1681,12 @@ export default function CreateProject() {
                </div>
 
                {/* Contact & Team Summary */}
-               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                 <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                   <Users className="h-5 w-5 mr-2 text-blue-500" />
+               <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                 <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                   <Users className="h-4 w-4 mr-2 text-blue-500" />
                    Team & Contact
                  </h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                    <div>
                      <span className="font-medium text-gray-600">Contact Email:</span>
                      <p className="text-gray-800">{project.contactEmail || 'Not specified'}</p>
@@ -1708,9 +1701,9 @@ export default function CreateProject() {
                </div>
 
                {/* Links Summary */}
-               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                 <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                   <LinkIcon className="h-5 w-5 mr-2 text-blue-500" />
+               <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                 <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                   <LinkIcon className="h-4 w-4 mr-2 text-blue-500" />
                    Links & Media
                  </h4>
                  <div className="space-y-2 text-sm">
@@ -1762,9 +1755,9 @@ export default function CreateProject() {
                </div>
 
                {/* Project Metadata Info */}
-               <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+               <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                  <div className="flex items-start">
-                   <Info className="h-5 w-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" />
+                   <Info className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
                    <div>
                      <p className="text-blue-700 font-medium mb-2">Project Metadata</p>
                      <p className="text-blue-600 text-sm">
@@ -1784,7 +1777,7 @@ export default function CreateProject() {
 
                {/* Upload Progress */}
                {loading && (
-                 <div className="bg-white rounded-xl p-6 border border-gray-200">
+                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                    <div className="flex items-center justify-between mb-2">
                      <span className="font-medium text-gray-700">Uploading Project</span>
                      <span className="text-sm text-gray-500">{uploadProgress}%</span>
@@ -1809,7 +1802,7 @@ export default function CreateProject() {
            </Section>
 
            {/* Card Navigation */}
-           <div className="flex justify-between items-center mt-8 mb-6">
+           <div className="flex justify-between items-center mt-6 mb-4">
              <Button
                type="button"
                variant="outline"
@@ -1849,42 +1842,44 @@ export default function CreateProject() {
              </Button>
            </div>
 
-           {/* Submit Button */}
-           <div className="mt-8 space-y-6">
-             <div className="flex justify-center pt-6">
-               <Button
-                 type="submit"
-                 disabled={loading || !isConnected}
-                 size="lg"
-                 variant="default"
-                 className="px-12 py-4 font-bold text-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none group relative overflow-hidden"
-               >
-                 {loading ? (
-                   <>
-                     <Loader2 className="h-6 w-6 mr-3 animate-spin" />
-                     Creating Project...
-                   </>
-                 ) : (
-                   <>
-                     <Sparkles className="h-5 w-5 mr-3 group-hover:rotate-12 transition-transform duration-300" />
-                     Create Project
-                     <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                   </>
-                 )}
-               </Button>
+           {/* Submit Button - Only show on last step */}
+           {currentCardIndex === cardSections.length - 1 && (
+             <div className="mt-6 space-y-4">
+               <div className="flex justify-center pt-4">
+                 <Button
+                   type="submit"
+                   disabled={loading || !isConnected}
+                   size="lg"
+                   variant="default"
+                   className="px-10 py-3 font-bold text-base hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none group relative overflow-hidden"
+                 >
+                   {loading ? (
+                     <>
+                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                       Creating Project...
+                     </>
+                   ) : (
+                     <>
+                       <Sparkles className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                       Create Project
+                       <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+                     </>
+                   )}
+                 </Button>
+               </div>
+               
+               {!isConnected && (
+                 <p className="mt-3 text-amber-600 text-center flex items-center justify-center text-sm">
+                   <AlertTriangle className="h-4 w-4 mr-2" />
+                   Please connect your wallet to create a project
+                 </p>
+               )}
+               
+               <div className="text-center text-xs text-gray-500 mt-3">
+                 <p>* Required fields must be completed before submission</p>
+               </div>
              </div>
-             
-             {!isConnected && (
-               <p className="mt-4 text-amber-600 text-center flex items-center justify-center">
-                 <AlertTriangle className="h-4 w-4 mr-2" />
-                 Please connect your wallet to create a project
-               </p>
-             )}
-             
-             <div className="text-center text-sm text-gray-500 mt-4">
-               <p>* Required fields must be completed before submission</p>
-             </div>
-           </div>
+           )}
          </form>
           </div>
         </div>

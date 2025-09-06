@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
 import './index.css'
 import { AppProvider } from '@/providers/AppProvider'
@@ -12,6 +12,8 @@ import CampaignView from '@/pages/explorer/campaign/<id>/page'
 import ProjectsPage from '@/pages/explorer/projects/page'
 import CampaignsPage from '@/pages/explorer/campaigns/page'
 import CreateProject from '@/pages/app/project/start'
+import CreateCampaign from '@/pages/app/campaign/start'
+import ProfilePage from '@/pages/app/profile/page'
 
 
 globalThis.Buffer = Buffer
@@ -31,6 +33,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
           {/* App */}
           <Route path="/app/project/start" element={<Layout><CreateProject /></Layout>} />
+          <Route path="/app/campaign/start" element={<Layout><CreateCampaign /></Layout>} />
+
+          <Route path="/app/profile" element={<Layout><ProfilePage /></Layout>} />
+          <Route path="/app/me" element={<Navigate to="/app/profile" replace />} />
 
 
         </Routes>

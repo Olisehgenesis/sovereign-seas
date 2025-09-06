@@ -33,6 +33,7 @@ interface ContractAddresses {
 }
 
 export type SupportedChains = 42220 | 122
+export const SUPPORTED_CHAINS = [42220, 122] as const
 
 type ChainContracts = Record<contractEnv, ContractAddresses>
 export const contractAddresses: Record<SupportedChains, ChainContracts> = {

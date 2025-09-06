@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { uploadToIPFS } from '@/utils/imageUtils';
 import { useCreateCampaignWithFees } from '@/hooks/useCampaignMethods';
-import { Address } from 'viem';
+import   {  type Address } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
 import { useAccount, useBalance, useWriteContract, useReadContract } from 'wagmi';
 import { contractABI as abi } from '@/abi/seas4ABI';

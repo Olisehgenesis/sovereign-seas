@@ -1,4 +1,4 @@
-import { createPublicClient, http, Address, WalletClient, PublicClient } from 'viem';
+import { createPublicClient, http, type Address, type WalletClient, type PublicClient } from 'viem';
 import { celo } from 'viem/chains';
 import { IdentitySDK } from './useGooddollar';
 

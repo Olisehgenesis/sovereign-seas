@@ -1,9 +1,9 @@
 import {
-  Address,
-  PublicClient,
-  WalletClient,
-  SimulateContractParameters,
-  WalletActions,
+  type Address,
+  type PublicClient,
+  type WalletClient,
+  type SimulateContractParameters,
+  type WalletActions,
   zeroAddress,
 } from "viem"
 import { waitForTransactionReceipt } from "viem/actions"
@@ -11,11 +11,11 @@ import { compressToEncodedURIComponent } from "lz-string"
 
 import {
   contractAddresses,
-  contractEnv,
+  type contractEnv,
   Envs,
   FV_IDENTIFIER_MSG2,
   identityV2ABI,
-  SupportedChains,
+  type SupportedChains,
 } from "./constants"
 
 import type {
