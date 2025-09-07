@@ -7,11 +7,11 @@ import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import ProjectCard from '@/components/cards/ProjectCard';
 import CampaignCard from '@/components/cards/CampaignCard';
 import { formatEther } from 'viem';
-import type { Address } from 'viem';
 import { useNavigate } from 'react-router-dom';
 import TerminalCard from '@/components/TerminalCard';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import Stepper from '@/components/ui/stepper';
+import { getMainContractAddress } from '@/utils/contractConfig';
 
 // Helper function to determine campaign status
 const getCampaignStatus = (campaign: any): 'upcoming' | 'active' | 'ended' | 'paused' => {
@@ -30,7 +30,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   
   // Contract address from environment variable
-  const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
+  const CONTRACT_ADDRESS = getMainContractAddress();
   
   // Fetch data using hooks
   const { projects } = useAllProjects(CONTRACT_ADDRESS);

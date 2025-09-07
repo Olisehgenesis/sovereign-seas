@@ -1,10 +1,8 @@
 import { useWriteContract, useReadContract, useReadContracts, useSendTransaction, useAccount } from 'wagmi'
 import { type Address } from 'viem'
 import { bridgeAbi } from '@/abi/bridge'
-import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Interface } from "ethers"
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk'
-import { waitForTransactionReceipt } from 'viem/actions'
 
 // Use fallback address if environment variable is not set
 const contractAddress = (import.meta.env.VITE_SIMPLE_BRIDGE_V1 || "0x8970026D77290AA73FF2c95f80D6a4beEd94284F") as Address;
@@ -113,7 +111,8 @@ export function useCreateProject() {
         transferrable
       ]);
       
-      const celoChainId = 42220; // Celo mainnet chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
       
       // Generate referral tag with user address
       const referralTag = getReferralTag({
@@ -803,14 +802,14 @@ export function useProject(projectId: bigint) {
   })
 
   const project = data ? {
-    id: data[0],
-    owner: data[1],
-    name: data[2],
-    description: data[3],
-    transferrable: data[4],
-    active: data[5],
-    createdAt: data[6],
-    campaignIds: data[7]
+    id: (data as any[])[0],
+    owner: (data as any[])[1],
+    name: (data as any[])[2],
+    description: (data as any[])[3],
+    transferrable: (data as any[])[4],
+    active: (data as any[])[5],
+    createdAt: (data as any[])[6],
+    campaignIds: (data as any[])[7]
   } as Project : null
 
   return {
@@ -834,19 +833,19 @@ export function useCampaign(campaignId: bigint) {
   })
 
   const campaign = data ? {
-    id: data[0],
-    admin: data[1],
-    name: data[2],
-    description: data[3],
-    startTime: data[4],
-    endTime: data[5],
-    adminFeePercentage: data[6],
-    maxWinners: data[7],
-    useQuadraticDistribution: data[8],
-    useCustomDistribution: data[9],
-    payoutToken: data[10],
-    active: data[11],
-    totalFunds: data[12]
+    id: (data as any[])[0],
+    admin: (data as any[])[1],
+    name: (data as any[])[2],
+    description: (data as any[])[3],
+    startTime: (data as any[])[4],
+    endTime: (data as any[])[5],
+    adminFeePercentage: (data as any[])[6],
+    maxWinners: (data as any[])[7],
+    useQuadraticDistribution: (data as any[])[8],
+    useCustomDistribution: (data as any[])[9],
+    payoutToken: (data as any[])[10],
+    active: (data as any[])[11],
+    totalFunds: (data as any[])[12]
   } as Campaign : null
 
   return {
@@ -870,14 +869,14 @@ export function useCampaignPool(campaignId: bigint) {
   })
 
   const pool = data ? {
-    campaignId: data[0],
-    poolId: data[1],
-    poolAddress: data[2],
-    totalAmount: data[3],
-    distributedAmount: data[4],
-    memberCount: data[5],
-    isActive: data[6],
-    createdAt: data[7]
+    campaignId: (data as any[])[0],
+    poolId: (data as any[])[1],
+    poolAddress: (data as any[])[2],
+    totalAmount: (data as any[])[3],
+    distributedAmount: (data as any[])[4],
+    memberCount: (data as any[])[5],
+    isActive: (data as any[])[6],
+    createdAt: (data as any[])[7]
   } as CampaignPool : null
 
   return {
@@ -921,10 +920,10 @@ export function usePoolStats(campaignId: bigint) {
   })
 
   const stats = data ? {
-    totalMembers: data[0],
-    totalDistributed: data[1],
-    remainingBalance: data[2],
-    averageRewardPerMember: data[3]
+    totalMembers: (data as any[])[0],
+    totalDistributed: (data as any[])[1],
+    remainingBalance: (data as any[])[2],
+    averageRewardPerMember: (data as any[])[3]
   } as PoolStats : null
 
   return {
@@ -948,11 +947,11 @@ export function useProjectParticipation(campaignId: bigint, projectId: bigint) {
   })
 
   const participation = data ? {
-    projectId: data[0],
-    campaignId: data[1],
-    approved: data[2],
-    voteCount: data[3],
-    fundsReceived: data[4]
+    projectId: (data as any[])[0],
+    campaignId: (data as any[])[1],
+    approved: (data as any[])[2],
+    voteCount: (data as any[])[3],
+    fundsReceived: (data as any[])[4]
   } as ProjectParticipation : null
 
   return {

@@ -458,76 +458,7 @@ const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
   );
 };
 
-interface VoteCardProps {
-  vote: {
-    projectId: bigint;
-    campaignId: bigint;
-    amount: bigint;
-    token: string;
-    celoEquivalent: bigint;
-    metadata?: {
-      mainInfo?: string;
-    };
-  };
-  onViewProject: (projectId: bigint) => void;
-  onViewCampaign: (campaignId: bigint) => void;
-}
 
-const VoteCard = ({ vote, onViewProject, onViewCampaign }: VoteCardProps) => {
-  const parsedMetadata = (() => {
-    try {
-      return vote.metadata?.mainInfo 
-        ? JSON.parse(vote.metadata.mainInfo) 
-        : {};
-    } catch (error) {
-      console.error('Error parsing vote metadata:', error);
-      return {};
-    }
-  })();
-
-  return (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200/50 hover:shadow-md transition-shadow duration-150">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white">
-            <Vote className="h-4 w-4" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 text-sm">
-              Project #{vote.projectId.toString()}
-            </h3>
-            <p className="text-xs text-gray-600">
-              Campaign #{vote.campaignId.toString()}
-            </p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold text-green-600">
-            {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? 'CELO' : 'cUSD'}
-          </p>
-          <p className="text-xs text-gray-600">
-            {formatEther(BigInt(vote.celoEquivalent))} CELO equiv.
-          </p>
-        </div>
-      </div>
-      
-      <div className="flex gap-2">
-        <button
-          onClick={() => onViewProject(vote.projectId)}
-          className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-150 text-xs font-medium"
-        >
-          View Project
-        </button>
-        <button
-          onClick={() => onViewCampaign(vote.campaignId)}
-          className="flex-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors duration-150 text-xs font-medium"
-        >
-          View Campaign
-        </button>
-      </div>
-    </div>
-  );
-};
 
   
 
@@ -932,7 +863,7 @@ export default function ProfilePage() {
                 const pingController = new AbortController();
                 const pingTimeoutId = setTimeout(() => pingController.abort(), 5000);
                 
-                const pingResponse = await fetch('https://selfauth.vercel.app', {
+                await fetch('https://selfauth.vercel.app', {
                   method: 'GET',
                   signal: pingController.signal
                 });
@@ -1251,7 +1182,7 @@ export default function ProfilePage() {
             { id: 'campaigns', label: 'Campaigns', icon: Trophy, count: userMetrics.campaigns },
             { id: 'votes', label: 'Votes', icon: Vote, count: userMetrics.votes },
             { id: 'identity', label: 'Identity', icon: Shield }
-          ].map((tab, index) => (
+          ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -1317,7 +1248,7 @@ export default function ProfilePage() {
                     hoverColor: 'hover:from-green-100 hover:to-teal-100',
                     action: () => navigate('/explore')
                   }
-                ].map((action, index) => (
+                ].map((action) => (
                   <button
                     key={action.title}
                     onClick={action.action}
@@ -1461,7 +1392,7 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 {voteHistory.slice(0, 3).map((vote, index) => {
                   const project = allProjects?.find(p => p.project.id === vote.projectId);
-                  const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
+                  // const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
                   
                   return (
                     <div
@@ -1530,7 +1461,7 @@ export default function ProfilePage() {
             <div 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             >
-              {filteredProjects.map((project, index) => (
+              {filteredProjects.map((project) => (
                 <div
                   key={project.id.toString()}
                 >
@@ -1573,7 +1504,7 @@ export default function ProfilePage() {
             <div 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             >
-              {userCampaigns.map((campaign, index) => (
+              {userCampaigns.map((campaign) => (
                 <div
                   key={campaign.id.toString()}
                 >

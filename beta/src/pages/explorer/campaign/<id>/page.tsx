@@ -1509,10 +1509,35 @@ export default function CampaignView() {
                         
                         {/* Action - Hidden on mobile if campaign ended */}
                         <td className={`px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap ${hasEnded ? 'hidden lg:table-cell' : ''}`}>
-                          <span className="inline-flex items-center px-3 py-2 text-sm text-gray-500 bg-gray-100 rounded-md">
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Not Approved
-                  </span>
+                          {isAdmin ? (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApproveProject(project.id);
+                              }}
+                              disabled={isApprovingProject}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-green-400 rounded-md transition-colors"
+                            >
+                              {isApprovingProject ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  Approving...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </>
+                              )}
+                            </motion.button>
+                          ) : (
+                            <span className="inline-flex items-center px-3 py-2 text-sm text-gray-500 bg-gray-100 rounded-md">
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Not Approved
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

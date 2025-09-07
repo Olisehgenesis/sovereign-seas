@@ -10,7 +10,7 @@ import {
 } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { getContract } from 'viem';
-import { getDataSuffix, submitReferral } from '@divvi/referral-sdk';
+import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 
 // Import ABI
 import sovereignSeasAbi from '../abis/SovereignSeasV2.json';
@@ -19,8 +19,7 @@ import { formatIpfsUrl } from '@/app/utils/imageUtils';
 // get chain id and contract address from .env
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ? Number(process.env.NEXT_PUBLIC_CHAIN_ID) : undefined;
 const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
-const DIVVI_IDENTIFIER = '0x53D2fEB0DD37CF6f9B06580FC86921f47685972B';
-const DIVVI_PROVIDERS = ['0x5f0a55FaD9424ac99429f635dfb9bF20c3360Ab8', '0x6226ddE08402642964f9A6de844ea3116F0dFc7e'];
+const DIVVI_IDENTIFIER = '0x53eaF4CD171842d8144e45211308e5D90B4b0088';
 
 
 // Updated Types
@@ -190,10 +189,10 @@ export const useSovereignSeas = (config?: SovereignSeasConfig) => {
       console.error('Error submitting Divvi referral:', error);
     }
   };
-  const getDivviDataSuffix = () => {
-    return getDataSuffix({
-      consumer: DIVVI_IDENTIFIER,
-      providers: DIVVI_PROVIDERS as `0x${string}`[],
+  const getDivviReferralTag = (userAddress: string) => {
+    return getReferralTag({
+      user: userAddress as `0x${string}`,
+      consumer: DIVVI_IDENTIFIER as `0x${string}`,
     });
   };
 
@@ -432,15 +431,15 @@ const loadProjects = async (campaignId: bigint | number) => {
 
 // Modified vote function to include Divvi referral
 const vote = async (campaignId: bigint | number, projectId: bigint | number, amount: string) => {
-  if (!walletClient || !publicClient) return;
+  if (!walletClient || !publicClient || !walletAddress) return;
   
   try {
     const amountInWei = parseEther(amount);
     
-    // Get the Divvi data suffix
-    const dataSuffix = getDivviDataSuffix();
+    // Get the Divvi referral tag
+    const referralTag = getDivviReferralTag(walletAddress);
     
-    // Prepare the function data without the suffix first
+    // Prepare the function data without the tag first
     const { data: functionData } = await publicClient.simulateContract({
       address: actualContractAddress,
       abi: sovereignSeasAbi,
@@ -449,8 +448,8 @@ const vote = async (campaignId: bigint | number, projectId: bigint | number, amo
       value: amountInWei
     });
     
-    // Combine function data with Divvi suffix
-    const dataWithSuffix = functionData + dataSuffix;
+    // Combine function data with Divvi referral tag
+    const dataWithTag = functionData + referralTag;
     
     // Send transaction with the modified data
     const hash = await walletClient.writeContract({
@@ -459,8 +458,8 @@ const vote = async (campaignId: bigint | number, projectId: bigint | number, amo
       functionName: 'vote',
       args: [BigInt(campaignId), BigInt(projectId)],
       value: amountInWei,
-      // Override data field with our suffixed data
-      data: dataWithSuffix
+      // Override data field with our tagged data
+      data: dataWithTag
     });
     
     // Wait for transaction confirmation
@@ -474,8 +473,8 @@ const vote = async (campaignId: bigint | number, projectId: bigint | number, amo
   }
 };
 
-// Similarly modify createCampaign function
-const createCampaign = async (
+// Modified createCampaign function to include Divvi referral
+const createCampaignWithDivvi = async (
   name: string,
   description: string,
   logo: string,
@@ -487,16 +486,16 @@ const createCampaign = async (
   maxWinners: number,
   useQuadraticDistribution: boolean
 ) => {
-  if (!walletClient || !publicClient) return;
+  if (!walletClient || !publicClient || !walletAddress) return;
   
   try {
     // Create the campaign with native token fee
     const campaignFee = parseEther(CAMPAIGN_CREATION_FEE);
     
-    // Get the Divvi data suffix
-    const dataSuffix = getDivviDataSuffix();
+    // Get the Divvi referral tag
+    const referralTag = getDivviReferralTag(walletAddress);
     
-    // Prepare the function data without the suffix first
+    // Prepare the function data without the tag first
     const { data: functionData } = await publicClient.simulateContract({
       address: actualContractAddress,
       abi: sovereignSeasAbi,
@@ -516,8 +515,8 @@ const createCampaign = async (
       value: campaignFee
     });
     
-    // Combine function data with Divvi suffix
-    const dataWithSuffix = functionData + dataSuffix;
+    // Combine function data with Divvi referral tag
+    const dataWithTag = functionData + referralTag;
     
     // Send transaction with the modified data
     const hash = await walletClient.writeContract({
@@ -537,7 +536,7 @@ const createCampaign = async (
         useQuadraticDistribution
       ],
       value: campaignFee,
-      data: dataWithSuffix
+      data: dataWithTag
     });
     
     // Wait for transaction confirmation
@@ -709,7 +708,7 @@ const createCampaign = async (
     demoVideo: string = '',
     contracts: string[] = []
   ) => {
-    if (!walletClient || !publicClient) return;
+    if (!walletClient || !publicClient || !walletAddress) return;
     
     try {
       // Submit the project with native token fee
@@ -718,7 +717,11 @@ const createCampaign = async (
       // Check if the user is a campaign admin
       const isAdmin = await isCampaignAdmin(campaignId);
       
-      writeContract({
+      // Get the Divvi referral tag
+      const referralTag = getDivviReferralTag(walletAddress);
+      
+      // Prepare the function data without the tag first
+      const { data: functionData } = await publicClient.simulateContract({
         address: actualContractAddress,
         abi: sovereignSeasAbi,
         functionName: 'submitProject',
@@ -733,11 +736,38 @@ const createCampaign = async (
           demoVideo,
           contracts
         ],
-        // Only send value if not an admin
         value: isAdmin ? BigInt(0) : projectFee
       });
       
-      await publicClient.waitForTransactionReceipt({ hash: writeData as `0x${string}` });
+      // Combine function data with Divvi referral tag
+      const dataWithTag = functionData + referralTag;
+      
+      // Send transaction with the modified data
+      const hash = await walletClient.writeContract({
+        address: actualContractAddress,
+        abi: sovereignSeasAbi,
+        functionName: 'submitProject',
+        args: [
+          BigInt(campaignId), 
+          name, 
+          description, 
+          githubLink, 
+          socialLink, 
+          testingLink,
+          logo,
+          demoVideo,
+          contracts
+        ],
+        value: isAdmin ? BigInt(0) : projectFee,
+        data: dataWithTag
+      });
+      
+      // Wait for transaction confirmation
+      await publicClient.waitForTransactionReceipt({ hash });
+      
+      // Submit the referral to Divvi
+      const currentChainId = await walletClient.getChainId();
+      await addDivviReferral(hash, currentChainId);
     } catch (error) {
       console.error('Error submitting project:', error);
     }
@@ -934,6 +964,7 @@ const createCampaign = async (
     
     // Write functions
     createCampaign,
+    createCampaignWithDivvi,
     updateCampaign,
     submitProject,
     updateProject,

@@ -1,9 +1,10 @@
 // hooks/useGrantsMethods.ts
 
-import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
-import { formatEther, Address, type Abi } from 'viem'
+import { useWriteContract, useReadContract, useReadContracts, useAccount, useSendTransaction } from 'wagmi'
+import { formatEther, type Address, type Abi } from 'viem'
 import { grantsABI as abi } from '@/abi/grantsABI' // You'll need to create this ABI file
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { executeTransactionWithDivvi, logDivviOperation } from '@/utils/divvi'
 
 // Types for better TypeScript support
 export interface GrantMetadata {
@@ -79,19 +80,23 @@ export interface Claim {
   rejectionCount: bigint
 }
 
-export enum GrantType {
-  MILESTONE = 0,
-  BOUNTY = 1,
-  ACHIEVEMENT = 2,
-  CAMPAIGN_BONUS = 3
-}
+export const GrantType = {
+  MILESTONE: 0,
+  BOUNTY: 1,
+  ACHIEVEMENT: 2,
+  CAMPAIGN_BONUS: 3
+} as const;
 
-export enum ClaimStatus {
-  PENDING = 0,
-  APPROVED = 1,
-  REJECTED = 2,
-  AUTO_APPROVED = 3
-}
+export type GrantType = typeof GrantType[keyof typeof GrantType];
+
+export const ClaimStatus = {
+  PENDING: 0,
+  APPROVED: 1,
+  REJECTED: 2,
+  AUTO_APPROVED: 3
+} as const;
+
+export type ClaimStatus = typeof ClaimStatus[keyof typeof ClaimStatus];
 
 // Enhanced Grant interface for the component
 export interface EnhancedGrant {
@@ -139,7 +144,9 @@ const celoToken = import.meta.env.VITE_CELO_TOKEN;
 
 // Hook for creating secured grants
 export function useCreateSecuredGrant(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract();
+  const { address: user } = useAccount();
+  const { isPending, isError, error, isSuccess, data } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const createSecuredGrant = async ({
     paymentToken,
@@ -184,11 +191,12 @@ export function useCreateSecuredGrant(contractAddress: Address) {
       const isCeloPayment = paymentToken.toLowerCase() === celoToken.toLowerCase();
       const totalValue = isCeloPayment ? totalAmount + feeAmount : feeAmount;
 
-      const result = await writeContract({
-        address: contractAddress,
+      // Divvi integration - use sendTransactionAsync for referral tracking
+      const result = await executeTransactionWithDivvi(
+        contractAddress,
         abi,
-        functionName: 'createSecuredGrant',
-        args: [
+        'createSecuredGrant',
+        [
           paymentToken,
           totalAmount,
           deadline,
@@ -199,9 +207,10 @@ export function useCreateSecuredGrant(contractAddress: Address) {
           milestoneMetadata,
           maxValidationTime
         ],
-        // Include value for native CELO payments
-        value: totalValue
-      });
+        user as Address,
+        sendTransactionAsync,
+        { value: totalValue }
+      );
 
       logDebug('Secured Grant Creation Success', {
         transactionHash: result,
@@ -210,6 +219,13 @@ export function useCreateSecuredGrant(contractAddress: Address) {
         feeAmount: feeAmount.toString(),
         isCeloPayment
       });
+
+      logDivviOperation('CREATE_SECURED_GRANT', {
+        transactionHash: result,
+        user: user,
+        totalAmount: totalAmount.toString(),
+        feeAmount: feeAmount.toString()
+      }, 'success');
 
       return result;
     } catch (err) {
@@ -235,7 +251,9 @@ export function useCreateSecuredGrant(contractAddress: Address) {
 
 // Hook for creating promised grants
 export function useCreatePromisedGrant(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract();
+  const { address: user } = useAccount();
+  const { isPending, isError, error, isSuccess, data } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const createPromisedGrant = async ({
     paymentToken,
@@ -261,11 +279,12 @@ export function useCreatePromisedGrant(contractAddress: Address) {
     feeAmount: bigint;
   }) => {
     try {
-      const result = await writeContract({
-        address: contractAddress,
+      // Divvi integration - use sendTransactionAsync for referral tracking
+      const result = await executeTransactionWithDivvi(
+        contractAddress,
         abi,
-        functionName: 'createPromisedGrant',
-        args: [
+        'createPromisedGrant',
+        [
           paymentToken,
           totalAmount,
           deadline,
@@ -276,8 +295,10 @@ export function useCreatePromisedGrant(contractAddress: Address) {
           milestoneMetadata,
           maxValidationTime
         ],
-        value: feeAmount // Fee amount in CELO
-      });
+        user as Address,
+        sendTransactionAsync,
+        { value: feeAmount }
+      );
 
       logDebug('Promised Grant Creation Success', {
         transactionHash: result,
@@ -285,6 +306,13 @@ export function useCreatePromisedGrant(contractAddress: Address) {
         totalAmount: totalAmount.toString(),
         feeAmount: feeAmount.toString()
       });
+
+      logDivviOperation('CREATE_PROMISED_GRANT', {
+        transactionHash: result,
+        user: user,
+        totalAmount: totalAmount.toString(),
+        feeAmount: feeAmount.toString()
+      }, 'success');
 
       return result;
     } catch (err) {
@@ -308,7 +336,9 @@ export function useCreatePromisedGrant(contractAddress: Address) {
 
 // Hook for submitting milestone
 export function useSubmitMilestone(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract();
+  const { address: user } = useAccount();
+  const { isPending, isError, error, isSuccess } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const submitMilestone = async ({
     grantId,
@@ -322,12 +352,24 @@ export function useSubmitMilestone(contractAddress: Address) {
     metadata: string;
   }) => {
     try {
-      await writeContract({
-        address: contractAddress,
+      // Divvi integration - use sendTransactionAsync for referral tracking
+      const result = await executeTransactionWithDivvi(
+        contractAddress,
         abi,
-        functionName: 'submitMilestone',
-        args: [grantId, milestoneIndex, submissionData, metadata]
-      });
+        'submitMilestone',
+        [grantId, milestoneIndex, submissionData, metadata],
+        user as Address,
+        sendTransactionAsync
+      );
+
+      logDivviOperation('SUBMIT_MILESTONE', {
+        transactionHash: result,
+        user: user,
+        grantId: grantId.toString(),
+        milestoneIndex: milestoneIndex.toString()
+      }, 'success');
+
+      return result;
     } catch (err) {
       console.error('Error submitting milestone:', err);
       throw err;
@@ -345,7 +387,9 @@ export function useSubmitMilestone(contractAddress: Address) {
 
 // Hook for validating milestone
 export function useValidateMilestone(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract();
+  const { address: user } = useAccount();
+  const { isPending, isError, error, isSuccess } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const validateMilestone = async ({
     grantId,
@@ -361,12 +405,25 @@ export function useValidateMilestone(contractAddress: Address) {
     feedback: string;
   }) => {
     try {
-      await writeContract({
-        address: contractAddress,
+      // Divvi integration - use sendTransactionAsync for referral tracking
+      const result = await executeTransactionWithDivvi(
+        contractAddress,
         abi,
-        functionName: 'validateMilestone',
-        args: [grantId, milestoneIndex, claimant, approve, feedback]
-      });
+        'validateMilestone',
+        [grantId, milestoneIndex, claimant, approve, feedback],
+        user as Address,
+        sendTransactionAsync
+      );
+
+      logDivviOperation('VALIDATE_MILESTONE', {
+        transactionHash: result,
+        user: user,
+        grantId: grantId.toString(),
+        milestoneIndex: milestoneIndex.toString(),
+        approve
+      }, 'success');
+
+      return result;
     } catch (err) {
       console.error('Error validating milestone:', err);
       throw err;
@@ -384,7 +441,9 @@ export function useValidateMilestone(contractAddress: Address) {
 
 // Hook for claiming milestone
 export function useClaimMilestone(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract();
+  const { address: user } = useAccount();
+  const { isPending, isError, error, isSuccess } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const claimMilestone = async ({
     grantId,
@@ -394,12 +453,24 @@ export function useClaimMilestone(contractAddress: Address) {
     milestoneIndex: bigint;
   }) => {
     try {
-      await writeContract({
-        address: contractAddress,
+      // Divvi integration - use sendTransactionAsync for referral tracking
+      const result = await executeTransactionWithDivvi(
+        contractAddress,
         abi,
-        functionName: 'claimMilestone',
-        args: [grantId, milestoneIndex]
-      });
+        'claimMilestone',
+        [grantId, milestoneIndex],
+        user as Address,
+        sendTransactionAsync
+      );
+
+      logDivviOperation('CLAIM_MILESTONE', {
+        transactionHash: result,
+        user: user,
+        grantId: grantId.toString(),
+        milestoneIndex: milestoneIndex.toString()
+      }, 'success');
+
+      return result;
     } catch (err) {
       console.error('Error claiming milestone:', err);
       throw err;
@@ -417,7 +488,9 @@ export function useClaimMilestone(contractAddress: Address) {
 
 // Hook for sending milestone payment (by grant creator)
 export function useSendMilestonePayment(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract();
+  const { address: user } = useAccount();
+  const { isPending, isError, error, isSuccess } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const sendMilestonePayment = async ({
     grantId,
@@ -431,13 +504,27 @@ export function useSendMilestonePayment(contractAddress: Address) {
     paymentAmount?: bigint; // For promised grants
   }) => {
     try {
-      await writeContract({
-        address: contractAddress,
+      // Divvi integration - use sendTransactionAsync for referral tracking
+      const result = await executeTransactionWithDivvi(
+        contractAddress,
         abi,
-        functionName: 'sendMilestonePayment',
-        args: [grantId, milestoneIndex, recipient],
-        ...(paymentAmount && { value: paymentAmount })
-      });
+        'sendMilestonePayment',
+        [grantId, milestoneIndex, recipient],
+        user as Address,
+        sendTransactionAsync,
+        paymentAmount ? { value: paymentAmount } : {}
+      );
+
+      logDivviOperation('SEND_MILESTONE_PAYMENT', {
+        transactionHash: result,
+        user: user,
+        grantId: grantId.toString(),
+        milestoneIndex: milestoneIndex.toString(),
+        recipient,
+        paymentAmount: paymentAmount?.toString()
+      }, 'success');
+
+      return result;
     } catch (err) {
       console.error('Error sending milestone payment:', err);
       throw err;

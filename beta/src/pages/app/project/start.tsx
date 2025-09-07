@@ -45,7 +45,9 @@ import {
 import { useCreateProject } from '@/hooks/useProjectMethods';
 import { uploadToIPFS } from '@/utils/imageUtils';
 import type { LucideIcon } from 'lucide-react';
-import { publicClient } from '@/utils/clients';
+import { usePublicClient } from 'wagmi';
+import { useChainSwitch } from '@/hooks/useChainSwitch';
+import { contractABI as abi } from '@/abi/seas4ABI';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -60,13 +62,17 @@ import {
 } from '@/components/ui/select';
 
 interface SectionProps {
+  id: string;
   title: string;
   icon: LucideIcon;
   children: React.ReactNode;
   required?: boolean;
+  expandedSection: string;
+  toggleSection: (section: string) => void;
+  isVisible?: boolean;
 }
 
-const Section = ({ id, title, icon: Icon, children, required = false, expandedSection, toggleSection, isVisible = true }: SectionProps & { isVisible?: boolean }) => {
+const Section = ({ title, icon: Icon, children, required = false, isVisible = true }: SectionProps) => {
   if (!isVisible) return null;
   
   return (
@@ -156,6 +162,8 @@ type ArrayFields = 'tags' | 'techStack' | 'smartContracts' | 'keyFeatures' | 'us
 export default function CreateProject() {
   const navigate = useNavigate();
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const { ensureCorrectChain, targetChain } = useChainSwitch();
   const [isMounted, setIsMounted] = useState(false);
   const { createProject, isSuccess, isPending, error: contractError } = useCreateProject(contractAddress);
   
@@ -601,6 +609,11 @@ export default function CreateProject() {
       
       setUploadProgress(90);
       
+      // Ensure we're on the correct chain before making the contract call
+      console.log('- Ensuring correct chain...');
+      await ensureCorrectChain();
+      console.log(`- Now on correct chain: ${targetChain.name}`);
+
       // Call the contract method
       const tx = await createProject({
         name: cleanedProject.name,
@@ -619,11 +632,11 @@ export default function CreateProject() {
       // Wait for transaction confirmation
       if (tx) {
         setSuccessMessage('Waiting for transaction confirmation...');
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-        if (receipt.status === 'success') {
+        const receipt = await publicClient?.waitForTransactionReceipt({ hash: tx });
+        if (receipt && receipt.status === 'success') {
           setSuccessMessage('Project created successfully! Redirecting...');
           setTimeout(() => {
-            navigate('/explorer?tab=projects');
+            navigate('/explorer/projects');
           }, 3000);
         } else {
           setErrorMessage('Transaction failed');
@@ -659,12 +672,44 @@ export default function CreateProject() {
   useEffect(() => {
     if (isSuccess) {
       setLoading(false);
-      setSuccessMessage('Project created successfully! Redirecting...');
-      setTimeout(() => {
-        navigate('/explorer?tab=projects');
+      setSuccessMessage('Project created successfully! Redirecting to your project in 3 seconds...');
+      
+      // Navigate to the new project after a short delay
+      setTimeout(async () => {
+        try {
+          console.log('Reading project count after successful creation...');
+          console.log('Contract address:', contractAddress);
+          console.log('Public client available:', !!publicClient);
+          
+          // Wait a bit more for the transaction to be fully confirmed
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Read the project count after successful creation to get the new project ID
+          const updatedProjectCount = await publicClient?.readContract({
+            address: contractAddress,
+            abi,
+            functionName: 'getProjectCount'
+          });
+          
+          console.log('Updated project count:', updatedProjectCount);
+          
+          if (updatedProjectCount && Number(updatedProjectCount) > 0) {
+            const newProjectId = Number(updatedProjectCount) - 1;
+            console.log('Navigating to new project:', newProjectId);
+            navigate(`/explorer/project/${newProjectId}`);
+          } else {
+            // Fallback to projects list if we can't get the count
+            console.log('Project count not available or zero, navigating to projects list');
+            navigate('/explorer/projects');
+          }
+        } catch (error) {
+          console.error('Error navigating to project:', error);
+          // Fallback to projects list
+          navigate('/explorer/projects');
+        }
       }, 3000);
     }
-  }, [isSuccess, navigate]);
+  }, [isSuccess, contractAddress, publicClient, navigate]);
 
   // Handle contract error state
   useEffect(() => {
@@ -681,37 +726,6 @@ export default function CreateProject() {
     }
   }, [isPending, isUploading]);
   
-  // Section completion checking
-  const getSectionCompletion = (section: string): boolean => {
-    switch (section) {
-      case 'basic':
-        return project.name.trim() !== '' && 
-               project.tagline.trim() !== '' && 
-               project.description.trim() !== '' && 
-               project.description.trim().length >= 50 && 
-               project.category !== '';
-      case 'media':
-        return true; // Media section is optional
-      case 'team':
-        return project.contactEmail.trim() !== '' && 
-               /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(project.contactEmail);
-      case 'technical':
-        return project.techStack.filter(t => t.trim() !== '').length > 0 && 
-               project.keyFeatures.filter(f => f.trim() !== '').length > 0;
-      case 'review':
-        return (project.name.trim() !== '' && 
-                project.tagline.trim() !== '' && 
-                project.description.trim() !== '' && 
-                project.description.trim().length >= 50 && 
-                project.category !== '') &&
-               (project.contactEmail.trim() !== '' && 
-                /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(project.contactEmail)) &&
-               (project.techStack.filter(t => t.trim() !== '').length > 0 && 
-                project.keyFeatures.filter(f => f.trim() !== '').length > 0);
-      default:
-        return false;
-    }
-  };
   
   // Section toggle handler
   const toggleSection = (section: string) => {

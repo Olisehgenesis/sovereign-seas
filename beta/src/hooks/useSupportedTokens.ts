@@ -1,4 +1,5 @@
 //export celo token details , and cusd, address get from env
+import { getCeloTokenAddress, getCusdTokenAddress, getGoodDollarTokenAddress } from '@/utils/contractConfig';
 
 interface SupportedToken {
     address: string;
@@ -7,13 +8,10 @@ interface SupportedToken {
     decimals: number;
 }
 
-const celoToken = import.meta.env.VITE_CELO_TOKEN;
-const cusdToken = import.meta.env.VITE_CUSD_TOKEN;
-const goodDollarToken = import.meta.env.VITE_GOOD_DOLLAR_TOKEN;
-
-if (!celoToken || !cusdToken || !goodDollarToken) {
-    throw new Error('CELO_TOKEN, CUSD_TOKEN, or VITE_GOOD_DOLLAR_TOKEN is not defined');
-}
+// Get testnet-aware token addresses
+const celoToken = getCeloTokenAddress();
+const cusdToken = getCusdTokenAddress();
+const goodDollarToken = getGoodDollarTokenAddress();
 
 export const supportedTokens: SupportedToken[] = [
     {

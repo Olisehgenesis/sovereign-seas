@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { contractABI as abi } from '@/abi/seas4ABI';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 import { Interface } from "ethers";
+import { getCeloTokenAddress } from '@/utils/contractConfig';
 
 // Divvi Integration - will be generated dynamically with user address
 const CONSUMER_ADDRESS = '0x53eaF4CD171842d8144e45211308e5D90B4b0088' as const
@@ -104,7 +105,7 @@ const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 
 
 
 
-const celoToken = import.meta.env.VITE_CELO_TOKEN as Address;
+const celoToken = getCeloTokenAddress();
 
 // Fixed hook for creating a new campaign
 export function useCreateCampaign(contractAddress: Address) {
@@ -171,7 +172,8 @@ export function useCreateCampaign(contractAddress: Address) {
         feeToken
       ]);
       
-      const celoChainId = 42220; // Celo mainnet chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
       
       // Generate referral tag with user address
       const referralTag = getReferralTag({
@@ -440,7 +442,8 @@ export function useAddProjectToCampaign(contractAddress: Address) {
         feeToken
       ]);
       
-      const celoChainId = 42220; // Celo mainnet chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
       
       // Generate referral tag with user address
       const referralTag = getReferralTag({

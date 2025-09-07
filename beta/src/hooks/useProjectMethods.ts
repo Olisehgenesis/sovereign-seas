@@ -4,8 +4,6 @@ import { contractABI as abi } from '@/abi/seas4ABI'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Interface } from "ethers"
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk'
-import { waitForTransactionReceipt } from 'viem/actions'
-import { useVerifyCeloToken } from './useVotingMethods'
 
 const projectInterface = new Interface(abi)
 
@@ -98,7 +96,8 @@ export function useCreateProject(contractAddress: Address) {
         transferrable
       ]);
       
-      const celoChainId = 42220; // Celo mainnet chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
       
       // Generate referral tag with user address
       const referralTag = getReferralTag({
@@ -360,7 +359,8 @@ export function useAddProjectToCampaign(contractAddress: Address) {
         feeToken
       ]);
 
-      const celoChainId = 42220;
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
       
       // Generate referral tag with user address
       const referralTag = getReferralTag({

@@ -4,15 +4,11 @@ import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
 import { formatEther } from 'viem';
 import { 
-  Github,
   Globe,
-  FileText,
   Calendar,
-  MapPin,
  
   CheckCircle,
  
-  ExternalLink,
   Share2,
   Users,
   Trophy,
@@ -23,18 +19,10 @@ import {
   Linkedin,
   Mail,
   MessageCircle,
-  Link as LinkIcon,
  
-  Award,
-  Target,
-  Lightbulb,
-
-  Globe2,
   Send,
-  User,
   Terminal,
   X,
-  Star,
   Code,
   Video,
   Play,
@@ -46,7 +34,6 @@ import {
   Eye,
   Vote,
   Coins,
-  Heart,
   Activity,
  
   BarChart3,
@@ -56,9 +43,6 @@ import {
   Search,
   Camera,
   Lock,
-  Unlock,
-  Network,
-  Database,
   ChevronRight,
 } from 'lucide-react';
 
@@ -356,18 +340,13 @@ interface ProjectLogoProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const ProjectLogo: React.FC<ProjectLogoProps> = ({ logo, name, verified, size = 'md' }) => {
+const ProjectLogo: React.FC<ProjectLogoProps> = ({ logo, name, size = 'md' }) => {
   const sizeClasses = {
     sm: 'w-12 h-12 text-lg',
     md: 'w-20 h-20 text-2xl',
     lg: 'w-32 h-32 text-4xl'
   };
 
-  const badgeSize = {
-    sm: 'w-4 h-4 -top-1 -right-1',
-    md: 'w-5 h-5 -top-1 -right-1',
-    lg: 'w-6 h-6 -top-2 -right-2'
-  };
 
   return (
     <div className="relative">
@@ -391,75 +370,8 @@ const ProjectLogo: React.FC<ProjectLogoProps> = ({ logo, name, verified, size = 
   );
 };
 
-interface StatCardProps {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string | number;
-  color: 'blue' | 'green' | 'purple' | 'amber' | 'red';
-  trend?: {
-    direction: 'up' | 'down';
-    value: string;
-  };
-}
 
-const StatCard: React.FC<StatCardProps> = ({ icon: Icon, label, value, color, trend }) => {
-  const colorClasses = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
-    purple: 'bg-purple-50 border-purple-200 text-purple-700',
-    amber: 'bg-amber-50 border-amber-200 text-amber-700',
-    red: 'bg-red-50 border-red-200 text-red-700',
-  };
 
-  const iconColors = {
-    blue: 'text-blue-600',
-    green: 'text-green-600',
-    purple: 'text-purple-600',
-    amber: 'text-amber-600',
-    red: 'text-red-600',
-  };
-
-  return (
-    <div className={`p-6 rounded-xl border ${colorClasses[color]} backdrop-blur-sm`}>
-      <div className="flex items-center justify-between mb-3">
-        <Icon className={`h-6 w-6 ${iconColors[color]}`} />
-        {trend && (
-          <div className={`flex items-center text-xs font-medium ${
-            trend.direction === 'up' ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {trend.direction === 'up' ? '↗' : '↘'} {trend.value}
-          </div>
-        )}
-      </div>
-      <div className="space-y-1">
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm font-medium opacity-80">{label}</p>
-      </div>
-    </div>
-  );
-};
-
-interface SectionHeaderProps {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  subtitle?: string;
-  action?: React.ReactNode;
-}
-
-const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title, subtitle, action }) => (
-  <div className="flex items-center justify-between mb-6">
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-        <div className="p-2 bg-blue-100 rounded-lg">
-          <Icon className="h-5 w-5 text-blue-600" />
-        </div>
-        {title}
-      </h2>
-      {subtitle && <p className="text-gray-600 mt-1">{subtitle}</p>}
-    </div>
-    {action}
-  </div>
-);
 
 // ==================== MAIN COMPONENT ====================
 

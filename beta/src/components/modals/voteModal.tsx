@@ -1,35 +1,153 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { parseEther, formatEther } from 'viem';
 import { useAccount } from 'wagmi';
-import { createPortal } from 'react-dom';
 import { 
-  X,
   AlertCircle,
   Loader2,
   Wallet,
   Check,
-  Vote,
-  Crown,
-  ChevronDown,
   TrendingUp,
-  DollarSign,
   Twitter,
   Share2,
-  Info,
   Gift,
   Shield,
   Zap,
-  Target
+  ChevronDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 import { useVote } from '@/hooks/useVotingMethods';
 import { useTokenToCeloEquivalent } from '@/hooks/useVotingMethods';
 import { useGoodDollarVoter } from '@/hooks/useGoodDollarVoter';
 import goodDollarLogo from '/images/good.png';
-import { publicClient } from '@/utils/clients';
+import { usePublicClient } from 'wagmi';
+import { getGoodDollarVoterAddress, getMainContractAddress } from '@/utils/contractConfig';
+import { supportedTokens } from '@/hooks/useSupportedTokens';
+
+// Token data - moved inside component to use current environment
+
+// Token Selector Component
+interface TokenSelectorProps {
+  selectedToken: string;
+  onTokenSelect: (tokenAddress: string) => void;
+  disabled?: boolean;
+  tokenBalances: Array<{
+    address: string;
+    symbol: string;
+    name: string;
+    balance: bigint;
+    formattedBalance: string;
+  }>;
+}
+
+const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSelect, disabled, tokenBalances }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Token data - using supportedTokens from hook (same as wallet modal)
+  const tokens = supportedTokens.map(token => ({
+    address: token.address,
+    name: token.name,
+    symbol: token.symbol,
+    logo: token.symbol === 'CELO' ? '/images/celo.png' : 
+          token.symbol === 'cUSD' ? '/images/cusd.png' : 
+          goodDollarLogo
+  }));
+  
+  const selectedTokenData = tokens.find(token => token.address === selectedToken);
+  
+  const getBalance = (tokenAddress: string) => {
+    const tokenBalance = tokenBalances.find(tb => tb.address.toLowerCase() === tokenAddress.toLowerCase());
+    return tokenBalance ? tokenBalance.formattedBalance : '0.00';
+  };
+
+  return (
+    <>
+      {/* Token Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        disabled={disabled}
+        className={`w-full h-12 rounded-xl border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors flex items-center justify-between px-4 ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        }`}
+      >
+        {selectedTokenData ? (
+          <div className="flex items-center space-x-3">
+            <img 
+              src={selectedTokenData.logo} 
+              alt={selectedTokenData.symbol}
+              className="w-6 h-6 rounded-full"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+            <span className="font-semibold text-gray-900">{selectedTokenData.symbol}</span>
+          </div>
+        ) : (
+          <span className="font-semibold text-gray-500">Select token</span>
+        )}
+        <ChevronDown className="h-5 w-5 text-gray-400" />
+      </button>
+
+      {/* Token Modal */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+          </DialogHeader>
+          
+          <div className="mt-4 space-y-2">
+            {tokens.map((token) => (
+              <button
+                key={token.address}
+                onClick={() => {
+                  onTokenSelect(token.address);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors ${
+                  selectedToken === token.address ? 'bg-blue-50 border border-blue-200' : ''
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <img 
+                    src={token.logo} 
+                    alt={token.symbol}
+                    className="w-8 h-8 rounded-full"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
+                  />
+                  <div className="text-left">
+                    <div className="font-semibold text-gray-900">{token.name}</div>
+                    <div className="text-sm text-gray-500">{token.symbol}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">Balance</div>
+                  <div className="font-semibold text-gray-900">{getBalance(token.address)}</div>
+                  {selectedToken === token.address && (
+                    <Check className="h-4 w-4 text-blue-600 mt-1" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
 
 interface VoteModalProps {
   isOpen: boolean;
@@ -44,15 +162,15 @@ interface VoteModalProps {
   onVoteSubmitted?: () => void;
 }
 
-interface ProjectVoteSimulation {
-  projectId: string;
-  currentVotes: number;
-  newVotes: number;
-  totalVotes: number;
-  quadraticWeight: number;
-  estimatedShare: number;
-  estimatedPayout: number;
-}
+// interface ProjectVoteSimulation {
+//   projectId: string;
+//   currentVotes: number;
+//   newVotes: number;
+//   totalVotes: number;
+//   quadraticWeight: number;
+//   estimatedShare: number;
+//   estimatedPayout: number;
+// }
 
 // API Functions
 const claimFreeVote = async (beneficiaryAddress: string, campaignId: bigint | string, projectId: string) => {
@@ -92,18 +210,16 @@ export default function VoteModal({
   onClose,
   selectedProject,
   campaignId,
-  allProjects = [],
-  totalCampaignFunds = 0,
   onVoteSuccess,
   onVoteSubmitted
 }: VoteModalProps) {
   // Core state
   const [currentView, setCurrentView] = useState<'vote' | 'claim' | 'success'>('vote');
-  const [voteAmount, setVoteAmount] = useState('');
+  const [voteAmount, setVoteAmount] = useState('1');
+  const [percentage, setPercentage] = useState([10]);
   const [selectedToken, setSelectedToken] = useState('');
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showTokenDropdown, setShowTokenDropdown] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
   // Claim state
@@ -117,22 +233,33 @@ export default function VoteModal({
   }>({ eligible: false });
 
   // Hooks
-  const { vote, voteWithCelo, isPending, isSuccess, reset } = useVote(import.meta.env.VITE_CONTRACT_V4);
+  const { vote, voteWithCelo, isPending, isSuccess, reset } = useVote(getMainContractAddress());
   const { address } = useAccount();
+  const publicClient = usePublicClient();
   const navigate = useNavigate();
 
-  // Token addresses
-  const celoTokenAddress = import.meta.env.VITE_CELO_TOKEN;
-  const cUSDTokenAddress = import.meta.env.VITE_CUSD_TOKEN;
-  const goodDollarTokenAddress = '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A';
-  const goodDollarVoterAddress = import.meta.env.VITE_GOODDOLLAR_VOTER_CONTRACT;
+  // Token addresses - using supportedTokens
+  const celoToken = supportedTokens.find(t => t.symbol === 'CELO');
+  const cUSDToken = supportedTokens.find(t => t.symbol === 'cUSD');
+  const goodDollarToken = supportedTokens.find(t => t.symbol === 'G$');
+  const goodDollarVoterAddress = getGoodDollarVoterAddress();
+  
+  // Debug: Log token addresses to verify they're using testnet
+  console.log('Token addresses:', {
+    celo: celoToken?.address,
+    cusd: cUSDToken?.address,
+    goodDollar: goodDollarToken?.address,
+    environment: import.meta.env.VITE_ENV
+  });
 
-  // Token balances
-  const [balances, setBalances] = useState<{
-    celo: bigint | null;
-    cusd: bigint | null;
-    goodDollar: bigint | null;
-  }>({ celo: null, cusd: null, goodDollar: null });
+  // Token balances - using same structure as wallet modal
+  const [tokenBalances, setTokenBalances] = useState<Array<{
+    address: string;
+    symbol: string;
+    name: string;
+    balance: bigint;
+    formattedBalance: string;
+  }>>([]);
 
   // GoodDollar integration
   const {
@@ -145,57 +272,119 @@ export default function VoteModal({
 
   // CELO equivalent for cUSD
   const { celoEquivalentFormatted } = useTokenToCeloEquivalent(
-    import.meta.env.VITE_CONTRACT_V4 as `0x${string}`,
-    cUSDTokenAddress as `0x${string}`,
+    getMainContractAddress(),
+    cUSDToken?.address as `0x${string}` || '0x0000000000000000000000000000000000000000' as `0x${string}`,
     voteAmount ? parseEther(voteAmount) : 0n
   );
 
-  // Fetch token balances
+  // Helper function for BigInt exponentiation (same as wallet modal)
+  const bigIntPow = (base: bigint, exponent: bigint): bigint => {
+    let result = BigInt(1);
+    for (let i = BigInt(0); i < exponent; i++) {
+      result *= base;
+    }
+    return result;
+  };
+
+  // Fetch token balances - using same logic as wallet modal
   useEffect(() => {
     async function fetchBalances() {
-      if (!address) return;
+      if (!address || !publicClient) {
+        console.log('No wallet address connected or public client');
+        return;
+      }
+      console.log('Fetching balances for address:', address);
+      
       try {
-        const [celo, cusd, gs] = await Promise.all([
-          publicClient.getBalance({ address: address as `0x${string}` }),
-          publicClient.readContract({
-            address: cUSDTokenAddress as `0x${string}`,
-            abi: [{ name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] }],
-            functionName: 'balanceOf',
-            args: [address as `0x${string}`]
-          }),
-          publicClient.readContract({
-            address: goodDollarTokenAddress as `0x${string}`,
-            abi: [{ name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] }],
-            functionName: 'balanceOf',
-            args: [address as `0x${string}`]
-          })
-        ]);
+        const balancesPromises = supportedTokens.map(async (token) => {
+          try {
+            let balance: bigint;
+            
+            if (token.symbol === 'CELO') {
+              balance = await publicClient.getBalance({
+                address: address as `0x${string}`
+              });
+            } else {
+              balance = await publicClient.readContract({
+                address: token.address as `0x${string}`,
+                abi: [{
+                  name: 'balanceOf',
+                  type: 'function',
+                  stateMutability: 'view',
+                  inputs: [{ name: 'account', type: 'address' }],
+                  outputs: [{ name: '', type: 'uint256' }]
+                }],
+                functionName: 'balanceOf',
+                args: [address as `0x${string}`]
+              });
+            }
+            
+            let formattedBalance: string;
+            if (token.decimals === 18) {
+              const fullBalance = formatEther(balance);
+              const parts = fullBalance.split('.');
+              formattedBalance = parts[0] + (parts[1] ? ('.' + parts[1].substring(0, 3)) : '');
+            } else {
+              const divisor = bigIntPow(BigInt(10), BigInt(token.decimals));
+              const integerPart = balance / divisor;
+              const fractionalPart = balance % divisor;
+              const fractionalStr = fractionalPart.toString().padStart(token.decimals, '0');
+              formattedBalance = `${integerPart}.${fractionalStr.substring(0, 3)}`;
+            }
+            
+            return {
+              address: token.address,
+              symbol: token.symbol,
+              name: token.name,
+              balance,
+              formattedBalance
+            };
+          } catch (error) {
+            console.error(`Error fetching balance for ${token.symbol}:`, error);
+            return {
+              address: token.address,
+              symbol: token.symbol,
+              name: token.name,
+              balance: BigInt(0),
+              formattedBalance: '0'
+            };
+          }
+        });
         
-        setBalances({ celo: celo as bigint, cusd: cusd as bigint, goodDollar: gs as bigint });
+        const balances = await Promise.all(balancesPromises);
+        
+        console.log('Balance fetch results:', balances.map(b => ({
+          symbol: b.symbol,
+          balance: b.balance.toString(),
+          formatted: b.formattedBalance
+        })));
+        
+        setTokenBalances(balances);
       } catch (e) {
-        setBalances({ celo: null, cusd: null, goodDollar: null });
+        console.error('Balance fetch error:', e);
+        setTokenBalances([]);
       }
     }
     fetchBalances();
-  }, [address, cUSDTokenAddress, goodDollarTokenAddress]);
+  }, [address, publicClient]);
 
   // Set default token
   useEffect(() => {
-    if (isOpen && !selectedToken) {
-      setSelectedToken(goodDollarTokenAddress);
+    if (isOpen && !selectedToken && goodDollarToken) {
+      setSelectedToken(goodDollarToken.address);
     }
-  }, [isOpen, goodDollarTokenAddress]);
+  }, [isOpen, goodDollarToken]);
 
   // Ensure default token is CELO when modal opens
   useEffect(() => {
-    if (isOpen) {
-      setSelectedToken(celoTokenAddress || '');
+    if (isOpen && celoToken) {
+      setSelectedToken(celoToken.address);
     }
-  }, [isOpen, celoTokenAddress]);
+  }, [isOpen, celoToken]);
 
   // Handle GoodDollar estimates
   useEffect(() => {
-    if (selectedToken === goodDollarTokenAddress && voteAmount && !goodDollarLoading) {
+    if (goodDollarToken && selectedToken === goodDollarToken.address && voteAmount && !goodDollarLoading) {
       (async () => {
         try {
           const estimate = await getGoodDollarQuote(parseEther(voteAmount));
@@ -205,7 +394,7 @@ export default function VoteModal({
         }
       })();
     }
-  }, [selectedToken, voteAmount, getGoodDollarQuote, goodDollarLoading]);
+  }, [selectedToken, voteAmount, getGoodDollarQuote, goodDollarLoading, goodDollarToken]);
 
   // Check claim eligibility
   const checkClaimEligibility = async () => {
@@ -300,25 +489,24 @@ export default function VoteModal({
       setIsProcessing(true);
       
       const amount = parseEther(voteAmount);
-      const isNativeCelo = selectedToken.toLowerCase() === celoTokenAddress?.toLowerCase();
+      const isNativeCelo = celoToken && selectedToken.toLowerCase() === celoToken.address.toLowerCase();
       
-      let tx;
       if (isNativeCelo) {
-        tx = await voteWithCelo({
+        await voteWithCelo({
           campaignId: campaignId,
           projectId: selectedProject.id.toString(),
           amount: amount
         });
-      } else if (selectedToken === cUSDTokenAddress) {
-        tx = await vote({
+      } else if (cUSDToken && selectedToken === cUSDToken.address) {
+        await vote({
           campaignId: campaignId,
           projectId: selectedProject.id.toString(),
           token: selectedToken as `0x${string}`,
           amount: amount
         });
-      } else if (selectedToken === goodDollarTokenAddress) {
+      } else if (goodDollarToken && selectedToken === goodDollarToken.address) {
         const minCeloOut = goodDollarEstimate ? parseEther(goodDollarEstimate) : 0n;
-        tx = await swapAndVoteGoodDollar(
+        await swapAndVoteGoodDollar(
           campaignId,
           BigInt(selectedProject.id),
           amount,
@@ -388,11 +576,11 @@ export default function VoteModal({
   useEffect(() => {
     if (!isOpen) {
       setCurrentView('vote');
-      setVoteAmount('');
-      setSelectedToken(goodDollarTokenAddress);
+      setVoteAmount('1');
+      setPercentage([10]);
+      setSelectedToken(goodDollarToken?.address || '');
       setError('');
       setIsProcessing(false);
-      setShowTokenDropdown(false);
       setCountdown(0);
       setIsClaimProcessing(false);
       setClaimError('');
@@ -401,128 +589,50 @@ export default function VoteModal({
       setGoodDollarEstimate('');
       reset();
     }
-  }, [isOpen, goodDollarTokenAddress, reset]);
+  }, [isOpen, goodDollarToken, reset]);
 
   // Utility functions
   const getSelectedBalance = () => {
-    if (selectedToken === celoTokenAddress) {
-      return balances.celo !== null ? parseFloat(formatEther(balances.celo)).toFixed(2) : '0.00';
-    } else if (selectedToken === cUSDTokenAddress) {
-      return balances.cusd !== null ? parseFloat(formatEther(balances.cusd)).toFixed(2) : '0.00';
-    } else if (selectedToken === goodDollarTokenAddress) {
-      return balances.goodDollar !== null ? parseFloat(formatEther(balances.goodDollar)).toFixed(2) : '0.00';
-    }
-    return '0.00';
+    const tokenBalance = tokenBalances.find(tb => tb.address.toLowerCase() === selectedToken.toLowerCase());
+    return tokenBalance ? tokenBalance.formattedBalance : '0.00';
   };
 
   const getSelectedSymbol = () => {
-    if (selectedToken === celoTokenAddress) return 'CELO';
-    if (selectedToken === cUSDTokenAddress) return 'cUSD';
-    if (selectedToken === goodDollarTokenAddress) return 'G$';
-    return '';
+    const tokenBalance = tokenBalances.find(tb => tb.address.toLowerCase() === selectedToken.toLowerCase());
+    return tokenBalance ? tokenBalance.symbol : '';
   };
 
-  // Calculate voting simulation
-  const votingSimulation = useMemo(() => {
-    if (!voteAmount || !allProjects?.length || !selectedProject) return null;
-
-    const voteValue = parseFloat(voteAmount);
-    if (voteValue <= 0) return null;
-
-    let effectiveVoteValue = voteValue;
-    if (selectedToken === cUSDTokenAddress) {
-      effectiveVoteValue = parseFloat(celoEquivalentFormatted);
-    } else if (selectedToken === goodDollarTokenAddress && goodDollarEstimate) {
-      effectiveVoteValue = parseFloat(goodDollarEstimate);
-    }
-
-    const simulations: ProjectVoteSimulation[] = allProjects.map(project => {
-      const currentVotes = Number(formatEther(project.voteCount || 0n));
-      const isSelectedProject = project.id === selectedProject.id;
-      const newVotes = isSelectedProject ? effectiveVoteValue : 0;
-      const totalVotes = currentVotes + newVotes;
-      
-      return {
-        projectId: project.id?.toString() || '',
-        currentVotes,
-        newVotes,
-        totalVotes,
-        quadraticWeight: Math.sqrt(totalVotes),
-        estimatedShare: 0,
-        estimatedPayout: 0
-      };
-    });
-
-    const totalQuadraticWeight = simulations.reduce((sum, sim) => sum + sim.quadraticWeight, 0);
-    const availableFunds = totalCampaignFunds * 0.7;
-    
-    simulations.forEach(sim => {
-      if (totalQuadraticWeight > 0) {
-        sim.estimatedShare = (sim.quadraticWeight / totalQuadraticWeight) * 100;
-        sim.estimatedPayout = (sim.quadraticWeight / totalQuadraticWeight) * availableFunds;
-      }
-    });
-
-    return simulations.find(sim => sim.projectId === selectedProject?.id?.toString());
-  }, [voteAmount, allProjects, selectedProject, totalCampaignFunds, selectedToken, celoEquivalentFormatted, cUSDTokenAddress, goodDollarTokenAddress, goodDollarEstimate]);
+  // Calculate voting simulation (currently unused but kept for future features)
+  // TODO: Implement voting simulation feature
 
   const handleClose = () => {
     setCurrentView('vote');
-    setVoteAmount('');
-    setSelectedToken(goodDollarTokenAddress || '');
+    setVoteAmount('1');
+    setPercentage([10]);
+      setSelectedToken(goodDollarToken?.address || '');
     setError('');
     setIsProcessing(false);
-    setShowTokenDropdown(false);
     reset();
     onClose();
   };
 
   if (!isOpen || !selectedProject) return null;
 
-  const modalContent = (
-    <div 
-      className="fixed inset-0 bg-black/60 flex items-start justify-center z-[9999] p-4 backdrop-blur-sm overflow-y-auto"
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-      onClick={handleClose}
-    >
-      <div 
-        className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 relative overflow-hidden max-h-[90vh] overflow-y-auto mt-4 sm:mt-8 lg:mt-16 mb-4"
-        style={{ position: 'relative', zIndex: 10000 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        
-        {/* Header */}
-        <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20"></div>
-          <button
-            onClick={handleClose}
-            className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 z-10"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          
-          <div className="relative z-10">
-            <div className="flex items-center mb-2">
-              <Crown className="h-6 w-6 mr-2 text-yellow-300" />
-              <h3 className="text-xl font-bold">Cast Your Vote</h3>
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col bg-white p-0 [&>button]:hidden">
+        <DialogHeader className="p-6 pb-3">
+          {/* Header */}
+          <div className="bg-gray-500 p-4 text-white relative overflow-hidden rounded-t-lg -m-6 mb-3">
+            <div className="relative z-10">
+              <DialogDescription className="text-white text-2xl">
+                Vote for: <span className="font-semibold text-yellow-200 uppercase">{selectedProject.name}</span>
+              </DialogDescription>
             </div>
-            <p className="text-blue-100 text-sm mb-4">
-              Supporting: <span className="font-semibold text-yellow-200">{selectedProject.name}</span>
-            </p>
-            
-            {currentView === 'vote' && (
-              <button
-                onClick={() => setCurrentView('claim')}
-                className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center"
-              >
-                <Gift className="h-4 w-4 mr-2" />
-                Claim Free Vote
-              </button>
-            )}
           </div>
-        </div>
+        </DialogHeader>
 
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto px-8 pb-0">
           
           {/* Success View */}
           {currentView === 'success' && (
@@ -543,29 +653,33 @@ export default function VoteModal({
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                <h5 className="font-semibold text-blue-800 mb-3 flex items-center justify-center">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share Your Support
-                </h5>
-                <div className="flex gap-3">
-                  <a
-                    href={`https://twitter.com/intent/tweet?text=Just voted for ${selectedProject.name} on @SovSeas! 🗳️✨ Community funding at its finest! %23CommunityFunding %23SovSeas`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#1DA1F2] text-white rounded-xl hover:bg-[#1a8cd8] transition-colors font-medium"
-                  >
-                    <Twitter className="h-4 w-4" />
-                    Share
-                  </a>
-                  <button
-                    onClick={handleClose}
-                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
+                <CardContent className="p-4">
+                  <h5 className="font-semibold text-blue-800 mb-3 flex items-center justify-center">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share Your Support
+                  </h5>
+                  <div className="flex gap-3">
+                    <Button asChild className="flex-1 bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white">
+                      <a
+                        href={`https://twitter.com/intent/tweet?text=Just voted for ${selectedProject.name} on @SovSeas! 🗳️✨ Community funding at its finest! %23CommunityFunding %23SovSeas`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Twitter className="h-4 w-4 mr-2" />
+                        Share
+                      </a>
+                    </Button>
+                    <Button
+                      onClick={handleClose}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -581,81 +695,89 @@ export default function VoteModal({
               </div>
 
               {isCheckingEligibility && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center">
-                  <Loader2 className="h-5 w-5 text-blue-600 mr-3 animate-spin" />
-                  <span className="text-blue-700 font-medium">Checking verification status...</span>
-                </div>
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4 flex items-center">
+                    <Loader2 className="h-5 w-5 text-blue-600 mr-3 animate-spin" />
+                    <span className="text-blue-700 font-medium">Checking verification status...</span>
+                  </CardContent>
+                </Card>
               )}
 
               {!isCheckingEligibility && eligibilityStatus.eligible !== undefined && (
-                <div className={`border-2 rounded-xl p-4 ${
+                <Card className={`border-2 ${
                   eligibilityStatus.eligible 
                     ? 'bg-green-50 border-green-200' 
                     : 'bg-red-50 border-red-200'
                 }`}>
-                  <div className="flex items-center mb-2">
-                    {eligibilityStatus.eligible ? (
-                      <>
-                        <Check className="h-5 w-5 text-green-600 mr-2" />
-                        <span className="font-semibold text-green-800">Eligible for Free Vote</span>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                        <span className="font-semibold text-red-800">Not Eligible</span>
-                      </>
-                    )}
-                  </div>
-                  <p className={`text-sm ${
-                    eligibilityStatus.eligible ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {eligibilityStatus.reason}
-                  </p>
-                </div>
+                  <CardContent className="p-4">
+                    <div className="flex items-center mb-2">
+                      {eligibilityStatus.eligible ? (
+                        <>
+                          <Check className="h-5 w-5 text-green-600 mr-2" />
+                          <span className="font-semibold text-green-800">Eligible for Free Vote</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                          <span className="font-semibold text-red-800">Not Eligible</span>
+                        </>
+                      )}
+                    </div>
+                    <p className={`text-sm ${
+                      eligibilityStatus.eligible ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {eligibilityStatus.reason}
+                    </p>
+                  </CardContent>
+                </Card>
               )}
 
               {claimError && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm font-medium text-red-800">{claimError}</p>
-                </div>
+                <Card className="bg-red-50 border-2 border-red-200">
+                  <CardContent className="p-4 flex items-start">
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm font-medium text-red-800">{claimError}</p>
+                  </CardContent>
+                </Card>
               )}
 
               {eligibilityStatus.eligible && (
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border-2 border-green-200">
-                  <h4 className="font-semibold text-green-800 mb-3 flex items-center">
-                    <Gift className="h-4 w-4 mr-2" />
-                    Free Vote Details
-                  </h4>
-                  <div className="space-y-2 text-sm text-green-700">
-                    <div className="flex justify-between">
-                      <span>Vote Amount:</span>
-                      <span className="font-semibold">1.0 CELO</span>
+                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-green-800 mb-3 flex items-center">
+                      <Gift className="h-4 w-4 mr-2" />
+                      Free Vote Details
+                    </h4>
+                    <div className="space-y-2 text-sm text-green-700">
+                      <div className="flex justify-between">
+                        <span>Vote Amount:</span>
+                        <span className="font-semibold">1.0 CELO</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Project:</span>
+                        <span className="font-semibold">{selectedProject.name}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Project:</span>
-                      <span className="font-semibold">{selectedProject.name}</span>
-                    </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               )}
 
               <div className="flex gap-3">
                 {!eligibilityStatus.eligible && !isCheckingEligibility && (
-                  <button
+                  <Button
                     onClick={checkClaimEligibility}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center font-medium"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Shield className="h-4 w-4 mr-2" />
                     Check Eligibility
-                  </button>
+                  </Button>
                 )}
                 
                 {eligibilityStatus.eligible && (
-                  <button
+                  <Button
                     onClick={handleClaimFreeVote}
                     disabled={isClaimProcessing}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
+                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg text-white"
                   >
                     {isClaimProcessing ? (
                       <>
@@ -668,238 +790,61 @@ export default function VoteModal({
                         Claim Now
                       </>
                     )}
-                  </button>
+                  </Button>
                 )}
                 
-                <button
+                <Button
                   onClick={() => setCurrentView('vote')}
                   disabled={isClaimProcessing}
-                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+                  variant="outline"
                 >
                   Back
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
           {/* Vote View */}
           {currentView === 'vote' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               
               {error && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm font-medium text-red-800">{error}</p>
-                </div>
+                <Card className="bg-red-50 border-2 border-red-200">
+                  <CardContent className="p-4 flex items-start">
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm font-medium text-red-800">{error}</p>
+                  </CardContent>
+                </Card>
               )}
 
               {(isProcessing || isPending) && (
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-                  <div className="flex items-center mb-3">
-                    <Loader2 className="h-5 w-5 text-amber-600 mr-3 animate-spin" />
-                    <p className="text-sm font-medium text-amber-800">Processing transaction...</p>
-                  </div>
-                  {countdown > 0 && (
-                    <div>
-                      <p className="text-xs text-amber-700 mb-2">
-                        Redirecting to campaign page in {countdown}s if no confirmation
-                      </p>
-                      <div className="bg-amber-200 rounded-full h-2">
-                        <div 
-                          className="bg-amber-500 h-2 rounded-full transition-all duration-1000"
-                          style={{ width: `${(countdown / 12) * 100}%` }}
-                        />
-                      </div>
+                <Card className="bg-amber-50 border-2 border-amber-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center mb-3">
+                      <Loader2 className="h-5 w-5 text-amber-600 mr-3 animate-spin" />
+                      <p className="text-sm font-medium text-amber-800">Processing transaction...</p>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Impact Preview */}
-              {votingSimulation && voteAmount && parseFloat(voteAmount) > 0 && (
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border-2 border-green-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-green-800 flex items-center">
-                      <Target className="h-4 w-4 mr-2" />
-                      Estimated Impact </h4>
-                    <div className="text-sm text-green-600 font-medium">
-                      +{selectedToken === cUSDTokenAddress 
-                        ? Number(celoEquivalentFormatted).toFixed(2)
-                        : selectedToken === goodDollarTokenAddress
-                          ? voteAmount // or you could use goodDollarEstimate if you want
-                          : parseFloat(voteAmount).toFixed(1)} votes
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/70 rounded-lg p-3">
-                      <div className="text-gray-600 text-xs font-medium">New Total Votes</div>
-                      <div className="font-bold text-green-700 text-lg">
-                        {votingSimulation.totalVotes.toFixed(1)}
-                      </div>
-                    </div>
-                    <div className="bg-white/70 rounded-lg p-3">
-                      <div className="text-gray-600 text-xs font-medium">Funding Share</div>
-                      <div className="font-bold text-green-700 text-lg">
-                        {votingSimulation.estimatedShare.toFixed(1)}%
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Estimated Funding */}
-                  {votingSimulation.estimatedPayout > 0 && (
-                    <div className="mt-3 bg-white/70 rounded-lg p-3">
-                      <div className="text-gray-600 text-xs">Estimated Funding</div>
-                      <div className="font-bold text-green-700 flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        {votingSimulation.estimatedPayout.toFixed(1)} CELO
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Token Selection */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">
-                  Select Token
-                </label>
-                
-                <div className="relative">
-                  <button
-                    onClick={() => setShowTokenDropdown(!showTokenDropdown)}
-                    disabled={isProcessing || isPending}
-                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
-                      selectedToken
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                    } ${(isProcessing || isPending) ? 'cursor-not-allowed opacity-60' : ''}`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {selectedToken === celoTokenAddress && (
-                        <img 
-                          src="/images/celo.png" 
-                          alt="CELO"
-                          className="w-8 h-8 rounded-full"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
-                        />
-                      )}
-                      {selectedToken === cUSDTokenAddress && (
-                        <img 
-                          src="/images/cusd.png" 
-                          alt="cUSD"
-                          className="w-8 h-8 rounded-full"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
-                        />
-                      )}
-                      {selectedToken === goodDollarTokenAddress && (
-                        <img 
-                          src={goodDollarLogo} 
-                          alt="GoodDollar"
-                          className="w-8 h-8 rounded-full"
-                        />
-                      )}
+                    {countdown > 0 && (
                       <div>
-                        <div className="font-semibold text-left">
-                          {selectedToken === celoTokenAddress ? 'CELO' : 
-                           selectedToken === cUSDTokenAddress ? 'cUSD' : 
-                           selectedToken === goodDollarTokenAddress ? 'GoodDollar' : 
-                           'Select Token'}
+                        <p className="text-xs text-amber-700 mb-2">
+                          Redirecting to campaign page in {countdown}s if no confirmation
+                        </p>
+                        <div className="bg-amber-200 rounded-full h-2">
+                          <div 
+                            className="bg-amber-500 h-2 rounded-full transition-all duration-1000"
+                            style={{ width: `${(countdown / 12) * 100}%` }}
+                          />
                         </div>
-                        {selectedToken && (
-                          <div className="text-xs text-gray-500 text-left">
-                            Balance: {getSelectedBalance()} {getSelectedSymbol()}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${showTokenDropdown ? 'rotate-180' : ''}`} />
-                  </button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
-                  {showTokenDropdown && (
-                    <div className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl">
-                      <div className="p-2">
-                        {/* CELO Option */}
-                        <button
-                          onClick={() => {
-                            setSelectedToken(celoTokenAddress || '');
-                            setShowTokenDropdown(false);
-                          }}
-                          className="w-full px-4 py-3 flex items-center space-x-3 hover:bg-blue-50 rounded-lg text-left transition-colors"
-                        >
-                          <img 
-                            src="/images/celo.png" 
-                            alt="CELO"
-                            className="w-8 h-8 rounded-full"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                          <div>
-                            <div className="font-semibold">CELO</div>
-                            <div className="text-xs text-gray-500">
-                              Balance: {balances.celo !== null ? parseFloat(formatEther(balances.celo)).toFixed(2) : '0.00'}
-                            </div>
-                          </div>
-                        </button>
-                        
-                        {/* cUSD Option */}
-                        <button
-                          onClick={() => {
-                            setSelectedToken(cUSDTokenAddress || '');
-                            setShowTokenDropdown(false);
-                          }}
-                          className="w-full px-4 py-3 flex items-center space-x-3 hover:bg-blue-50 rounded-lg text-left transition-colors"
-                        >
-                          <img 
-                            src="/images/cusd.png" 
-                            alt="cUSD"
-                            className="w-8 h-8 rounded-full"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                          <div>
-                            <div className="font-semibold">cUSD</div>
-                            <div className="text-xs text-gray-500">
-                              Balance: {balances.cusd !== null ? parseFloat(formatEther(balances.cusd)).toFixed(2) : '0.00'}
-                            </div>
-                          </div>
-                        </button>
-                        
-                        {/* GoodDollar Option */}
-                        <button
-                          onClick={() => {
-                            setSelectedToken(goodDollarTokenAddress);
-                            setShowTokenDropdown(false);
-                          }}
-                          className="w-full px-4 py-3 flex items-center space-x-3 hover:bg-blue-50 rounded-lg text-left transition-colors"
-                        >
-                          <img src={goodDollarLogo} alt="GoodDollar" className="w-8 h-8 rounded-full" />
-                          <div>
-                            <div className="font-semibold">GoodDollar</div>
-                            <div className="text-xs text-gray-500">
-                              Balance: {balances.goodDollar !== null ? parseFloat(formatEther(balances.goodDollar)).toFixed(2) : '0.00'}
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
+
               {/* Amount Input */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
                   <label className="text-sm font-semibold text-gray-800">
                     Vote Amount
                   </label>
@@ -911,109 +856,145 @@ export default function VoteModal({
                   )}
                 </div>
                 
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={voteAmount}
-                    onChange={(e) => setVoteAmount(e.target.value)}
-                    placeholder="0.00"
-                    disabled={isProcessing || isPending}
-                    className={`w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-lg font-semibold ${
-                      (isProcessing || isPending) ? 'cursor-not-allowed opacity-60' : ''
-                    }`}
-                    step="0.01"
-                    min="0"
-                    max={getSelectedBalance()}
-                  />
-                  <button
-                    onClick={() => setVoteAmount(getSelectedBalance())}
-                    disabled={isProcessing || isPending}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-blue-600 hover:text-blue-700 px-3 py-1 hover:bg-blue-50 rounded-lg transition-colors font-medium"
-                  >
-                    MAX
-                  </button>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="number"
+                      value={voteAmount}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setVoteAmount(e.target.value);
+                        const balance = parseFloat(getSelectedBalance());
+                        if (balance > 0) {
+                          const newPercentage = (parseFloat(e.target.value) / balance) * 100;
+                          setPercentage([Math.min(100, Math.max(0, Math.round(newPercentage)))]);
+                        }
+                      }}
+                      placeholder="0.00"
+                      disabled={isProcessing || isPending}
+                      className="text-xl font-semibold h-12"
+                      step="0.01"
+                      min="0"
+                      max={getSelectedBalance()}
+                    />
+                  </div>
+                  <div className="w-48">
+                    <TokenSelector 
+                      selectedToken={selectedToken}
+                      onTokenSelect={setSelectedToken}
+                      disabled={isProcessing || isPending}
+                      tokenBalances={tokenBalances}
+                    />
+                  </div>
                 </div>
 
-                {/* Token Conversion Info */}
-                {selectedToken === cUSDTokenAddress && voteAmount && parseFloat(voteAmount) > 0 && (
-                  <div className="mt-2 text-sm text-gray-600 flex items-center bg-gray-50 rounded-lg p-2">
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    <span>≈ {Number(celoEquivalentFormatted).toFixed(2)} CELO voting power</span>
+                {/* Percentage Slider */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Percentage of balance</span>
+                    <span className="font-semibold text-blue-600">{percentage[0]}%</span>
                   </div>
-                )}
-                
-                {selectedToken === goodDollarTokenAddress && voteAmount && parseFloat(voteAmount) > 0 && goodDollarEstimate && (
-                  <div className="mt-2 text-sm text-gray-600 flex items-center bg-gray-50 rounded-lg p-2">
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    <span>≈ {goodDollarEstimate} CELO voting power</span>
+                  <div className="relative">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={percentage[0]}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const value = parseInt(e.target.value);
+                        setPercentage([value]);
+                        const balance = parseFloat(getSelectedBalance());
+                        const newAmount = (balance * value) / 100;
+                        setVoteAmount(newAmount.toFixed(2));
+                      }}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider relative z-10"
+                      disabled={isProcessing || isPending}
+                      style={{
+                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage[0]}%, #e5e7eb ${percentage[0]}%, #e5e7eb 100%)`
+                      }}
+                    />
+                    {/* Slider marks */}
+                    <div className="absolute top-0 left-0 w-full h-2 pointer-events-none">
+                      <div className="relative h-full">
+                        {/* Mark at 5% */}
+                        <div className="absolute top-0 w-1 h-2 bg-gray-400 rounded-full" style={{ left: '5%', transform: 'translateX(-50%)' }}></div>
+                        {/* Mark at 25% */}
+                        <div className="absolute top-0 w-1 h-2 bg-gray-400 rounded-full" style={{ left: '25%', transform: 'translateX(-50%)' }}></div>
+                        {/* Mark at 50% */}
+                        <div className="absolute top-0 w-1 h-2 bg-gray-400 rounded-full" style={{ left: '50%', transform: 'translateX(-50%)' }}></div>
+                        {/* Mark at 75% */}
+                        <div className="absolute top-0 w-1 h-2 bg-gray-400 rounded-full" style={{ left: '75%', transform: 'translateX(-50%)' }}></div>
+                      </div>
+                    </div>
                   </div>
-                )}
-                
-                {/* Quick Amount Buttons */}
-                <div className="grid grid-cols-4 gap-2 mt-4">
-                  {['1', '5', '10', '25'].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setVoteAmount(amount)}
-                      disabled={isProcessing || isPending || parseFloat(amount) > parseFloat(getSelectedBalance())}
-                      className={`px-3 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {amount}
-                    </button>
-                  ))}
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>0%</span>
+                    <span>5%</span>
+                    <span>25%</span>
+                    <span>50%</span>
+                    <span>75%</span>
+                    <span>100%</span>
+                  </div>
                 </div>
               </div>
               
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                {/* Main Vote Button */}
-                <button
-                  onClick={handleVote}
-                  disabled={
-                    isProcessing || 
-                    isPending || 
-                    !voteAmount || 
-                    !selectedToken || 
-                    parseFloat(voteAmount) > parseFloat(getSelectedBalance()) || 
-                    parseFloat(voteAmount) <= 0
-                  }
-                  className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
-                >
-                  {isProcessing || isPending ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Vote className="h-5 w-5" />
-                      <span>
-                        Cast Vote • {parseFloat(voteAmount || '0').toFixed(1)} {getSelectedSymbol()}
-                        {selectedToken === goodDollarTokenAddress && goodDollarEstimate && (
-                          <span className="text-sm opacity-75"> (≈{parseFloat(goodDollarEstimate).toFixed(2)} CELO)</span>
-                        )}
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
+              {/* Token Conversion Info */}
+              {cUSDToken && selectedToken === cUSDToken.address && voteAmount && parseFloat(voteAmount) > 0 && (
+                <Card className="bg-gray-50 border-gray-200">
+                  <CardContent className="p-3">
+                    <div className="text-sm text-gray-600 flex items-center">
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      <span>≈ {Number(celoEquivalentFormatted).toFixed(2)} CELO voting power</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {goodDollarToken && selectedToken === goodDollarToken.address && voteAmount && parseFloat(voteAmount) > 0 && goodDollarEstimate && (
+                <Card className="bg-gray-50 border-gray-200">
+                  <CardContent className="p-3">
+                    <div className="text-sm text-gray-600 flex items-center">
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      <span>≈ {goodDollarEstimate} CELO voting power</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
 
-              {/* Info Section */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <div className="flex items-start">
-                  <Info className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-blue-700">
-                    <p className="font-medium mb-1">Quadratic Voting</p>
-                    <p>Your voting power is calculated using quadratic funding - the square root of your contribution amount. This helps ensure fair distribution across all projects.</p>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </div>
-      </div>
-    </div>
+        
+        {/* Action Buttons */}
+        <div className="p-8 pt-6 flex justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            size="default"
+            className="w-24 h-12 text-base"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleVote}
+            disabled={
+              isProcessing || 
+              isPending || 
+              !voteAmount || 
+              !selectedToken || 
+              parseFloat(voteAmount) > parseFloat(getSelectedBalance()) || 
+              parseFloat(voteAmount) <= 0
+            }
+            className="w-32 bg-gradient-to-r from-blue-600 to-indigo-700 hover:shadow-lg hover:-translate-y-0.5 text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none h-12 text-base"
+          >
+            {isProcessing || isPending ? (
+              <span>Processing...</span>
+            ) : (
+              <span>Cast Vote</span>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

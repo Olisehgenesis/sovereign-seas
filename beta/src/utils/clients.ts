@@ -1,25 +1,17 @@
-//make public and wallet clients
+/**
+ * Client utilities - DEPRECATED
+ * 
+ * ⚠️  WARNING: This file is deprecated!
+ * 
+ * Use Wagmi hooks instead:
+ * - usePublicClient() instead of publicClient
+ * - useWalletClient() instead of walletClient
+ * 
+ * These Wagmi hooks automatically use the correct testnet configuration
+ * from the WagmiProvider in AppProvider.tsx
+ */
 
-import { createPublicClient, createWalletClient, http } from 'viem';
-import { celoAlfajores, celo } from 'viem/chains';
-
-const isTestnet = import.meta.env.VITE_ENV === 'testnet';
-
-
-// const celoAlfajoresRpcUrl = process.env.NEXT_PUBLIC_CELO_ALFAJORES_RPC_URL;
-
-const rpcUrl = isTestnet ? "https://celo-alfajores.drpc.org" : "https://rpc.ankr.com/celo";
-const publicClient = createPublicClient({
-  chain: isTestnet ? celoAlfajores : celo,
-  transport: http(rpcUrl),
-});
-
-const walletClient = createWalletClient({
-  chain: isTestnet ? celoAlfajores : celo,
-  //set chain rpc url to https://celo-alfajores.drpc.org
-  transport: http(rpcUrl),
-});
-
-
-//export the clients
-export { publicClient, walletClient };
+// Legacy exports for backward compatibility
+// TODO: Remove these once all components are updated to use Wagmi hooks
+export const publicClient = null;
+export const walletClient = null;

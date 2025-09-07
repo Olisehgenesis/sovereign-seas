@@ -1,6 +1,6 @@
 // types/index.ts
 
-import { Address } from 'viem';
+import type { Address } from 'viem';
 
 // ==================== SHARED TYPES ====================
 

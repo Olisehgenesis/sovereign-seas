@@ -1,5 +1,5 @@
 import { useReadContract, useReadContracts } from 'wagmi'
-import { Address, type Abi } from 'viem'
+import type { Address, Abi } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 
 // Example of reading a single contract value

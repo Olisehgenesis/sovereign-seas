@@ -25,7 +25,7 @@ import { formatEther, parseUnits } from 'viem';
 import { abbreviateAddress } from '@/utils/formatting';
 import { usePrivy } from '@privy-io/react-auth';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
-import { publicClient } from '@/utils/clients';
+import { usePublicClient } from 'wagmi';
 import { celo, celoAlfajores } from 'viem/chains';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -67,6 +67,7 @@ type TokenBalance = {
 const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const { logout } = usePrivy();
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState<'overview' | 'send' | 'receive' | 'add'>('overview');
@@ -215,16 +216,6 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
     }
   };
 
-  const getTokenLogo = (symbol: string) => {
-    const logos: Record<string, string> = {
-      'CELO': '/images/celo-token.png',
-      'cUSD': '/images/cusd-token.png',
-      'cEUR': '/images/ceur-token.png',
-      'cREAL': '/images/creal-token.png',
-    };
-    
-    return logos[symbol] || '/images/default-token.png';
-  };
 
   const getTokenColor = (symbol: string) => {
     const colors: Record<string, string> = {

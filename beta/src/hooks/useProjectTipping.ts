@@ -1,12 +1,10 @@
 // hooks/useProjectTipping.ts
 
-import { useWriteContract, useReadContract, useReadContracts } from 'wagmi'
-import {useAccount} from 'wagmi'
+import { useWriteContract, useReadContract } from 'wagmi'
 import type { Address } from 'viem'
-import { formatEther, parseEther } from 'viem'
+import { formatEther } from 'viem'
 import { tipsABI as abi } from '@/abi/tipsABI' 
 import { useState, useEffect, useCallback } from 'react'
-import { publicClient } from '@/utils/clients';
 import { erc20ABI } from '@/abi/erc20ABI';
 
 // Types for better TypeScript support
@@ -1266,7 +1264,7 @@ export function parseUnixTimestamp(timestamp: bigint): Date {
   return new Date(Number(timestamp) * 1000)
 }
 
-export function formatTipValue(amount: bigint, decimals: number = 18): string {
+export function formatTipValue(amount: bigint): string {
   try {
     return formatEther(amount)
   } catch {
@@ -1339,7 +1337,7 @@ export function getTokenDisplayName(tokenAddress: Address): string {
   return knownTokens[tokenAddress] || 'ERC20';
 }
 
-export function formatTokenAmount(amount: bigint, tokenAddress: Address, decimals: number = 18): string {
+export function formatTokenAmount(amount: bigint, tokenAddress: Address): string {
   try {
     if (tokenAddress === '0x0000000000000000000000000000000000000000') {
       return `${formatEther(amount)} CELO`;

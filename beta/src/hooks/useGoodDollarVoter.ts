@@ -1,12 +1,8 @@
 import { useState, useCallback } from 'react';
 import { 
-  parseUnits, 
-  parseAbi,
-  formatUnits
+  parseAbi
 } from 'viem';
 import type { Address, Hash, TransactionReceipt } from 'viem';
-import { getContract } from 'viem';
-import { useReadContract } from 'wagmi';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
 
 // Contract ABIs
@@ -89,17 +85,6 @@ export const useGoodDollarVoter = (config: UseGoodDollarVoterConfig): UseGoodDol
   const { address: account } = useAccount();
 
   // Contract instances
-  const voterContract = getContract({
-    address: config.contractAddress,
-    abi: GOOD_DOLLAR_VOTER_ABI,
-    client: publicClient as any,
-  });
-
-  const goodDollarContract = getContract({
-    address: GOOD_DOLLAR_ADDRESS as Address,
-    abi: ERC20_ABI,
-    client: publicClient as any,
-  });
 
   // Load contract info
   const loadContractInfo = useCallback(async () => {

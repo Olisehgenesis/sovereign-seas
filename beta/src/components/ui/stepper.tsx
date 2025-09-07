@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Square } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface StepperStep {
@@ -66,12 +66,6 @@ const Stepper: React.FC<StepperProps> = ({
     return step.status;
   };
 
-  const getIcon = (step: StepperStep, status: string) => {
-    if (status === 'completed') {
-      return <Check className="w-4 h-4" />;
-    }
-    return <Square className="w-4 h-4" />;
-  };
 
   const getStepBackgroundColor = (status: string) => {
     switch (status) {
@@ -82,6 +76,13 @@ const Stepper: React.FC<StepperProps> = ({
       default:
         return 'transparent';
     }
+  };
+
+  const getConnectorColor = (currentStatus: string, _nextStatus: string) => {
+    if (currentStatus === 'completed') {
+      return defaultStyle.activeConnectorColor;
+    }
+    return defaultStyle.inactiveConnectorColor;
   };
 
   const getStepBorderColor = (status: string) => {
@@ -106,12 +107,6 @@ const Stepper: React.FC<StepperProps> = ({
     }
   };
 
-  const getConnectorColor = (currentStatus: string, nextStatus: string) => {
-    if (currentStatus === 'completed') {
-      return defaultStyle.activeConnectorColor;
-    }
-    return defaultStyle.inactiveConnectorColor;
-  };
 
   if (orientation === 'vertical') {
     return (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { X, Loader2, Wallet, Check, Gift, TrendingUp, Info, PlusCircle, ChevronDown, Coins, Heart, DollarSign, Sparkles } from 'lucide-react';
-import { useAccount, useBalance, useReadContract, useWriteContract } from 'wagmi';
-import { parseEther, formatEther, type Address, encodeFunctionData, type Hash } from 'viem';
+import { X, Loader2, Wallet, Check, Gift, TrendingUp, Info, PlusCircle, ChevronDown, Coins, DollarSign, Sparkles } from 'lucide-react';
+import { useAccount, useBalance, useReadContract, usePublicClient } from 'wagmi';
+import { parseEther, formatEther, type Address, type Hash } from 'viem';
 
 import { 
   useProjectTipping, 
@@ -19,7 +19,6 @@ import { formatIpfsUrl } from '@/utils/imageUtils';
 import { tokenList, getTokenInfo } from '@/utils/tokenUtils';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
-import { publicClient, walletClient } from '@/utils/clients';
 
 interface TipModalProps {
   isOpen: boolean;
@@ -45,12 +44,12 @@ const Step = ({ active, label }: { active: boolean; label: string }) => (
   </div>
 );
 
-const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSuccess }) => {
+const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
   const { address: userAddress } = useAccount();
-  const { writeContract } = useWriteContract();
+  const publicClient = usePublicClient();
 
   // Project details (use project.contractAddress)
-  const { projectDetails, isLoading: projectLoading } = useProjectDetails(project.contractAddress as Address, project.id);
+  const { projectDetails } = useProjectDetails(project.contractAddress as Address, project.id);
   const projectLogo = useMemo(() => {
     if (!projectDetails) return '';
     try {
@@ -62,13 +61,13 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   }, [projectDetails]);
 
   // Tipping contract hooks (use TIPPING_CONTRACT)
-  const { summary: tipSummary, isLoading: tipSummaryLoading, refetch: refetchTipSummary } = useProjectTipSummary(TIPPING_CONTRACT, project.id);
-  const { minimumTipAmount, minimumTipAmountFormatted, isLoading: minTipLoading } = useMinimumTipAmount(TIPPING_CONTRACT);
-  const { platformFeePercentage, isLoading: feeLoading } = usePlatformFeePercentage(TIPPING_CONTRACT);
+  const { summary: tipSummary, isLoading: tipSummaryLoading } = useProjectTipSummary(TIPPING_CONTRACT, project.id);
+  const { minimumTipAmount, isLoading: minTipLoading } = useMinimumTipAmount(TIPPING_CONTRACT);
+  const { platformFeePercentage } = usePlatformFeePercentage(TIPPING_CONTRACT);
   const { formatTipAmount, calculatePlatformFee, getNetTipAmount } = useProjectTipping(TIPPING_CONTRACT);
-  const { tipProject, data: tipData, isSuccess: tipSuccess } = useTipProject(TIPPING_CONTRACT);
-  const { tipProjectWithCelo, data: tipCeloData, isSuccess: tipCeloSuccess } = useTipProjectWithCelo(TIPPING_CONTRACT);
-  const { approveToken, isPending: isApproving, error: approveError, data: approveData, isSuccess: approveSuccess } = useApproveToken();
+  const { tipProject, data: tipData } = useTipProject(TIPPING_CONTRACT);
+  const { tipProjectWithCelo, data: tipCeloData } = useTipProjectWithCelo(TIPPING_CONTRACT);
+  const { approveToken, isPending: isApproving, data: approveData } = useApproveToken();
 
   // State
   const [currentView, setCurrentView] = useState<'tip' | 'success'>('tip');
@@ -392,7 +391,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     if (waitingForApproval && approveData) {
       const handleApprovalCompletion = async () => {
         try {
-          await publicClient.waitForTransactionReceipt({ hash: approveData as Hash });
+          await publicClient!.waitForTransactionReceipt({ hash: approveData as Hash });
           setWaitingForApproval(false);
           setTipStep('tipping');
         } catch (err) {
@@ -414,7 +413,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
         try {
           const hash = tipData || tipCeloData;
           if (hash) {
-            await publicClient.waitForTransactionReceipt({ hash: hash as Hash });
+            await publicClient!.waitForTransactionReceipt({ hash: hash as Hash });
           }
           setWaitingForTip(false);
           setTipStep('done');

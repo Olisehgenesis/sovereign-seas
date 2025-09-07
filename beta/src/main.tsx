@@ -14,6 +14,7 @@ import CampaignsPage from '@/pages/explorer/campaigns/page'
 import CreateProject from '@/pages/app/project/start'
 import CreateCampaign from '@/pages/app/campaign/start'
 import ProfilePage from '@/pages/app/profile/page'
+import NotFound from '@/pages/404/page'
 
 
 globalThis.Buffer = Buffer
@@ -38,6 +39,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/app/profile" element={<Layout><ProfilePage /></Layout>} />
           <Route path="/app/me" element={<Navigate to="/app/profile" replace />} />
 
+          {/* 404 Route */}
+          <Route path="*" element={<Layout><NotFound /></Layout>} />
 
         </Routes>
       </BrowserRouter>

@@ -12,7 +12,6 @@ import { IdentitySDK } from './useGooddollar';
  * @returns The generated Face Verification link.
  */
 export async function getGoodLink({
-  address,
   walletClient,
   popupMode = false,
   callbackUrl,

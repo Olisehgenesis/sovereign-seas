@@ -1,9 +1,8 @@
 import Fuse from 'fuse.js';
-import { getNames, getCodes, getCode } from 'country-list';
+import { getNames, getCode } from 'country-list';
 
 // List of countries and cities (for demo, only countries; cities can be extended)
 const countries = getNames();
-const countryCodes = getCodes();
 const countryFuse = new Fuse(countries, { threshold: 0.3 });
 
 // Optionally, you can add a list of major cities for fuzzy matching

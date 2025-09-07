@@ -131,7 +131,8 @@ export function useVote(contractAddress: Address) {
 
       const voteData = voteInterface.encodeFunctionData('vote', [campaignId, projectId,
         token, amount, bypassCode as `0x${string}`]);
-      const celoChainId = 42220; // Celo mainnet chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
 
       // Generate referral tag with user address
       const referralTag = getReferralTag({

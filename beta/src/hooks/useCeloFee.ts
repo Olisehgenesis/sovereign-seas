@@ -1,5 +1,5 @@
 import { useReadContract } from 'wagmi'
-import { formatEther, Address } from 'viem'
+import { formatEther, type Address } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
 
 export function useCeloFee(contractAddress: Address) {

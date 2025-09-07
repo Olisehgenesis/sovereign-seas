@@ -1,6 +1,8 @@
 import { useLogin, useWallets } from "@privy-io/react-auth";
 
-const CELO_CHAIN_ID = parseInt(import.meta.env.VITE_CHAIN_ID as string);
+// Get the correct chain ID based on testnet configuration
+const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+const CELO_CHAIN_ID = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
 
 // Create a custom hook that returns the switchNetwork function
 export const useWallet = () => {

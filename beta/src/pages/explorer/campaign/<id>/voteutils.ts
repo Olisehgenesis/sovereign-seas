@@ -1,9 +1,16 @@
-import { publicClient } from '@/utils/clients';
+import { createPublicClient, http } from 'viem';
+import { celoAlfajores } from 'viem/chains';
 import { formatEther } from 'viem';
 import { contractABI } from '@/abi/seas4ABI';
 
+const publicClient = createPublicClient({
+  chain: celoAlfajores,
+  transport: http()
+});
+
 export const getProjectVotesByCampaignId = async (campaignId: bigint, projectId: bigint) => {
   try {
+    
     // Get participation details
     const participationData = await publicClient.readContract({
       address: import.meta.env.VITE_CONTRACT_V4 as `0x${string}`,

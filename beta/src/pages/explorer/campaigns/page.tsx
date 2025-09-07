@@ -219,7 +219,7 @@ export default function CampaignsPage() {
           </div>
         ) : processedCampaigns.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 gap-y-12">
-            {processedCampaigns.map((campaign, index) => {
+            {processedCampaigns.map((campaign) => {
               let logo;
               try {
                 logo = campaign.metadata.logo;

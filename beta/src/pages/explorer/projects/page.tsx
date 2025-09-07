@@ -127,6 +127,8 @@ const ProjectsPage = () => {
                 location={projectDetails.location}
                 campaignCount={projectDetails.campaignCount}
                 projectId={projectDetails.project.id?.toString()}
+                projectOwner={projectDetails.project.owner}
+                contractAddress={CONTRACT_ADDRESS}
               />
             ))}
           </div>

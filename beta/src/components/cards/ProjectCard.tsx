@@ -1,7 +1,8 @@
-import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { capitalizeWords } from '@/utils/textUtils';
+import TipModal from '@/components/TipModal';
 
 interface ProjectCardProps {
   title: string;
@@ -11,20 +12,22 @@ interface ProjectCardProps {
   campaignCount?: number;
   className?: string;
   projectId?: string;
+  projectOwner?: string;
+  contractAddress?: string;
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
   title,
   description,
   logo,
-  location,
   campaignCount,
   className = '',
-  projectId
+  projectId,
+  projectOwner,
+  contractAddress
 }) => {
   const navigate = useNavigate();
-  // Trim description to 70 characters
-  const trimmedDescription = description.length > 70 ? `${description.substring(0, 70)}...` : description;
+  const [isTipModalOpen, setIsTipModalOpen] = useState(false);
 
   return (
     <div className={`group relative ${className}`}>
@@ -44,13 +47,31 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             </div>
           )}
 
-          {/* Small Button in Bottom Right Corner */}
-          <button 
-            onClick={() => projectId && navigate(`/explorer/project/${projectId}`)}
-            className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
-          >
-            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-          </button>
+          {/* Action Buttons in Bottom Right Corner */}
+          <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 flex gap-1 sm:gap-2">
+            {/* Tip Button */}
+            {projectId && projectOwner && contractAddress && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsTipModalOpen(true);
+                }}
+                className="w-6 h-6 sm:w-8 sm:h-8 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
+                title="Tip this project"
+              >
+                <Gift className="h-3 w-3 sm:h-4 sm:w-4" />
+              </button>
+            )}
+            
+            {/* View Project Button */}
+            <button 
+              onClick={() => projectId && navigate(`/explorer/project/${projectId}`)}
+              className="w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
+              title="View project details"
+            >
+              <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            </button>
+          </div>
           
           {/* Project Text Content */}
           <div className="h-full flex flex-col">
@@ -74,6 +95,24 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Tip Modal */}
+      {projectId && projectOwner && contractAddress && (
+        <TipModal
+          isOpen={isTipModalOpen}
+          onClose={() => setIsTipModalOpen(false)}
+          project={{
+            id: BigInt(projectId),
+            name: title,
+            owner: projectOwner,
+            contractAddress: contractAddress
+          }}
+          onTipSuccess={() => {
+            setIsTipModalOpen(false);
+            // Optionally show a success message or refresh data
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-'use client';
+
 
 import { useState, useEffect, useRef } from 'react';
 import { 
@@ -31,8 +31,11 @@ import {
 import { uploadToIPFS } from '@/utils/imageUtils';
 import { type Address } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
-import { useAccount, useBalance, useWriteContract, useReadContract } from 'wagmi';
+import { useAccount, useBalance, useWriteContract, useReadContract, usePublicClient } from 'wagmi';
 import { contractABI as abi } from '@/abi/seas4ABI';
+import { getMainContractAddress, getEnvironmentName, getCeloTokenAddress } from '@/utils/contractConfig';
+import { useChainSwitch } from '@/hooks/useChainSwitch';
+import { useNavigate } from 'react-router-dom';
 
 interface Campaign {
   name: string;
@@ -104,6 +107,7 @@ const Section = ({ title, icon: Icon, children, required = false, isVisible = tr
 };
 
 export default function CreateCampaign() {
+  const navigate = useNavigate();
   const [isMounted, setIsMounted] = useState(false);
   
   // Collapsible sections state
@@ -112,13 +116,15 @@ export default function CreateCampaign() {
   // Card navigation state
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const cardSections = ['basic', 'media', 'funding', 'rules', 'review'];
-  const celoToken = import.meta.env.VITE_CELO_TOKEN;
-  const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
+  const celoToken = getCeloTokenAddress();
+  const contractAddress = getMainContractAddress();
   
   // Debug environment variables
   console.log('Environment variables:');
+  console.log('- Environment:', getEnvironmentName());
   console.log('- VITE_CELO_TOKEN:', import.meta.env.VITE_CELO_TOKEN);
   console.log('- VITE_CONTRACT_V4:', import.meta.env.VITE_CONTRACT_V4);
+  console.log('- Contract Address Used:', contractAddress);
   console.log('- celoToken:', celoToken);
   console.log('- contractAddress:', contractAddress);
 
@@ -133,6 +139,11 @@ export default function CreateCampaign() {
   // Wallet and contract hooks
   const { address, isConnected } = useAccount();
   const { authenticated, ready } = usePrivy();
+  const { ensureCorrectChain, isSwitching, targetChain } = useChainSwitch();
+  const publicClient = usePublicClient();
+  
+  // Type guard for isSwitching to handle bigint values
+  const isChainSwitching: boolean = Boolean(isSwitching);
   
   // Get user's CELO balance
   const { data: celoBalance } = useBalance({
@@ -227,10 +238,10 @@ export default function CreateCampaign() {
   });
   
   // UI State
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   
   // Form validation
   const [formErrors, setFormErrors] = useState({
@@ -266,19 +277,57 @@ export default function CreateCampaign() {
   useEffect(() => {
     if (isSuccess) {
       setLoading(false);
-      setSuccessMessage('Campaign created successfully! Redirecting...');
+      setSuccessMessage('Campaign created successfully! Redirecting to your campaign in 3 seconds...');
       
-      setTimeout(() => {
-        window.location.href = '/explorer';
-      }, 5000);
+      // Navigate to the new campaign after a short delay
+      setTimeout(async () => {
+        try {
+          console.log('Reading campaign count after successful creation...');
+          console.log('Contract address:', contractAddress);
+          console.log('Public client available:', !!publicClient);
+          
+          // Wait a bit more for the transaction to be fully confirmed
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Read the campaign count after successful creation to get the new campaign ID
+          const updatedCampaignCount = await publicClient?.readContract({
+            address: contractAddress,
+            abi,
+            functionName: 'getCampaignCount'
+          });
+          
+          console.log('Updated campaign count:', updatedCampaignCount);
+          
+          if (updatedCampaignCount && Number(updatedCampaignCount) > 0) {
+            const newCampaignId = Number(updatedCampaignCount) - 1;
+            console.log('Navigating to new campaign:', newCampaignId);
+            navigate(`/explorer/campaign/${newCampaignId}`);
+          } else {
+            // Fallback to campaigns list if we can't get the count
+            console.log('Campaign count not available or zero, navigating to campaigns list');
+            navigate('/explorer/campaigns');
+          }
+        } catch (error) {
+          console.error('Error navigating to campaign:', error);
+          // Fallback to campaigns list
+          navigate('/explorer/campaigns');
+        }
+      }, 3000);
     }
-  }, [isSuccess]);
+  }, [isSuccess, contractAddress, publicClient, navigate]);
 
   // Handle contract error state
   useEffect(() => {
     if (contractError) {
       setLoading(false);
-      setErrorMessage(`Transaction failed: ${contractError.message || 'Unknown error'}`);
+      setIsUploading(false);
+      const errorMessage = `Transaction failed: ${contractError.message || 'Unknown error'}`;
+      setErrorMessage(errorMessage);
+      
+      // Show alert for better visibility
+      alert(`Campaign Creation Failed: ${errorMessage}`);
+      
+      console.error('Campaign creation error:', contractError);
     }
   }, [contractError]);
 
@@ -300,11 +349,14 @@ export default function CreateCampaign() {
   ];
   
   const categories = [
-    'DeFi', 'NFT', 'Gaming', 'Infrastructure', 'Healthcare', 'Education', 
-    'Climate', 'Social Impact', 'Research', 'Other'
+    'Web3 & Blockchain',
+    'Artificial Intelligence',
+    'General Tech',
+    'Startup & Innovation',
+    'Legacy categories',
+    'Other'
   ];
 
-  // Available tokens - CELO only for now
 
 
   // Handle logo file selection and preview
@@ -360,21 +412,43 @@ export default function CreateCampaign() {
       errors.campaignType = '';
     }
     
+    // Enhanced date validation
     if (!campaign.startDate) {
       errors.startDate = 'Start date is required';
       isValid = false;
     } else {
-      errors.startDate = '';
+      const startDate = new Date(campaign.startDate);
+      const now = new Date();
+      
+      // Check if start date is valid
+      if (isNaN(startDate.getTime())) {
+        errors.startDate = 'Please enter a valid start date';
+        isValid = false;
+      } else if (startDate <= now) {
+        errors.startDate = 'Start date must be in the future';
+        isValid = false;
+      } else {
+        errors.startDate = '';
+      }
     }
     
     if (!campaign.endDate) {
       errors.endDate = 'End date is required';
       isValid = false;
-    } else if (new Date(campaign.endDate) <= new Date(campaign.startDate)) {
-      errors.endDate = 'End date must be after start date';
-      isValid = false;
     } else {
-      errors.endDate = '';
+      const endDate = new Date(campaign.endDate);
+      const startDate = campaign.startDate ? new Date(campaign.startDate) : null;
+      
+      // Check if end date is valid
+      if (isNaN(endDate.getTime())) {
+        errors.endDate = 'Please enter a valid end date';
+        isValid = false;
+      } else if (startDate && endDate <= startDate) {
+        errors.endDate = 'End date must be after start date';
+        isValid = false;
+      } else {
+        errors.endDate = '';
+      }
     }
     
     if (!campaign.prizePool) {
@@ -477,7 +551,7 @@ export default function CreateCampaign() {
     }
 
     // Check if user has sufficient CELO balance for the fee
-    if (!canBypass && feeAmount && celoBalance) {
+    if (!canBypass && feeAmount != null && celoBalance) {
       const requiredBalance = feeAmount;
       const userBalance = celoBalance.value;
       
@@ -583,9 +657,20 @@ export default function CreateCampaign() {
         }
       };
 
-      // Convert dates to Unix timestamps (BigInt)
-      const startTimeUnix = BigInt(Math.floor(new Date(cleanedCampaign.startDate).getTime() / 1000));
-      const endTimeUnix = BigInt(Math.floor(new Date(cleanedCampaign.endDate).getTime() / 1000));
+      // Convert dates to Unix timestamps (BigInt) with enhanced validation
+      const startDate = new Date(cleanedCampaign.startDate);
+      const endDate = new Date(cleanedCampaign.endDate);
+      
+      // Validate dates are valid
+      if (isNaN(startDate.getTime())) {
+        throw new Error('Invalid start date format');
+      }
+      if (isNaN(endDate.getTime())) {
+        throw new Error('Invalid end date format');
+      }
+      
+      const startTimeUnix = BigInt(Math.floor(startDate.getTime() / 1000));
+      const endTimeUnix = BigInt(Math.floor(endDate.getTime() / 1000));
 
       // Validate timestamps
       const nowUnix = BigInt(Math.floor(Date.now() / 1000));
@@ -594,6 +679,18 @@ export default function CreateCampaign() {
       }
       if (endTimeUnix <= startTimeUnix) {
         throw new Error('End date must be after start date');
+      }
+      
+      // Additional validation: ensure campaign duration is reasonable (at least 1 hour, max 2 years)
+      const durationSeconds = endTimeUnix - startTimeUnix;
+      const minDuration = BigInt(3600); // 1 hour
+      const maxDuration = BigInt(2 * 365 * 24 * 3600); // 2 years
+      
+      if (durationSeconds < minDuration) {
+        throw new Error('Campaign duration must be at least 1 hour');
+      }
+      if (durationSeconds > maxDuration) {
+        throw new Error('Campaign duration cannot exceed 2 years');
       }
 
       // Create custom distribution data
@@ -621,7 +718,7 @@ export default function CreateCampaign() {
       console.log('- customDistributionData:', customDistributionData);
 
       // Show fee information to user
-      if (!canBypass && feeAmount) {
+      if (!canBypass && feeAmount != null) {
         console.log('Fee information:');
         console.log('- Campaign creation fee:', feeAmount.toString());
         console.log('- Fee in CELO:', (Number(feeAmount) / 1e18).toFixed(6));
@@ -633,15 +730,20 @@ export default function CreateCampaign() {
       }
 
       // Debug transaction details
-      const feeValue = !canBypass && feeAmount ? feeAmount : BigInt(0);
+      const feeValue = !canBypass && feeAmount != null ? feeAmount : BigInt(0);
       console.log('Transaction details:');
       console.log('- Contract address:', contractAddress);
       console.log('- Fee value to send:', feeValue.toString());
       console.log('- Fee value in CELO:', (Number(feeValue) / 1e18).toFixed(6));
       console.log('- Can bypass fees:', canBypass);
 
+      // Ensure we're on the correct chain before making the contract call
+      console.log('- Ensuring correct chain...');
+      await ensureCorrectChain();
+      console.log(`- Now on correct chain: ${targetChain.name}`);
+
       // Call the contract method
-      await writeContract({
+      const txHash = await writeContract({
         address: contractAddress,
         abi,
         functionName: 'createCampaign',
@@ -662,6 +764,8 @@ export default function CreateCampaign() {
         ],
         value: feeValue
       });
+      
+      console.log('Transaction hash:', txHash);
       
     } catch (error) {
       console.error('Campaign creation error:', error);
@@ -686,6 +790,9 @@ export default function CreateCampaign() {
       setErrorMessage(userFriendlyMessage);
       setLoading(false);
       setIsUploading(false);
+      
+      // Show alert for better visibility
+      alert(`Campaign Creation Failed: ${userFriendlyMessage}`);
     }
   };
 
@@ -1009,9 +1116,12 @@ export default function CreateCampaign() {
                         type="datetime-local"
                         value={campaign.startDate}
                         onChange={(e) => handleFieldChange('startDate', e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                        placeholder="Select start date and time"
                       />
                       {formErrors.startDate && <p className="mt-2 text-red-500 text-sm">{formErrors.startDate}</p>}
+                      <p className="mt-1 text-xs text-gray-500">Campaign must start in the future</p>
                     </div>
                     
                     <div>
@@ -1022,9 +1132,12 @@ export default function CreateCampaign() {
                         type="datetime-local"
                         value={campaign.endDate}
                         onChange={(e) => handleFieldChange('endDate', e.target.value)}
+                        min={campaign.startDate || new Date().toISOString().slice(0, 16)}
                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                        placeholder="Select end date and time"
                       />
                       {formErrors.endDate && <p className="mt-2 text-red-500 text-sm">{formErrors.endDate}</p>}
+                      <p className="mt-1 text-xs text-gray-500">Must be after start date</p>
                     </div>
                   </div>
                   
@@ -1687,7 +1800,7 @@ export default function CreateCampaign() {
                        <p>• Distribution: {campaign.useQuadraticDistribution ? 'Quadratic' : campaign.useCustomDistribution ? 'Custom' : 'Linear'}</p>
                        <p>• Media files: {logoFile ? 1 : 0} file(s)</p>
                        <p>• Token: CELO (Payout & Fees)</p>
-                       {!canBypass && feeAmount && Number(feeAmount) > 0 ? (
+                       {!canBypass && feeAmount != null && Number(feeAmount) > 0 ? (
                          <>
                            <p>• Creation Fee: {(Number(feeAmount) / 1e18).toFixed(6)} CELO</p>
                            {celoBalance && Number(celoBalance.value) >= Number(feeAmount) ? (
@@ -1756,7 +1869,7 @@ export default function CreateCampaign() {
              <div className="mt-8 space-y-6">
              {/* Balance Warning */}
              {(() => {
-               if (!canBypass && feeAmount && Number(feeAmount) > 0 && celoBalance && Number(celoBalance.value) < Number(feeAmount)) {
+               if (!canBypass && feeAmount != null && Number(feeAmount) > 0 && celoBalance && Number(celoBalance.value) < Number(feeAmount)) {
                  return (
                    <div className="bg-red-50 rounded-xl p-4 border border-red-200">
                      <div className="flex items-start">
@@ -1777,26 +1890,31 @@ export default function CreateCampaign() {
              })()}
 
              {/* Upload Progress */}
-             {(Boolean(isUploading) || Boolean(loading)) && (
-               <div className="bg-white rounded-xl p-6 border border-gray-200">
-                 <div className="flex items-center justify-between mb-2">
-                   <span className="font-medium text-gray-700">
-                     {isUploading ? 'Uploading Files...' : 'Creating Campaign...'}
-                   </span>
-                   <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
-                 </div>
-                 <p className="text-sm text-gray-500">
-                   {isUploading && 'Uploading media files to IPFS...'}
-                   {loading && !isUploading && 'Preparing transaction...'}
-                 </p>
-               </div>
-             )}
+             {(() => {
+               if (isUploading || loading) {
+                 return (
+                   <div className="bg-white rounded-xl p-6 border border-gray-200">
+                     <div className="flex items-center justify-between mb-2">
+                       <span className="font-medium text-gray-700">
+                         {isUploading ? 'Uploading Files...' : 'Creating Campaign...'}
+                       </span>
+                       <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+                     </div>
+                     <p className="text-sm text-gray-500">
+                       {isUploading ? 'Uploading media files to IPFS...' : ''}
+                       {loading && !isUploading ? 'Preparing transaction...' : ''}
+                     </p>
+                   </div>
+                 );
+               }
+               return null;
+             })() as React.ReactNode}
 
              {/* Submit Button */}
              <div className="flex justify-center pt-6">
                <button
                  type="submit"
-                 disabled={Boolean(loading) || Boolean(isUploading) || (!canBypass && feeAmount && celoBalance && Number(celoBalance.value) < Number(feeAmount))}
+                  disabled={!!loading || !!isUploading || !!isChainSwitching || (!canBypass && !!feeAmount && !!celoBalance && Number(celoBalance.value) < Number(feeAmount)) as any}
                  className="px-12 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold text-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center group border border-emerald-400/30 relative overflow-hidden"
                >
                  {loading || isUploading ? (
@@ -1815,7 +1933,7 @@ export default function CreateCampaign() {
              </div>
              
              {/* Helpful message when button is disabled */}
-             {!canBypass && feeAmount && celoBalance && Number(celoBalance.value) < Number(feeAmount) && (
+             {!canBypass && feeAmount != null && celoBalance && Number(celoBalance.value) < Number(feeAmount) && (
                <div className="text-center text-sm text-red-500 mt-2">
                  <p>Submit button is disabled due to insufficient CELO balance for the campaign creation fee.</p>
                </div>
