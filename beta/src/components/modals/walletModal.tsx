@@ -217,6 +217,17 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
   };
 
 
+  const getTokenLogo = (symbol: string) => {
+    const logos: Record<string, string> = {
+      'CELO': '/images/celo.png',
+      'cUSD': '/images/cusd.png',
+      'cEUR': '/images/celo_logo.svg',
+      'cREAL': '/images/celo_logo.svg',
+    };
+    
+    return logos[symbol] || '/images/celo_logo.svg';
+  };
+
   const getTokenColor = (symbol: string) => {
     const colors: Record<string, string> = {
       'CELO': 'bg-emerald-500',
@@ -349,31 +360,20 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                 {/* Header */}
                 <div className="bg-gray-500 px-6 py-4 text-white">
                   <div className="flex items-center justify-between">
-                    {/* Network Selector */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowNetworkDropdown(!showNetworkDropdown)}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-white/20 rounded-full border border-white/30 text-sm hover:bg-white/30 text-white"
-                      >
-                        <div className={`w-2 h-2 rounded-full ${selectedNetwork.color.includes('green') ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                        <span className="font-medium">{selectedNetwork.shortName}</span>
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                      
-                      {showNetworkDropdown && (
-                        <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]">
-                          {networks.map((network) => (
-                            <button
-                              key={network.id}
-                              onClick={() => switchNetwork(network)}
-                              className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
-                            >
-                              <div className={`w-2 h-2 rounded-full mr-2 ${network.color.includes('green') ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                              <span>{network.shortName}</span>
-                              {selectedNetwork.id === network.id && <Check className="w-3 h-3 ml-auto text-blue-600" />}
-                            </button>
-                          ))}
-                        </div>
+                    {/* Wallet Icon */}
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-white" />
+                    </div>
+
+                    {/* Wallet Address */}
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm text-white font-mono">
+                        {address ? abbreviateAddress(address) : 'Not connected'}
+                      </p>
+                      {address && (
+                        <button onClick={copyToClipboard} className="p-1 hover:bg-white/20 rounded">
+                          {copied ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white" />}
+                        </button>
                       )}
                     </div>
 
@@ -391,58 +391,60 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                 <div className="px-6 py-6">
                   {activeView === 'overview' && (
                     <>
-                      {/* Wallet Info */}
-                      <div className="text-center mb-6">
-                        <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                          <Wallet className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-1">Wallet</h2>
-                        <div className="flex items-center justify-center space-x-2">
-                          <p className="text-sm text-gray-500 font-mono">
-                            {address ? abbreviateAddress(address) : 'Not connected'}
-                          </p>
-                          {address && (
-                            <>
-                              <button onClick={copyToClipboard} className="p-1 hover:bg-gray-100 rounded">
-                                {copied ? <CheckCircle className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-400" />}
-                              </button>
-                              <a
-                                href={`${selectedNetwork.explorerUrl}/address/${address}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1 hover:bg-gray-100 rounded"
-                              >
-                                <ExternalLink className="w-4 h-4 text-gray-400" />
-                              </a>
-                            </>
+                      {/* Network Selector and Action Buttons */}
+                      <div className="flex items-center justify-between mb-6">
+                        {/* Network Selector */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowNetworkDropdown(!showNetworkDropdown)}
+                            className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-full border border-gray-200 text-sm hover:bg-gray-200 text-gray-700"
+                          >
+                            <div className={`w-2 h-2 rounded-full ${selectedNetwork.color.includes('green') ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                            <span className="font-medium">{selectedNetwork.shortName}</span>
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                          
+                          {showNetworkDropdown && (
+                            <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]">
+                              {networks.map((network) => (
+                                <button
+                                  key={network.id}
+                                  onClick={() => switchNetwork(network)}
+                                  className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                >
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${network.color.includes('green') ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                  <span>{network.shortName}</span>
+                                  {selectedNetwork.id === network.id && <Check className="w-3 h-3 ml-auto text-blue-600" />}
+                                </button>
+                              ))}
+                            </div>
                           )}
                         </div>
-                      </div>
 
-
-                      {/* Action Buttons */}
-                      <div className="grid grid-cols-3 gap-3 mb-6">
-                        <button
-                          onClick={() => setActiveView('send')}
-                          className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
-                        >
-                          <ArrowUpRight className="w-6 h-6 text-gray-600 mb-2" />
-                          <span className="text-sm font-medium text-gray-900">Send</span>
-                        </button>
-                        <button
-                          onClick={() => setActiveView('receive')}
-                          className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
-                        >
-                          <ArrowDownLeft className="w-6 h-6 text-gray-600 mb-2" />
-                          <span className="text-sm font-medium text-gray-900">Receive</span>
-                        </button>
-                        <button
-                          onClick={() => setActiveView('add')}
-                          className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
-                        >
-                          <Plus className="w-6 h-6 text-gray-600 mb-2" />
-                          <span className="text-sm font-medium text-gray-900">Add</span>
-                        </button>
+                        {/* Action Buttons */}
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => setActiveView('send')}
+                            className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors"
+                            title="Send"
+                          >
+                            <ArrowUpRight className="w-5 h-5 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={() => setActiveView('receive')}
+                            className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors"
+                            title="Receive"
+                          >
+                            <ArrowDownLeft className="w-5 h-5 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={() => setActiveView('add')}
+                            className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors"
+                            title="Add Funds"
+                          >
+                            <Plus className="w-5 h-5 text-gray-600" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Token List */}
@@ -470,8 +472,21 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                         ) : (
                           tokenBalances.map((token) => (
                             <div key={token.address} className="flex items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                              <div className={`w-10 h-10 rounded-full ${getTokenColor(token.symbol)} flex items-center justify-center text-white font-bold text-sm mr-3`}>
-                                {token.symbol.charAt(0)}
+                              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center mr-3 overflow-hidden">
+                                <img 
+                                  src={getTokenLogo(token.symbol)} 
+                                  alt={token.symbol}
+                                  className="w-8 h-8 object-contain"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const fallback = target.nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'flex';
+                                  }}
+                                />
+                                <div className={`w-8 h-8 rounded-full ${getTokenColor(token.symbol)} flex items-center justify-center text-white font-bold text-xs hidden`}>
+                                  {token.symbol.charAt(0)}
+                                </div>
                               </div>
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900">{token.symbol}</h4>
@@ -479,7 +494,6 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                               </div>
                               <div className="text-right">
                                 <p className="font-semibold text-gray-900">{token.formattedBalance}</p>
-                                <p className="text-sm text-gray-500">≈ $0.00</p>
                               </div>
                             </div>
                           ))
@@ -528,8 +542,21 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                               }`}
                             >
                               <div className="flex items-center">
-                                <div className={`w-8 h-8 rounded-full ${getTokenColor(token.symbol)} flex items-center justify-center text-white font-bold text-xs mr-2`}>
-                                  {token.symbol.charAt(0)}
+                                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center mr-2 overflow-hidden">
+                                  <img 
+                                    src={getTokenLogo(token.symbol)} 
+                                    alt={token.symbol}
+                                    className="w-6 h-6 object-contain"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextElementSibling as HTMLElement;
+                                      if (fallback) fallback.style.display = 'flex';
+                                    }}
+                                  />
+                                  <div className={`w-6 h-6 rounded-full ${getTokenColor(token.symbol)} flex items-center justify-center text-white font-bold text-xs hidden`}>
+                                    {token.symbol.charAt(0)}
+                                  </div>
                                 </div>
                                 <div className="text-left">
                                   <p className="font-medium text-sm">{token.symbol}</p>

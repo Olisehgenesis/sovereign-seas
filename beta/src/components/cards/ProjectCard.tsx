@@ -30,8 +30,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   const navigate = useNavigate();
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
 
+  const handleCardClick = () => {
+    if (projectId) {
+      navigate(getProjectRoute(Number(projectId)));
+    }
+  };
+
   return (
-    <div className={`group relative ${className}`}>
+    <div 
+      className={`group relative ${className} cursor-pointer`}
+      onClick={handleCardClick}
+    >
       {/* Single Card Design */}
       <div className="relative">
         {/* Project Card */}
@@ -66,7 +75,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             
             {/* View Project Button */}
             <button 
-              onClick={() => projectId && navigate(getProjectRoute(Number(projectId)))}
+              onClick={(e) => {
+                e.stopPropagation();
+                projectId && navigate(getProjectRoute(Number(projectId)));
+              }}
               className="w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
               title="View project details"
             >

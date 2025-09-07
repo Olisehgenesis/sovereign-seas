@@ -86,8 +86,17 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo?.icon;
 
+  const handleCardClick = () => {
+    if (campaignId) {
+      navigate(getCampaignRoute(Number(campaignId)));
+    }
+  };
+
   return (
-    <div className={`group relative ${className}`}>
+    <div 
+      className={`group relative ${className} cursor-pointer`}
+      onClick={handleCardClick}
+    >
       {/* Two-Card Folder Design on Desktop, Single Card on Mobile */}
       <div className="relative">
         {/* Top Card - Folder Design (Desktop) / Single Card (Mobile) */}
@@ -129,7 +138,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
           <div className="sm:hidden">
             {/* Small Button in Bottom Right Corner */}
             <button 
-              onClick={() => campaignId && navigate(getCampaignRoute(Number(campaignId)))}
+              onClick={(e) => {
+                e.stopPropagation();
+                campaignId && navigate(getCampaignRoute(Number(campaignId)));
+              }}
               className="absolute bottom-2 right-2 w-6 h-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
             >
               <ArrowRight className="h-3 w-3" />
@@ -171,7 +183,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
         <div className="hidden sm:block absolute top-0 w-full h-32 sm:h-56 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border-2 border-blue-300 translate-y-10 p-3 sm:p-6 group-hover:opacity-40 transition-opacity duration-500">
           {/* Small Button in Bottom Right Corner */}
           <button 
-            onClick={() => campaignId && navigate(`/explorer/campaign/${campaignId}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              campaignId && navigate(getCampaignRoute(Number(campaignId)));
+            }}
             className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
           >
             <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />

@@ -145,29 +145,36 @@ interface StatCardProps {
 function VerificationComponent({ onSuccess, onError }: { onSuccess: () => void; onError: (error: any) => void }) {
   const { address } = useAccount();
   const [universalLink, setUniversalLink] = useState<string | null>(null);
-  if (!address) return null;
-  const selfApp = new SelfAppBuilder({
-    version : 2,
-    appName: "Sovereign Seas",
-    scope: "seasv2",
-    endpoint: "https://selfauth.vercel.app/api/verify",
-    logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
-    endpointType: "https",
-    userDefinedData: "Sovereign Seas V4.2",
-    userId: address,
-    userIdType: "hex",
-    disclosures: {
-      nationality: true,
-      minimumAge: 18,
-      gender: true,
-      excludedCountries: [],
-      ofac: false,
-    },
-  }).build();
+  
+  const selfApp = useMemo(() => {
+    if (!address) return null;
+    return new SelfAppBuilder({
+      version : 2,
+      appName: "Sovereign Seas",
+      scope: "seasv2",
+      endpoint: "https://selfauth.vercel.app/api/verify",
+      logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
+      endpointType: "https",
+      userDefinedData: "Sovereign Seas V4.2",
+      userId: address,
+      userIdType: "hex",
+      disclosures: {
+        nationality: true,
+        minimumAge: 18,
+        gender: true,
+        excludedCountries: [],
+        ofac: false,
+      },
+    }).build();
+  }, [address]);
 
   useEffect(() => {
-    setUniversalLink(getUniversalLink(selfApp as any));
-  }, [address]);
+    if (selfApp) {
+      setUniversalLink(getUniversalLink(selfApp as any));
+    }
+  }, [selfApp]);
+
+  if (!address || !selfApp) return null;
 
   return (
     <div>

@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 
 import { useProjectDetails, useProjectCampaigns } from '@/hooks/useProjectMethods';
+import TipModal from '@/components/TipModal';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import ProjectCampaignsModal from '@/components/modals/ProjectCampaignsModal';
 import PhoneFrame from '@/components/PhoneFrame';
@@ -387,6 +388,7 @@ export default function ProjectView() {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
+  const [isTipModalOpen, setIsTipModalOpen] = useState(false);
   
   // Data
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -499,6 +501,7 @@ export default function ProjectView() {
   }
 
   return (
+    <>
     <div className="min-h-screen relative overflow-x-hidden">
       {/* New Hero Section */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-8">
@@ -590,7 +593,10 @@ export default function ProjectView() {
 
             {/* Action Buttons */}
             <div className="flex flex-row gap-2 sm:gap-4">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-6 py-1.5 sm:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none">
+              <button 
+                onClick={() => setIsTipModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-6 py-1.5 sm:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none"
+              >
                 <Coins className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Tip Project</span>
                 <span className="sm:hidden">Tip</span>
@@ -1421,5 +1427,22 @@ export default function ProjectView() {
      </div>
      </div>
    </div>
+
+   {/* Tip Modal */}
+   <TipModal
+     isOpen={isTipModalOpen}
+     onClose={() => setIsTipModalOpen(false)}
+     project={{
+       id: projectId,
+       name: project.name,
+       owner: project.owner,
+       contractAddress: contractAddress
+     }}
+     onTipSuccess={() => {
+       setIsTipModalOpen(false);
+       // Optionally show a success message or refresh data
+     }}
+   />
+    </>
  );
 }
