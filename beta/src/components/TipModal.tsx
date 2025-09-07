@@ -3,7 +3,7 @@ import { Loader2, Wallet, Check, Gift, TrendingUp, ChevronDown, AlertCircle } fr
 import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther } from 'viem';
 
-import {
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
@@ -285,7 +285,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
     try {
       setError('');
       setIsProcessing(true);
-      setTipStep('tipping');
+        setTipStep('tipping');
       
       // Simulate tip processing
       await new Promise(resolve => setTimeout(resolve, 2000));

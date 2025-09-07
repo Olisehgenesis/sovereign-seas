@@ -63,6 +63,7 @@ import { formatIpfsUrl } from '@/utils/imageUtils';
 import LocationBadge from '@/components/LocationBadge';
 import { getNormalizedLocation } from '@/utils/locationUtils';
 import TruncatedText from '@/components/TruncatedText';
+import DynamicHelmet from '@/components/DynamicHelmet';
 
 interface Project {
   voteCount: bigint;
@@ -640,6 +641,18 @@ export default function CampaignView() {
   
 
     return (
+    <>
+    {/* Dynamic Metadata */}
+    <DynamicHelmet 
+      config={{
+        title: campaign?.name || 'Campaign',
+        description: campaign?.description || `Join this ${campaign?.campaignType || 'funding'} campaign on Sovereign Seas`,
+        image: campaign?.logo ? formatIpfsUrl(campaign.logo) : '/og-image.png',
+        url: window.location.href,
+        type: 'website'
+      }}
+    />
+    
     <div className="min-h-screen relative overflow-hidden">
       {/* Enhanced animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -1594,5 +1607,6 @@ export default function CampaignView() {
       )}
     </div>
   </div>
+    </>
 );
 }

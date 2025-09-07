@@ -49,6 +49,7 @@ import {
 
 import { useProjectDetails, useProjectCampaigns } from '@/hooks/useProjectMethods';
 import TipModal from '@/components/TipModal';
+import DynamicHelmet from '@/components/DynamicHelmet';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import ProjectCampaignsModal from '@/components/modals/ProjectCampaignsModal';
 import PhoneFrame from '@/components/PhoneFrame';
@@ -502,6 +503,17 @@ export default function ProjectView() {
 
   return (
     <>
+    {/* Dynamic Metadata */}
+    <DynamicHelmet 
+      config={{
+        title: project?.name || 'Project',
+        description: project?.metadata?.tagline || project?.description || 'Discover this innovative project on Sovereign Seas',
+        image: project?.metadata?.logo ? formatIpfsUrl(project.metadata.logo) : '/og-image.png',
+        url: window.location.href,
+        type: 'website'
+      }}
+    />
+    
     <div className="min-h-screen relative overflow-x-hidden">
       {/* New Hero Section */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-8">

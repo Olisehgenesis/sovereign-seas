@@ -2,6 +2,7 @@ import { Buffer } from 'buffer'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 
 import './index.css'
 import { AppProvider } from '@/providers/AppProvider'
@@ -21,8 +22,9 @@ globalThis.Buffer = Buffer
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AppProvider>
-      <BrowserRouter>
+    <HelmetProvider>
+      <AppProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout><HomePage /></Layout>} />
 
@@ -43,7 +45,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="*" element={<Layout><NotFound /></Layout>} />
 
         </Routes>
-      </BrowserRouter>
-    </AppProvider>
+        </BrowserRouter>
+      </AppProvider>
+    </HelmetProvider>
   </React.StrictMode>,
 )
