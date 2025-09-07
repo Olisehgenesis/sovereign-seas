@@ -19,11 +19,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getCampaignRoute } from '@/utils/hashids';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-} from '@/components/ui/dialog';
+  MobileDialog as Dialog,
+  MobileDialogContent as DialogContent,
+  MobileDialogDescription as DialogDescription,
+  MobileDialogHeader as DialogHeader,
+} from '@/components/ui/mobile-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

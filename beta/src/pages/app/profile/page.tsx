@@ -43,6 +43,7 @@ import { v4 as uuidv4 } from 'uuid';
 import  { SelfAppBuilder, SelfQRcodeWrapper } from '@selfxyz/qrcode';
 import { getUniversalLink } from "@selfxyz/core";
 import { getGoodLink } from '@/utils/get-good-link';
+import DynamicHelmet from '@/components/DynamicHelmet';
 
 // Helper function to safely parse JSON
 const safeJsonParse = (jsonString: string, fallback = {}) => {
@@ -1026,6 +1027,18 @@ export default function ProfilePage() {
   const themeColors = getThemeColors();
 
   return (
+    <>
+    {/* Dynamic Metadata */}
+    <DynamicHelmet 
+      config={{
+        title: 'My Profile',
+        description: 'View your projects, campaigns, and voting history on Sov Seas',
+        image: '/og-image.png',
+        url: window.location.href,
+        type: 'website'
+      }}
+    />
+    
     <div className={`min-h-screen bg-gradient-to-br from-${themeColors.from} via-${themeColors.via} to-${themeColors.to}`}>
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Profile Header */}
@@ -2107,5 +2120,6 @@ export default function ProfilePage() {
      )}
    </div>
  </div>
+    </>
 );
 }

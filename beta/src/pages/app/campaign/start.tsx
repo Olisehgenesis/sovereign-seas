@@ -37,6 +37,7 @@ import { getMainContractAddress, getEnvironmentName, getCeloTokenAddress } from 
 import { useChainSwitch } from '@/hooks/useChainSwitch';
 import { useNavigate } from 'react-router-dom';
 import { getCampaignRoute } from '@/utils/hashids';
+import DynamicHelmet from '@/components/DynamicHelmet';
 
 interface Campaign {
   name: string;
@@ -839,6 +840,18 @@ export default function CreateCampaign() {
   }
   
   return (
+    <>
+    {/* Dynamic Metadata */}
+    <DynamicHelmet 
+      config={{
+        title: 'Create Campaign',
+        description: 'Create a new funding campaign on Sov Seas - Launch your project with community support',
+        image: '/og-image.png',
+        url: window.location.href,
+        type: 'website'
+      }}
+    />
+    
     <div className="min-h-screen text-gray-800">
       <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="max-w-3xl mx-auto">
@@ -1951,5 +1964,6 @@ export default function CreateCampaign() {
         </div>
       </div>
     </div>
+    </>
   );
 }

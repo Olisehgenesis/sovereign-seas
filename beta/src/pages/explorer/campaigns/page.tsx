@@ -9,6 +9,7 @@ import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { type Address } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import CampaignCard from '@/components/cards/CampaignCard';
+import DynamicHelmet from '@/components/DynamicHelmet';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_V4 as Address;
@@ -175,6 +176,18 @@ export default function CampaignsPage() {
   }
 
   return (
+    <>
+    {/* Dynamic Metadata */}
+    <DynamicHelmet 
+      config={{
+        title: 'Campaigns',
+        description: 'Explore funding campaigns on Sov Seas - Support innovative projects through community voting',
+        image: '/og-image.png',
+        url: window.location.href,
+        type: 'website'
+      }}
+    />
+    
     <div className="min-h-screen">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Input */}
@@ -281,5 +294,6 @@ export default function CampaignsPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

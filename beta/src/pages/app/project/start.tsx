@@ -48,6 +48,7 @@ import { uploadToIPFS } from '@/utils/imageUtils';
 import type { LucideIcon } from 'lucide-react';
 import { usePublicClient } from 'wagmi';
 import { useChainSwitch } from '@/hooks/useChainSwitch';
+import DynamicHelmet from '@/components/DynamicHelmet';
 import { contractABI as abi } from '@/abi/seas4ABI';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -758,6 +759,18 @@ export default function CreateProject() {
   }
   
   return (
+    <>
+    {/* Dynamic Metadata */}
+    <DynamicHelmet 
+      config={{
+        title: 'Create Project',
+        description: 'Create a new project on Sov Seas - Build and showcase your innovative blockchain project',
+        image: '/og-image.png',
+        url: window.location.href,
+        type: 'website'
+      }}
+    />
+    
     <div className="min-h-screen text-gray-800">
       
       <div className="container mx-auto px-4 py-8 relative z-10">
@@ -1900,5 +1913,6 @@ export default function CreateProject() {
         </div>
       </div>
     </div>
+    </>
   );
 }

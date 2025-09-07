@@ -20,8 +20,8 @@ const DynamicHelmet: React.FC<DynamicHelmetProps> = ({ config }) => {
     description,
     image = '/og-image.png',
     url = window.location.href,
-    type = 'website',
-    siteName = 'Sovereign Seas'
+    type = 'app',
+    siteName = 'Sov Seas'
   } = config;
 
   const fullTitle = `${title} | ${siteName}`;

@@ -4,6 +4,7 @@ import { useAllProjects } from '@/hooks/useProjectMethods';
 import ProjectCard from '@/components/cards/ProjectCard';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import type { Address } from 'viem';
+import DynamicHelmet from '@/components/DynamicHelmet';
 
 const ProjectsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,6 +79,18 @@ const ProjectsPage = () => {
   }
   
   return (
+    <>
+    {/* Dynamic Metadata */}
+    <DynamicHelmet 
+      config={{
+        title: 'Projects',
+        description: 'Discover innovative blockchain projects on Sov Seas - Explore and support cutting-edge decentralized applications',
+        image: '/og-image.png',
+        url: window.location.href,
+        type: 'website'
+      }}
+    />
+    
     <div className="min-h-screen">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Input */}
@@ -135,6 +148,7 @@ const ProjectsPage = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
