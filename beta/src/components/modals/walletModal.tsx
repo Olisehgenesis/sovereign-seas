@@ -350,15 +350,15 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               <Dialog.Panel className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
                 
                 {/* Header */}
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                <div className="bg-gray-500 px-6 py-4 text-white">
                   <div className="flex items-center justify-between">
                     {/* Network Selector */}
                     <div className="relative">
                       <button
                         onClick={() => setShowNetworkDropdown(!showNetworkDropdown)}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-white rounded-full border border-gray-200 text-sm hover:bg-gray-50"
+                        className="flex items-center space-x-2 px-3 py-1.5 bg-white/20 rounded-full border border-white/30 text-sm hover:bg-white/30 text-white"
                       >
-                        <div className={`w-2 h-2 rounded-full ${selectedNetwork.color.includes('green') ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                        <div className={`w-2 h-2 rounded-full ${selectedNetwork.color.includes('green') ? 'bg-green-400' : 'bg-yellow-400'}`} />
                         <span className="font-medium">{selectedNetwork.shortName}</span>
                         <ChevronDown className="w-3 h-3" />
                       </button>
@@ -383,7 +383,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                     {/* Close Button */}
                     <button
                       onClick={onClose}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -422,13 +422,6 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                         </div>
                       </div>
 
-                      {/* Total Value */}
-                      <div className="text-center mb-6">
-                        <p className="text-3xl font-bold text-gray-900">
-                          ${getTotalValue().toFixed(2)}
-                        </p>
-                        <p className="text-sm text-gray-500">Total Balance</p>
-                      </div>
 
                       {/* Action Buttons */}
                       <div className="grid grid-cols-3 gap-3 mb-6">

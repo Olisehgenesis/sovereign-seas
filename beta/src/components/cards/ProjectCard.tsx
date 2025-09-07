@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getProjectRoute } from '@/utils/hashids';
 import { capitalizeWords } from '@/utils/textUtils';
 import TipModal from '@/components/TipModal';
 
@@ -65,7 +66,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             
             {/* View Project Button */}
             <button 
-              onClick={() => projectId && navigate(`/explorer/project/${projectId}`)}
+              onClick={() => projectId && navigate(getProjectRoute(Number(projectId)))}
               className="w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
               title="View project details"
             >

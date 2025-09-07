@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getProjectRoute } from '@/utils/hashids';
 import { useAccount } from 'wagmi';
 import { 
   ArrowLeft, 
@@ -696,7 +697,7 @@ export default function CreateProject() {
           if (updatedProjectCount && Number(updatedProjectCount) > 0) {
             const newProjectId = Number(updatedProjectCount) - 1;
             console.log('Navigating to new project:', newProjectId);
-            navigate(`/explorer/project/${newProjectId}`);
+            navigate(getProjectRoute(newProjectId));
           } else {
             // Fallback to projects list if we can't get the count
             console.log('Project count not available or zero, navigating to projects list');

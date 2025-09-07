@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { parseIdParam, getProjectRoute } from '@/utils/hashids';
 import { useAccount, useReadContracts } from 'wagmi';
 import { formatEther } from 'viem';
 import type { Address } from 'viem';
@@ -176,7 +177,8 @@ export default function CampaignView() {
   
 
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
-  const campaignId = id ? BigInt(id) : BigInt(0);
+  const parsedId = parseIdParam(id);
+  const campaignId = parsedId ? BigInt(parsedId) : BigInt(0);
   
   // FIXED: Always call all hooks in the same order - moved to top level
   const { campaignDetails, isLoading: campaignLoading } = useCampaignDetails(
@@ -1323,7 +1325,7 @@ export default function CampaignView() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/explorer/project/${project.id}`);
+                                  navigate(getProjectRoute(Number(project.id)));
                                 }}
                                 className="text-xs lg:text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors flex-1 text-left"
                               >
@@ -1461,7 +1463,7 @@ export default function CampaignView() {
                               <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                      navigate(`/explorer/project/${project.id}`);
+                                      navigate(getProjectRoute(Number(project.id)));
                                 }}
                                 className="text-xs lg:text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors flex-1 text-left"
                               >

@@ -212,14 +212,20 @@ const HomePage = () => {
               
               {/* CTA Buttons - Side by side on mobile */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:gap-4 mt-4 sm:mt-6">
-                <button className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-2 sm:px-5 lg:px-6 py-1.5 sm:py-2.5 lg:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm lg:text-base flex items-center justify-center">
+                <button 
+                  onClick={() => navigate('/app/project/start')}
+                  className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-2 sm:px-5 lg:px-6 py-1.5 sm:py-2.5 lg:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm lg:text-base flex items-center justify-center"
+                >
                   Create Project
                   <ChevronRight className="ml-1 sm:ml-2 w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-2 sm:px-5 lg:px-6 py-1.5 sm:py-2.5 lg:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm lg:text-base">
+                <button 
+                  onClick={() => navigate('/app/campaign/start')}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-2 sm:px-5 lg:px-6 py-1.5 sm:py-2.5 lg:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm lg:text-base"
+                >
                   Host a Campaign
-              </button>
-          </div>
+                </button>
+              </div>
 
               {/* Stats Words - Single line on mobile */}
               <div className="flex items-center justify-between sm:justify-start mt-4 sm:mt-8 space-x-2 sm:space-x-4 lg:space-x-6">

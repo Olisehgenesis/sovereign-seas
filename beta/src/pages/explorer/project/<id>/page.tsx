@@ -1,5 +1,6 @@
 import { useState,  useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { parseIdParam, getCampaignRoute } from '@/utils/hashids';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
 import { formatEther } from 'viem';
@@ -389,7 +390,8 @@ export default function ProjectView() {
   
   // Data
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
-  const projectId = id ? BigInt(id) : BigInt(0);
+  const parsedId = parseIdParam(id);
+  const projectId = parsedId ? BigInt(parsedId) : BigInt(0);
   const { project, projectCampaigns, isLoading, error } = useProjectData(projectId, contractAddress);
   
   // Check if user is owner
@@ -457,7 +459,7 @@ export default function ProjectView() {
   };
 
   const openVoteModal = (campaignId: string) => {
-    navigate(`/explorer/campaign/${campaignId}`);
+    navigate(getCampaignRoute(Number(campaignId)));
   };
 
  
@@ -1018,7 +1020,7 @@ export default function ProjectView() {
                             
                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                               <button
-                                onClick={() => navigate(`/explorer/campaign/${campaign.id.toString()}`)}
+                                onClick={() => navigate(getCampaignRoute(Number(campaign.id)))}
                                 className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-white/80 border border-gray-200 text-gray-700 rounded-lg hover:bg-white hover:shadow-md transition-all duration-200 font-medium text-sm sm:text-base"
                               >
                                 <Eye className="h-4 w-4" />

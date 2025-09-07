@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getProjectRoute, getCampaignRoute } from '@/utils/hashids';
 import { useAccount, useBalance, useWalletClient } from 'wagmi';
-// import { motion, AnimatePresence } from 'framer-motion'; // Removed for performance optimization
-// import axios from 'axios'; // Removed to use fetch instead
+
 import { 
   FileCode,
   Vote,
@@ -1467,7 +1467,7 @@ export default function ProfilePage() {
                 >
                   <ProjectCard
                     project={project}
-                    onClick={() => navigate(`/explorer/project/${project.id}`)}
+                    onClick={() => navigate(getProjectRoute(Number(project.id)))}
                   />
                 </div>
               ))}
@@ -1510,7 +1510,7 @@ export default function ProfilePage() {
                 >
                   <CampaignCard
                     campaign={campaign}
-                    onClick={() => navigate(`/explorer/campaign/${campaign.id}`)}
+                    onClick={() => navigate(getCampaignRoute(Number(campaign.id)))}
                   />
                 </div>
               ))}
@@ -1643,13 +1643,13 @@ export default function ProfilePage() {
                             <td className="px-4 py-3">
                               <div className="flex space-x-2">
                                 <button
-                                  onClick={() => navigate(`/explorer/project/${vote.projectId}`)}
+                                  onClick={() => navigate(getProjectRoute(Number(vote.projectId)))}
                                   className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-150 text-xs font-medium"
                                 >
                                   View Project
                                 </button>
                                 <button
-                                  onClick={() => navigate(`/explorer/campaign/${vote.campaignId}`)}
+                                  onClick={() => navigate(getCampaignRoute(Number(vote.campaignId)))}
                                   className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors duration-150 text-xs font-medium"
                                 >
                                   View Campaign

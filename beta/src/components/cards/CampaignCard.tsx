@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, CheckCircle, Timer, Activity, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getCampaignRoute } from '@/utils/hashids';
 import { capitalizeWords } from '@/utils/textUtils';
 
 interface CampaignCardProps {
@@ -128,7 +129,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
           <div className="sm:hidden">
             {/* Small Button in Bottom Right Corner */}
             <button 
-              onClick={() => campaignId && navigate(`/explorer/campaign/${campaignId}`)}
+              onClick={() => campaignId && navigate(getCampaignRoute(Number(campaignId)))}
               className="absolute bottom-2 right-2 w-6 h-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
             >
               <ArrowRight className="h-3 w-3" />

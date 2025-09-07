@@ -465,14 +465,14 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-1 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] rounded-3xl shadow-2xl border border-slate-200 flex flex-col lg:flex-row overflow-hidden relative animate-fadeIn mt-4 sm:mt-8 lg:mt-16 max-h-[90vh] overflow-y-auto min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] mb-4">
+      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-gray-200 flex flex-col lg:flex-row overflow-hidden relative animate-fadeIn mt-4 sm:mt-8 lg:mt-16 max-h-[90vh] overflow-y-auto min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] mb-4">
         {/* Country flag badge in top-left */}
         <div className="absolute left-4 top-4 z-30">
           <LocationBadge location={location} variant="card" />
         </div>
 
         {/* Left: Project Info & Stats */}
-        <div className="flex-1 min-w-[252px] max-w-md bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] text-gray-900 p-7 flex flex-col justify-between relative">
+        <div className="flex-1 min-w-[252px] max-w-md bg-white text-gray-900 p-7 flex flex-col justify-between relative">
           <button
             onClick={handleClose}
             className="absolute top-3 right-3 text-gray-700/80 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-white/20 z-10"
@@ -491,7 +491,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
                   onError={e => (e.currentTarget.style.display = 'none')}
                 />
               ) : (
-                <div className="w-20 h-20 bg-gradient-to-br from-[#e7d6f7] via-[#f3e6f9] to-[#f8e9d2] rounded-2xl flex items-center justify-center text-purple-700 text-3xl font-bold shadow-lg border-2 border-white">
+                <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-700 text-3xl font-bold shadow-lg border-2 border-gray-200">
                   {project.name?.charAt(0) || 'P'}
                 </div>
               )}
@@ -499,7 +499,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
             </div>
 
             <h2 className="text-xl font-bold text-center mb-1">{project.name}</h2>
-            <p className="text-purple-900/80 text-center text-xs mb-2 line-clamp-2">
+            <p className="text-gray-600 text-center text-xs mb-2 line-clamp-2">
               {projectDetails?.project?.description || ''}
             </p>
 
@@ -509,7 +509,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
             </div>
 
             {/* Tip Summary */}
-            <div className="w-full bg-white/30 rounded-xl p-3 flex flex-col gap-2 mb-2">
+            <div className="w-full bg-gray-50 rounded-xl p-3 flex flex-col gap-2 mb-2">
               {tipSummaryLoading ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-gray-700" />
@@ -517,23 +517,23 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
               ) : tipSummary ? (
                 <>
                   <div className="flex items-center gap-2">
-                    <Gift className="h-4 w-4 text-yellow-400 animate-bounce" />
+                    <Gift className="h-4 w-4 text-yellow-500 animate-bounce" />
                     <span className="font-semibold">Total Tips:</span>
-                    <span className="ml-auto text-amber-700 font-bold">
+                    <span className="ml-auto text-gray-700 font-bold">
                       {formatTipAmount(tipSummary.totalTipsInCelo)} CELO
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-400 animate-pulse" />
+                    <TrendingUp className="h-4 w-4 text-blue-500 animate-pulse" />
                     <span className="font-semibold">Tippers:</span>
-                    <span className="ml-auto text-green-700 font-bold">
+                    <span className="ml-auto text-gray-700 font-bold">
                       {tipSummary.tipperCount?.toString() || '0'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Coins className="h-4 w-4 text-blue-400 animate-spin" />
+                    <Coins className="h-4 w-4 text-gray-500 animate-spin" />
                     <span className="font-semibold">Tokens:</span>
-                    <span className="ml-auto text-blue-700 font-bold">
+                    <span className="ml-auto text-gray-700 font-bold">
                       {tipSummary.tippedTokens?.length || 0}
                     </span>
                   </div>
@@ -572,20 +572,20 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
                   )}
                 </>
               ) : (
-                <div className="text-xs text-purple-900/80">No tip data yet.</div>
+                <div className="text-xs text-gray-600">No tip data yet.</div>
               )}
             </div>
           </div>
 
           <div className="mt-auto pt-4">
-            <div className="text-xs text-purple-700/80 text-center">
+            <div className="text-xs text-gray-600 text-center">
               Powered by Sovereign Seas Tipping
             </div>
           </div>
         </div>
 
         {/* Right: Tip Form */}
-        <div className="flex-1 min-w-[288px] bg-gradient-to-br from-[#f8e9d2] via-[#f3e6f9] to-[#e7d6f7] p-7 flex flex-col justify-center relative">
+        <div className="flex-1 min-w-[288px] bg-white p-7 flex flex-col justify-center relative">
           {currentView === 'success' ? (
             <div className="flex flex-col items-center justify-center h-full gap-5 animate-fadeIn">
               <div className="relative">
@@ -594,9 +594,9 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
                 </div>
                 <div className="absolute -top-2 -right-2 text-2xl">🎉</div>
               </div>
-              <h4 className="text-xl font-bold text-emerald-600 mb-1">Tip Sent Successfully!</h4>
+              <h4 className="text-xl font-bold text-gray-700 mb-1">Tip Sent Successfully!</h4>
               <p className="text-gray-700 mb-4 text-center">
-                Your tip has been sent to <span className="font-semibold text-purple-700">{project.name}</span>
+                Your tip has been sent to <span className="font-semibold text-gray-800">{project.name}</span>
               </p>
               <button
                 onClick={handleClose}

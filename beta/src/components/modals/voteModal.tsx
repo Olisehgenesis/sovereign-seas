@@ -17,6 +17,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getCampaignRoute } from '@/utils/hashids';
 import {
   Dialog,
   DialogContent,
@@ -561,7 +562,7 @@ export default function VoteModal({
           if (prev <= 1) {
             clearInterval(interval);
             onClose();
-            navigate(`/explorers/campaign/${campaignId}`);
+            navigate(getCampaignRoute(Number(campaignId)));
             return 0;
           }
           return prev - 1;

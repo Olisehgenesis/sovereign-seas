@@ -36,6 +36,7 @@ import { contractABI as abi } from '@/abi/seas4ABI';
 import { getMainContractAddress, getEnvironmentName, getCeloTokenAddress } from '@/utils/contractConfig';
 import { useChainSwitch } from '@/hooks/useChainSwitch';
 import { useNavigate } from 'react-router-dom';
+import { getCampaignRoute } from '@/utils/hashids';
 
 interface Campaign {
   name: string;
@@ -301,7 +302,7 @@ export default function CreateCampaign() {
           if (updatedCampaignCount && Number(updatedCampaignCount) > 0) {
             const newCampaignId = Number(updatedCampaignCount) - 1;
             console.log('Navigating to new campaign:', newCampaignId);
-            navigate(`/explorer/campaign/${newCampaignId}`);
+            navigate(getCampaignRoute(newCampaignId));
           } else {
             // Fallback to campaigns list if we can't get the count
             console.log('Campaign count not available or zero, navigating to campaigns list');
