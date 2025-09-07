@@ -1,4 +1,4 @@
-import { Hashids } from 'hashids';
+import Hashids from 'hashids';
 
 // Initialize hashids with a secret salt and minimum length of 6 characters
 const hashids = new Hashids('sovereign-seas-salt-2024', 6);
@@ -26,7 +26,7 @@ export function encodeId(id: number | bigint): string {
 export function decodeId(hashid: string): number | null {
   try {
     const decoded = hashids.decode(hashid);
-    return decoded.length > 0 ? decoded[0] : null;
+    return decoded.length > 0 ? Number(decoded[0]) : null;
   } catch (error) {
     console.warn('Failed to decode hashid:', hashid, error);
     return null;

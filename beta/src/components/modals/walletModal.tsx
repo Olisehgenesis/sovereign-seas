@@ -317,9 +317,6 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
     }
   };
 
-  const getTotalValue = () => {
-    return tokenBalances.reduce((total, token) => total + parseFloat(token.formattedBalance || '0'), 0);
-  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
