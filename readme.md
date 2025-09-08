@@ -1,6 +1,6 @@
 <div align="center">
 
-![Sovereign Seas Logo](v4.2/public/images/logo.png)
+
 
 # 🌊 Sovereign Seas
 
