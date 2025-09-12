@@ -44,6 +44,7 @@ import  { SelfAppBuilder, SelfQRcodeWrapper } from '@selfxyz/qrcode';
 import { getUniversalLink } from "@selfxyz/core";
 import { getGoodLink } from '@/utils/get-good-link';
 import DynamicHelmet from '@/components/DynamicHelmet';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Helper function to safely parse JSON
 const safeJsonParse = (jsonString: string, fallback = {}) => {
@@ -550,6 +551,27 @@ export default function ProfilePage() {
           console.error('Network Error during refresh - API endpoint may be down');
         }
       }
+      
+      // Set verification to false on error
+      console.log('Setting verification status to false due to refresh error');
+      setIsVerified(false);
+      setVerificationProviders([]);
+      setVerificationDetails({
+        gooddollar: { 
+          isVerified: false,
+          wallet: address,
+          root: null,
+          expiry: null
+        },
+        self: { 
+          isVerified: false,
+          nationality: null,
+          attestationId: null,
+          timestamp: null,
+          userDefinedData: null,
+          verificationOptions: null
+        }
+      });
     } finally {
       setVerificationLoading(false);
     }
@@ -885,7 +907,8 @@ export default function ProfilePage() {
             }
           }
           
-          // Set default values on error
+          // Set default values on error - ensure verification is set to false
+          console.log('Setting verification status to false due to error');
           setIsVerified(false);
           setVerificationProviders([]);
           setVerificationDetails({
@@ -2083,11 +2106,31 @@ export default function ProfilePage() {
      )}
 
      {/* GoodDollar Verification Modal */}
-     <GoodDollarVerifyModal 
-       isOpen={showGoodDollarVerification}
-       onClose={() => setShowGoodDollarVerification(false)}
-       onVerificationComplete={handleGoodDollarVerificationComplete}
-     />
+     <ErrorBoundary
+       fallback={
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+           <div className="bg-white rounded-lg p-6 max-w-md w-full mt-4 sm:mt-8 lg:mt-16 mb-4">
+             <div className="text-center">
+               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+               <h3 className="text-lg font-bold text-gray-900 mb-2">Verification Error</h3>
+               <p className="text-gray-600 mb-4">There was an error loading the verification modal. Please try again.</p>
+               <button
+                 onClick={() => setShowGoodDollarVerification(false)}
+                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
+               >
+                 Close
+               </button>
+             </div>
+           </div>
+         </div>
+       }
+     >
+       <GoodDollarVerifyModal 
+         isOpen={showGoodDollarVerification}
+         onClose={() => setShowGoodDollarVerification(false)}
+         onVerificationComplete={handleGoodDollarVerificationComplete}
+       />
+     </ErrorBoundary>
 
      {/* GoodDollar Face Verification Popup */}
      {showGoodDollarPopup && (

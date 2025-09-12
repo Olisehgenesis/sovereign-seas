@@ -88,7 +88,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
 
   const handleCardClick = () => {
     if (campaignId) {
+      console.log('Campaign card clicked, navigating to:', getCampaignRoute(Number(campaignId)));
       navigate(getCampaignRoute(Number(campaignId)));
+    } else {
+      console.warn('Campaign card clicked but no campaignId provided');
     }
   };
 
@@ -96,11 +99,12 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
     <div 
       className={`group relative ${className} cursor-pointer`}
       onClick={handleCardClick}
+      onMouseDown={() => console.log('Campaign card mouse down, campaignId:', campaignId)}
     >
       {/* Two-Card Folder Design on Desktop, Single Card on Mobile */}
       <div className="relative">
         {/* Top Card - Folder Design (Desktop) / Single Card (Mobile) */}
-        <div className="relative h-32 sm:h-48 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border-2 border-blue-300 overflow-hidden sm:group-hover:-translate-y-24 transition-transform duration-500">
+        <div className="relative sm:h-48 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border-2 border-blue-300 overflow-hidden sm:group-hover:-translate-y-24 transition-transform duration-500" style={{ height: '168px' }}>
           {/* Folder Top Tab - Hidden on Mobile */}
           <div className="hidden sm:block absolute top-0 left-0 w-24 h-6 bg-gradient-to-r from-gray-500 to-gray-600 rounded-t-lg">
             <div className="absolute top-0 left-0 w-20 h-4 bg-gradient-to-r from-gray-400 to-gray-500 rounded-t-lg"></div>
@@ -140,7 +144,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                campaignId && navigate(getCampaignRoute(Number(campaignId)));
+                if (campaignId) {
+                  console.log('Mobile button clicked, navigating to:', getCampaignRoute(Number(campaignId)));
+                  navigate(getCampaignRoute(Number(campaignId)));
+                }
               }}
               className="absolute bottom-2 right-2 w-6 h-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
             >
@@ -185,7 +192,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              campaignId && navigate(getCampaignRoute(Number(campaignId)));
+              if (campaignId) {
+                console.log('Desktop button clicked, navigating to:', getCampaignRoute(Number(campaignId)));
+                navigate(getCampaignRoute(Number(campaignId)));
+              }
             }}
             className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
           >
