@@ -12,6 +12,7 @@ import TerminalCard from '@/components/TerminalCard';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import Stepper from '@/components/ui/stepper';
 import { getMainContractAddress } from '@/utils/contractConfig';
+import EngagementRewardsCard from '@/components/cards/EngagementRewardsCard';
 
 // Helper function to determine campaign status
 const getCampaignStatus = (campaign: any): 'upcoming' | 'active' | 'ended' | 'paused' => {
@@ -237,7 +238,7 @@ const HomePage = () => {
                 <div className="text-center">
                   <div className="text-xs sm:text-sm lg:text-base font-medium text-gray-600">
                     Projects <span className="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => navigate('/explorer/projects')}>{totalProjects}+</span>
-              </div>
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-xs sm:text-sm lg:text-base font-medium text-gray-600">
@@ -257,6 +258,11 @@ const HomePage = () => {
             />
           </div>
         </div>
+      </div>
+
+      {/* Floating Engagement Rewards Card */}
+      <div className="fixed z-50 max-w-sm" style={{ bottom: '220px', right: '10%' }}>
+        <EngagementRewardsCard />
       </div>
 
       {/* Campaigns & Projects Section */}

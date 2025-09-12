@@ -18,7 +18,14 @@ const VerifyModal = ({ isOpen, onClose, onVerificationComplete }) => {
  const { data: walletClient } = useWalletClient();
  
  // Initialize IdentitySDK when clients are available
- const identitySDK = publicClient && walletClient ? new IdentitySDK(publicClient, walletClient, 'production') : null;
+ const identitySDK = publicClient && walletClient ? (() => {
+   try {
+     return new IdentitySDK(publicClient, walletClient, 'production');
+   } catch (error) {
+     console.error('Failed to initialize IdentitySDK:', error);
+     return null;
+   }
+ })() : null;
 
  // Reset state when modal opens
  useEffect(() => {
@@ -54,7 +61,10 @@ const VerifyModal = ({ isOpen, onClose, onVerificationComplete }) => {
  };
 
  const checkIdentityStatus = async () => {
-   if (!address || !identitySDK) return;
+   if (!address || !identitySDK) {
+     console.log('IdentitySDK or address not available:', { identitySDK: !!identitySDK, address });
+     return;
+   }
    
    setIsLoading(true);
    setVerificationStatus('checking');

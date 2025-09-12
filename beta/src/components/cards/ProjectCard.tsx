@@ -44,7 +44,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
       {/* Single Card Design */}
       <div className="relative">
         {/* Project Card */}
-        <div className="relative h-32 sm:h-56 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-sm border-2 border-gray-300 p-3 sm:p-6">
+        <div className="relative h-36 sm:h-64 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-sm border-2 border-gray-300 p-3 sm:p-6">
 
           {/* Square Image in Top Right Corner - Desktop only */}
           {logo && (
@@ -92,7 +92,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             <h3 className="text-sm sm:text-lg font-medium text-gray-900 line-clamp-2 mb-1 sm:mb-2">{capitalizeWords(title)}</h3>
             
             {/* Campaign Count */}
-            {campaignCount && campaignCount > 0 && (
+            {campaignCount !== undefined && campaignCount > 0 && (
               <div className="mb-2 sm:mb-4">
                 <span className="text-xs sm:text-sm text-gray-600">{campaignCount} Campaigns</span>
               </div>

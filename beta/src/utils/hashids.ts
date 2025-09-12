@@ -104,5 +104,6 @@ export function getProjectRoute(projectId: number | bigint, useHashid: boolean =
  */
 export function getCampaignRoute(campaignId: number | bigint, useHashid: boolean = true): string {
   const id = generateUrlId(campaignId, useHashid);
+  console.log('getCampaignRoute called with:', { campaignId, useHashid, id, route: `/explorer/campaign/${id}` });
   return `/explorer/campaign/${id}`;
 }

@@ -2,12 +2,12 @@
  * Contract configuration utility that handles testnet vs mainnet contract addresses
  */
 
-const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+const isTestnet = import.meta.env.VITE_ENV === 'testnet' || import.meta.env.VITE_IS_TESTNET === 'true';
 
 /**
  * Get the appropriate contract address based on the current environment
  * @param mainnetAddress - The mainnet contract address
- * @param testnetAddress - The testnet contract address (optional, falls back to mainnet if not provided)
+ * @param testnetAddress - The testnet contract address or testnet address from the environment variable (optional, falls back to mainnet if not provided)
  * @returns The appropriate contract address for the current environment
  */
 export function getContractAddress(
@@ -26,6 +26,15 @@ export function getContractAddress(
 export function getMainContractAddress(): `0x${string}` {
   const mainnetContract = import.meta.env.VITE_CONTRACT_V4 as string;
   const testnetContract = import.meta.env.VITE_CONTRACT_V4_TESTNET as string;
+  
+  console.log('Contract Address Selection:', {
+    isTestnet,
+    VITE_ENV: import.meta.env.VITE_ENV,
+    VITE_IS_TESTNET: import.meta.env.VITE_IS_TESTNET,
+    mainnetContract,
+    testnetContract,
+    selectedContract: getContractAddress(mainnetContract, testnetContract)
+  });
   
   return getContractAddress(mainnetContract, testnetContract);
 }

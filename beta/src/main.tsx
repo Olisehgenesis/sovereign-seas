@@ -14,7 +14,10 @@ import ProjectsPage from '@/pages/explorer/projects/page'
 import CampaignsPage from '@/pages/explorer/campaigns/page'
 import CreateProject from '@/pages/app/project/start'
 import CreateCampaign from '@/pages/app/campaign/start'
+import CampaignManage from '@/pages/app/campaign/<id>/manage'
+import CampaignEdit from '@/pages/app/campaign/<id>/edit'
 import ProfilePage from '@/pages/app/profile/page'
+import BackofficePage from '@/pages/app/backoffice/page'
 import NotFound from '@/pages/404/page'
 
 
@@ -37,9 +40,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           {/* App */}
           <Route path="/app/project/start" element={<Layout><CreateProject /></Layout>} />
           <Route path="/app/campaign/start" element={<Layout><CreateCampaign /></Layout>} />
+          <Route path="/app/campaign/manage/:id" element={<Layout><CampaignManage /></Layout>} />
+          <Route path="/app/campaign/edit/:id" element={<Layout><CampaignEdit /></Layout>} />
 
           <Route path="/app/profile" element={<Layout><ProfilePage /></Layout>} />
           <Route path="/app/me" element={<Navigate to="/app/profile" replace />} />
+          <Route path="/app/backoffice" element={<Layout><BackofficePage /></Layout>} />
 
           {/* 404 Route */}
           <Route path="*" element={<Layout><NotFound /></Layout>} />

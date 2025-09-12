@@ -51,7 +51,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
             <Route path="/app/me" element={<ProfilePage />} />
             <Route path="/app/campaign/start" element={<CreateCampaign />} />
-            <Route path="/app/campaign/manage/:id" element={<CampaignManagePage />} />
             <Route path="/app/campaign/edit/:id" element={<EditCampaignDetails />} />
             <Route path="/app/project/start" element={<CreateProject />} />
             <Route path="/app/project/edit/:id" element={<EditProjectPage />} />
@@ -65,6 +64,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/v2/explorer/project/:id" element={<ProjectViewV2 />} />
             <Route path="/v2/explorer/campaign/:id" element={<CampaignViewV2 />} />
             <Route path="/app/v2/test-tips" element={<TestTipsPage />} />
+            
+            // Campaign management routes
+            <Route path="/app/campaign/manage/:id" element={<CampaignManagePage />} />
 
             <Route path="*" element={<NotFound />} />
           </Route>

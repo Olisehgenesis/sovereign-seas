@@ -145,6 +145,10 @@ export function useCreateCampaign(contractAddress: Address) {
   }) => {
     try {
       console.log('createCampaign - Function called with:');
+      console.log('- contractAddress:', contractAddress);
+      console.log('- isTestnet:', import.meta.env.VITE_ENV === 'testnet');
+      console.log('- VITE_CONTRACT_V4:', import.meta.env.VITE_CONTRACT_V4);
+      console.log('- VITE_CONTRACT_V4_TESTNET:', import.meta.env.VITE_CONTRACT_V4_TESTNET);
       console.log('- feeAmount:', feeAmount.toString());
       console.log('- feeToken:', feeToken);
       console.log('- celoToken:', celoToken);
@@ -184,6 +188,7 @@ export function useCreateCampaign(contractAddress: Address) {
       const dataWithSuffix = createCampaignData + referralTag;
 
       // Using sendTransactionAsync to support referral integration
+      // The chain context is handled by the Wagmi provider configuration
       const result = await sendTransactionAsync({
         to: contractAddress,
         data: dataWithSuffix as `0x${string}`,

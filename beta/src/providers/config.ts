@@ -9,9 +9,7 @@ const isTestnet = import.meta.env.VITE_ENV === 'testnet';
 
 
 export const config = createConfig({
-  
   chains: isTestnet ? [celoAlfajores] : [celo],
-  
   transports: {
     [celoAlfajores.id]: http("https://celo-alfajores.drpc.org"),
     [celo.id]: http("https://celo.drpc.org"),

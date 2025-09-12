@@ -31,9 +31,10 @@ import {
 import { uploadToIPFS } from '@/utils/imageUtils';
 import { type Address } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
-import { useAccount, useBalance, useWriteContract, useReadContract, usePublicClient } from 'wagmi';
+import { useAccount, useBalance, usePublicClient } from 'wagmi';
 import { contractABI as abi } from '@/abi/seas4ABI';
 import { getMainContractAddress, getEnvironmentName, getCeloTokenAddress } from '@/utils/contractConfig';
+import { useCreateCampaignWithFees } from '@/hooks/useCampaignMethods';
 import { useChainSwitch } from '@/hooks/useChainSwitch';
 import { useNavigate } from 'react-router-dom';
 import { getCampaignRoute } from '@/utils/hashids';
@@ -124,8 +125,11 @@ export default function CreateCampaign() {
   // Debug environment variables
   console.log('Environment variables:');
   console.log('- Environment:', getEnvironmentName());
+  console.log('- VITE_ENV:', import.meta.env.VITE_ENV);
   console.log('- VITE_CELO_TOKEN:', import.meta.env.VITE_CELO_TOKEN);
+  console.log('- VITE_CELO_TOKEN_TESTNET:', import.meta.env.VITE_CELO_TOKEN_TESTNET);
   console.log('- VITE_CONTRACT_V4:', import.meta.env.VITE_CONTRACT_V4);
+  console.log('- VITE_CONTRACT_V4_TESTNET:', import.meta.env.VITE_CONTRACT_V4_TESTNET);
   console.log('- Contract Address Used:', contractAddress);
   console.log('- celoToken:', celoToken);
   console.log('- contractAddress:', contractAddress);
@@ -141,11 +145,43 @@ export default function CreateCampaign() {
   // Wallet and contract hooks
   const { address, isConnected } = useAccount();
   const { authenticated, ready } = usePrivy();
-  const { ensureCorrectChain, isSwitching, targetChain } = useChainSwitch();
+  const { 
+    ensureCorrectChain, 
+    isSwitching, 
+    targetChain, 
+    isOnCorrectChain, 
+    switchToCorrectChain, 
+    currentChainId
+  } = useChainSwitch();
   const publicClient = usePublicClient();
   
   // Type guard for isSwitching to handle bigint values
   const isChainSwitching: boolean = Boolean(isSwitching);
+  
+  // Manual chain switch state
+  const [showChainSwitch, setShowChainSwitch] = useState(false);
+  const [chainSwitchError, setChainSwitchError] = useState<string>('');
+  
+  // Manual chain switch function
+  const handleManualChainSwitch = async () => {
+    setChainSwitchError('');
+    try {
+      await switchToCorrectChain();
+      setShowChainSwitch(false);
+      setSuccessMessage(`Successfully switched to ${targetChain.name}`);
+    } catch (error) {
+      console.error('Manual chain switch failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setChainSwitchError(`Failed to switch chain: ${errorMessage}`);
+    }
+  };
+
+  // Show manual switch option if user is on wrong chain
+  useEffect(() => {
+    if (isConnected && !isOnCorrectChain && !isChainSwitching) {
+      setShowChainSwitch(true);
+    }
+  }, [isConnected, isOnCorrectChain, isChainSwitching]);
   
   // Get user's CELO balance
   const { data: celoBalance } = useBalance({
@@ -153,32 +189,20 @@ export default function CreateCampaign() {
     token: celoToken as Address,
   });
   
-  // Direct contract interaction
-  const { writeContract, isPending, isError, error: contractError, isSuccess } = useWriteContract();
+  // Use the campaign creation hook with fees
+  const { 
+    createCampaignWithFees, 
+    isPending, 
+    isError, 
+    error: contractError, 
+    isSuccess,
+    campaignCreationFee,
+    canBypass: canBypassFees
+  } = useCreateCampaignWithFees(contractAddress, address as Address);
   
-  // Read campaign creation fee directly from contract
-  const { data: campaignCreationFee } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'campaignCreationFee',
-    query: {
-      enabled: !!contractAddress
-    }
-  });
-  
-  // Cast the fee to bigint and add type guard
-  const feeAmount = campaignCreationFee as bigint | undefined;
-  
-  // Check if user can bypass fees (super admin)
-  const { data: canBypass } = useReadContract({
-    address: contractAddress,
-    abi,
-    functionName: 'superAdmins',
-    args: [address || '0x0'],
-    query: {
-      enabled: !!contractAddress && !!address
-    }
-  });
+  // Fee amount and bypass status are now handled by the hook
+  const feeAmount = campaignCreationFee;
+  const canBypass = canBypassFees;
 
   console.log(isError)
   
@@ -323,7 +347,7 @@ export default function CreateCampaign() {
     if (contractError) {
       setLoading(false);
       setIsUploading(false);
-      const errorMessage = `Transaction failed: ${contractError.message || 'Unknown error'}`;
+      const errorMessage = `Transaction failed: ${contractError ? String(contractError) : 'Unknown error'}`;
       setErrorMessage(errorMessage);
       
       // Show alert for better visibility
@@ -732,39 +756,57 @@ export default function CreateCampaign() {
       }
 
       // Debug transaction details
-      const feeValue = !canBypass && feeAmount != null ? feeAmount : BigInt(0);
       console.log('Transaction details:');
       console.log('- Contract address:', contractAddress);
-      console.log('- Fee value to send:', feeValue.toString());
-      console.log('- Fee value in CELO:', (Number(feeValue) / 1e18).toFixed(6));
+      console.log('- Fee amount:', feeAmount?.toString() || '0');
+      console.log('- Fee in CELO:', feeAmount ? (Number(feeAmount) / 1e18).toFixed(6) : '0');
       console.log('- Can bypass fees:', canBypass);
 
       // Ensure we're on the correct chain before making the contract call
       console.log('- Ensuring correct chain...');
-      await ensureCorrectChain();
-      console.log(`- Now on correct chain: ${targetChain.name}`);
+      console.log(`- Environment: ${getEnvironmentName()}`);
+      console.log(`- Target chain: ${targetChain.name} (${targetChain.id})`);
+      console.log(`- Is testnet: ${import.meta.env.VITE_ENV === 'testnet'}`);
+      try {
+        await ensureCorrectChain();
+        console.log(`- Now on correct chain: ${targetChain.name}`);
+      } catch (chainError) {
+        console.error('Chain switching failed:', chainError);
+        const chainErrorMessage = chainError instanceof Error ? chainError.message : 'Unknown chain switching error';
+        
+        if (chainErrorMessage.includes('user rejected')) {
+          setErrorMessage('Chain switching was rejected by user. Please try the manual switch below.');
+          setShowChainSwitch(true);
+        } else if (chainErrorMessage.includes('not supported')) {
+          setErrorMessage('The target network is not supported by your wallet. Please add the network manually or try the manual switch below.');
+          setShowChainSwitch(true);
+        } else if (chainErrorMessage.includes('Wallet not connected')) {
+          setErrorMessage('Wallet not connected. Please connect your wallet first.');
+        } else {
+          setErrorMessage(`Failed to switch to the correct network: ${chainErrorMessage}`);
+          setShowChainSwitch(true);
+        }
+        
+        setLoading(false);
+        setIsUploading(false);
+        return;
+      }
 
-      // Call the contract method
-      const txHash = await writeContract({
-        address: contractAddress,
-        abi,
-        functionName: 'createCampaign',
-        args: [
-          cleanedCampaign.name,
-          cleanedCampaign.description,
-          JSON.stringify(mainInfoData),
-          JSON.stringify(additionalInfoData),
-          startTimeUnix,
-          endTimeUnix,
-          BigInt(parseInt(cleanedCampaign.adminFeePercentage)),
-          BigInt(cleanedCampaign.maxWinners ? parseInt(cleanedCampaign.maxWinners) : 10), // Default to 10 winners
-          cleanedCampaign.useQuadraticDistribution,
-          cleanedCampaign.useCustomDistribution,
-          customDistributionData,
-          cleanedCampaign.payoutToken as Address,
-          cleanedCampaign.feeToken as Address
-        ],
-        value: feeValue
+      // Call the campaign creation hook
+      const txHash = await createCampaignWithFees({
+        name: cleanedCampaign.name,
+        description: cleanedCampaign.description,
+        mainInfo: JSON.stringify(mainInfoData),
+        additionalInfo: JSON.stringify(additionalInfoData),
+        startTime: startTimeUnix,
+        endTime: endTimeUnix,
+        adminFeePercentage: BigInt(parseInt(cleanedCampaign.adminFeePercentage)),
+        maxWinners: BigInt(cleanedCampaign.maxWinners ? parseInt(cleanedCampaign.maxWinners) : 10), // Default to 10 winners
+        useQuadraticDistribution: cleanedCampaign.useQuadraticDistribution,
+        useCustomDistribution: cleanedCampaign.useCustomDistribution,
+        customDistributionData: customDistributionData,
+        payoutToken: cleanedCampaign.payoutToken as Address,
+        feeToken: cleanedCampaign.feeToken as Address
       });
       
       console.log('Transaction hash:', txHash);
@@ -785,6 +827,8 @@ export default function CreateCampaign() {
         userFriendlyMessage += 'Network error. Please check your connection and try again.';
       } else if (errorMessage.includes('revert')) {
         userFriendlyMessage += 'Contract execution reverted. Please check your parameters.';
+      } else if (errorMessage.includes('chain') || errorMessage.includes('switch')) {
+        userFriendlyMessage += 'Network switching error. Please ensure you are on the correct network.';
       } else {
         userFriendlyMessage += errorMessage;
       }
@@ -870,6 +914,64 @@ export default function CreateCampaign() {
             <div className="mb-6 bg-red-50 rounded-xl p-4 border border-red-200 flex items-start">
               <XCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
               <p className="text-red-700">{errorMessage}</p>
+            </div>
+          )}
+
+          {/* Chain Status and Manual Switch */}
+          {isConnected && (
+            <div className="mb-6 bg-blue-50 rounded-xl p-4 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`w-3 h-3 rounded-full mr-3 ${isOnCorrectChain ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+                  <div>
+                    <p className="text-blue-800 font-medium">
+                      {isOnCorrectChain ? 'Connected to correct network' : 'Wrong network detected'}
+                    </p>
+                    <p className="text-blue-600 text-sm">
+                      Current: {currentChainId === 42220 ? 'Celo Mainnet' : currentChainId === 44787 ? 'Celo Alfajores (Testnet)' : `Chain ${currentChainId}`}
+                      {!isOnCorrectChain && (
+                        <span className="ml-2">
+                          → Required: {targetChain.name} ({targetChain.id})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {!isOnCorrectChain && (
+                  <button
+                    type="button"
+                    onClick={handleManualChainSwitch}
+                    disabled={isChainSwitching}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    {isChainSwitching ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Switching...
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="h-4 w-4 mr-2" />
+                        Switch Network
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              
+              {chainSwitchError && (
+                <div className="mt-3 p-3 bg-red-100 rounded-lg border border-red-200">
+                  <p className="text-red-700 text-sm">{chainSwitchError}</p>
+                </div>
+              )}
+              
+              {showChainSwitch && !isOnCorrectChain && (
+                <div className="mt-3 p-3 bg-yellow-100 rounded-lg border border-yellow-200">
+                  <p className="text-yellow-800 text-sm">
+                    Automatic network switching failed. Please use the "Switch Network" button above or switch manually in your wallet.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
