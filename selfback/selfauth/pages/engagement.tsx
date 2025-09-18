@@ -174,6 +174,17 @@ function ClaimDemo() {
       console.error('[Claim Debug] Error object', e)
       const message = e?.message || 'Unknown error'
       const cause = e?.cause || null
+      // Map contract revert reasons to user-friendly messages
+      let userMessage = message
+      if (message.includes('Invalid user address')) {
+        userMessage = 'Wallet is not verified'
+      } else if (message.includes('Signature expired')) {
+        userMessage = 'Signatures expired. Please regenerate user & app signatures.'
+      } else if (message.includes('Invalid app signature')) {
+        userMessage = 'App signature invalid. Please regenerate app signature.'
+      } else if (message.includes('User not eligible')) {
+        userMessage = 'User not eligible to claim'
+      }
       console.error('[Claim Debug] Details', {
         message,
         cause,
@@ -184,7 +195,7 @@ function ClaimDemo() {
         userSignature,
         appSignature: signature
       })
-      setStatus(`Claim failed: ${message}`)
+      setStatus(`Claim failed: ${userMessage}`)
     }
   }
 
