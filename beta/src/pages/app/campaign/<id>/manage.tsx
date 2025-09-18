@@ -28,6 +28,7 @@ import {
   Zap,
   Crown,
   Trophy,
+  Database,
   Medal,
   Info,
   Building2,
@@ -53,6 +54,23 @@ import {
   useAllProjects, 
   formatProjectForDisplay 
 } from '@/hooks/useProjectMethods';
+
+import { 
+  usePools,
+  usePoolInfo,
+  usePoolBalance,
+  usePoolStats,
+  useCreatePoolUniversal,
+  useCreatePoolERC20,
+  useFundPool,
+  useDonateToPool,
+  useDistributeQuadratic,
+  useDistributeManual,
+  useDistribute,
+  useTransferPoolAdmin,
+  useAddSuperAdmin,
+  useRemoveSuperAdmin
+} from '@/hooks/usePools';
 
 import { formatEther } from 'viem';
 import { parseIdParam } from '@/utils/hashids';
@@ -180,6 +198,82 @@ export default function CampaignManagePage() {
     contractAddress as `0x${string}`,
     campaignId
   );
+
+  // Pools hooks
+  const poolsContractAddress = import.meta.env.VITE_POOLS_CONTRACT_ADDRESS as `0x${string}`;
+  const { createPool: createUniversalPool, isPending: isCreatingUniversal } = useCreatePoolUniversal();
+  const { createPool: createERC20Pool, isPending: isCreatingERC20 } = useCreatePoolERC20();
+  const { fundPool, isPending: isFunding } = useFundPool();
+  const { donate, isPending: isDonating } = useDonateToPool();
+  const { distribute: distributeQuadratic, isPending: isDistributingQuadratic } = useDistributeQuadratic();
+  const { distribute: distributeManual, isPending: isDistributingManual } = useDistributeManual();
+  const { distribute: distributePool, isPending: isDistributingPool } = useDistribute();
+  const { transferAdmin, isPending: isTransferringAdmin } = useTransferPoolAdmin();
+  const { addSuperAdmin, isPending: isAddingSuperAdmin } = useAddSuperAdmin();
+  const { removeSuperAdmin, isPending: isRemovingSuperAdmin } = useRemoveSuperAdmin();
+
+  // Pool state
+  const [showCreatePoolModal, setShowCreatePoolModal] = useState(false);
+  const [poolType, setPoolType] = useState<'universal' | 'erc20'>('universal');
+  const [poolMetadata, setPoolMetadata] = useState('');
+  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
+  
+  // Simple pool metadata state
+  const [poolName, setPoolName] = useState('');
+  const [poolDescription, setPoolDescription] = useState('');
+
+  // Generate simple metadata as plain string
+  const generatePoolMetadata = () => {
+    if (!poolName.trim() && !poolDescription.trim()) {
+      return "Pool created for campaign";
+    }
+    if (!poolDescription.trim()) {
+      return poolName.trim();
+    }
+    return `${poolName.trim()}: ${poolDescription.trim()}`;
+  };
+
+  // Pool creation functions
+  const handleCreateUniversalPool = async () => {
+    try {
+      setStatusMessage({ text: 'Creating universal pool...', type: 'info' });
+      const metadata = generatePoolMetadata();
+      console.log('Creating universal pool with:', { campaignId, metadata, type: typeof metadata });
+      await createUniversalPool(campaignId, metadata);
+      setStatusMessage({ text: 'Universal pool created successfully!', type: 'success' });
+      setShowCreatePoolModal(false);
+      resetPoolForm();
+    } catch (error) {
+      console.error('Error creating universal pool:', error);
+      setStatusMessage({ text: 'Failed to create universal pool', type: 'error' });
+    }
+  };
+
+  const handleCreateERC20Pool = async () => {
+    try {
+      if (selectedTokens.length === 0) {
+        setStatusMessage({ text: 'Please select at least one token', type: 'error' });
+        return;
+      }
+      setStatusMessage({ text: 'Creating ERC20 pool...', type: 'info' });
+      const metadata = generatePoolMetadata();
+      console.log('Creating ERC20 pool with:', { campaignId, selectedTokens, metadata, type: typeof metadata });
+      await createERC20Pool(campaignId, selectedTokens as `0x${string}`[], metadata);
+      setStatusMessage({ text: 'ERC20 pool created successfully!', type: 'success' });
+      setShowCreatePoolModal(false);
+      resetPoolForm();
+    } catch (error) {
+      console.error('Error creating ERC20 pool:', error);
+      setStatusMessage({ text: 'Failed to create ERC20 pool', type: 'error' });
+    }
+  };
+
+  const resetPoolForm = () => {
+    setPoolMetadata('');
+    setSelectedTokens([]);
+    setPoolName('');
+    setPoolDescription('');
+  };
 
   const approvedProjectIds = useMemo(() => {
     return new Set(sortedProjectIds.map(id => id.toString()));
@@ -737,6 +831,7 @@ export default function CampaignManagePage() {
               {[
                 { id: 'overview', label: 'Overview', icon: BarChart3 },
                 { id: 'projects', label: 'Projects', icon: ListChecks, count: totalProjects },
+                { id: 'pools', label: 'Pools', icon: Database },
                 { id: 'simulation', label: 'Distribution', icon: Calculator },
                 { id: 'settings', label: 'Settings', icon: Settings },
                 { id: 'advanced', label: 'Advanced', icon: Settings }
@@ -1018,6 +1113,213 @@ export default function CampaignManagePage() {
                    })
                  )}
                </div>
+             </div>
+           )}
+
+           {/* Pools Tab */}
+           {activeTab === 'pools' && (
+             <div className="space-y-8">
+               {/* Pool Management Header */}
+               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                 <div className="flex items-center justify-between">
+                   <div>
+                     <h3 className="text-xl font-semibold text-slate-800 mb-2">Prize Pool Management</h3>
+                     <p className="text-slate-600">Create and manage prize pools for this campaign to distribute rewards to participants.</p>
+                   </div>
+                   <Database className="h-8 w-8 text-primary" />
+                 </div>
+               </div>
+
+               {/* Pool Actions */}
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 {/* Create Universal Pool */}
+                 <div className="bg-white rounded-xl border border-slate-200 p-6">
+                   <div className="flex items-center space-x-3 mb-4">
+                     <div className="p-2 bg-primary/10 rounded-lg">
+                       <Database className="h-5 w-5 text-primary" />
+                     </div>
+                     <h4 className="text-lg font-semibold text-slate-800">Universal Pool</h4>
+                   </div>
+                   <p className="text-slate-600 mb-4">Create a universal pool that accepts any token for donations and funding.</p>
+                   <button
+                     onClick={() => {
+                       setPoolType('universal');
+                       setShowCreatePoolModal(true);
+                     }}
+                     disabled={isCreatingUniversal}
+                     className="w-full px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                   >
+                     {isCreatingUniversal ? (
+                       <Loader2 className="h-4 w-4 animate-spin" />
+                     ) : (
+                       <Database className="h-4 w-4" />
+                     )}
+                     <span>{isCreatingUniversal ? 'Creating...' : 'Create Universal Pool'}</span>
+                   </button>
+                 </div>
+
+                 {/* Create ERC20 Pool */}
+                 <div className="bg-white rounded-xl border border-slate-200 p-6">
+                   <div className="flex items-center space-x-3 mb-4">
+                     <div className="p-2 bg-green-100 rounded-lg">
+                       <Target className="h-5 w-5 text-green-600" />
+                     </div>
+                     <h4 className="text-lg font-semibold text-slate-800">ERC20 Specific Pool</h4>
+                   </div>
+                   <p className="text-slate-600 mb-4">Create a pool that only accepts specific ERC20 tokens for donations.</p>
+                   <button
+                     onClick={() => {
+                       setPoolType('erc20');
+                       setShowCreatePoolModal(true);
+                     }}
+                     disabled={isCreatingERC20}
+                     className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                   >
+                     {isCreatingERC20 ? (
+                       <Loader2 className="h-4 w-4 animate-spin" />
+                     ) : (
+                       <Target className="h-4 w-4" />
+                     )}
+                     <span>{isCreatingERC20 ? 'Creating...' : 'Create ERC20 Pool'}</span>
+                   </button>
+                 </div>
+               </div>
+
+               {/* Pool Stats */}
+               <div className="bg-white rounded-xl border border-slate-200 p-6">
+                 <h4 className="text-lg font-semibold text-slate-800 mb-6">Pool Statistics</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   <div className="text-center">
+                     <div className="text-2xl font-bold text-blue-600 mb-1">0</div>
+                     <div className="text-sm text-slate-600">Total Pools</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-2xl font-bold text-green-600 mb-1">0 CELO</div>
+                     <div className="text-sm text-slate-600">Total Pool Value</div>
+                   </div>
+                   <div className="text-center">
+                     <div className="text-2xl font-bold text-purple-600 mb-1">0</div>
+                     <div className="text-sm text-slate-600">Active Contributors</div>
+                   </div>
+                 </div>
+               </div>
+
+              {/* Pool Distribution Actions */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <h4 className="text-lg font-semibold text-slate-800 mb-6">Pool Distribution</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                      // For now, we'll use poolId 1 as an example - in a real app, this would come from the actual pool data
+                      const poolId = BigInt(1);
+                      distributePool(poolId, false);
+                    }}
+                    disabled={isDistributingPool}
+                    className="px-6 py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                  >
+                    {isDistributingPool ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Award className="h-4 w-4" />
+                    )}
+                    <span>{isDistributingPool ? 'Distributing...' : 'Distribute Pool'}</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      const poolId = BigInt(1);
+                      distributePool(poolId, true);
+                    }}
+                    disabled={isDistributingPool}
+                    className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                  >
+                    {isDistributingPool ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trophy className="h-4 w-4" />
+                    )}
+                    <span>{isDistributingPool ? 'Distributing...' : 'Distribute in Sovereign Seas'}</span>
+                  </button>
+                </div>
+                <p className="text-sm text-slate-600 mt-4">
+                  Distribute pool funds to approved projects. Choose regular distribution or distribute through Sovereign Seas for enhanced tracking.
+                </p>
+              </div>
+
+              {/* Super Admin Actions */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <h4 className="text-lg font-semibold text-slate-800 mb-6">Super Admin Management</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Add Super Admin
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="0x..."
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      />
+                      <button
+                        onClick={() => {
+                          // This would need to get the address from the input
+                          // addSuperAdmin(address);
+                        }}
+                        disabled={isAddingSuperAdmin}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                      >
+                        {isAddingSuperAdmin ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <UserPlus className="h-4 w-4" />
+                        )}
+                        <span>Add</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Remove Super Admin
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="0x..."
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      />
+                      <button
+                        onClick={() => {
+                          // This would need to get the address from the input
+                          // removeSuperAdmin(address);
+                        }}
+                        disabled={isRemovingSuperAdmin}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                      >
+                        {isRemovingSuperAdmin ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <User className="h-4 w-4" />
+                        )}
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600 mt-4">
+                  Manage super admin permissions for the pools contract. Super admins can create pools and perform administrative actions.
+                </p>
+              </div>
+
+              {/* Pool List */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <h4 className="text-lg font-semibold text-slate-800 mb-6">Existing Pools</h4>
+                <div className="text-center py-12 bg-slate-50 rounded-xl">
+                  <Database className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-slate-600 mb-2">No Pools Created</h4>
+                  <p className="text-slate-500">Create your first pool to start managing prize distributions for this campaign.</p>
+                </div>
+              </div>
              </div>
            )}
 
@@ -1923,6 +2225,148 @@ export default function CampaignManagePage() {
                      setCustomDistributionData('');
                    }}
                    className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors duration-200 font-medium"
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Create Pool Modal */}
+       {showCreatePoolModal && (
+         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-xl w-full max-w-lg p-6 shadow-2xl">
+             <div className="flex items-center justify-between mb-6">
+               <h3 className="text-xl font-semibold text-slate-800">
+                 Create {poolType === 'universal' ? 'Universal' : 'ERC20'} Pool
+               </h3>
+               <button
+                 onClick={() => {
+                   setShowCreatePoolModal(false);
+                   resetPoolForm();
+                 }}
+                 className="text-slate-400 hover:text-slate-600 transition-colors"
+               >
+                 <XCircle className="h-6 w-6" />
+               </button>
+             </div>
+
+             <div className="space-y-6">
+               {/* Pool Name */}
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Pool Name
+                 </label>
+                 <input
+                   type="text"
+                   value={poolName}
+                   onChange={(e) => setPoolName(e.target.value)}
+                   placeholder="Enter pool name..."
+                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                 />
+               </div>
+
+               {/* Pool Description */}
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Pool Description
+                 </label>
+                 <textarea
+                   value={poolDescription}
+                   onChange={(e) => setPoolDescription(e.target.value)}
+                   placeholder="Describe the purpose and details of this pool..."
+                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary h-24"
+                 />
+               </div>
+
+               {/* ERC20 Token Addresses */}
+               {poolType === 'erc20' && (
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-2">
+                     Token Addresses (0x...)
+                   </label>
+                   <div className="space-y-2">
+                     <div className="flex items-center space-x-2">
+                       <input
+                         type="text"
+                         placeholder="Enter token address (0x...)"
+                         className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                         onKeyPress={(e) => {
+                           if (e.key === 'Enter') {
+                             const value = e.currentTarget.value;
+                             if (value && !selectedTokens.includes(value)) {
+                               setSelectedTokens([...selectedTokens, value]);
+                               e.currentTarget.value = '';
+                             }
+                           }
+                         }}
+                       />
+                       <button
+                         type="button"
+                         onClick={() => {
+                           const input = document.querySelector('input[placeholder="Enter token address (0x...)"]') as HTMLInputElement;
+                           const value = input?.value;
+                           if (value && !selectedTokens.includes(value)) {
+                             setSelectedTokens([...selectedTokens, value]);
+                             input.value = '';
+                           }
+                         }}
+                         className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                       >
+                         Add
+                       </button>
+                     </div>
+                     {selectedTokens.length > 0 && (
+                       <div className="space-y-1">
+                         {selectedTokens.map((token, index) => (
+                           <div key={index} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg">
+                             <span className="text-sm font-mono text-slate-600">{token}</span>
+                             <button
+                               onClick={() => setSelectedTokens(selectedTokens.filter((_, i) => i !== index))}
+                               className="text-red-500 hover:text-red-700"
+                             >
+                               <XCircle className="h-4 w-4" />
+                             </button>
+                           </div>
+                         ))}
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               )}
+
+               <div className="flex space-x-4">
+                 <button
+                   onClick={poolType === 'universal' ? handleCreateUniversalPool : handleCreateERC20Pool}
+                   disabled={
+                     (poolType === 'universal' ? isCreatingUniversal : isCreatingERC20) ||
+                     !poolName.trim() ||
+                     !poolDescription.trim() ||
+                     (poolType === 'erc20' && selectedTokens.length === 0)
+                   }
+                   className="flex-1 px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
+                 >
+                   {(poolType === 'universal' ? isCreatingUniversal : isCreatingERC20) ? (
+                     <Loader2 className="h-4 w-4 animate-spin" />
+                   ) : (
+                     <Database className="h-4 w-4" />
+                   )}
+                   <span>
+                     {(poolType === 'universal' ? isCreatingUniversal : isCreatingERC20) 
+                       ? 'Creating...' 
+                       : `Create ${poolType === 'universal' ? 'Universal' : 'ERC20'} Pool`
+                     }
+                   </span>
+                 </button>
+                 
+                 <button
+                   onClick={() => {
+                     setShowCreatePoolModal(false);
+                     resetPoolForm();
+                   }}
+                   className="px-6 py-3 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors duration-200 font-medium"
                  >
                    Cancel
                  </button>

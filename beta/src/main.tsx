@@ -11,6 +11,7 @@ import HomePage from '@/pages/index/page'
 import ProjectView from '@/pages/explorer/project/<id>/page'
 import CampaignView from '@/pages/explorer/campaign/<id>/page'
 import ProjectsPage from '@/pages/explorer/projects/page'
+import LeaderboardPage from '@/pages/explorer/leaderboard/page'
 import CampaignsPage from '@/pages/explorer/campaigns/page'
 import CreateProject from '@/pages/app/project/start'
 import CreateCampaign from '@/pages/app/campaign/start'
@@ -36,6 +37,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/explorer/campaign/:id" element={<Layout><CampaignView /></Layout>} />
           <Route path="/explorer/projects" element={<Layout><ProjectsPage /></Layout>} />
           <Route path="/explorer/campaigns" element={<Layout><CampaignsPage /></Layout>} />
+          <Route path="/explorer/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
 
           {/* App */}
           <Route path="/app/project/start" element={<Layout><CreateProject /></Layout>} />

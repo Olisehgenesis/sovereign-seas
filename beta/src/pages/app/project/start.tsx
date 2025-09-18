@@ -561,9 +561,9 @@ export default function CreateProject() {
         techStack: cleanedProject.techStack,
         license: cleanedProject.license,
         developmentStage: cleanedProject.developmentStage,
-        auditReports: cleanedProject.auditReports,
+        auditReports: (cleanedProject.auditReports || []).filter((r: string) => r && r.trim() !== ''),
         kycCompliant: cleanedProject.kycCompliant,
-        regulatoryCompliance: cleanedProject.regulatoryCompliance
+        regulatoryCompliance: (cleanedProject.regulatoryCompliance || []).filter((r: string) => r && r.trim() !== '')
       };
       
       // Create additional data metadata (everything else)
@@ -576,8 +576,23 @@ export default function CreateProject() {
         logo: cleanedProject.logo,
         demoVideo: cleanedProject.demoVideo,
         demoUrl: cleanedProject.demoUrl,
+        // Keep top-level for backward compatibility across readers
+        githubRepo: cleanedProject.githubRepo,
         documentation: cleanedProject.documentation,
         karmaGapProfile: cleanedProject.karmaGapProfile,
+        // New normalized links block for forward compatibility
+        links: {
+          demoUrl: cleanedProject.demoUrl,
+          githubRepo: cleanedProject.githubRepo,
+          documentation: cleanedProject.documentation,
+          karmaGapProfile: cleanedProject.karmaGapProfile,
+          twitter: cleanedProject.twitter,
+          linkedin: cleanedProject.linkedin,
+          discord: cleanedProject.discord,
+          telegram: cleanedProject.telegram,
+          youtube: cleanedProject.youtube,
+          instagram: cleanedProject.instagram
+        },
         
         // Social Media
         social: {
@@ -1078,7 +1093,7 @@ export default function CreateProject() {
                   <div>
                     <label className="block text-blue-700 font-medium mb-2 flex items-center">
                       <Github className="h-4 w-4 mr-2" />
-                      GitHub Repository *
+                      GitHub Repository
                     </label>
                     <input
                       type="url"
