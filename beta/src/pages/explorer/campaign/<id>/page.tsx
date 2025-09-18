@@ -53,6 +53,9 @@ import { useCampaignDetails, useApproveProject, useAddCampaignAdmin, useDistribu
 import { contractABI } from '@/abi/seas4ABI';
 import VoteModal from '@/components/modals/voteModal';
 import AddProjectsToCampaignModal from '@/components/modals/AddProjectsToCampaignModal';
+import FundDonateModal from '@/components/modals/FundDonateModal';
+import { useCampaignToPool, usePoolBalance, useDonateToPool } from '@/hooks/usePools';
+import { supportedTokens } from '@/hooks/useSupportedTokens';
 import { useAllProjects, formatProjectForDisplay, useCanBypassFees } from '@/hooks/useProjectMethods';
 import {
   useVote,
@@ -175,6 +178,7 @@ export default function CampaignView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedDescription, setExpandedDescription] = useState(false);
   const [showUnapproved, setShowUnapproved] = useState(false);
+  const [showDonateModal, setShowDonateModal] = useState(false);
   
 
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
@@ -233,6 +237,13 @@ export default function CampaignView() {
   // FIXED: Always call project management hooks
   const { isAdmin: canBypassFees } = useCanBypassFees(contractAddress, campaignId);
   const { approveProject, isPending: isApprovingProject } = useApproveProject(contractAddress);
+
+  // Pool-related hooks
+  const { poolId: campaignPoolId, isLoading: isLoadingPoolId } = useCampaignToPool(campaignId);
+  const { balance: poolBalance, isLoading: isLoadingPoolBalance, error: poolBalanceError } = usePoolBalance(
+    campaignPoolId !== undefined && campaignPoolId !== 0n ? campaignPoolId : 0n
+  );
+  const { donate, isPending: isDonating, error: donateError } = useDonateToPool();
 
   // Create a Set of approved project IDs for O(1) lookup
   const approvedProjectIds = useMemo(() => {
@@ -410,6 +421,27 @@ export default function CampaignView() {
     
     setSelectedProject(project);
     setShowVoteModal(true);
+  };
+
+  const handleDonateToPool = async (token: `0x${string}`, amount: bigint) => {
+    if (!campaignPoolId || campaignPoolId === 0n) {
+      throw new Error('No pool found for this campaign');
+    }
+
+    try {
+      // Call the donate function with pool ID, token, amount, and a message
+      const txHash = await donate(
+        campaignPoolId,
+        token,
+        amount,
+        `Donation to campaign pool for campaign ${campaignId.toString()}`
+      );
+      
+      return { fundTxHash: txHash };
+    } catch (error) {
+      console.error('Error donating to pool:', error);
+      throw error;
+    }
   };
 
   const handleBackToArena = () => {
@@ -1015,14 +1047,16 @@ export default function CampaignView() {
                   )}
                 </div>
 
-                {/* Right Side - Podium Divs */}
+                {/* Right Side - Podium on Prize Pool Card */}
                 <div className="w-full lg:w-3/5">
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex flex-row items-end justify-center space-x-8"
-                  >
+                  <div className="flex flex-col items-center">
+                    {/* Podium Section */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="flex flex-row items-end justify-center space-x-8 -mb-6"
+                    >
                     {/* Horizontal Podium Divs - Reordered to put 1st in middle */}
                     {(() => {
                       // Only show approved projects in the podium
@@ -1164,7 +1198,146 @@ export default function CampaignView() {
                       );
                     });
                     })()}
-                  </motion.div>
+                    </motion.div>
+
+                    {/* Prize Pool Card - Below Podium */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="w-full max-w-2xl"
+                    >
+                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4 shadow-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-bold text-blue-800 flex items-center">
+                            <Trophy className="h-5 w-5 mr-2" />
+                            Campaign Pool
+                          </h3>
+                          <div className="relative group">
+                            <Info className="h-5 w-5 text-blue-600 cursor-help" />
+                            <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                              This is the amount in contract that will be distributed between projects
+                              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {isLoadingPoolBalance ? (
+                          <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                            <span className="ml-2 text-blue-600">Loading...</span>
+                          </div>
+                        ) : poolBalanceError ? (
+                          <div className="text-center py-4">
+                            <XCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
+                            <p className="text-red-600 text-sm">Error loading pool</p>
+                          </div>
+                        ) : (() => {
+                          // Handle both array and object formats
+                          const tokens = Array.isArray(poolBalance) ? poolBalance[0] : poolBalance?.tokens;
+                          const balances = Array.isArray(poolBalance) ? poolBalance[1] : poolBalance?.balances;
+                          
+                          return tokens && balances ? (
+                            <div className="space-y-4">
+                              <div className="flex flex-wrap gap-4 justify-center">
+                                {tokens.length > 0 ? (
+                                  tokens.map((token, index) => {
+                                    // Find token info from supported tokens
+                                    const tokenInfo = supportedTokens.find(t => 
+                                      t.address.toLowerCase() === token.toLowerCase()
+                                    );
+                                    
+                                    const balance = Number(balances[index]);
+                                    const formattedBalance = tokenInfo 
+                                      ? (balance / Math.pow(10, tokenInfo.decimals)).toFixed(4)
+                                      : (balance / 1e18).toFixed(4);
+                                    
+                                    const tokenSymbol = tokenInfo?.symbol || 'UNK';
+                                    
+                                    return (
+                                      <div key={token} className="flex items-center space-x-2">
+                                        {tokenInfo ? (
+                                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+                                            {tokenSymbol === 'CELO' ? (
+                                              <img 
+                                                src="/images/celo.png" 
+                                                alt="CELO" 
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                  const target = e.target as HTMLImageElement;
+                                                  target.style.display = 'none';
+                                                  const fallback = target.nextSibling as HTMLElement;
+                                                  if (fallback) fallback.style.display = 'flex';
+                                                }}
+                                              />
+                                            ) : tokenSymbol === 'cUSD' ? (
+                                              <img 
+                                                src="/images/cusd.png" 
+                                                alt="cUSD" 
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                  const target = e.target as HTMLImageElement;
+                                                  target.style.display = 'none';
+                                                  const fallback = target.nextSibling as HTMLElement;
+                                                  if (fallback) fallback.style.display = 'flex';
+                                                }}
+                                              />
+                                            ) : tokenSymbol === 'G$' ? (
+                                              <img 
+                                                src="/images/good.png" 
+                                                alt="Good Dollar" 
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                  const target = e.target as HTMLImageElement;
+                                                  target.style.display = 'none';
+                                                  const fallback = target.nextSibling as HTMLElement;
+                                                  if (fallback) fallback.style.display = 'flex';
+                                                }}
+                                              />
+                                            ) : null}
+                                            <div className="w-full h-full flex items-center justify-center hidden">
+                                              <span className="text-xs font-bold text-blue-600">
+                                                {tokenSymbol.charAt(0)}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <span className="text-xs font-bold text-gray-600">
+                                              ?
+                                            </span>
+                                          </div>
+                                        )}
+                                        <span className="text-lg font-bold text-blue-900">
+                                          {formattedBalance}
+                                        </span>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="text-center py-4 text-blue-600">
+                                    No tokens in pool
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <button
+                                onClick={() => setShowDonateModal(true)}
+                                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-2 px-6 rounded-lg font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                              >
+                                <Coins className="h-4 w-4" />
+                                <span>Donate to Pool</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-blue-600">
+                              No pool data available
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </motion.div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1605,8 +1778,19 @@ export default function CampaignView() {
           onVoteSubmitted={handleVoteSubmitted}
         />
       )}
+
+      {/* Donate to Pool Modal */}
+      {showDonateModal && (
+        <FundDonateModal
+          isOpen={showDonateModal}
+          onClose={() => setShowDonateModal(false)}
+          title="Donate to Campaign Pool"
+          onConfirm={handleDonateToPool}
+          isSubmitting={isDonating}
+        />
+      )}
     </div>
   </div>
     </>
-);
+  );
 }

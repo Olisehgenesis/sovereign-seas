@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAccount } from 'wagmi';
@@ -44,11 +42,11 @@ import {
   useIsCampaignAdmin,
   useSortedProjects,
   useParticipation,
-  useUpdateCampaign,
   useUpdateCampaignMetadata,
   useUpdateCustomDistributionData,
   useRemoveCampaignAdmin
 } from '@/hooks/useCampaignMethods';
+import FundDonateModal from '@/components/modals/FundDonateModal';
 
 import { 
   useAllProjects, 
@@ -56,10 +54,16 @@ import {
 } from '@/hooks/useProjectMethods';
 
 import { 
-  usePools,
   usePoolInfo,
   usePoolBalance,
   usePoolStats,
+  useAllowedTokens,
+  useCampaignToPool,
+  useIsSuperAdmin,
+  useIsBlacklisted,
+  usePoolsOwner,
+  useCampaignExists,
+  useHasCreatePermission,
   useCreatePoolUniversal,
   useCreatePoolERC20,
   useFundPool,
@@ -67,13 +71,18 @@ import {
   useDistributeQuadratic,
   useDistributeManual,
   useDistribute,
-  useTransferPoolAdmin,
-  useAddSuperAdmin,
-  useRemoveSuperAdmin
+  usePoolFees,
+  useSetPoolContractAdminFee,
+  useSetCampaignAdminFee,
+  useClaimContractAdminFees,
+  useRemoveAllowedToken,
+  useClosePool,
+  useUpdatePoolMetadata
 } from '@/hooks/usePools';
 
 import { formatEther } from 'viem';
 import { parseIdParam } from '@/utils/hashids';
+import { supportedTokens } from '@/hooks/useSupportedTokens';
 
 // Individual ProjectVotes component for accurate vote tracking
 function ProjectVotes({ 
@@ -169,16 +178,32 @@ export default function CampaignManagePage() {
   const [projectVoteCounts, setProjectVoteCounts] = useState<Map<string, bigint>>(new Map());
   
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
+  const poolsContractAddress = import.meta.env.VITE_POOLS_CONTRACT_ADDRESS;
   const parsedId = parseIdParam(id);
   const campaignId = parsedId ? BigInt(parsedId) : BigInt(0);
+
+  // Environment variable validation
+  if (import.meta.env.DEV) {
+    console.log('Environment Variables Debug:', {
+      VITE_CONTRACT_V4: contractAddress,
+      VITE_POOLS_CONTRACT_ADDRESS: poolsContractAddress,
+      hasContractAddress: !!contractAddress,
+      hasPoolsContractAddress: !!poolsContractAddress,
+      contractAddressValid: contractAddress?.startsWith('0x') && contractAddress?.length === 42,
+      poolsContractAddressValid: poolsContractAddress?.startsWith('0x') && poolsContractAddress?.length === 42
+    });
+  }
+
   
-  // Debug logging for ID parsing
+  // Debug logging for ID parsing (only in development)
+  if (import.meta.env.DEV) {
   console.log('Campaign Manage - ID Parsing:', {
     originalId: id,
     parsedId,
     campaignId: campaignId.toString(),
     isValidId: parsedId !== null
   });
+  }
   
   // Hooks
   const { campaignDetails, isLoading: campaignLoading, error: campaignError } = useCampaignDetails(
@@ -198,29 +223,159 @@ export default function CampaignManagePage() {
     contractAddress as `0x${string}`,
     campaignId
   );
-
-  // Pools hooks
-  const poolsContractAddress = import.meta.env.VITE_POOLS_CONTRACT_ADDRESS as `0x${string}`;
   const { createPool: createUniversalPool, isPending: isCreatingUniversal } = useCreatePoolUniversal();
   const { createPool: createERC20Pool, isPending: isCreatingERC20 } = useCreatePoolERC20();
   const { fundPool, isPending: isFunding } = useFundPool();
   const { donate, isPending: isDonating } = useDonateToPool();
-  const { distribute: distributeQuadratic, isPending: isDistributingQuadratic } = useDistributeQuadratic();
-  const { distribute: distributeManual, isPending: isDistributingManual } = useDistributeManual();
+  // Removed unused hooks to satisfy linter
   const { distribute: distributePool, isPending: isDistributingPool } = useDistribute();
-  const { transferAdmin, isPending: isTransferringAdmin } = useTransferPoolAdmin();
-  const { addSuperAdmin, isPending: isAddingSuperAdmin } = useAddSuperAdmin();
-  const { removeSuperAdmin, isPending: isRemovingSuperAdmin } = useRemoveSuperAdmin();
+  const { close: closePoolFunction, isPending: isClosingPool } = useClosePool();
+  const { update: updateMetadata, isPending: isUpdatingPoolMetadata } = useUpdatePoolMetadata();
+
+  // Get campaign's pool using the new hook
+  const { poolId: campaignPoolId, isLoading: isLoadingPoolId } = useCampaignToPool(campaignId);
+
+  // Debug logging for pool identification
+  if (import.meta.env.DEV) {
+    console.log('Pool Identification Debug:', {
+      campaignId: campaignId.toString(),
+      campaignPoolId: campaignPoolId?.toString(),
+      hasPool: campaignPoolId !== undefined && campaignPoolId !== 0n,
+      isLoadingPoolId
+    });
+  }
+
+  // Get pool info if pool exists
+  const { poolInfo, isLoading: isLoadingPoolInfo, error: poolInfoError } = usePoolInfo(
+    campaignPoolId !== undefined && campaignPoolId !== 0n ? campaignPoolId : 0n
+  );
+
+  // Get pool balance if pool exists
+  const { balance: poolBalance, isLoading: isLoadingPoolBalance, error: poolBalanceError, refetch: refetchPoolBalance } = usePoolBalance(
+    campaignPoolId !== undefined && campaignPoolId !== 0n ? campaignPoolId : 0n
+  );
+
+  // Get pool stats if pool exists
+  const { stats: poolStats, isLoading: isLoadingPoolStats, error: poolStatsError, refetch: refetchPoolStats } = usePoolStats(
+    campaignPoolId !== undefined && campaignPoolId !== 0n ? campaignPoolId : 0n
+  );
+  const { allowedTokens, error: allowedTokensError } = useAllowedTokens(
+    campaignPoolId !== undefined && campaignPoolId !== 0n ? campaignPoolId : 0n
+  );
+
+  // Debug logging for pool data loading
+  if (import.meta.env.DEV) {
+    console.log('Pool Data Loading Debug:', {
+      poolInfo: poolInfo ? {
+        raw: poolInfo,
+        isArray: Array.isArray(poolInfo),
+        length: Array.isArray(poolInfo) ? poolInfo.length : 'N/A',
+        structure: Array.isArray(poolInfo) ? poolInfo.map((item, index) => ({ index, type: typeof item, value: item?.toString() })) : {
+          id: poolInfo.id?.toString(),
+          campaignId: poolInfo.campaignId?.toString(),
+          admin: poolInfo.admin,
+          poolType: poolInfo.poolType,
+          isActive: poolInfo.isActive,
+          isPaused: poolInfo.isPaused,
+          createdAt: poolInfo.createdAt?.toString(),
+          metadata: poolInfo.metadata
+        }
+      } : null,
+      poolBalance: poolBalance ? {
+        raw: poolBalance,
+        isArray: Array.isArray(poolBalance),
+        length: Array.isArray(poolBalance) ? poolBalance.length : 'N/A',
+        structure: Array.isArray(poolBalance) ? poolBalance.map((item, index) => ({ index, type: typeof item, value: Array.isArray(item) ? `Array(${item.length})` : item?.toString() })) : {
+          tokens: poolBalance.tokens,
+          balances: poolBalance.balances?.map(b => b.toString())
+        }
+      } : null,
+      poolStats: poolStats ? {
+        raw: poolStats,
+        isArray: Array.isArray(poolStats),
+        length: Array.isArray(poolStats) ? poolStats.length : 'N/A',
+        structure: Array.isArray(poolStats) ? poolStats.map((item, index) => ({ index, type: typeof item, value: item?.toString() })) : {
+          totalValue: poolStats.totalValue?.toString(),
+          contributorCount: poolStats.contributorCount?.toString(),
+          distributedAmount: poolStats.distributedAmount?.toString(),
+          distributionCount: poolStats.distributionCount?.toString()
+        }
+      } : null,
+      allowedTokens: allowedTokens,
+      errors: {
+        poolInfoError,
+        poolBalanceError,
+        poolStatsError,
+        allowedTokensError
+      },
+      loading: {
+        isLoadingPoolInfo,
+        isLoadingPoolBalance,
+        isLoadingPoolStats
+      }
+    });
+  }
+
+  // Admin and permission checks
+  const { isSuperAdmin } = useIsSuperAdmin(address as `0x${string}`);
+  const { isBlacklisted } = useIsBlacklisted(address as `0x${string}`);
+  const { owner: poolsOwner } = usePoolsOwner();
+  const { exists: campaignExists } = useCampaignExists(campaignId);
+  const { hasPermission } = useHasCreatePermission(campaignId, address as `0x${string}`);
 
   // Pool state
+  // Fees & tracking
+  const { fees: poolFees } = usePoolFees(
+    campaignPoolId !== undefined && campaignPoolId !== 0n ? campaignPoolId : 0n
+  );
+  const { setFee: setPoolContractFee } = useSetPoolContractAdminFee();
+  const { setFee: setCampaignFee } = useSetCampaignAdminFee();
+  const { claim: claimContractFees, isPending: isClaimingFees } = useClaimContractAdminFees();
+  const { removeToken: removeTrackedToken, isPending: isRemovingToken } = useRemoveAllowedToken();
   const [showCreatePoolModal, setShowCreatePoolModal] = useState(false);
+
+  // Derived flags
+  const hasPool = campaignPoolId !== undefined && campaignPoolId !== 0n && !!poolInfo;
+  // Normalize pool admin address (tuple/object safe)
+  const poolAdminAddress = useMemo(() => {
+    // Prefer object key; fallback to tuple index (admin likely at index 5)
+    const raw = Array.isArray(poolInfo) ? (poolInfo[5] as any) : (poolInfo as any)?.admin;
+    const str = typeof raw === 'string' ? raw : raw?.toString?.();
+    return typeof str === 'string' && str.startsWith('0x') ? str : '';
+  }, [poolInfo]);
+  const isPoolAdmin = !!(poolAdminAddress && address && poolAdminAddress.toLowerCase() === address.toLowerCase());
+  const [showFundPoolModal, setShowFundPoolModal] = useState(false);
+  const [showDonateModal, setShowDonateModal] = useState(false);
   const [poolType, setPoolType] = useState<'universal' | 'erc20'>('universal');
-  const [poolMetadata, setPoolMetadata] = useState('');
   const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
   
   // Simple pool metadata state
   const [poolName, setPoolName] = useState('');
   const [poolDescription, setPoolDescription] = useState('');
+
+  // Fund pool state
+  const [fundAmount, setFundAmount] = useState('');
+  const [fundToken, setFundToken] = useState('0x0000000000000000000000000000000000000000'); // CELO by default
+  const [fundTokenList, setFundTokenList] = useState<string[]>(['0x0000000000000000000000000000000000000000']);
+  const [fundAgree] = useState(false);
+
+  useEffect(() => {
+    // Populate funding token options similar to vote modal: CELO + pool tokens + allowed tokens
+    const tokens = new Set<string>();
+    tokens.add('0x0000000000000000000000000000000000000000');
+    if (poolBalance?.tokens) {
+      poolBalance.tokens.forEach(t => tokens.add(t));
+    }
+    if (allowedTokens) {
+      allowedTokens.forEach(t => tokens.add(t));
+    }
+    setFundTokenList(Array.from(tokens));
+  }, [poolBalance?.tokens, allowedTokens]);
+
+  // Donate state
+  const [donateAmount, setDonateAmount] = useState('');
+  const [donateToken, setDonateToken] = useState('0x0000000000000000000000000000000000000000'); // CELO by default
+  const [donateMessage, setDonateMessage] = useState('');
 
   // Generate simple metadata as plain string
   const generatePoolMetadata = () => {
@@ -273,6 +428,58 @@ export default function CampaignManagePage() {
     setSelectedTokens([]);
     setPoolName('');
     setPoolDescription('');
+  };
+
+  // Reset fund pool form
+  const resetFundPoolForm = () => {
+    setFundAmount('');
+    setFundToken('0x0000000000000000000000000000000000000000');
+  };
+
+  // Reset donate form
+  const resetDonateForm = () => {
+    setDonateAmount('');
+    setDonateToken('0x0000000000000000000000000000000000000000');
+    setDonateMessage('');
+  };
+
+
+  // Handle donate to pool
+  const handleDonateToPool = async () => {
+    if (campaignPoolId === undefined || campaignPoolId === 0n || !donateAmount) return;
+    
+    try {
+      setStatusMessage({ text: 'Making donation...', type: 'info' });
+      await donate(
+        campaignPoolId,
+        donateToken as `0x${string}`,
+        BigInt(Math.floor(parseFloat(donateAmount) * 1e18)),
+        donateMessage
+      );
+      setStatusMessage({ text: 'Donation successful!', type: 'success' });
+      setShowDonateModal(false);
+      resetDonateForm();
+    } catch (error) {
+      console.error('Error donating to pool:', error);
+      setStatusMessage({ text: 'Failed to donate to pool', type: 'error' });
+    }
+  };
+
+  // Handle update pool metadata
+  const handleUpdatePoolMetadata = async () => {
+    if (campaignPoolId === undefined || campaignPoolId === 0n || !poolName.trim()) return;
+    
+    try {
+      setStatusMessage({ text: 'Updating pool metadata...', type: 'info' });
+      const newMetadata = `${poolName}: ${poolDescription}`;
+      await updateMetadata(campaignPoolId, newMetadata);
+      setStatusMessage({ text: 'Pool metadata updated successfully!', type: 'success' });
+      setShowUpdateMetadataModal(false);
+      resetPoolForm();
+    } catch (error) {
+      console.error('Error updating metadata:', error);
+      setStatusMessage({ text: 'Failed to update pool metadata', type: 'error' });
+    }
   };
 
   const approvedProjectIds = useMemo(() => {
@@ -706,7 +913,7 @@ export default function CampaignManagePage() {
   const canDistribute = hasEnded && campaign.active;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Professional Header */}
         <div className="flex items-center justify-between mb-8">
@@ -766,6 +973,76 @@ export default function CampaignManagePage() {
           </div>
         </div>
 
+        {/* Status + Metrics + Actions */}
+        <div className="space-y-4 mb-8">
+          {/* Status Banner */}
+          <div className={`${canDistribute ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-blue-50'} border-l-4 p-4 rounded`}>
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-sm font-medium text-slate-900">
+                  {canDistribute ? 'Campaign has ended — distribution available' : hasStarted ? 'Campaign in progress' : 'Campaign not started'}
+                </h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  {hasEnded ? 'You can distribute funds to approved projects.' : hasStarted ? 'Collect votes and contributions until the deadline.' : 'Configure details before the campaign starts.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+
+
+          {/* Grouped Actions */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Primary */}
+            {canDistribute && (
+              <button onClick={() => setShowDistributeModal(true)} className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Distribute Funds</button>
+            )}
+            {pendingProjects > 0 && (
+              <button onClick={() => setActiveTab('approval')} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Review Projects</button>
+            )}
+            {campaignPoolId !== undefined && campaignPoolId !== 0n && (
+              <button onClick={() => setShowFundPoolModal(true)} className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Fund Pool</button>
+            )}
+
+            {/* Secondary */}
+            <div className="relative">
+              <details className="group">
+                <summary className="px-4 py-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">More Actions</summary>
+                <div className="absolute z-10 mt-2 w-56 bg-white rounded-lg border border-slate-200 shadow-lg p-2 space-y-1">
+                  <button onClick={() => {
+                    try {
+                      const rows: string[] = [];
+                      rows.push(['Project ID', 'Name', 'Status'].join(','));
+                      (campaignProjects || []).forEach((p: any) => {
+                        const proj = formatProjectForDisplay(p);
+                        if (!proj) return;
+                        const isApproved = approvedProjectIds.has(proj.id.toString());
+                        rows.push([proj.id.toString(), (proj.name || '').replace(/,/g, ' '), isApproved ? 'Approved' : 'Pending'].join(','));
+                      });
+                      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `campaign_${id}_projects.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    } catch (e) { console.error('Export failed', e); }
+                  }} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">Export Data</button>
+                  <button onClick={() => console.log('Analytics not implemented')} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">View Analytics</button>
+                  <button onClick={() => console.log('Simulation not implemented')} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">Simulate Distribution</button>
+                </div>
+              </details>
+            </div>
+
+            {/* Admin */}
+            {(isSuperAdmin || (poolsOwner && address && poolsOwner.toLowerCase() === address.toLowerCase())) && (
+              <button onClick={() => setActiveTab('admin')} className="px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-900">Admin Controls</button>
+            )}
+          </div>
+        </div>
+
         {/* Campaign Info Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between">
@@ -798,6 +1075,87 @@ export default function CampaignManagePage() {
                   <div className="text-sm text-slate-600">CELO Treasury</div>
                 </div>
               </div>
+
+              {/* Pool Information */}
+              {campaignPoolId !== undefined && campaignPoolId !== 0n && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-purple-800 flex items-center">
+                      <Trophy className="h-5 w-5 mr-2" />
+                      Prize Pool
+                    </h3>
+                    <span className="text-sm text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                      {poolInfo && poolInfo.metadata ? poolInfo.metadata : `Pool #${campaignPoolId !== undefined && campaignPoolId !== 0n ? campaignPoolId.toString() : 'N/A'}`}
+                    </span>
+                  </div>
+                  
+                  {isLoadingPoolBalance || isLoadingPoolStats ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                      <span className="ml-2 text-purple-600">Loading pool data...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white rounded-lg p-3 border border-purple-200">
+                        <div className="text-lg font-bold text-purple-800">
+                          {(() => {
+                            // Build a compact multi-token summary (up to 3 tokens)
+                            const tokens = Array.isArray(poolBalance) ? poolBalance[0] : poolBalance?.tokens;
+                            const balances = Array.isArray(poolBalance) ? poolBalance[1] : poolBalance?.balances;
+                            if (!tokens || !balances || tokens.length === 0) return '0';
+                            const items = tokens.slice(0, 3).map((token: string, i: number) => {
+                              const tokenInfo = supportedTokens.find(t => t.address.toLowerCase() === token.toLowerCase());
+                              const dec = tokenInfo?.decimals ?? 18;
+                              const sym = tokenInfo?.symbol ?? 'TOK';
+                              const val = Number(balances[i]) / Math.pow(10, dec);
+                              return `${val.toFixed(2)} ${sym}`;
+                            });
+                            const extra = tokens.length > 3 ? ` +${tokens.length - 3} more` : '';
+                            return `${items.join(', ')}${extra}`;
+                          })()}
+                        </div>
+                        <div className="text-sm text-purple-600">Pool Balances</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-purple-200">
+                        <div className="text-lg font-bold text-purple-800">
+                          {(() => {
+                            if (!poolStats) return '0';
+                            return Array.isArray(poolStats) ? (poolStats[1]?.toString?.() || '0') : (poolStats.contributorCount?.toString() || '0');
+                          })()}
+                        </div>
+                        <div className="text-sm text-purple-600">Contributors</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-purple-200">
+                        <div className="text-lg font-bold text-purple-800">
+                          {(() => {
+                            if (!poolStats) return '0';
+                            return Array.isArray(poolStats) ? (poolStats[3]?.toString?.() || '0') : (poolStats.distributionCount?.toString() || '0');
+                          })()}
+                        </div>
+                        <div className="text-sm text-purple-600">Distributions</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Create Pool Button if no pool exists */}
+              {!hasPool && (
+                <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="text-center">
+                    <Trophy className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                    <h3 className="text-lg font-semibold text-slate-800 mb-2">No Prize Pool Yet</h3>
+                    <p className="text-slate-600 mb-4">Create a prize pool to allow contributors to fund rewards for this campaign.</p>
+                    <button
+                      onClick={() => setShowCreatePoolModal(true)}
+                      className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2 mx-auto"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      <span>Create Prize Pool</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -863,12 +1221,29 @@ export default function CampaignManagePage() {
             {activeTab === 'overview' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Analytics Card */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+              <div className="bg-white rounded-xl p-6 border border-slate-200">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold text-slate-800">Campaign Analytics</h3>
                     <BarChart3 className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div className="space-y-4">
+              <div className="space-y-4">
+                {/* Token Selector (allow multiple common tokens) */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Token
+                  </label>
+                  <select
+                    value={fundToken}
+                    onChange={(e) => setFundToken(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                  >
+                    {fundTokenList.map((t) => (
+                      <option key={t} value={t}>
+                        {t === '0x0000000000000000000000000000000000000000' ? 'CELO' : `${t.slice(0, 6)}...${t.slice(-4)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Total Votes Cast:</span>
                       <span className="font-semibold text-blue-600">{totalCampaignVotes.toFixed(1)}</span>
@@ -889,7 +1264,7 @@ export default function CampaignManagePage() {
                 </div>
 
                 {/* Financial Overview */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+                <div className="bg-white rounded-xl p-6 border border-slate-200">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold text-slate-800">Financial Overview</h3>
                     <DollarSign className="h-5 w-5 text-green-600" />
@@ -923,7 +1298,7 @@ export default function CampaignManagePage() {
                </div>
 
                {/* Timeline Card */}
-               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
+              <div className="bg-white rounded-xl p-6 border border-slate-200">
                  <div className="flex items-center justify-between mb-6">
                    <h3 className="text-lg font-semibold text-slate-800">Campaign Timeline</h3>
                    <Calendar className="h-5 w-5 text-purple-600" />
@@ -1005,7 +1380,7 @@ export default function CampaignManagePage() {
                            <div className="flex flex-col lg:flex-row lg:items-start justify-between">
                              <div className="flex-1">
                                <div className="flex items-start space-x-4 mb-4">
-                                 <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
+                                  <div className="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
                                    {project.name?.charAt(0) || 'P'}
                                  </div>
                                  <div className="flex-1 min-w-0">
@@ -1130,14 +1505,15 @@ export default function CampaignManagePage() {
                  </div>
                </div>
 
-               {/* Pool Actions */}
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Pool Actions (creation) - hide if pool exists */}
+              {!hasPool && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                  {/* Create Universal Pool */}
                  <div className="bg-white rounded-xl border border-slate-200 p-6">
                    <div className="flex items-center space-x-3 mb-4">
-                     <div className="p-2 bg-primary/10 rounded-lg">
-                       <Database className="h-5 w-5 text-primary" />
-                     </div>
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Database className="h-5 w-5 text-primary" />
+                    </div>
                      <h4 className="text-lg font-semibold text-slate-800">Universal Pool</h4>
                    </div>
                    <p className="text-slate-600 mb-4">Create a universal pool that accepts any token for donations and funding.</p>
@@ -1183,72 +1559,76 @@ export default function CampaignManagePage() {
                      <span>{isCreatingERC20 ? 'Creating...' : 'Create ERC20 Pool'}</span>
                    </button>
                  </div>
-               </div>
-
-               {/* Pool Stats */}
-               <div className="bg-white rounded-xl border border-slate-200 p-6">
-                 <h4 className="text-lg font-semibold text-slate-800 mb-6">Pool Statistics</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-blue-600 mb-1">0</div>
-                     <div className="text-sm text-slate-600">Total Pools</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-green-600 mb-1">0 CELO</div>
-                     <div className="text-sm text-slate-600">Total Pool Value</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-purple-600 mb-1">0</div>
-                     <div className="text-sm text-slate-600">Active Contributors</div>
-                   </div>
-                 </div>
-               </div>
-
-              {/* Pool Distribution Actions */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h4 className="text-lg font-semibold text-slate-800 mb-6">Pool Distribution</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => {
-                      // For now, we'll use poolId 1 as an example - in a real app, this would come from the actual pool data
-                      const poolId = BigInt(1);
-                      distributePool(poolId, false);
-                    }}
-                    disabled={isDistributingPool}
-                    className="px-6 py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                  >
-                    {isDistributingPool ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Award className="h-4 w-4" />
-                    )}
-                    <span>{isDistributingPool ? 'Distributing...' : 'Distribute Pool'}</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      const poolId = BigInt(1);
-                      distributePool(poolId, true);
-                    }}
-                    disabled={isDistributingPool}
-                    className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                  >
-                    {isDistributingPool ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trophy className="h-4 w-4" />
-                    )}
-                    <span>{isDistributingPool ? 'Distributing...' : 'Distribute in Sovereign Seas'}</span>
-                  </button>
-                </div>
-                <p className="text-sm text-slate-600 mt-4">
-                  Distribute pool funds to approved projects. Choose regular distribution or distribute through Sovereign Seas for enhanced tracking.
-                </p>
               </div>
+              )}
 
-              {/* Super Admin Actions */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h4 className="text-lg font-semibold text-slate-800 mb-6">Super Admin Management</h4>
+             {/* Pool Stats removed per request */}
+
+              {/* Pool Distribution Actions - Only show if pool exists */}
+              {hasPool && (
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <h4 className="text-lg font-semibold text-slate-800 mb-6">Pool Distribution</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => {
+                        distributePool(campaignPoolId, false);
+                      }}
+                      disabled={isDistributingPool}
+                      className="px-6 py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                    >
+                      {isDistributingPool ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Award className="h-4 w-4" />
+                      )}
+                      <span>{isDistributingPool ? 'Distributing...' : 'Distribute Pool'}</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        distributePool(campaignPoolId, true);
+                      }}
+                      disabled={isDistributingPool}
+                      className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                    >
+                      {isDistributingPool ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trophy className="h-4 w-4" />
+                      )}
+                      <span>{isDistributingPool ? 'Distributing...' : 'Distribute in Sovereign Seas'}</span>
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-4">
+                    Distribute pool funds to approved projects. Choose regular distribution or distribute through Sovereign Seas for enhanced tracking.
+                  </p>
+                </div>
+              )}
+
+              {/* Super Admin Actions - Only show if user is super admin or contract owner */}
+              {(isSuperAdmin || (poolsOwner && address && poolsOwner && poolsOwner.toLowerCase() === address.toLowerCase())) && (
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <h4 className="text-lg font-semibold text-slate-800 mb-6">Super Admin Management</h4>
+                  <div className="mb-4 p-3 rounded border border-slate-200">
+                    <div className="flex flex-col md:flex-row md:items-end md:space-x-3 space-y-2 md:space-y-0">
+                      <div>
+                        <label className="block text-sm text-slate-600 mb-1">Claim Contract Fees For Token</label>
+                        <input id="claim-token-input" className="px-3 py-2 border rounded w-80 font-mono text-xs" placeholder="0x token address" />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const input = document.getElementById('claim-token-input') as HTMLInputElement | null
+                          const token = (input?.value || '') as `0x${string}`
+                          if (!token) return
+                          try { await claimContractFees(token) } catch (e) { console.error(e) }
+                        }}
+                        disabled={isClaimingFees}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg"
+                      >
+                        {isClaimingFees ? 'Claiming...' : 'Claim Contract Fees'}
+                      </button>
+                    </div>
+                  </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -1265,14 +1645,10 @@ export default function CampaignManagePage() {
                           // This would need to get the address from the input
                           // addSuperAdmin(address);
                         }}
-                        disabled={isAddingSuperAdmin}
+                        disabled={false}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
                       >
-                        {isAddingSuperAdmin ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
                           <UserPlus className="h-4 w-4" />
-                        )}
                         <span>Add</span>
                       </button>
                     </div>
@@ -1293,33 +1669,449 @@ export default function CampaignManagePage() {
                           // This would need to get the address from the input
                           // removeSuperAdmin(address);
                         }}
-                        disabled={isRemovingSuperAdmin}
+                        disabled={false}
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
                       >
-                        {isRemovingSuperAdmin ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
                           <User className="h-4 w-4" />
-                        )}
                         <span>Remove</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                <p className="text-sm text-slate-600 mt-4">
-                  Manage super admin permissions for the pools contract. Super admins can create pools and perform administrative actions.
-                </p>
-              </div>
-
-              {/* Pool List */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h4 className="text-lg font-semibold text-slate-800 mb-6">Existing Pools</h4>
-                <div className="text-center py-12 bg-slate-50 rounded-xl">
-                  <Database className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-semibold text-slate-600 mb-2">No Pools Created</h4>
-                  <p className="text-slate-500">Create your first pool to start managing prize distributions for this campaign.</p>
+                  <p className="text-sm text-slate-600 mt-4">
+                    Manage super admin permissions for the pools contract. Super admins can create pools and perform administrative actions.
+                  </p>
                 </div>
-              </div>
+              )}
+
+              {/* Pool Management Section */}
+            {hasPool ? (
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="text-lg font-semibold text-slate-800">Pool Management</h4>
+                    <span className="text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                      Pool #{campaignPoolId?.toString() || 'N/A'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Pool Data - 3/4 width */}
+                    <div className="lg:col-span-3">
+                      <div className="space-y-6">
+                        {/* Pool Information */}
+                        <div className="bg-slate-50 rounded-lg p-4">
+                          <h5 className="font-semibold text-slate-800 mb-3 flex items-center">
+                            <Database className="h-4 w-4 mr-2" />
+                            Pool Information
+                          </h5>
+                          {poolInfoError ? (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                              <div className="flex items-center">
+                                <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+                                <div>
+                                  <p className="text-red-800 font-medium">Error loading pool info</p>
+                                  <p className="text-red-600 text-sm mt-1">
+                                    {poolInfoError.message || 'Unknown error occurred'}
+                                  </p>
+                                  <button 
+                                    onClick={() => window.location.reload()} 
+                                    className="text-red-600 text-sm underline mt-2 hover:text-red-800"
+                                  >
+                                    Retry
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : isLoadingPoolInfo ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
+                              <span className="ml-2 text-slate-600">Loading...</span>
+                            </div>
+                          ) : poolInfo ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <span className="text-sm text-slate-600">Pool ID:</span>
+                                <p className="font-medium text-slate-800">
+                                  {Array.isArray(poolInfo) ? poolInfo[0]?.toString() : poolInfo.id?.toString() || 'N/A'}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-slate-600">Campaign ID:</span>
+                                <p className="font-medium text-slate-800">
+                                  {Array.isArray(poolInfo) ? poolInfo[1]?.toString() : poolInfo.campaignId?.toString() || 'N/A'}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-slate-600">Pool Type:</span>
+                                <p className="font-medium text-slate-800">
+                                  {(() => {
+                                    const poolType = Array.isArray(poolInfo) ? poolInfo[2] : poolInfo.poolType;
+                                    return poolType === 0 ? 'Universal' : 'ERC20 Specific';
+                                  })()}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-slate-600">Status:</span>
+                                <p className="font-medium text-slate-800">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                    (() => {
+                                      const isActive = Array.isArray(poolInfo) ? poolInfo[3] : poolInfo.isActive;
+                                      const isPaused = Array.isArray(poolInfo) ? poolInfo[4] : poolInfo.isPaused;
+                                      return isActive 
+                                        ? (isPaused ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800')
+                                        : 'bg-red-100 text-red-800';
+                                    })()
+                                  }`}>
+                                    {(() => {
+                                      const isActive = Array.isArray(poolInfo) ? poolInfo[3] : poolInfo.isActive;
+                                      const isPaused = Array.isArray(poolInfo) ? poolInfo[4] : poolInfo.isPaused;
+                                      return isActive 
+                                        ? (isPaused ? 'Paused' : 'Active')
+                                        : 'Inactive';
+                                    })()}
+                                  </span>
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-slate-600">Created:</span>
+                                <p className="font-medium text-slate-800">
+                                  {(() => {
+                                    // Prefer object key; fallback to tuple index (createdAt likely at index 6)
+                                    const createdAt = Array.isArray(poolInfo) ? poolInfo[6] : poolInfo.createdAt;
+                                    return createdAt && Number(createdAt) > 0 
+                                      ? new Date(Number(createdAt) * 1000).toLocaleDateString()
+                                      : '—';
+                                  })()}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-slate-600">Admin:</span>
+                                <p className="font-medium text-slate-800 font-mono text-xs">
+                                  {(() => {
+                                    // Prefer object key; fallback to tuple index (admin likely at index 5)
+                                    const rawAdmin = Array.isArray(poolInfo) ? poolInfo[5] : poolInfo.admin;
+                                    const admin = typeof rawAdmin === 'string' ? rawAdmin : (rawAdmin?.toString?.() ?? '');
+                                    return admin && admin.startsWith('0x') && admin.length >= 10
+                                      ? `${admin.slice(0, 6)}...${admin.slice(-4)}`
+                                      : (admin || 'N/A');
+                                  })()}
+                                </p>
+                              </div>
+                              {(() => {
+                                const metadata = Array.isArray(poolInfo) ? poolInfo[7] : poolInfo.metadata;
+                                return metadata && (
+                                  <div className="md:col-span-2">
+                                    <span className="text-sm text-slate-600">Metadata:</span>
+                                    <p className="font-medium text-slate-800">{metadata}</p>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <p className="text-slate-500">Pool information unavailable</p>
+                          )}
+                        </div>
+
+                        {/* Pool Balance */}
+                        <div className="bg-slate-50 rounded-lg p-4">
+                          <h5 className="font-semibold text-slate-800 mb-3 flex items-center">
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Pool Balance
+                          </h5>
+                          {poolBalanceError ? (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                              <div className="flex items-center">
+                                <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+                                <div>
+                                  <p className="text-red-800 font-medium">Error loading pool balance</p>
+                                  <p className="text-red-600 text-sm mt-1">
+                                    {poolBalanceError.message || 'Unknown error occurred'}
+                                  </p>
+                                  <button 
+                                    onClick={() => refetchPoolBalance?.()} 
+                                    className="text-red-600 text-sm underline mt-2 hover:text-red-800"
+                                  >
+                                    Retry
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : isLoadingPoolBalance ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
+                              <span className="ml-2 text-slate-600">Loading...</span>
+                            </div>
+                          ) : (() => {
+                            // Handle both array and object formats
+                            const tokens = Array.isArray(poolBalance) ? poolBalance[0] : poolBalance?.tokens;
+                            const balances = Array.isArray(poolBalance) ? poolBalance[1] : poolBalance?.balances;
+                            
+                            return tokens && balances ? (
+                              <div className="space-y-3">
+                                {tokens.length > 0 ? (
+                                  tokens.map((token, index) => {
+                                    // Find token info from supported tokens
+                                    const tokenInfo = supportedTokens.find(t => 
+                                      t.address.toLowerCase() === token.toLowerCase()
+                                    );
+                                    
+                                    const balance = Number(balances[index]);
+                                    const formattedBalance = tokenInfo 
+                                      ? (balance / Math.pow(10, tokenInfo.decimals)).toFixed(4)
+                                      : (balance / 1e18).toFixed(4);
+                                    
+                                    const tokenName = tokenInfo?.name || 'Unknown Token';
+                                    const tokenSymbol = tokenInfo?.symbol || 'UNK';
+                                    const tokenAddress = token.slice(0, 6) + '...' + token.slice(-4);
+                                    
+                                    return (
+                                      <div key={index} className="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-slate-200">
+                                        <div className="flex flex-col">
+                                          <div className="flex items-center space-x-2">
+                                            <span className="font-medium text-slate-800">{tokenName}</span>
+                                            <span className="text-sm text-slate-500">({tokenSymbol})</span>
+                                          </div>
+                                          <span className="text-xs text-slate-400 font-mono">{tokenAddress}</span>
+                                        </div>
+                                  <div className="flex items-center space-x-3">
+                                          <div className="text-right">
+                                            <div className="font-semibold text-slate-800">
+                                              {formattedBalance}
+                                            </div>
+                                            <div className="text-xs text-slate-500">{tokenSymbol}</div>
+                                          </div>
+                                  {isPoolAdmin && balance === 0 && (
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            await removeTrackedToken(campaignPoolId as bigint, token as `0x${string}`)
+                                                  } catch (e) { console.error('Remove token failed:', e) }
+                                        }}
+                                        disabled={isRemovingToken}
+                                        className="px-2 py-1 text-xs rounded bg-red-50 hover:bg-red-100 text-red-700 disabled:opacity-50"
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="text-center py-8">
+                                    <DollarSign className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                                    <p className="text-slate-500">No tokens in pool</p>
+                                  </div>
+                              )}
+                            </div>
+                          ) : (
+                              <div className="text-center py-8">
+                                <DollarSign className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                                <p className="text-slate-500">Balance information unavailable</p>
+                            </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Pool Statistics */}
+                        <div className="bg-slate-50 rounded-lg p-4">
+                          <h5 className="font-semibold text-slate-800 mb-3 flex items-center">
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Pool Statistics
+                          </h5>
+                          {poolStatsError ? (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                              <div className="flex items-center">
+                                <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+                                <div>
+                                  <p className="text-red-800 font-medium">Error loading pool statistics</p>
+                                  <p className="text-red-600 text-sm mt-1">
+                                    {poolStatsError.message || 'Unknown error occurred'}
+                                  </p>
+                                  <button 
+                                    onClick={() => refetchPoolStats?.()} 
+                                    className="text-red-600 text-sm underline mt-2 hover:text-red-800"
+                                  >
+                                    Retry
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : isLoadingPoolStats ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
+                              <span className="ml-2 text-slate-600">Loading...</span>
+                            </div>
+                          ) : poolStats ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="text-center p-4 bg-white rounded-lg border border-slate-200">
+                                <div className="text-2xl font-bold text-slate-800 mb-1">
+                                  {Array.isArray(poolStats) ? poolStats[1]?.toString() : poolStats.contributorCount?.toString() || '0'}
+                                </div>
+                                <div className="text-sm text-slate-600">Contributors</div>
+                              </div>
+                              <div className="text-center p-4 bg-white rounded-lg border border-slate-200">
+                                <div className="text-2xl font-bold text-slate-800 mb-1">
+                                  {Array.isArray(poolStats) ? poolStats[3]?.toString() : poolStats.distributionCount?.toString() || '0'}
+                                </div>
+                                <div className="text-sm text-slate-600">Distributions</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <BarChart3 className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                              <p className="text-slate-500">Statistics unavailable</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Pool Fees (Admin Only) */}
+                        {isPoolAdmin && (
+                          <div className="bg-slate-50 rounded-lg p-4">
+                            <h5 className="font-semibold text-slate-800 mb-3 flex items-center">
+                              <Settings className="h-4 w-4 mr-2" />
+                              Pool Fees
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm text-slate-600 mb-1">Contract Admin Fee (bps)</label>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={10000}
+                                    defaultValue={poolFees?.contractAdminFee ? Number(poolFees.contractAdminFee) : 500}
+                                    className="w-28 px-2 py-1 border rounded"
+                                    onBlur={async (e) => {
+                                      const value = BigInt(e.target.value || '0')
+                                      try { 
+                                        await setPoolContractFee(campaignPoolId as bigint, value) 
+                                      } catch (err) { 
+                                        console.error('Set contract fee failed:', err) 
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm text-slate-500">/ 10000</span>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm text-slate-600 mb-1">Campaign Admin Fee (bps)</label>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={10000}
+                                    defaultValue={poolFees?.campaignAdminFee ? Number(poolFees.campaignAdminFee) : 0}
+                                    className="w-28 px-2 py-1 border rounded"
+                                    onBlur={async (e) => {
+                                      const value = BigInt(e.target.value || '0')
+                                      try { 
+                                        await setCampaignFee(campaignPoolId as bigint, value) 
+                                      } catch (err) { 
+                                        console.error('Set campaign fee failed:', err) 
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm text-slate-500">/ 10000</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Pool Actions - 1/4 width */}
+                    <div className="lg:col-span-1">
+                      <div className="space-y-4">
+                        <h5 className="font-semibold text-slate-800 mb-3 flex items-center">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Actions
+                        </h5>
+                        
+                        {/* Fund Pool */}
+                        <button
+                          onClick={() => setShowFundPoolModal(true)}
+                          className="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                        >
+                          <DollarSign className="h-4 w-4" />
+                          <span>Fund Pool</span>
+                        </button>
+
+                        {/* Donate to Pool */}
+                        <button
+                          onClick={() => setShowDonateModal(true)}
+                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          <span>Donate</span>
+                        </button>
+
+                        {/* Distribute Pool */}
+                        <button
+                          onClick={() => distributePool(campaignPoolId, true)}
+                          disabled={isDistributingPool || !poolInfo?.isActive || poolInfo?.isPaused}
+                          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                        >
+                          {isDistributingPool ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trophy className="h-4 w-4" />
+                          )}
+                          <span>{isDistributingPool ? 'Distributing...' : 'Distribute'}</span>
+                        </button>
+
+                        {/* Pool Admin Controls */}
+                        {isPoolAdmin && (
+                          <>
+                            {/* Update Metadata */}
+                            <button
+                              onClick={() => setShowUpdateMetadataModal(true)}
+                              className="w-full px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span>Update Info</span>
+                            </button>
+
+                            {/* Close Pool */}
+                            <button
+                              onClick={() => {
+                                if (confirm('Are you sure you want to close this pool? This action cannot be undone.')) {
+                                  closePoolFunction(campaignPoolId);
+                                }
+                              }}
+                              disabled={isClosingPool}
+                              className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                            >
+                              {isClosingPool ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
+                              )}
+                              <span>{isClosingPool ? 'Closing...' : 'Close Pool'}</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="text-center py-12 bg-slate-50 rounded-xl">
+                    <Database className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-slate-600 mb-2">No Pool Created</h4>
+                    <p className="text-slate-500 mb-4">Create a pool to start managing prize distributions for this campaign.</p>
+                    <button
+                      onClick={() => setShowCreatePoolModal(true)}
+                      className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2 mx-auto"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      <span>Create Pool</span>
+                    </button>
+                  </div>
+                </div>
+              )}
              </div>
            )}
 
@@ -1904,7 +2696,7 @@ export default function CampaignManagePage() {
                {/* Campaign Overview */}
                <div className="space-y-6">
                  {/* Fund Breakdown */}
-                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                <div className="bg-white rounded-xl p-4 border border-slate-200">
                    <h4 className="font-medium text-slate-800 mb-4 flex items-center">
                      <DollarSign className="h-4 w-4 mr-2 text-blue-600" />
                      Fund Breakdown
@@ -1936,7 +2728,7 @@ export default function CampaignManagePage() {
                  </div>
   
                  {/* Campaign Statistics */}
-                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+                <div className="bg-white rounded-xl p-4 border border-slate-200">
                    <h4 className="font-medium text-slate-800 mb-4 flex items-center">
                      <BarChart3 className="h-4 w-4 mr-2 text-green-600" />
                      Campaign Statistics
@@ -2254,6 +3046,44 @@ export default function CampaignManagePage() {
              </div>
 
              <div className="space-y-6">
+               {/* Pool Type Selection */}
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-3">
+                   Pool Type
+                 </label>
+                 <div className="grid grid-cols-2 gap-3">
+                   <button
+                     onClick={() => setPoolType('universal')}
+                     className={`p-4 rounded-lg border-2 transition-colors ${
+                       poolType === 'universal'
+                         ? 'border-primary bg-primary/10 text-primary'
+                         : 'border-slate-200 hover:border-slate-300'
+                     }`}
+                   >
+                     <div className="text-center">
+                       <Trophy className="h-8 w-8 mx-auto mb-2" />
+                       <div className="font-medium">Universal</div>
+                       <div className="text-xs text-slate-600 mt-1">Accepts any token</div>
+                     </div>
+                   </button>
+                   
+                   <button
+                     onClick={() => setPoolType('erc20')}
+                     className={`p-4 rounded-lg border-2 transition-colors ${
+                       poolType === 'erc20'
+                         ? 'border-primary bg-primary/10 text-primary'
+                         : 'border-slate-200 hover:border-slate-300'
+                     }`}
+                   >
+                     <div className="text-center">
+                       <Database className="h-8 w-8 mx-auto mb-2" />
+                       <div className="font-medium">ERC20 Specific</div>
+                       <div className="text-xs text-slate-600 mt-1">Custom token list</div>
+                     </div>
+                   </button>
+                 </div>
+               </div>
+
                {/* Pool Name */}
                <div>
                  <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -2364,6 +3194,169 @@ export default function CampaignManagePage() {
                  <button
                    onClick={() => {
                      setShowCreatePoolModal(false);
+                     resetPoolForm();
+                   }}
+                   className="px-6 py-3 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors duration-200 font-medium"
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+
+      {/* Fund/Donate Modal */}
+      <FundDonateModal
+        isOpen={showFundPoolModal}
+        onClose={() => { setShowFundPoolModal(false); resetFundPoolForm(); }}
+        title="Fund Pool"
+        isSubmitting={isFunding}
+        onConfirm={async (token, amount) => {
+          if (campaignPoolId === undefined || campaignPoolId === 0n) return;
+          // Force msg.value to amount for testing visibility in wallet/explorer
+          const isCelo = token === '0x0000000000000000000000000000000000000000';
+          const res = await fundPool(campaignPoolId, token, amount, isCelo ? amount : 0n);
+          // Auto-close modal after success
+          setShowFundPoolModal(false);
+          resetFundPoolForm();
+          return res as any;
+        }}
+      />
+
+       {/* Donate to Pool Modal */}
+       {showDonateModal && (
+         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
+             <div className="flex items-center justify-between mb-6">
+               <h3 className="text-xl font-semibold text-slate-800">Donate to Pool</h3>
+               <button
+                 onClick={() => {
+                   setShowDonateModal(false);
+                   resetDonateForm();
+                 }}
+                 className="text-slate-400 hover:text-slate-600 transition-colors"
+               >
+                 <XCircle className="h-6 w-6" />
+               </button>
+             </div>
+
+             <div className="space-y-4">
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Amount (CELO)
+                 </label>
+                 <input
+                   type="number"
+                   step="0.0001"
+                   value={donateAmount}
+                   onChange={(e) => setDonateAmount(e.target.value)}
+                   placeholder="0.0"
+                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                 />
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Message (Optional)
+                 </label>
+                 <textarea
+                   value={donateMessage}
+                   onChange={(e) => setDonateMessage(e.target.value)}
+                   placeholder="Leave a message with your donation..."
+                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary h-20"
+                 />
+               </div>
+
+               <div className="flex space-x-4">
+                 <button
+                   onClick={handleDonateToPool}
+                   disabled={isDonating || !donateAmount}
+                   className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
+                 >
+                   {isDonating ? (
+                     <Loader2 className="h-4 w-4 animate-spin" />
+                   ) : (
+                     <UserPlus className="h-4 w-4" />
+                   )}
+                   <span>{isDonating ? 'Donating...' : 'Donate'}</span>
+                 </button>
+                 
+                 <button
+                   onClick={() => {
+                     setShowDonateModal(false);
+                     resetDonateForm();
+                   }}
+                   className="px-6 py-3 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors duration-200 font-medium"
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Update Metadata Modal */}
+       {showUpdateMetadataModal && (
+         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
+             <div className="flex items-center justify-between mb-6">
+               <h3 className="text-xl font-semibold text-slate-800">Update Pool Info</h3>
+               <button
+                 onClick={() => {
+                   setShowUpdateMetadataModal(false);
+                   resetPoolForm();
+                 }}
+                 className="text-slate-400 hover:text-slate-600 transition-colors"
+               >
+                 <XCircle className="h-6 w-6" />
+               </button>
+             </div>
+
+             <div className="space-y-4">
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Pool Name
+                 </label>
+                 <input
+                   type="text"
+                   value={poolName}
+                   onChange={(e) => setPoolName(e.target.value)}
+                   placeholder="Enter pool name..."
+                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                 />
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Pool Description
+                 </label>
+                 <textarea
+                   value={poolDescription}
+                   onChange={(e) => setPoolDescription(e.target.value)}
+                   placeholder="Describe the purpose and details of this pool..."
+                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary h-24"
+                 />
+               </div>
+
+               <div className="flex space-x-4">
+                 <button
+                   onClick={handleUpdatePoolMetadata}
+                   disabled={isUpdatingPoolMetadata || !poolName.trim()}
+                   className="flex-1 px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
+                 >
+                   {isUpdatingPoolMetadata ? (
+                     <Loader2 className="h-4 w-4 animate-spin" />
+                   ) : (
+                     <Edit className="h-4 w-4" />
+                   )}
+                   <span>{isUpdatingPoolMetadata ? 'Updating...' : 'Update Info'}</span>
+                 </button>
+                 
+                 <button
+                   onClick={() => {
+                     setShowUpdateMetadataModal(false);
                      resetPoolForm();
                    }}
                    className="px-6 py-3 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors duration-200 font-medium"

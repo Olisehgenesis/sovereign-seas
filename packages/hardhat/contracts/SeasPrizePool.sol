@@ -94,13 +94,19 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         bool isActive;
         bool isPaused;
         address[] allowedTokens;
+        // Tracks all tokens that have ever been used in this pool (including ETH at address(0))
+        address[] tokens;
         mapping(address => uint256) balances;
         mapping(address => bool) isTokenAllowed;
         mapping(address => bool) isTokenFrozen;
+        mapping(address => bool) isTokenTracked;
         uint256 createdAt;
         string metadata;
         uint256 distributionNonce;
         uint256 totalDistributedAmount;
+        // Fee settings
+        uint256 contractAdminFeePercentage; // Default 5% (500 = 5%)
+        uint256 campaignAdminFeePercentage; // Default 0% (0 = 0%)
     }
 
     struct Donation {
@@ -162,10 +168,13 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
     mapping(bytes32 => ScheduledRescue) public scheduledRescues;
     mapping(address => bool) public blacklistedAddresses;
     mapping(address => bool) public superAdmins;
+    mapping(address => uint256) public contractAdminFees; // Accumulated fees per token
 
     uint256 public nextPoolId;
     uint256 public rescueDelay = 24 hours;
     uint256 public largeRescueThreshold = 1000 * 1e18;
+    uint256 public defaultContractAdminFee = 500; // 5% (500 basis points)
+    uint256 public constant FEE_DENOMINATOR = 10000; // 100% = 10000 basis points
 
     // Events
     event PoolCreated(uint256 indexed poolId, uint256 indexed campaignId, address indexed admin, PoolType poolType);
@@ -188,6 +197,10 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
     event SuperAdminRemoved(address indexed admin);
     event AddressBlacklisted(address indexed addr);
     event AddressUnblacklisted(address indexed addr);
+    event TokenRemovedFromPool(uint256 indexed poolId, address token);
+    event ContractAdminFeeUpdated(uint256 newFee);
+    event CampaignAdminFeeUpdated(uint256 indexed poolId, uint256 newFee);
+    event ContractAdminFeeClaimed(address indexed token, uint256 amount, address indexed recipient);
 
     // Modifiers
     modifier onlyPoolAdmin(uint256 poolId) {
@@ -255,6 +268,7 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         }
         seasContract = ISovereignSeasV4(_seasContract);
         superAdmins[msg.sender] = true;
+        nextPoolId = 1; // Start pool IDs from 1
         emit SuperAdminAdded(msg.sender);
     }
 
@@ -288,6 +302,8 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         newPool.metadata = metadata;
         newPool.distributionNonce = 0;
         newPool.totalDistributedAmount = 0;
+        newPool.contractAdminFeePercentage = defaultContractAdminFee;
+        newPool.campaignAdminFeePercentage = 0;
         
         campaignToPool[campaignId] = poolId;
         
@@ -329,6 +345,8 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         newPool.metadata = metadata;
         newPool.distributionNonce = 0;
         newPool.totalDistributedAmount = 0;
+        newPool.contractAdminFeePercentage = defaultContractAdminFee;
+        newPool.campaignAdminFeePercentage = 0;
         
         // Set allowed tokens with validation
         for (uint256 i = 0; i < allowedTokens.length; i++) {
@@ -375,6 +393,8 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         newPool.metadata = metadata;
         newPool.distributionNonce = 0;
         newPool.totalDistributedAmount = 0;
+        newPool.contractAdminFeePercentage = defaultContractAdminFee;
+        newPool.campaignAdminFeePercentage = 0;
         
         campaignToPool[campaignId] = poolId;
         
@@ -412,6 +432,8 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         newPool.metadata = metadata;
         newPool.distributionNonce = 0;
         newPool.totalDistributedAmount = 0;
+        newPool.contractAdminFeePercentage = defaultContractAdminFee;
+        newPool.campaignAdminFeePercentage = 0;
         
         // Set allowed tokens
         for (uint256 i = 0; i < allowedTokens.length; i++) {
@@ -472,6 +494,31 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         emit TokenRemoved(poolId, token);
     }
 
+    // Admin function to remove tracked tokens (only if balance is 0)
+    function removeTrackedToken(uint256 poolId, address token) external onlyPoolAdminOrSuperAdmin(poolId) validPool(poolId) {
+        if (pools[poolId].balances[token] > 0) {
+            revert TokenHasBalance(token, poolId);
+        }
+        
+        if (!pools[poolId].isTokenTracked[token]) {
+            revert TokenNotAllowed(token, poolId);
+        }
+        
+        pools[poolId].isTokenTracked[token] = false;
+        
+        // Remove from tokens array
+        address[] storage tokens = pools[poolId].tokens;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] == token) {
+                tokens[i] = tokens[tokens.length - 1];
+                tokens.pop();
+                break;
+            }
+        }
+        
+        emit TokenRemovedFromPool(poolId, token);
+    }
+
     function freezeToken(uint256 poolId, address token) external onlyPoolAdminOrSuperAdmin(poolId) validPool(poolId) {
         if (!_isTokenValidForPool(poolId, token)) {
             revert InvalidTokenForPool(token, poolId);
@@ -513,6 +560,7 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
             pools[poolId].balances[token] += amount;
         }
+        _trackTokenIfNeeded(poolId, token);
         
         _recordContribution(poolId, msg.sender, token, amount);
         
@@ -545,6 +593,7 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
             pools[poolId].balances[token] += amount;
         }
+        _trackTokenIfNeeded(poolId, token);
         
         _recordContribution(poolId, msg.sender, token, amount);
         
@@ -705,6 +754,47 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         largeRescueThreshold = newThreshold;
     }
 
+    function setDefaultContractAdminFee(uint256 newFee) external onlyOwner {
+        if (newFee > FEE_DENOMINATOR) {
+            revert InvalidAmount(newFee);
+        }
+        defaultContractAdminFee = newFee;
+        emit ContractAdminFeeUpdated(newFee);
+    }
+
+    function setPoolContractAdminFee(uint256 poolId, uint256 newFee) external onlyPoolAdminOrSuperAdmin(poolId) validPool(poolId) {
+        if (newFee > FEE_DENOMINATOR) {
+            revert InvalidAmount(newFee);
+        }
+        pools[poolId].contractAdminFeePercentage = newFee;
+        emit ContractAdminFeeUpdated(newFee);
+    }
+
+    function setCampaignAdminFee(uint256 poolId, uint256 newFee) external onlyPoolAdminOrSuperAdmin(poolId) validPool(poolId) {
+        if (newFee > FEE_DENOMINATOR) {
+            revert InvalidAmount(newFee);
+        }
+        pools[poolId].campaignAdminFeePercentage = newFee;
+        emit CampaignAdminFeeUpdated(poolId, newFee);
+    }
+
+    function claimContractAdminFees(address token) external onlySuperAdmin {
+        uint256 amount = contractAdminFees[token];
+        if (amount == 0) {
+            revert InsufficientBalance(token, 0, 1);
+        }
+        
+        contractAdminFees[token] = 0;
+        
+        if (token == address(0)) {
+            payable(msg.sender).transfer(amount);
+        } else {
+            IERC20(token).safeTransfer(msg.sender, amount);
+        }
+        
+        emit ContractAdminFeeClaimed(token, amount, msg.sender);
+    }
+
     function emergencyPause() external onlySuperAdmin {
         _pause();
     }
@@ -850,20 +940,19 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
 
     function getPoolBalance(uint256 poolId) external view returns (address[] memory tokens, uint256[] memory balances) {
         Pool storage pool = pools[poolId];
-        
-        if (pool.poolType == PoolType.UNIVERSAL) {
-            // For universal pools, return ETH balance (simplified)
-            tokens = new address[](1);
-            balances = new uint256[](1);
-            tokens[0] = address(0); // ETH
-            balances[0] = pool.balances[address(0)];
-        } else {
-            tokens = pool.allowedTokens;
-            balances = new uint256[](tokens.length);
-            for (uint256 i = 0; i < tokens.length; i++) {
-                balances[i] = pool.balances[tokens[i]];
-            }
+        tokens = pool.tokens;
+        balances = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            balances[i] = pool.balances[tokens[i]];
         }
+    }
+
+    function getPoolTokens(uint256 poolId) external view returns (address[] memory) {
+        return pools[poolId].tokens;
+    }
+
+    function getTokenBalance(uint256 poolId, address token) external view returns (uint256) {
+        return pools[poolId].balances[token];
     }
 
     function getPoolContributors(uint256 poolId) external view returns (address[] memory) {
@@ -883,19 +972,27 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         contributionCount = contrib.contributionCount;
         firstContributionTime = contrib.firstContributionTime;
         
-        // Get tokens contributed
+        // Get tokens contributed across all tracked tokens in this pool
         Pool storage pool = pools[poolId];
-        if (pool.poolType == PoolType.ERC20_SPECIFIC) {
-            tokens = pool.allowedTokens;
-            amounts = new uint256[](tokens.length);
-            for (uint256 i = 0; i < tokens.length; i++) {
-                amounts[i] = contrib.tokenContributions[tokens[i]];
-            }
-        } else {
-            tokens = new address[](1);
-            amounts = new uint256[](1);
-            tokens[0] = address(0);
-            amounts[0] = contrib.tokenContributions[address(0)];
+        tokens = pool.tokens;
+        amounts = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            amounts[i] = contrib.tokenContributions[tokens[i]];
+        }
+    }
+
+    // New: concise user contribution getter
+    function getUserContributions(uint256 poolId, address user) external view returns (
+        address[] memory tokens,
+        uint256[] memory amounts,
+        uint256 totalContributed
+    ) {
+        Contributor storage contrib = poolContributors[poolId][user];
+        tokens = pools[poolId].tokens;
+        amounts = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            amounts[i] = contrib.tokenContributions[tokens[i]];
+            totalContributed += amounts[i];
         }
     }
 
@@ -923,7 +1020,9 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         bool isActive,
         bool isPaused,
         uint256 createdAt,
-        string memory metadata
+        string memory metadata,
+        uint256 contractAdminFeePercentage,
+        uint256 campaignAdminFeePercentage
     ) {
         Pool storage pool = pools[poolId];
         return (
@@ -934,7 +1033,9 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
             pool.isActive,
             pool.isPaused,
             pool.createdAt,
-            pool.metadata
+            pool.metadata,
+            pool.contractAdminFeePercentage,
+            pool.campaignAdminFeePercentage
         );
     }
 
@@ -989,6 +1090,15 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         );
     }
 
+    function getContractAdminFees(address token) external view returns (uint256) {
+        return contractAdminFees[token];
+    }
+
+    function getPoolFees(uint256 poolId) external view returns (uint256 contractAdminFee, uint256 campaignAdminFee) {
+        Pool storage pool = pools[poolId];
+        return (pool.contractAdminFeePercentage, pool.campaignAdminFeePercentage);
+    }
+
     // Batch operations
     function batchFundPool(uint256 poolId, address[] memory tokens, uint256[] memory amounts) 
         external 
@@ -1033,6 +1143,7 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
                 pools[poolId].balances[tokens[i]] += amounts[i];
             }
             
+            _trackTokenIfNeeded(poolId, tokens[i]);
             _recordContribution(poolId, msg.sender, tokens[i], amounts[i]);
             emit PoolFunded(poolId, msg.sender, tokens[i], amounts[i], true);
         }
@@ -1170,15 +1281,9 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
     function _getPoolTotalValue(uint256 poolId) internal view returns (uint256) {
         uint256 total = 0;
         Pool storage pool = pools[poolId];
-        
-        if (pool.poolType == PoolType.ERC20_SPECIFIC) {
-            for (uint256 i = 0; i < pool.allowedTokens.length; i++) {
-                total += pool.balances[pool.allowedTokens[i]];
-            }
-        } else {
-            total += pool.balances[address(0)]; // ETH balance for universal pools
+        for (uint256 i = 0; i < pool.tokens.length; i++) {
+            total += pool.balances[pool.tokens[i]];
         }
-        
         return total;
     }
 
@@ -1187,11 +1292,20 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
     }
 
     function _distributeToRecipientsQuadratic(uint256 poolId, address[] memory recipients, uint256[] memory projectIds, bytes32 distributionHash) internal {
-        // Simplified quadratic distribution
-        uint256[] memory voteWeights = new uint256[](recipients.length);
-        uint256 totalWeight = 0;
+        // Calculate vote weights
+        (uint256[] memory voteWeights, uint256 totalWeight) = _calculateVoteWeights(poolId, projectIds);
+        if (totalWeight == 0) return;
+
+        // Distribute across all tokens
+        uint256 totalDistributed = _distributeTokensWithFees(poolId, recipients, voteWeights, totalWeight, distributionHash);
+        pools[poolId].totalDistributedAmount += totalDistributed;
+    }
+
+    function _calculateVoteWeights(uint256 poolId, uint256[] memory projectIds) internal view returns (uint256[] memory voteWeights, uint256 totalWeight) {
+        voteWeights = new uint256[](projectIds.length);
+        totalWeight = 0;
         
-        for (uint256 i = 0; i < recipients.length; i++) {
+        for (uint256 i = 0; i < projectIds.length; i++) {
             try seasContract.getParticipation(pools[poolId].campaignId, projectIds[i]) returns (bool, uint256 voteCount, uint256) {
                 voteWeights[i] = _sqrt(voteCount);
                 totalWeight += voteWeights[i];
@@ -1199,41 +1313,71 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
                 voteWeights[i] = 0;
             }
         }
+    }
+
+    function _distributeTokensWithFees(uint256 poolId, address[] memory recipients, uint256[] memory voteWeights, uint256 totalWeight, bytes32 distributionHash) internal returns (uint256 totalDistributed) {
+        Pool storage pool = pools[poolId];
+        address[] storage tokens = pool.tokens;
         
-        if (totalWeight == 0) return;
+        for (uint256 t = 0; t < tokens.length; t++) {
+            totalDistributed += _distributeSingleToken(poolId, tokens[t], recipients, voteWeights, totalWeight, distributionHash);
+        }
+    }
+
+    function _distributeSingleToken(uint256 poolId, address token, address[] memory recipients, uint256[] memory voteWeights, uint256 totalWeight, bytes32 distributionHash) internal returns (uint256 distributed) {
+        uint256 available = pools[poolId].balances[token];
+        if (available == 0) return 0;
+
+        Pool storage pool = pools[poolId];
+        uint256 contractFee = (available * pool.contractAdminFeePercentage) / FEE_DENOMINATOR;
+        uint256 campaignFee = (available * pool.campaignAdminFeePercentage) / FEE_DENOMINATOR;
+        uint256 netAvailable = available - contractFee - campaignFee;
         
-        // Distribute ETH proportionally (simplified)
-        uint256 totalETH = pools[poolId].balances[address(0)];
-        uint256 totalDistributed = 0;
+        if (netAvailable == 0) return 0;
+
+        // Deduct fees from pool balance
+        pools[poolId].balances[token] -= (contractFee + campaignFee);
         
-        for (uint256 i = 0; i < recipients.length; i++) {
-            if (voteWeights[i] > 0) {
-                uint256 share = (totalETH * voteWeights[i]) / totalWeight;
-                if (share > 0) {
-                    pools[poolId].balances[address(0)] -= share;
-                    payable(recipients[i]).transfer(share);
-                    totalDistributed += share;
-                    
-                    // Record claim
-                    userClaimHistory[poolId][recipients[i]].push(ClaimRecord({
-                        recipient: recipients[i],
-                        token: address(0),
-                        amount: share,
-                        claimTime: block.timestamp,
-                        distributionHash: distributionHash,
-                        claimed: true
-                    }));
-                    
-                    totalClaimedByUser[poolId][recipients[i]] += share;
-                    hasClaimedDistribution[poolId][recipients[i]][distributionHash] = true;
-                    
-                    emit TokensClaimed(poolId, recipients[i], address(0), share, distributionHash);
-                }
-            }
+        // Handle fees
+        if (contractFee > 0) {
+            contractAdminFees[token] += contractFee;
         }
         
-        // Update total distributed amount tracking
-        pools[poolId].totalDistributedAmount += totalDistributed;
+        if (campaignFee > 0) {
+            if (token == address(0)) {
+                payable(pool.admin).transfer(campaignFee);
+            } else {
+                IERC20(token).safeTransfer(pool.admin, campaignFee);
+            }
+        }
+
+        // Distribute to recipients
+        for (uint256 i = 0; i < recipients.length; i++) {
+            if (voteWeights[i] == 0) continue;
+            uint256 share = (netAvailable * voteWeights[i]) / totalWeight;
+            if (share == 0) continue;
+
+            pools[poolId].balances[token] -= share;
+            if (token == address(0)) {
+                payable(recipients[i]).transfer(share);
+            } else {
+                IERC20(token).safeTransfer(recipients[i], share);
+            }
+            distributed += share;
+
+            // Record claim
+            userClaimHistory[poolId][recipients[i]].push(ClaimRecord({
+                recipient: recipients[i],
+                token: token,
+                amount: share,
+                claimTime: block.timestamp,
+                distributionHash: distributionHash,
+                claimed: true
+            }));
+            totalClaimedByUser[poolId][recipients[i]] += share;
+            hasClaimedDistribution[poolId][recipients[i]][distributionHash] = true;
+            emit TokensClaimed(poolId, recipients[i], token, share, distributionHash);
+        }
     }
 
     function _sqrt(uint256 x) internal pure returns (uint256 y) {
@@ -1243,6 +1387,15 @@ contract SeasPrizePool is Ownable, ReentrancyGuard, Pausable {
         while (z < y) {
             y = z;
             z = (x / z + z) / 2;
+        }
+    }
+
+    // Track token in pool if first seen
+    function _trackTokenIfNeeded(uint256 poolId, address token) internal {
+        Pool storage pool = pools[poolId];
+        if (!pool.isTokenTracked[token]) {
+            pool.isTokenTracked[token] = true;
+            pool.tokens.push(token);
         }
     }
 
