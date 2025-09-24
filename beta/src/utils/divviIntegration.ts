@@ -1,4 +1,4 @@
-import { Address } from 'viem'
+import type { Address } from 'viem'
 
 // Divvi configuration
 export const DIVVI_CONFIG = {
@@ -187,7 +187,7 @@ export async function withDivviTracking<T>(
   const divvi = DivviIntegration.getInstance()
 
   if (!divvi.isAvailable()) {
-    console.warn('Divvi not available, proceeding without tracking')
+    console.warn('Divvi not available, proceeding without tracking', options)
     const result = await transactionFn()
     return {
       txHash: result as string,

@@ -10,10 +10,12 @@ const CONSUMER_ADDRESS = '0x53eaF4CD171842d8144e45211308e5D90B4b0088' as const
 
 // ==================== TYPES ====================
 
-export enum PoolType {
-  UNIVERSAL = 0,
-  ERC20_SPECIFIC = 1
-}
+export const PoolType = {
+  UNIVERSAL: 0,
+  ERC20_SPECIFIC: 1
+} as const
+
+export type PoolType = typeof PoolType[keyof typeof PoolType]
 
 export interface Pool {
   id: bigint

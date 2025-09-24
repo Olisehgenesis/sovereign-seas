@@ -60,16 +60,11 @@ import {
   useAllowedTokens,
   useCampaignToPool,
   useIsSuperAdmin,
-  useIsBlacklisted,
   usePoolsOwner,
-  useCampaignExists,
-  useHasCreatePermission,
   useCreatePoolUniversal,
   useCreatePoolERC20,
   useFundPool,
   useDonateToPool,
-  useDistributeQuadratic,
-  useDistributeManual,
   useDistribute,
   usePoolFees,
   useSetPoolContractAdminFee,
@@ -234,6 +229,7 @@ export default function CampaignManagePage() {
 
   // Get campaign's pool using the new hook
   const { poolId: campaignPoolId, isLoading: isLoadingPoolId } = useCampaignToPool(campaignId);
+  
 
   // Debug logging for pool identification
   if (import.meta.env.DEV) {
@@ -270,7 +266,7 @@ export default function CampaignManagePage() {
         raw: poolInfo,
         isArray: Array.isArray(poolInfo),
         length: Array.isArray(poolInfo) ? poolInfo.length : 'N/A',
-        structure: Array.isArray(poolInfo) ? poolInfo.map((item, index) => ({ index, type: typeof item, value: item?.toString() })) : {
+        structure: Array.isArray(poolInfo) ? poolInfo.map((item, index: number) => ({ index, type: typeof item, value: item?.toString() })) : {
           id: poolInfo.id?.toString(),
           campaignId: poolInfo.campaignId?.toString(),
           admin: poolInfo.admin,
@@ -285,7 +281,7 @@ export default function CampaignManagePage() {
         raw: poolBalance,
         isArray: Array.isArray(poolBalance),
         length: Array.isArray(poolBalance) ? poolBalance.length : 'N/A',
-        structure: Array.isArray(poolBalance) ? poolBalance.map((item, index) => ({ index, type: typeof item, value: Array.isArray(item) ? `Array(${item.length})` : item?.toString() })) : {
+        structure: Array.isArray(poolBalance) ? poolBalance.map((item, index: number) => ({ index, type: typeof item, value: Array.isArray(item) ? `Array(${item.length})` : item?.toString() })) : {
           tokens: poolBalance.tokens,
           balances: poolBalance.balances?.map(b => b.toString())
         }
@@ -294,7 +290,7 @@ export default function CampaignManagePage() {
         raw: poolStats,
         isArray: Array.isArray(poolStats),
         length: Array.isArray(poolStats) ? poolStats.length : 'N/A',
-        structure: Array.isArray(poolStats) ? poolStats.map((item, index) => ({ index, type: typeof item, value: item?.toString() })) : {
+        structure: Array.isArray(poolStats) ? poolStats.map((item, index: number) => ({ index, type: typeof item, value: item?.toString() })) : {
           totalValue: poolStats.totalValue?.toString(),
           contributorCount: poolStats.contributorCount?.toString(),
           distributedAmount: poolStats.distributedAmount?.toString(),
@@ -317,11 +313,8 @@ export default function CampaignManagePage() {
   }
 
   // Admin and permission checks
-  const { isSuperAdmin } = useIsSuperAdmin(address as `0x${string}`);
-  const { isBlacklisted } = useIsBlacklisted(address as `0x${string}`);
+  const { isSuperAdmin } = useIsSuperAdmin(address as `0x${string}`)
   const { owner: poolsOwner } = usePoolsOwner();
-  const { exists: campaignExists } = useCampaignExists(campaignId);
-  const { hasPermission } = useHasCreatePermission(campaignId, address as `0x${string}`);
 
   // Pool state
   // Fees & tracking
@@ -354,10 +347,10 @@ export default function CampaignManagePage() {
   const [poolDescription, setPoolDescription] = useState('');
 
   // Fund pool state
-  const [fundAmount, setFundAmount] = useState('');
+  
   const [fundToken, setFundToken] = useState('0x0000000000000000000000000000000000000000'); // CELO by default
   const [fundTokenList, setFundTokenList] = useState<string[]>(['0x0000000000000000000000000000000000000000']);
-  const [fundAgree] = useState(false);
+  
 
   useEffect(() => {
     // Populate funding token options similar to vote modal: CELO + pool tokens + allowed tokens
@@ -424,7 +417,6 @@ export default function CampaignManagePage() {
   };
 
   const resetPoolForm = () => {
-    setPoolMetadata('');
     setSelectedTokens([]);
     setPoolName('');
     setPoolDescription('');
@@ -432,7 +424,6 @@ export default function CampaignManagePage() {
 
   // Reset fund pool form
   const resetFundPoolForm = () => {
-    setFundAmount('');
     setFundToken('0x0000000000000000000000000000000000000000');
   };
 
@@ -1849,7 +1840,7 @@ export default function CampaignManagePage() {
                             return tokens && balances ? (
                               <div className="space-y-3">
                                 {tokens.length > 0 ? (
-                                  tokens.map((token, index) => {
+                                  tokens.map((token: `0x${string}`, index: number) => {
                                     // Find token info from supported tokens
                                     const tokenInfo = supportedTokens.find(t => 
                                       t.address.toLowerCase() === token.toLowerCase()
@@ -2147,7 +2138,7 @@ export default function CampaignManagePage() {
                    </div>
 
                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                     {calculateDistribution(false).map((dist, index) => (
+                     {calculateDistribution(false).map((dist, index: number) => (
                        <div key={`linear-${dist.projectId}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                          <div className="flex items-center space-x-3">
                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
@@ -2193,7 +2184,7 @@ export default function CampaignManagePage() {
                    </div>
 
                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                     {calculateDistribution(true).map((dist, index) => (
+                     {calculateDistribution(true).map((dist, index: number) => (
                        <div key={`quadratic-${dist.projectId}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                          <div className="flex items-center space-x-3">
                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
@@ -2755,7 +2746,7 @@ export default function CampaignManagePage() {
                      Linear Distribution Preview
                    </h4>
                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                     {calculateDistribution(false).slice(0, 5).map((dist, index) => (
+                     {calculateDistribution(false).slice(0, 5).map((dist, index: number) => (
                        <div key={`linear-preview-${dist.projectId}`} className="flex items-center justify-between p-2 bg-slate-50 rounded">
                          <div className="flex items-center space-x-2">
                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -2789,7 +2780,7 @@ export default function CampaignManagePage() {
                      Quadratic Distribution Preview
                    </h4>
                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                     {calculateDistribution(true).slice(0, 5).map((dist, index) => (
+                     {calculateDistribution(true).slice(0, 5).map((dist, index: number) => (
                        <div key={`quadratic-preview-${dist.projectId}`} className="flex items-center justify-between p-2 bg-slate-50 rounded">
                          <div className="flex items-center space-x-2">
                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -3150,7 +3141,7 @@ export default function CampaignManagePage() {
                      </div>
                      {selectedTokens.length > 0 && (
                        <div className="space-y-1">
-                         {selectedTokens.map((token, index) => (
+                         {selectedTokens.map((token, index: number) => (
                            <div key={index} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg">
                              <span className="text-sm font-mono text-slate-600">{token}</span>
                              <button

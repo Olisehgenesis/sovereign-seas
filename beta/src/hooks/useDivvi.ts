@@ -1,6 +1,7 @@
+// ts-ignore
 import { useCallback, useEffect, useState } from 'react'
 import { useAccount, useChainId, useWalletClient } from 'wagmi'
-import { Address } from 'viem'
+import type { Address } from 'viem'
 
 // Divvi configuration
 const DIVVI_CONSUMER_ADDRESS = '0x53eaF4CD171842d8144e45211308e5D90B4b0088' // Your Divvi Identifier
@@ -38,6 +39,8 @@ export function useDivvi() {
       try {
         // Dynamic import to check if SDK is available
         const { getReferralTag, submitReferral } = await import('@divvi/referral-sdk')
+        console.log('getReferralTag', getReferralTag)
+        console.log('submitReferral', submitReferral)
         setIsDivviAvailable(true)
       } catch (error) {
         console.warn('Divvi SDK not available:', error)
@@ -75,8 +78,8 @@ export function useDivvi() {
       const { submitReferral: submitDivviReferral } = await import('@divvi/referral-sdk')
       
       await submitDivviReferral({
-        txHash,
-        chainId: chainId || chainId,
+        txHash: txHash as `0x${string}`,
+        chainId: chainId || 42220,
       })
 
       console.log('Divvi referral submitted successfully:', txHash)
@@ -117,11 +120,7 @@ export function useDivvi() {
         account: userAddress,
         to: transactionData.to,
         data: enhancedData,
-        value: transactionData.value || 0n,
-        gas: transactionData.gas,
-        gasPrice: transactionData.gasPrice,
-        maxFeePerGas: transactionData.maxFeePerGas,
-        maxPriorityFeePerGas: transactionData.maxPriorityFeePerGas,
+        value: transactionData.value || 0n
       })
 
       // Submit referral to Divvi
@@ -185,13 +184,12 @@ export function useDivviContractInteraction(contractAddress: Address) {
         return null
       }
 
-      // This would be used with your contract write functions
-      // The actual implementation depends on your contract interaction pattern
       console.log(`Tracking ${functionName} interaction with Divvi:`, {
         contractAddress,
         functionName,
         args,
-        referralTag
+        referralTag,
+        value
       })
 
       return referralTag

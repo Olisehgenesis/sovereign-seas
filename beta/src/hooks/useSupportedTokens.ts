@@ -12,7 +12,6 @@ interface SupportedToken {
 // Get testnet-aware token addresses
 const celoToken = getCeloTokenAddress();
 const cusdToken = getCusdTokenAddress();
-const goodDollarToken = getGoodDollarTokenAddress();
 
 const baseTokens: SupportedToken[] = [
   {
