@@ -46,8 +46,9 @@ import {
   Lock,
   ChevronRight,
 } from 'lucide-react';
+import { Github, Award } from 'lucide-react';
 
-import { useProjectDetails, useProjectCampaigns } from '@/hooks/useProjectMethods';
+import { useProjectDetails, useProjectCampaigns, useUpdateProjectMetadata } from '@/hooks/useProjectMethods';
 import TipModal from '@/components/TipModal';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import { formatIpfsUrl } from '@/utils/imageUtils';
@@ -395,7 +396,14 @@ export default function ProjectView() {
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
   const parsedId = parseIdParam(id);
   const projectId = parsedId ? BigInt(parsedId) : BigInt(0);
-  const { project, projectCampaigns, isLoading, error } = useProjectData(projectId, contractAddress);
+  const { project, projectCampaigns, isLoading, error, refetch } = useProjectData(projectId, contractAddress);
+  // Raw project details for direct access to metadata strings to avoid data loss on update
+  const { projectDetails: rawDetails } = useProjectDetails(contractAddress, projectId);
+  const { updateProjectMetadata, isPending: isUpdatingGithub } = useUpdateProjectMetadata(contractAddress);
+  const [showSetGithub, setShowSetGithub] = useState<boolean>(false);
+  const [newGithub, setNewGithub] = useState<string>('');
+  const [githubSaveError, setGithubSaveError] = useState<string>('');
+  const [githubSaved, setGithubSaved] = useState<boolean>(false);
   
   // Check if user is owner
   const isOwner = isConnected && address && project && address.toLowerCase() === project.owner?.toLowerCase();
@@ -459,6 +467,65 @@ export default function ProjectView() {
         break;
     }
     setShowShareModal(false);
+  };
+
+  const normalizedGithub = (() => {
+    const value = project?.metadata?.githubRepo?.trim();
+    if (!value) return '';
+    const hasProtocol = value.startsWith('http://') || value.startsWith('https://');
+    const hasGithubDomain = value.includes('github.com');
+    const looksLikeSlug = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/.test(value);
+    if (hasProtocol) return value;
+    if (hasGithubDomain) return `https://${value}`;
+    if (looksLikeSlug) return `https://github.com/${value.replace(/\/$/, '')}`;
+    return `https://${value}`;
+  })();
+
+  const normalizeGithubInput = (value: string) => {
+    const trimmed = (value || '').trim();
+    if (!trimmed) return '';
+    const hasProtocol = trimmed.startsWith('http://') || trimmed.startsWith('https://');
+    const hasGithubDomain = trimmed.includes('github.com');
+    const looksLikeSlug = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/.test(trimmed);
+    if (hasProtocol) return trimmed;
+    if (hasGithubDomain) return `https://${trimmed}`;
+    if (looksLikeSlug) return `https://github.com/${trimmed.replace(/\/$/, '')}`;
+    return `https://${trimmed}`;
+  };
+
+  const handleSaveGithub = async () => {
+    try {
+      setGithubSaveError('');
+      setGithubSaved(false);
+      const url = normalizeGithubInput(newGithub);
+      if (!url) {
+        setGithubSaveError('Please enter a valid GitHub URL');
+        return;
+      }
+      // Read current on-chain additionalData JSON string to preserve all fields
+      const currentAdditional = rawDetails?.metadata?.additionalData || '{}';
+      let additionalObj: any = {};
+      try { additionalObj = JSON.parse(currentAdditional); } catch {}
+      // Merge github at both normalized links and legacy top-level for compatibility
+      additionalObj.githubRepo = url;
+      additionalObj.links = {
+        ...(additionalObj.links || {}),
+        githubRepo: url
+      };
+      const newAdditionalJson = JSON.stringify(additionalObj);
+      await updateProjectMetadata({
+        projectId,
+        metadataType: 3,
+        newData: newAdditionalJson
+      });
+      setGithubSaved(true);
+      setShowSetGithub(false);
+      setNewGithub('');
+      // Refresh view
+      await refetch();
+    } catch (e: any) {
+      setGithubSaveError(e?.message || 'Failed to save GitHub URL');
+    }
   };
 
   const openVoteModal = (campaignId: string) => {
@@ -530,6 +597,34 @@ export default function ProjectView() {
                   size="sm"
                 />
               </div>
+            </div>
+
+            {/* Quick Links Row: GitHub and KarmaGAP */}
+            <div className="mt-2 sm:mt-4 flex items-center gap-2 sm:gap-3">
+              {normalizedGithub && (
+                <a
+                  href={normalizedGithub}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs sm:text-sm transition-colors"
+                  title="View GitHub"
+                >
+                  <Github className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">GitHub</span>
+                </a>
+              )}
+              {project.metadata?.karmaGapProfile && (
+                <a
+                  href={project.metadata.karmaGapProfile}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs sm:text-sm transition-colors"
+                  title="View Karma GAP"
+                >
+                  <Award className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Karma GAP</span>
+                </a>
+              )}
             </div>
 
             {/* Project Name and Creator */}
@@ -1317,6 +1412,47 @@ export default function ProjectView() {
                           <Edit className="h-4 w-4" />
                           Edit Project Details
                         </button>
+                        {!normalizedGithub && (
+                          <div className="p-3 bg-white rounded-lg border border-red-200">
+                            <p className="text-sm text-red-800 mb-2">GitHub repository not set. Add it now:</p>
+                            {!showSetGithub ? (
+                              <button
+                                onClick={() => setShowSetGithub(true)}
+                                className="w-full flex items-center justify-center gap-2 p-2 bg-red-100 hover:bg-red-200 rounded-md text-red-800 transition-colors"
+                              >
+                                <Github className="h-4 w-4" />
+                                Add GitHub URL
+                              </button>
+                            ) : (
+                              <div className="space-y-2">
+                                <input
+                                  type="url"
+                                  value={newGithub}
+                                  onChange={(e) => setNewGithub(e.target.value)}
+                                  placeholder="https://github.com/org/repo"
+                                  className="w-full px-3 py-2 border rounded-md text-sm"
+                                />
+                                {githubSaveError && <p className="text-xs text-red-600">{githubSaveError}</p>}
+                                {githubSaved && <p className="text-xs text-green-600">GitHub URL saved.</p>}
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={handleSaveGithub}
+                                    disabled={isUpdatingGithub}
+                                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-60"
+                                  >
+                                    {isUpdatingGithub ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button
+                                    onClick={() => setShowSetGithub(false)}
+                                    className="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <button className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors">
                    <Trophy className="h-4 w-4" />
                           Manage Campaigns

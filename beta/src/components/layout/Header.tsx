@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useConnect, useAccount, injected } from 'wagmi';
-import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User } from 'lucide-react';
+import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User, Anchor } from 'lucide-react';
 import { usePrivy, useLogin } from '@privy-io/react-auth';
 import WalletModal from '@/components/modals/walletModal';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 const explorerOptions = [
   { name: 'Projects', href: '/explorer/projects', icon: Ship },
   { name: 'Campaigns', href: '/explorer/campaigns', icon: Globe },
+  { name: 'Leaderboard', href: '/explorer/leaderboard', icon: Compass },
 ];
 
 const createOptions = [
@@ -151,6 +152,15 @@ export default function Header() {
                   })}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Anchor Points direct tab */}
+              <Link 
+                to="/explorer/leaderboard" 
+                className="text-gray-600 hover:text-black font-medium flex items-center"
+              >
+                <Anchor className="w-4 h-4 mr-2" />
+                Anchor Points
+              </Link>
 
               {/* Create Dropdown */}
               <DropdownMenu>

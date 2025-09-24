@@ -1,0 +1,9 @@
+{
+  "network": "alfajores",
+  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
+  "timestamp": "2025-09-17T17:40:34.339Z",
+  "contracts": {
+    "seasPrizePool": "0xDd30B7FA9Bef98683B160135fa98B37bF8cF1be3",
+    "sovereignSeasV4": "0x221c41f490d09DEC87b2Ac38201A305072089186"
+  }
+}
