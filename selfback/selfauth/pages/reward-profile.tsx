@@ -2,7 +2,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useEffect, useMemo, useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { useEngagementRewards, DEV_REWARDS_CONTRACT } from '@goodsdks/engagement-sdk';
+import { useEngagementRewards, REWARDS_CONTRACT } from '@goodsdks/engagement-sdk';
 import { createPublicClient, formatEther, http } from 'viem';
 import { celo } from 'viem/chains';
 
@@ -18,7 +18,7 @@ const RewardProfile: NextPage = () => {
   const address = useMemo(() => user?.wallet?.address ?? walletAccount?.address, [user?.wallet?.address, walletAccount?.address]);
   const isHexAddress = (a?: string): a is `0x${string}` => !!a && a.startsWith('0x');
 
-  const rewardsAddress = DEV_REWARDS_CONTRACT;
+  const rewardsAddress = REWARDS_CONTRACT;
   const engagementRewards = useEngagementRewards(rewardsAddress);
   const isUserRegisteredSafe = async (
     app: `0x${string}`,

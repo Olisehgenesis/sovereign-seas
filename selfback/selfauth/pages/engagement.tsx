@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { useEngagementRewards, DEV_REWARDS_CONTRACT } from '@goodsdks/engagement-sdk'
+import { useEngagementRewards, REWARDS_CONTRACT } from '@goodsdks/engagement-sdk'
 
 // Lazy import SDK hook to avoid SSR issues if not installed
 const DynamicEngagementGuide = dynamic(async () => Promise.resolve(EngagementGuide), { ssr: false })
@@ -18,7 +18,7 @@ function ClaimDemo() {
   const [txHash, setTxHash] = useState<string>('')
 
   const apiBase = useMemo(() => '', []) // same origin
-  const engagementRewards = useEngagementRewards(DEV_REWARDS_CONTRACT)
+  const engagementRewards = useEngagementRewards(REWARDS_CONTRACT)
   const APP_ADDRESS = process.env.NEXT_PUBLIC_APP_ADDRESS as `0x${string}` | "0x752850Cd4143137d0cdB32b0bc141fd79e7626EA"
 
   const connectWallet = async () => {

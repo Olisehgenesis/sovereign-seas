@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
-import { useEngagementRewards, DEV_REWARDS_CONTRACT } from '@goodsdks/engagement-sdk'
+import { useEngagementRewards, DEV_REWARDS_CONTRACT, REWARDS_CONTRACT } from '@goodsdks/engagement-sdk'
 import { useSearchParams } from 'react-router-dom'
 
 type ClaimStatus = 'idle' | 'connecting' | 'signing' | 'waiting_for_app' | 'claiming' | 'success' | 'error'
@@ -13,8 +13,8 @@ export function useEngagementClaim() {
   const [searchParams] = useSearchParams()
 
   const apiBase = useMemo(() => 'https://selfauth.vercel.app', [])
-  const engagementRewards = useEngagementRewards(DEV_REWARDS_CONTRACT)
-  const APP_ADDRESS = '0x752850Cd4143137d0cdB32b0bc141fd79e7626EA'
+  const engagementRewards = useEngagementRewards(REWARDS_CONTRACT)
+  const APP_ADDRESS = '0x53eaF4CD171842d8144e45211308e5D90B4b0088'
   
   // Get inviter from URL params or use default
   const inviterFromUrl = searchParams.get('referral')

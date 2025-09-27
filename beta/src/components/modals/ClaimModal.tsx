@@ -31,9 +31,20 @@ export default function ClaimModal({ open, onOpenChange }: ClaimModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Engagement Rewards</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <img 
+              src="/images/good.png" 
+              alt="Good Dollar" 
+              className="w-6 h-6 rounded-full"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+            Claim Free $G
+          </DialogTitle>
           <DialogDescription>
-            Claim 0.5 dollars to support your favorite project
+            to vote your favorite projects
           </DialogDescription>
         </DialogHeader>
 
