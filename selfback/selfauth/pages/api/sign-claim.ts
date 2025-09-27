@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { celo } from 'viem/chains';
-import { EngagementRewardsSDK, DEV_REWARDS_CONTRACT } from '@goodsdks/engagement-sdk';
+import { EngagementRewardsSDK, REWARDS_CONTRACT } from '@goodsdks/engagement-sdk';
 
 // Basic CORS middleware (aligned with pages/api/verify.ts)
 const corsMiddleware = (req: NextApiRequest, res: NextApiResponse) => {
@@ -25,7 +25,7 @@ function getSdk(): EngagementRewardsSDK {
   if (sdk) return sdk;
 
   const appPrivateKey = process.env.APP_PRIVATE_KEY as `0x${string}` | undefined;
-  const rewardsContract = (process.env.REWARDS_CONTRACT as `0x${string}` | undefined) || (DEV_REWARDS_CONTRACT as `0x${string}`);
+  const rewardsContract = (process.env.REWARDS_CONTRACT as `0x${string}` | undefined) || (REWARDS_CONTRACT as `0x${string}`);
 
   if (!appPrivateKey) {
     throw new Error('Missing APP_PRIVATE_KEY env variable');

@@ -71,13 +71,26 @@ const EngagementRewardsCard: React.FC<EngagementRewardsCardProps> = ({ className
 
       {/* Card Content */}
       <div className="flex items-start gap-3">
+        {/* Good Dollar Logo */}
+        <div className="flex-shrink-0">
+          <img 
+            src="/images/good.png" 
+            alt="Good Dollar" 
+            className="w-12 h-12 rounded-full"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </div>
+        
         {/* Text Content */}
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Engagement Rewards
+            Claim Free $G
           </h3>
           <p className="text-sm text-gray-600 mb-4">
-            Claim 0.5 dollars to support your favorite project
+            to vote your favorite projects
           </p>
           
           {/* Action Buttons */}
