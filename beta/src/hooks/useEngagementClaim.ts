@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
-import { useEngagementRewards, DEV_REWARDS_CONTRACT, REWARDS_CONTRACT } from '@goodsdks/engagement-sdk'
+import { useEngagementRewards, REWARDS_CONTRACT } from '@goodsdks/engagement-sdk'
 import { useSearchParams } from 'react-router-dom'
 
 type ClaimStatus = 'idle' | 'connecting' | 'signing' | 'waiting_for_app' | 'claiming' | 'success' | 'error'
