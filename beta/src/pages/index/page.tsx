@@ -261,7 +261,7 @@ const HomePage = () => {
       </div>
 
       {/* Floating Engagement Rewards Card */}
-      <div className="fixed z-50 max-w-sm" style={{ bottom: '220px', right: '10%' }}>
+      <div className="fixed z-50 max-w-sm" style={{ bottom: '264px', right: '0%' }}>
         <EngagementRewardsCard />
       </div>
 

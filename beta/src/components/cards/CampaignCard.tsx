@@ -101,139 +101,77 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
       onClick={handleCardClick}
       onMouseDown={() => console.log('Campaign card mouse down, campaignId:', campaignId)}
     >
-      {/* Two-Card Folder Design on Desktop, Single Card on Mobile */}
-      <div className="relative">
-        {/* Top Card - Folder Design (Desktop) / Single Card (Mobile) */}
-        <div className="relative sm:h-48 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border-2 border-blue-300 overflow-hidden sm:group-hover:-translate-y-24 transition-transform duration-500" style={{ height: '168px' }}>
-          {/* Folder Top Tab - Hidden on Mobile */}
-          <div className="hidden sm:block absolute top-0 left-0 w-24 h-6 bg-gradient-to-r from-gray-500 to-gray-600 rounded-t-lg">
-            <div className="absolute top-0 left-0 w-20 h-4 bg-gradient-to-r from-gray-400 to-gray-500 rounded-t-lg"></div>
-          </div>
-          
-          {/* Campaign Image - Desktop only */}
+      {/* Single Card with Background Logo and Transparent Overlay */}
+      <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+        {/* Background Logo/Image */}
+        <div className="absolute inset-0">
           {logo ? (
-            <div className="hidden sm:block absolute inset-0">
-              <img 
-                src={logo} 
-                alt={title}
-                className="w-full h-full object-cover rounded-lg shadow-lg"
-                style={{ height: '200%' }}
-              />
-            </div>
+            <img 
+              src={logo} 
+              alt={title}
+              className="w-full h-full object-cover brightness-75"
+            />
           ) : (
-            <div className="hidden sm:block absolute inset-0 flex items-center justify-center">
-              <Trophy className="h-20 w-20 text-gray-400/50" />
+            <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+              <Trophy className="h-20 w-20 text-blue-400/60" />
             </div>
           )}
-          
-          {/* Folder Papers Effect - Desktop only */}
-          <div className="hidden sm:block absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-100 to-transparent group-hover:opacity-0 transition-opacity duration-500">
-            <div className="absolute bottom-2 left-4 right-4 h-0.5 bg-gray-300"></div>
-            <div className="absolute bottom-3 left-4 right-4 h-0.5 bg-gray-300"></div>
-            <div className="absolute bottom-4 left-4 right-4 h-0.5 bg-gray-300"></div>
-          </div>
-
-
-
-          {/* Gradient Overlay - Desktop only */}
-          <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-          
-          {/* Mobile: Button and Content */}
-          <div className="sm:hidden">
-            {/* Small Button in Bottom Right Corner */}
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (campaignId) {
-                  console.log('Mobile button clicked, navigating to:', getCampaignRoute(Number(campaignId)));
-                  navigate(getCampaignRoute(Number(campaignId)));
-                }
-              }}
-              className="absolute bottom-2 right-2 w-6 h-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
-            >
-              <ArrowRight className="h-3 w-3" />
-            </button>
-            
-            {/* Campaign Text Content */}
-            <div className="h-full flex flex-col p-3">
-              {/* Status Badge and Campaign Name */}
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-sm font-medium text-gray-900 line-clamp-2 flex-1">{capitalizeWords(title)}</h3>
-                {statusInfo && (
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.class}`}>
-                    {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
-                    {statusInfo.text}
-                  </span>
-                )}
-              </div>
-              
-              {/* Spacer to push description down */}
-              <div className="flex-1"></div>
-              
-              {/* Countdown Timer */}
-              {timeLeft && timeLeft !== 'Ended' && (
-                <div className="mb-2 px-2 py-1 bg-blue-500/10 text-blue-700 text-xs rounded-full text-center">
-                  <Timer className="h-3 w-3 inline mr-1" />
-                  {timeLeft}
-                </div>
-              )}
-
-              {/* Description - Configurable truncation size, aligned above button */}
-              <p className="text-gray-600 text-sm leading-relaxed mb-1">
-                {description.length > descriptionTruncateSize ? `${description.substring(0, descriptionTruncateSize)}...` : description}
-              </p>
-            </div>
-          </div>
         </div>
 
-        {/* Bottom Card - Desktop only, Square, same dimensions, stacked effect */}
-        <div className="hidden sm:block absolute top-0 w-full h-32 sm:h-56 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border-2 border-blue-300 translate-y-10 p-3 sm:p-6 group-hover:opacity-40 transition-opacity duration-500">
-          {/* Small Button in Bottom Right Corner */}
+        {/* Gradient Overlay for Better Text Readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+
+        {/* Transparent Content Overlay with White Text */}
+        <div className="absolute inset-0 p-4 flex flex-col justify-end">
+          {/* Status Badge - Top Right Corner */}
+          {statusInfo && (
+            <div className="absolute top-4 right-4">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium shadow-lg ${statusInfo.class}`}>
+                {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                {statusInfo.text}
+              </span>
+            </div>
+          )}
+
+          {/* Title - White Text */}
+          <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 pr-20 drop-shadow-lg">
+            {capitalizeWords(title)}
+          </h3>
+
+          {/* Countdown Timer - Highlighted */}
+          {timeLeft && timeLeft !== 'Ended' && (
+            <div className="mb-3 px-3 py-1 bg-blue-500/90 text-white text-xs rounded-full inline-flex items-center shadow-md">
+              <Timer className="h-3 w-3 mr-1" />
+              {timeLeft}
+            </div>
+          )}
+
+          {/* Description - White Text */}
+          <p className="text-sm text-white/90 leading-relaxed mb-3 line-clamp-2 drop-shadow-md">
+            {description.length > descriptionTruncateSize ? `${description.substring(0, descriptionTruncateSize)}...` : description}
+          </p>
+
+          {/* Action Button */}
           <button 
             onClick={(e) => {
               e.stopPropagation();
               if (campaignId) {
-                console.log('Desktop button clicked, navigating to:', getCampaignRoute(Number(campaignId)));
+                console.log('Button clicked, navigating to:', getCampaignRoute(Number(campaignId)));
                 navigate(getCampaignRoute(Number(campaignId)));
               }
             }}
-            className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
+            className="absolute bottom-4 right-4 w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-110 border border-white/30"
           >
-            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            <ArrowRight className="h-4 w-4" />
           </button>
-          
-          {/* Folder Text Content */}
-          <div className="h-full flex flex-col">
-            {/* Status Badge and Campaign Name */}
-            <div className="flex items-center gap-2 mb-2 sm:mb-4">
-              <h3 className="text-sm sm:text-lg font-bold text-gray-900 line-clamp-2 flex-1">{capitalizeWords(title)}</h3>
-              {statusInfo && (
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.class}`}>
-                  {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
-                  {statusInfo.text}
-                </span>
-              )}
-            </div>
-            
-            {/* Spacer to push description down */}
-            <div className="flex-1"></div>
-            
-            {/* Countdown Timer */}
-            {timeLeft && timeLeft !== 'Ended' && (
-              <div className="mb-2 px-2 py-1 bg-blue-500/10 text-blue-700 text-xs rounded-full text-center">
-                <Timer className="h-3 w-3 inline mr-1" />
-                {timeLeft}
-              </div>
-            )}
-            
-            {/* Description - Configurable truncation size, aligned above button */}
-            <p className="text-gray-600 text-sm leading-relaxed mb-1 sm:mb-2">
-              {description.length > descriptionTruncateSize ? `${description.substring(0, descriptionTruncateSize)}...` : description}
-            </p>
-          </div>
         </div>
+
+        {/* Subtle Highlight Effect */}
+        <div className="absolute inset-0 rounded-2xl ring-1 ring-white/20 group-hover:ring-white/40 transition-all duration-300"></div>
       </div>
 
+      {/* Highlighter Effect Below Card */}
+      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3/4 h-2 bg-gradient-to-r from-transparent via-yellow-400/60 to-transparent rounded-full blur-sm group-hover:via-yellow-400/80 transition-all duration-300"></div>
     </div>
   );
 };
