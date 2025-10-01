@@ -1121,6 +1121,43 @@ export function useDonateToPool() {
 
       const dataWithSuffix = donateData + referralTag;
 
+      // If ERC20 token (not CELO), first send approve to token contract
+      let approveTxHash: `0x${string}` | undefined;
+      if (token.toLowerCase() !== '0x0000000000000000000000000000000000000000') {
+        const erc20ApproveAbi = [
+          {
+            name: 'approve',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'spender', type: 'address' },
+              { name: 'amount', type: 'uint256' }
+            ],
+            outputs: [{ name: '', type: 'bool' }]
+          }
+        ] as const;
+        const erc20Interface = new Interface(erc20ApproveAbi as any);
+        const approveCalldata = erc20Interface.encodeFunctionData('approve', [POOLS_CONTRACT_ADDRESS, amount]);
+        const approveDataWithSuffix = approveCalldata + referralTag;
+
+        const approveTx = await sendTransactionAsync({
+          to: token,
+          data: approveDataWithSuffix as `0x${string}`,
+        });
+        if (!approveTx) {
+          throw new Error('Approval transaction failed to send');
+        }
+        approveTxHash = approveTx as unknown as `0x${string}`;
+        try {
+          await submitReferral({
+            txHash: approveTxHash,
+            chainId: celoChainId
+          });
+        } catch (referralError) {
+          console.error('Referral submission error (approve):', referralError);
+        }
+      }
+
       // Using sendTransactionAsync to support referral integration
       const tx = await sendTransactionAsync({
         to: POOLS_CONTRACT_ADDRESS,
@@ -1133,15 +1170,17 @@ export function useDonateToPool() {
       }
 
       // Submit the referral to Divvi
+      let donateTxHash: `0x${string}` | undefined;
       try {
+        donateTxHash = tx as unknown as `0x${string}`;
         await submitReferral({
-          txHash: tx as unknown as `0x${string}`,
+          txHash: donateTxHash,
           chainId: celoChainId
         });
       } catch (referralError) {
         console.error("Referral submission error:", referralError);
       }
-      return tx;
+      return { approveTxHash, donateTxHash };
     } catch (err) {
       console.error('❌ Error in donateToPool:', err)
       throw err
