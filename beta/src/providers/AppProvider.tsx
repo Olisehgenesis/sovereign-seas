@@ -51,10 +51,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             theme: "#FFFFFF",
             logo: "https://auth.privy.io/logos/privy-logo.png",
             walletChainType: "ethereum-only",
+            walletList: ['wallet_connect_qr','wallet_connect', 'metamask', 'rainbow', 'detected_ethereum_wallets'],
           },
           defaultChain: isTestnet ? celoAlfajores : celo,
           supportedChains: isTestnet ? [celoAlfajores] : [celo],
-          // walletConnectCloudProjectId: import.meta.env.VITE_WALLET_CONNECT_ID as string,
+          walletConnectCloudProjectId: import.meta.env.VITE_WALLET_CONNECT_ID as string,
         }}
       >
         <PrivyInitializationTracker>
