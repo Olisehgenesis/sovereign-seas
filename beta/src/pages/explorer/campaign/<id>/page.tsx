@@ -245,10 +245,7 @@ export default function CampaignView() {
   );
   const { donate, isPending: isDonating, error: donateError } = useDonateToPool();
 
-  // Create a Set of approved project IDs for O(1) lookup
-  const approvedProjectIds = useMemo(() => {
-    return new Set(sortedProjectIds.map(id => id.toString()));
-  }, [sortedProjectIds]);
+  
 
   // Data processing logic
   const campaignProjectsBasic = useMemo(() => {
@@ -317,7 +314,6 @@ export default function CampaignView() {
     const projects = campaignProjectsBasic.map((project) => {
       const projectIdStr = project.id?.toString();
       
-     
       
       // Get the correct participation data using project ID mapping
       const participationIndex = projectIdToParticipationIndex.get(projectIdStr);
@@ -325,8 +321,8 @@ export default function CampaignView() {
         ? participationData?.[participationIndex]?.result as [boolean, bigint, bigint] | undefined 
         : undefined;
 
-      // Get approval status from sortedProjectIds (the authoritative source)
-      const isApproved = approvedProjectIds.has(projectIdStr || '');
+      // Get approval status from participation data (authoritative source)
+      const isApproved = participation ? participation[0] === true : false;
       
       // Get vote count from participation data
       const voteCount = participation ? participation[1] : 0n;
@@ -345,7 +341,7 @@ export default function CampaignView() {
     });
 
     return projects;
-  }, [campaignProjectsBasic, participationData, projectIds, approvedProjectIds]);
+  }, [campaignProjectsBasic, participationData, projectIds]);
 
   const sortedProjects = useMemo(() => {
     // Sort all projects by vote count (descending)
@@ -968,7 +964,8 @@ export default function CampaignView() {
                     </div>
                   </div>
 
-                  {/* Campaign Details */}
+                  {/* Campaign Details */
+                  }
                   <div className="flex flex-col sm:flex-row gap-4 text-sm items-center">
                     <span className="text-black/70">
                       <Trophy className="h-4 w-4 inline mr-2 text-yellow-600" />
@@ -990,6 +987,15 @@ export default function CampaignView() {
                       </motion.button>
                     )}
                   </div>
+
+                  {/* Countdown below title, description, and details */}
+                  {!hasEnded && (
+                    <div className="mt-1 text-left">
+                      <div className="text-2xl lg:text-3xl font-extrabold text-blue-600 tracking-tight">
+                        {countdown.days}d {countdown.hours}h {countdown.minutes}m
+                      </div>
+                    </div>
+                  )}
 
                   {/* User Voting Status Section */}
                   {totalVotes && Number(formatEther(totalVotes)) > 0 && (
@@ -1345,16 +1351,7 @@ export default function CampaignView() {
 
                   </div>
 
-        {/* Countdown - Show on both mobile and desktop when campaign hasn't ended */}
-        {!hasEnded && (
-          <div className="px-4 py-2">
-              <div className="text-center">
-              <div className="text-lg font-semibold text-gray-700">
-                {countdown.days}d {countdown.hours}h {countdown.minutes}m
-                  </div>
-                  </div>
-                </div>
-        )}
+        
 
         {/* Projects Table */}
         <div className="relative z-10 pl-4 pr-0 py-2 lg:py-8 lg:px-24 pb-32 lg:pb-8">
@@ -1409,12 +1406,12 @@ export default function CampaignView() {
               <table className="w-full max-w-4xl">
                 <thead className="bg-transparent hidden lg:table-header-group">
                   <tr>
-                    <th className="px-0.5 py-2 lg:px-2 lg:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
                     <th className="px-0.5 py-2 lg:px-2 lg:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
                     <th className="px-0.5 py-2 lg:px-2 lg:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vote Participation</th>
                     <th className="px-0.5 py-2 lg:px-2 lg:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Votes</th>
                     <th className={`px-0.5 py-2 lg:px-2 lg:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${!hasEnded ? 'hidden lg:table-cell' : ''}`}>Matching</th>
                     <th className={`px-0.5 py-2 lg:px-2 lg:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${hasEnded ? 'hidden lg:table-cell' : ''}`}>Action</th>
+                    <th className="px-0.5 py-2 lg:px-2 lg:py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200/50">
@@ -1466,19 +1463,7 @@ export default function CampaignView() {
                         className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                         onClick={() => isApproved && isActive ? openVoteModal(project) : null}
                       >
-                        {/* Position */}
-                        <td className="px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                              position === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
-                              position === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-white' :
-                              position === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-800 text-white' :
-                              'bg-gray-100 text-gray-600'
-                            }`}>
-                              {position}
-            </div>
-                </div>
-                        </td>
+                        
                         
                         {/* Logo - Hidden on mobile */}
                         <td className="hidden lg:table-cell px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap">
@@ -1581,6 +1566,19 @@ export default function CampaignView() {
                   </span>
                           )}
                         </td>
+                        {/* Position on right */}
+                        <td className="px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end">
+                            <div className={`px-2 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                              position === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
+                              position === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-white' :
+                              position === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-800 text-white' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {`No ${position}`}
+                            </div>
+                          </div>
+                        </td>
                       </tr>
                     );
                   });
@@ -1609,14 +1607,7 @@ export default function CampaignView() {
                         className="hover:bg-gray-50/50 transition-colors bg-gray-100/30 cursor-pointer"
                         onClick={() => isApproved && isActive ? openVoteModal(project) : null}
                       >
-                        {/* Position - Show dash for unapproved */}
-                        <td className="px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold text-sm">
-                              -
-                            </div>
-                          </div>
-                        </td>
+                        
                         
                         {/* Logo - Hidden on mobile */}
                         <td className="hidden lg:table-cell px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap">
@@ -1726,6 +1717,14 @@ export default function CampaignView() {
                               Not Approved
                             </span>
                           )}
+                        </td>
+                        {/* Position on right for unapproved */}
+                        <td className="px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end">
+                            <div className="px-2 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-bold text-xs">
+                              {`No -`}
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     );
