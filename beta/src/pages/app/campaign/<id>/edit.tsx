@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useCampaignDetails, useUpdateCampaign, useUpdateCampaignMetadata } from '@/hooks/useCampaignMethods';
 import { useParams } from 'react-router-dom';
+import { parseIdParam } from '@/utils/hashids';
+import { useChainSwitch } from '@/hooks/useChainSwitch';
 import { 
   ArrowLeft, 
   Globe,
@@ -124,8 +126,19 @@ export default function EditCampaignDetails() {
   const params = useParams();
   const contractAddress = import.meta.env.VITE_CONTRACT_V4;
   
+  // Chain switching hook
+  const { 
+    ensureCorrectChain, 
+    isSwitching, 
+    targetChain, 
+    isOnCorrectChain, 
+    switchToCorrectChain, 
+    currentChainId
+  } = useChainSwitch();
+  
   // Get campaign ID from URL params
-  const campaignId = params?.id ? BigInt(params.id as string) : undefined;
+  const parsedId = parseIdParam(params?.id);
+  const campaignId = parsedId ? BigInt(parsedId) : undefined;
   
   // Fetch campaign details using the hook
   const { campaignDetails, isLoading: loadingDetails, error: detailsError, refetch } = useCampaignDetails(contractAddress, campaignId);
@@ -408,7 +421,9 @@ export default function EditCampaignDetails() {
     }
     setErrorMessage('');
     setSuccessMessage('');
+    
     try {
+      // Chain switching is now handled by the hooks themselves
       let logoUrl = campaign.logo;
       if (logoFile) {
         try {
@@ -535,6 +550,34 @@ export default function EditCampaignDetails() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Campaign
             </button>
+            
+            {/* Chain Status Indicator */}
+            {!isOnCorrectChain && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+                    <span className="text-yellow-800">
+                      Please switch to {targetChain.name} to edit this campaign
+                    </span>
+                  </div>
+                  <button
+                    onClick={switchToCorrectChain}
+                    disabled={isSwitching}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    {isSwitching ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Switching...
+                      </>
+                    ) : (
+                      'Switch Chain'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full mb-4">
@@ -1109,10 +1152,15 @@ export default function EditCampaignDetails() {
            <div className="mt-8 flex justify-center">
              <button
                type="submit"
-               disabled={isUpdatingCampaign || isUpdatingMetadata || !hasChanges}
+               disabled={isUpdatingCampaign || isUpdatingMetadata || !hasChanges || isSwitching}
                className="px-8 py-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold text-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center border border-purple-400/30 relative overflow-hidden"
              >
-               {isUpdatingCampaign || isUpdatingMetadata ? (
+               {isSwitching ? (
+                 <>
+                   <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                   Switching to {targetChain.name}...
+                 </>
+               ) : isUpdatingCampaign || isUpdatingMetadata ? (
                  <>
                    <Loader2 className="h-5 w-5 mr-3 animate-spin" />
                    Saving Changes...

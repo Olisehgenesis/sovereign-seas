@@ -1249,8 +1249,8 @@ export default function CampaignView() {
                                     
                                     const balance = Number(balances[index]);
                                     const formattedBalance = tokenInfo 
-                                      ? (balance / Math.pow(10, tokenInfo.decimals)).toFixed(4)
-                                      : (balance / 1e18).toFixed(4);
+                                      ? (balance / Math.pow(10, tokenInfo.decimals)).toFixed(0)
+                                      : (balance / 1e18).toFixed(0);
                                     
                                     const tokenSymbol = tokenInfo?.symbol || 'UNK';
                                     

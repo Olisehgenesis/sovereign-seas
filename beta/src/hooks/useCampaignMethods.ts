@@ -8,6 +8,7 @@ import { contractABI as abi } from '@/abi/seas4ABI';
 import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
 import { Interface } from "ethers";
 import { getCeloTokenAddress } from '@/utils/contractConfig';
+import { useChainSwitch } from './useChainSwitch';
 
 // Divvi Integration - will be generated dynamically with user address
 const CONSUMER_ADDRESS = '0x53eaF4CD171842d8144e45211308e5D90B4b0088' as const
@@ -542,6 +543,7 @@ export function useAddProjectToCampaignWithFees(
 // Hook for updating campaign
 export function useUpdateCampaign(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
+  const { ensureCorrectChain } = useChainSwitch()
 
   const updateCampaign = async ({
     campaignId,
@@ -567,6 +569,9 @@ export function useUpdateCampaign(contractAddress: Address) {
     payoutToken: Address
   }) => {
     try {
+      // Ensure we're on the correct chain before making the transaction
+      await ensureCorrectChain()
+      
       await writeContract({
         address: contractAddress,
         abi,
@@ -602,6 +607,7 @@ export function useUpdateCampaign(contractAddress: Address) {
 // Hook for updating campaign metadata
 export function useUpdateCampaignMetadata(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
+  const { ensureCorrectChain } = useChainSwitch()
 
   const updateCampaignMetadata = async ({
     campaignId,
@@ -613,6 +619,9 @@ export function useUpdateCampaignMetadata(contractAddress: Address) {
     additionalInfo: string
   }) => {
     try {
+      // Ensure we're on the correct chain before making the transaction
+      await ensureCorrectChain()
+      
       await writeContract({
         address: contractAddress,
         abi,
@@ -637,6 +646,7 @@ export function useUpdateCampaignMetadata(contractAddress: Address) {
 // Hook for updating custom distribution data
 export function useUpdateCustomDistributionData(contractAddress: Address) {
   const { writeContract, isPending, isError, error, isSuccess } = useWriteContract()
+  const { ensureCorrectChain } = useChainSwitch()
 
   const updateCustomDistributionData = async ({
     campaignId,
@@ -646,6 +656,9 @@ export function useUpdateCustomDistributionData(contractAddress: Address) {
     customDistributionData: string
   }) => {
     try {
+      // Ensure we're on the correct chain before making the transaction
+      await ensureCorrectChain()
+      
       await writeContract({
         address: contractAddress,
         abi,

@@ -1099,7 +1099,7 @@ export default function CampaignManagePage() {
                               const dec = tokenInfo?.decimals ?? 18;
                               const sym = tokenInfo?.symbol ?? 'TOK';
                               const val = Number(balances[i]) / Math.pow(10, dec);
-                              return `${val.toFixed(2)} ${sym}`;
+                              return `${val.toFixed(0)} ${sym}`;
                             });
                             const extra = tokens.length > 3 ? ` +${tokens.length - 3} more` : '';
                             return `${items.join(', ')}${extra}`;
