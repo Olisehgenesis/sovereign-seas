@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useConnect, useAccount, injected } from 'wagmi';
+import { useConnect, injected } from 'wagmi';
 import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User, Anchor } from 'lucide-react';
-import { usePrivy, useLogin } from '@privy-io/react-auth';
+import { usePrivy, useConnectOrCreateWallet } from '@privy-io/react-auth';
+import { useActiveWallet } from '@/hooks/useActiveWallet';
 import WalletModal from '@/components/modals/walletModal';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -40,7 +41,7 @@ const createOptions = [
 export default function Header() {
   const [hideConnectBtn, setHideConnectBtn] = useState(false);
   const { connect } = useConnect();
-  const { address } = useAccount();
+  const { address, walletsReady } = useActiveWallet();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -49,7 +50,14 @@ export default function Header() {
   
   // Use Privy hooks for authentication
   const { authenticated, logout, ready } = usePrivy();
-  const { login } = useLogin();
+  const { connectOrCreateWallet } = useConnectOrCreateWallet({
+    onSuccess: async ({ wallet }) => {
+      console.log('[Header] connectOrCreateWallet success. Wallet:', wallet?.address);
+    },
+    onError: async (error) => {
+      console.error('[Header] connectOrCreateWallet error:', error);
+    }
+  });
 
   // Handle scroll effect - header reduces size when scrolling
   useEffect(() => {
@@ -68,20 +76,28 @@ export default function Header() {
     }
   }, [connect]);
   
-  // Handle wallet connection with Privy login
+  // Handle wallet connection with Privy connectOrCreateWallet
   const handleLogin = () => {
-    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isMiniPay) {
+    if (authenticated) {
+      console.log('[Header] Already authenticated. walletsReady:', walletsReady, 'address:', address);
+      if (walletsReady && address) {
+        openWalletModal();
+        return;
+      }
+      console.log('[Header] No connected wallets yet. Triggering connectOrCreateWallet.');
+      connectOrCreateWallet();
+      return;
+    }
+    if (typeof window !== 'undefined' && (window as any).ethereum && (window as any).ethereum.isMiniPay) {
       connect({ connector: injected({ target: 'metaMask' }) });
     } else {
-      login({
-        loginMethods: ['email', 'wallet', 'google'],
-        walletChainType: 'ethereum-only'
-      });
+      connectOrCreateWallet();
     }
   };
 
-  // Function to open wallet modal
+  // Function to open wallet modal (requires connected wallets to be ready)
   const openWalletModal = () => {
+    if (!walletsReady) return;
     setWalletModalOpen(true);
   };
 
@@ -94,6 +110,17 @@ export default function Header() {
   const abbreviateAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
+  
+  // Diagnostics
+  useEffect(() => {
+    console.log('[Header] privy.ready:', ready, 'authenticated:', authenticated);
+  }, [ready, authenticated]);
+  useEffect(() => {
+    console.log('[Header] walletsReady:', walletsReady, 'address:', address);
+  }, [walletsReady, address]);
+
+  // Note: When authenticated but with no connected wallets, we should use a link helper.
+  // We avoid auto-invoking any flow here to prevent errors when user is already authenticated.
   
   // Close mobile menu when route changes
   useEffect(() => {

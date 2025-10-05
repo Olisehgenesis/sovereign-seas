@@ -6,7 +6,7 @@ import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { useEffect } from 'react';
 // import Layout from '../components/Layout';
 import { config } from './config';
-import { celo } from 'wagmi/chains';
+import { celo, celoAlfajores } from 'wagmi/chains';
 
 const appId = import.meta.env.VITE_PRIVY_APP_ID as string;
 const isTestnet = import.meta.env.VITE_ENV === 'testnet';
@@ -53,11 +53,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             walletChainType: "ethereum-only",
             walletList: ['wallet_connect_qr','wallet_connect', 'metamask', 'rainbow', 'detected_ethereum_wallets'],
           },
-          embeddedWallets: {
-            createOnLogin: 'users-without-wallets'
-          },
-          defaultChain: isTestnet ? celo : celo,
-          supportedChains: isTestnet ? [celo] : [celo],
+          defaultChain: isTestnet ? celoAlfajores : celo,
+          supportedChains: isTestnet ? [celoAlfajores] : [celo],
           walletConnectCloudProjectId: import.meta.env.VITE_WALLET_CONNECT_ID as string,
         }}
       >

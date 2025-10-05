@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjectRoute } from '@/utils/hashids';
-import { useAccount } from 'wagmi';
+import { useActiveWallet } from '@/hooks/useActiveWallet';
 import { 
   ArrowLeft, 
   
@@ -163,7 +163,7 @@ type ArrayFields = 'tags' | 'techStack' | 'smartContracts' | 'keyFeatures' | 'us
 
 export default function CreateProject() {
   const navigate = useNavigate();
-  const { address, isConnected } = useAccount();
+  const { address, walletsReady } = useActiveWallet();
   const publicClient = usePublicClient();
   const { ensureCorrectChain, targetChain } = useChainSwitch();
   const [isMounted, setIsMounted] = useState(false);
@@ -497,7 +497,7 @@ export default function CreateProject() {
     e.preventDefault();
     setErrorMessage('');
     
-    if (!isConnected) {
+    if (!walletsReady || !address) {
       setErrorMessage('Please connect your wallet to create a project');
       return;
     }
@@ -1889,9 +1889,9 @@ export default function CreateProject() {
            {currentCardIndex === cardSections.length - 1 && (
              <div className="mt-6 space-y-4">
                <div className="flex justify-center pt-4">
-                 <Button
+               <Button
                    type="submit"
-                   disabled={loading || !isConnected}
+                 disabled={loading || !walletsReady || !address}
                    size="lg"
                    variant="default"
                    className="px-10 py-3 font-bold text-base hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none group relative overflow-hidden"
@@ -1911,7 +1911,7 @@ export default function CreateProject() {
                  </Button>
                </div>
                
-               {!isConnected && (
+              {(!walletsReady || !address) && (
                  <p className="mt-3 text-amber-600 text-center flex items-center justify-center text-sm">
                    <AlertTriangle className="h-4 w-4 mr-2" />
                    Please connect your wallet to create a project

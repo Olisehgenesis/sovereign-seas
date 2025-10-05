@@ -31,7 +31,8 @@ import {
 import { uploadToIPFS } from '@/utils/imageUtils';
 import { type Address } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
-import { useAccount, useBalance, usePublicClient } from 'wagmi';
+import { useBalance, usePublicClient } from 'wagmi';
+import { useActiveWallet } from '@/hooks/useActiveWallet';
 import { contractABI as abi } from '@/abi/seas4ABI';
 import { getMainContractAddress, getEnvironmentName, getCeloTokenAddress } from '@/utils/contractConfig';
 import { useCreateCampaignWithFees } from '@/hooks/useCampaignMethods';
@@ -143,7 +144,7 @@ export default function CreateCampaign() {
   }
   
   // Wallet and contract hooks
-  const { address, isConnected } = useAccount();
+  const { address, walletsReady } = useActiveWallet();
   const { authenticated, ready } = usePrivy();
   const { 
     ensureCorrectChain, 
@@ -178,14 +179,14 @@ export default function CreateCampaign() {
 
   // Show manual switch option if user is on wrong chain
   useEffect(() => {
-    if (isConnected && !isOnCorrectChain && !isChainSwitching) {
+    if (address && !isOnCorrectChain && !isChainSwitching) {
       setShowChainSwitch(true);
     }
-  }, [isConnected, isOnCorrectChain, isChainSwitching]);
+  }, [address, isOnCorrectChain, isChainSwitching]);
   
   // Get user's CELO balance
   const { data: celoBalance } = useBalance({
-    address,
+    address: address as any,
     token: celoToken as Address,
   });
   
@@ -555,8 +556,8 @@ export default function CreateCampaign() {
       return;
     }
 
-    if (!authenticated || !isConnected || !address) {
-      console.log('not authenticated', authenticated, isConnected, address);
+    if (!authenticated || !walletsReady || !address) {
+      console.log('not authenticated', authenticated, walletsReady, address);
       setErrorMessage('Please connect your wallet to create a campaign');
       return;
     }
@@ -918,7 +919,7 @@ export default function CreateCampaign() {
           )}
 
           {/* Chain Status and Manual Switch */}
-          {isConnected && (
+                    {address && (
             <div className="mb-6 bg-blue-50 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
