@@ -50,7 +50,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             accentColor: "#6A6FF5",
             theme: "#FFFFFF",
             logo: "https://auth.privy.io/logos/privy-logo.png",
-            walletChainType: "ethereum-only",
+            walletChainType: "ethereum-and-solana",
             walletList: ['wallet_connect_qr','wallet_connect', 'metamask', 'rainbow', 'detected_ethereum_wallets'],
           },
           embeddedWallets: {
@@ -73,11 +73,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 // Component to track Privy initialization
 function PrivyInitializationTracker({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
 
   useEffect(() => {
-    console.log('Privy State Changed:', { ready, authenticated });
-  }, [ready, authenticated]);
+    console.log('Privy State Changed:', { 
+      ready, 
+      authenticated, 
+      hasUser: !!user,
+      userId: user?.id,
+      wallets: user?.linkedAccounts?.filter(acc => 'address' in acc).map(acc => (acc as any).address) || []
+    });
+  }, [ready, authenticated, user]);
 
   return <>{children}</>;
 }

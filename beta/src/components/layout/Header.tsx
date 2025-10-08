@@ -78,6 +78,14 @@ export default function Header() {
   
   // Handle wallet connection with Privy connectOrCreateWallet
   const handleLogin = () => {
+    console.log('[Header] handleLogin called. State:', {
+      authenticated,
+      walletsReady,
+      address,
+      ready,
+      hideConnectBtn
+    });
+    
     if (authenticated) {
       console.log('[Header] Already authenticated. walletsReady:', walletsReady, 'address:', address);
       if (walletsReady && address) {
@@ -88,9 +96,13 @@ export default function Header() {
       connectOrCreateWallet();
       return;
     }
+    
+    console.log('[Header] Not authenticated. Checking for MiniPay...');
     if (typeof window !== 'undefined' && (window as any).ethereum && (window as any).ethereum.isMiniPay) {
+      console.log('[Header] MiniPay detected, using injected connector');
       connect({ connector: injected({ target: 'metaMask' }) });
     } else {
+      console.log('[Header] Using Privy connectOrCreateWallet');
       connectOrCreateWallet();
     }
   };
@@ -260,7 +272,10 @@ export default function Header() {
                 </Button>
               ) : !hideConnectBtn && (
                 <Button 
-                  onClick={handleLogin}
+                  onClick={() => {
+                    console.log('[Header] Connect Wallet button clicked');
+                    handleLogin();
+                  }}
                   disabled={!ready} 
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-3 sm:px-6 py-1.5 sm:py-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base"
                 >
@@ -397,6 +412,7 @@ export default function Header() {
                         <div className="pt-4 border-t border-gray-100">
                           <Button
                             onClick={() => {
+                              console.log('[Header] Mobile Connect Wallet button clicked');
                               handleLogin();
                               setMobileMenuOpen(false);
                             }}

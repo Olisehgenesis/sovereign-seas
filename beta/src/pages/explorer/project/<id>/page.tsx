@@ -1408,7 +1408,10 @@ export default function ProjectView() {
                         Project Management
                       </h4>
                       <div className="space-y-3">
-                        <button className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors">
+                        <button 
+                          onClick={() => navigate(`/app/project/edit/${id}`)}
+                          className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors"
+                        >
                           <Edit className="h-4 w-4" />
                           Edit Project Details
                         </button>
