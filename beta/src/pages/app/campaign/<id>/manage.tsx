@@ -78,6 +78,7 @@ import {
 import { formatEther } from 'viem';
 import { parseIdParam } from '@/utils/hashids';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
+import ManualDistributeModal from '@/components/modals/ManualDistributeModal';
 
 // Individual ProjectVotes component for accurate vote tracking
 function ProjectVotes({ 
@@ -162,6 +163,7 @@ export default function CampaignManagePage() {
   const [showRemoveAdminModal, setShowRemoveAdminModal] = useState(false);
   const [showUpdateMetadataModal, setShowUpdateMetadataModal] = useState(false);
   const [showCustomDistributionModal, setShowCustomDistributionModal] = useState(false);
+  const [showManualDistributeModal, setShowManualDistributeModal] = useState(false);
   const [newAdminAddress, setNewAdminAddress] = useState('');
   const [removeAdminAddress, setRemoveAdminAddress] = useState('');
   const [mainInfo, setMainInfo] = useState('');
@@ -1559,7 +1561,7 @@ export default function CampaignManagePage() {
               {hasPool && (
                 <div className="bg-white rounded-xl border border-slate-200 p-6">
                   <h4 className="text-lg font-semibold text-slate-800 mb-6">Pool Distribution</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                       onClick={() => {
                         distributePool(campaignPoolId, false);
@@ -1589,9 +1591,18 @@ export default function CampaignManagePage() {
                       )}
                       <span>{isDistributingPool ? 'Distributing...' : 'Distribute in Sovereign Seas'}</span>
                     </button>
+
+                    <button
+                      onClick={() => setShowManualDistributeModal(true)}
+                      disabled={isDistributingPool}
+                      className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Distribute Manual</span>
+                    </button>
                   </div>
                   <p className="text-sm text-slate-600 mt-4">
-                    Distribute pool funds to approved projects. Choose regular distribution or distribute through Sovereign Seas for enhanced tracking.
+                    Distribute pool funds to approved projects. Choose regular distribution, distribute through Sovereign Seas for enhanced tracking, or manually configure distributions by token and project.
                   </p>
                 </div>
               )}
@@ -3358,6 +3369,17 @@ export default function CampaignManagePage() {
              </div>
            </div>
          </div>
+       )}
+
+       {/* Manual Distribute Modal */}
+       {showManualDistributeModal && hasPool && (
+         <ManualDistributeModal
+           isOpen={showManualDistributeModal}
+           onClose={() => setShowManualDistributeModal(false)}
+           poolId={campaignPoolId}
+           campaignId={campaignId}
+           projectIds={campaignProjects.map(p => p.project.id)}
+         />
        )}
      </div>
    );
