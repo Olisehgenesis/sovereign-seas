@@ -1,0 +1,18 @@
+{
+  "name": "@sovads/sdk",
+  "version": "1.0.0",
+  "description": "SovAds SDK for publisher integration",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["sovads", "advertising", "sdk", "crypto"],
+  "author": "SovAds Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

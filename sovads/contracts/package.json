@@ -1,0 +1,47 @@
+{
+  "name": "sovads-contracts",
+  "version": "1.0.0",
+  "description": "SovAds Smart Contracts - Decentralized Ad Network",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:alfajores": "hardhat run scripts/deploy.ts --network alfajores",
+    "deploy:base": "hardhat run scripts/deploy.ts --network base",
+    "add-token": "hardhat run scripts/add-payment-token.ts --network alfajores",
+    "verify": "hardhat verify",
+    "coverage": "hardhat coverage"
+  },
+  "keywords": [
+    "blockchain",
+    "advertising",
+    "defi",
+    "celo",
+    "base",
+    "solidity"
+  ],
+  "author": "SovAds Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.0",
+    "@nomiclabs/hardhat-etherscan": "^3.1.0",
+    "@openzeppelin/contracts": "^4.9.0",
+    "@typechain/ethers-v5": "^10.2.0",
+    "@typechain/hardhat": "^6.1.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^10.0.0",
+    "chai": "^4.3.0",
+    "ethers": "^5.8.0",
+    "hardhat": "^2.19.0",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solidity-coverage": "^0.8.0",
+    "ts-node": "^10.9.0",
+    "typechain": "^8.3.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.51.0",
+    "dotenv": "^16.0.0"
+  },
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
+}

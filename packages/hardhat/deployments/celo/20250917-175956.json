@@ -1,9 +1,0 @@
-{
-  "network": "celo",
-  "deployer": "0x53eaF4CD171842d8144e45211308e5D90B4b0088",
-  "timestamp": "2025-09-17T17:59:56.553Z",
-  "contracts": {
-    "seasPrizePool": "0x080c99F069148a87e8e655372e460bFEa9A7BBB3",
-    "sovereignSeasV4": "0x0cc096b1cc568a22c1f02dab769881d1afe6161a"
-  }
-}

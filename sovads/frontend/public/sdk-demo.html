@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SovAds SDK Demo - Modular Components</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #000;
+            color: #fff;
+        }
+        
+        .demo-section {
+            margin: 40px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #111;
+        }
+        
+        .ad-container {
+            min-height: 200px;
+            border: 2px dashed #666;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #222;
+            margin: 20px 0;
+        }
+        
+        .ad-container:empty::before {
+            content: "Ad will appear here";
+            color: #666;
+        }
+        
+        button {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #444;
+        }
+        
+        .code {
+            background-color: #222;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            border: 1px solid #333;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        .sidebar {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+        
+        .main-content {
+            background: #111;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .sidebar-content {
+            background: #111;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .fira-code {
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>SovAds SDK Demo - Modular Components</h1>
+    
+    <div class="demo-section">
+        <h2>🚀 Quick Start</h2>
+        <div class="code">
+// 1. Initialize SovAds (site ID auto-detected)
+const sovads = new SovAds({
+    debug: true
+});
+
+// 2. Create components
+const banner = new Banner(sovads, 'banner-container');
+const popup = new Popup(sovads);
+const sidebar = new Sidebar(sovads, 'sidebar-container');
+
+// 3. Render ads
+await banner.render();
+await sidebar.render();
+await popup.show(); // Shows after 3 seconds
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>📱 Banner Ad</h2>
+        <div id="banner-container" class="ad-container"></div>
+        <button onclick="loadBanner()">Load Banner</button>
+        <button onclick="loadBannerWithAdvertiser()">Load Banner (Specific Advertiser)</button>
+    </div>
+
+    <div class="demo-section">
+        <h2>📄 Sidebar Layout</h2>
+        <div class="sidebar">
+            <div class="main-content">
+                <h3>Main Content</h3>
+                <p>This is your main website content. The sidebar will show ads alongside your content.</p>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            </div>
+            <div class="sidebar-content">
+                <h3>Sidebar</h3>
+                <div id="sidebar-container" class="ad-container" style="min-height: 300px;"></div>
+                <button onclick="loadSidebar()">Load Sidebar Ad</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>💬 Popup Ad</h2>
+        <button onclick="showPopup()">Show Popup Ad</button>
+        <button onclick="showPopupWithDelay()">Show Popup (5s delay)</button>
+        <p>Popup ads appear as overlays and auto-close after 10 seconds.</p>
+    </div>
+
+    <div class="demo-section">
+        <h2>🎯 Advertiser Targeting</h2>
+        <div class="code">
+// Target specific advertiser
+const consumerId = '0x1234567890abcdef...';
+
+await banner.render(consumerId);
+await popup.show(consumerId);
+await sidebar.render(consumerId);
+        </div>
+        <input type="text" id="consumerId" placeholder="Enter consumer ID" style="width: 100%; padding: 10px; margin: 10px 0; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px;">
+        <button onclick="loadWithConsumer()">Load Ad with Consumer ID</button>
+    </div>
+
+    <div class="demo-section">
+        <h2>📋 Integration Code</h2>
+        <div class="code">
+&lt;!-- Add to your website's &lt;head&gt; --&gt;
+&lt;script src="https://api.sovads.com/sdk.js"&gt;&lt;/script&gt;
+
+&lt;!-- Banner Ad --&gt;
+&lt;div id="banner-ad"&gt;&lt;/div&gt;
+
+&lt;!-- Sidebar Ad --&gt;
+&lt;div id="sidebar-ad"&gt;&lt;/div&gt;
+
+&lt;script&gt;
+// Initialize SovAds SDK (site ID auto-detected)
+const sovads = new SovAds({
+    debug: true
+});
+
+// Create components
+const banner = new Banner(sovads, 'banner-ad');
+const sidebar = new Sidebar(sovads, 'sidebar-ad');
+const popup = new Popup(sovads);
+
+// Render ads
+banner.render();
+sidebar.render();
+popup.show(); // Shows popup after 3 seconds
+&lt;/script&gt;
+        </div>
+    </div>
+
+    <script>
+        // Mock SovAds SDK for demo
+        class MockSovAds {
+            constructor(config) {
+                this.config = config;
+                console.log('SovAds initialized:', config);
+            }
+            
+            async loadAd(consumerId) {
+                // Simulate API call
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        const ad = {
+                            id: `ad_${Date.now()}`,
+                            campaignId: `camp_${Math.random().toString(36).substr(2, 9)}`,
+                            bannerUrl: 'https://via.placeholder.com/728x90/333/fff?text=SovAds+Ad',
+                            targetUrl: 'https://example.com/advertiser-landing',
+                            description: 'A sample ad from SovAds',
+                            consumerId: consumerId || 'default'
+                        };
+                        resolve(ad);
+                    }, 500);
+                });
+            }
+            
+            trackEvent(type, adId, campaignId) {
+                console.log(`Tracked ${type} event:`, { adId, campaignId });
+            }
+        }
+
+        class MockBanner {
+            constructor(sovads, containerId) {
+                this.sovads = sovads;
+                this.containerId = containerId;
+            }
+            
+            async render(consumerId) {
+                const container = document.getElementById(this.containerId);
+                if (!container) return;
+                
+                const ad = await this.sovads.loadAd(consumerId);
+                if (!ad) {
+                    container.innerHTML = '<div style="color: #666;">No ads available</div>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <div style="
+                        background: linear-gradient(135deg, #1a1a1a, #333);
+                        border: 1px solid #555;
+                        border-radius: 8px;
+                        padding: 20px;
+                        text-align: center;
+                        color: #fff;
+                        cursor: pointer;
+                        transition: transform 0.2s ease;
+                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        <h3 style="margin: 0 0 10px 0;">🚀 SovAds Banner</h3>
+                        <p style="margin: 0; color: #ccc;">Click to visit advertiser</p>
+                        <small style="color: #666;">Consumer: ${ad.consumerId}</small>
+                    </div>
+                `;
+                
+                container.addEventListener('click', () => {
+                    this.sovads.trackEvent('CLICK', ad.id, ad.campaignId);
+                    alert('This would redirect to advertiser URL');
+                });
+                
+                this.sovads.trackEvent('IMPRESSION', ad.id, ad.campaignId);
+            }
+        }
+
+        class MockSidebar {
+            constructor(sovads, containerId) {
+                this.sovads = sovads;
+                this.containerId = containerId;
+            }
+            
+            async render(consumerId) {
+                const container = document.getElementById(this.containerId);
+                if (!container) return;
+                
+                const ad = await this.sovads.loadAd(consumerId);
+                if (!ad) {
+                    container.innerHTML = '<div style="color: #666;">No ads available</div>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <div style="
+                        background: #f8f9fa;
+                        border: 1px solid #e9ecef;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-bottom: 15px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        color: #333;
+                    " onmouseover="this.style.background='#e9ecef'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#f8f9fa'; this.style.transform='translateY(0)'">
+                        <h4 style="margin: 0 0 10px 0;">📊 SovAds Sidebar</h4>
+                        <p style="margin: 0; font-size: 14px;">Targeted ad content</p>
+                        <small style="color: #666;">Consumer: ${ad.consumerId}</small>
+                    </div>
+                `;
+                
+                container.addEventListener('click', () => {
+                    this.sovads.trackEvent('CLICK', ad.id, ad.campaignId);
+                    alert('This would redirect to advertiser URL');
+                });
+                
+                this.sovads.trackEvent('IMPRESSION', ad.id, ad.campaignId);
+            }
+        }
+
+        class MockPopup {
+            constructor(sovads) {
+                this.sovads = sovads;
+            }
+            
+            async show(consumerId, delay = 3000) {
+                const ad = await this.sovads.loadAd(consumerId);
+                if (!ad) {
+                    console.log('No popup ad available');
+                    return;
+                }
+                
+                setTimeout(() => {
+                    this.renderPopup(ad);
+                }, delay);
+            }
+            
+            renderPopup(ad) {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                
+                const popup = document.createElement('div');
+                popup.style.cssText = `
+                    background: white;
+                    border-radius: 12px;
+                    padding: 20px;
+                    max-width: 400px;
+                    position: relative;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+                    color: #333;
+                `;
+                
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '×';
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    right: 15px;
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #666;
+                `;
+                
+                closeBtn.addEventListener('click', () => {
+                    overlay.remove();
+                });
+                
+                popup.innerHTML = `
+                    <h3 style="margin: 0 0 15px 0;">💬 SovAds Popup</h3>
+                    <p style="margin: 0 0 10px 0;">This is a popup ad!</p>
+                    <small style="color: #666;">Advertiser: ${ad.advertiserPublicKey}</small>
+                `;
+                
+                popup.addEventListener('click', () => {
+                    this.sovads.trackEvent('CLICK', ad.id, ad.campaignId);
+                    alert('This would redirect to advertiser URL');
+                    overlay.remove();
+                });
+                
+                popup.appendChild(closeBtn);
+                overlay.appendChild(popup);
+                document.body.appendChild(overlay);
+                
+                this.sovads.trackEvent('IMPRESSION', ad.id, ad.campaignId);
+                
+                // Auto close after 10 seconds
+                setTimeout(() => {
+                    overlay.remove();
+                }, 10000);
+            }
+        }
+
+        // Initialize SDK (site ID auto-detected)
+        const sovads = new MockSovAds({
+            debug: true
+        });
+
+        const banner = new MockBanner(sovads, 'banner-container');
+        const sidebar = new MockSidebar(sovads, 'sidebar-container');
+        const popup = new MockPopup(sovads);
+
+        // Demo functions
+        function loadBanner() {
+            banner.render();
+        }
+
+        function loadBannerWithAdvertiser() {
+            banner.render('0x1234567890abcdef');
+        }
+
+        function loadSidebar() {
+            sidebar.render();
+        }
+
+        function showPopup() {
+            popup.show();
+        }
+
+        function showPopupWithDelay() {
+            popup.show(null, 5000);
+        }
+
+        function loadWithConsumer() {
+            const consumerId = document.getElementById('consumerId').value;
+            if (consumerId) {
+                banner.render(consumerId);
+                sidebar.render(consumerId);
+            } else {
+                alert('Please enter a consumer ID');
+            }
+        }
+
+        // Load initial ads
+        loadBanner();
+        loadSidebar();
+    </script>
+</body>
+</html>

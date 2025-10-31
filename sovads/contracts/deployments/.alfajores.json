@@ -1,0 +1,14 @@
+{
+    "network": "unknown",
+    "chainId": 44787,
+    "contracts": {
+      "SovAdsManager": {
+        "address": "0x826327cB87e9c06eDc6aAFB1433bB48918174297",
+        "deployedAt": "2025-10-20T05:53:26.446Z",
+        "supportedTokens": [
+          "0x874069fa1eb16d44d622f2e0ca25eea172369bc1",
+          "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B"
+        ]
+      }
+    }
+  }
