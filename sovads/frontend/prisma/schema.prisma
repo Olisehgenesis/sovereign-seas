@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Advertiser {
+  id        String   @id @default(cuid())
+  wallet    String   @unique
+  name      String?
+  email     String?
+  company   String?
+  subscriptionPlan String? // basic, premium, enterprise
+  subscriptionActive Boolean @default(false)
+  subscriptionDate DateTime?
+  totalSpent Decimal @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns Campaign[]
+
+  @@map("advertisers")
+}
+
+model Publisher {
+  id          String   @id @default(cuid())
+  wallet      String   @unique
+  domain      String
+  verified    Boolean  @default(false)
+  totalEarned Decimal  @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events Event[]
+
+  @@map("publishers")
+}
+
+model Campaign {
+  id           String   @id @default(cuid())
+  advertiserId String
+  advertiser   Advertiser @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
+  
+  name         String
+  description  String?
+  bannerUrl    String
+  targetUrl    String
+  budget        Decimal
+  spent         Decimal  @default(0)
+  cpc          Decimal  // Cost per click
+  active        Boolean  @default(true)
+  metadataURI   String?  // IPFS URI for additional metadata
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  events Event[]
+
+  @@map("campaigns")
+}
+
+model Event {
+  id         String   @id @default(cuid())
+  type       EventType
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  publisherId String
+  publisher  Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  
+  siteId     String
+  adId       String
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+  
+  // For fraud detection
+  fingerprint String?
+  verified    Boolean @default(false)
+  
+  @@map("events")
+}
+
+model AnalyticsHash {
+  id        String   @id @default(cuid())
+  date      DateTime
+  hash      String   @unique
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+  @@map("analytics_hashes")
+}
+
+enum EventType {
+  IMPRESSION
+  CLICK
+}
+
+model Asset {
+  id          String   @id @default(cuid())
+  filename    String?
+  contentType String
+  dataBase64  String   // base64-encoded image data
+  createdAt   DateTime @default(now())
+
+  @@map("assets")
+}
