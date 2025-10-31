@@ -1305,6 +1305,6 @@ const sovAdsManagerAbi = [
     }
   ]
 
-const address = process.env.SOVADS_MANAGER_ADDRESS || '0x826327cB87e9c06eDc6aAFB1433bB48918174297'
+const address = process.env.SOVADS_MANAGER_ADDRESS || '0x3eCE3a48818efF703204eC9B60f00d476923f5B5'
 
 export { sovAdsManagerAbi, address }

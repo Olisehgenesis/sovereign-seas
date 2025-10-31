@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCollections } from '@/lib/db'
+import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,23 +11,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const { advertisers } = await getCollections()
-    let advertiser = await advertisers.findOne({ wallet })
+    let advertiser = await prisma.advertiser.findUnique({
+      where: { wallet }
+    })
 
     if (advertiser) {
       // Update subscription plan
-      await advertisers.updateOne(
-        { wallet },
-        { $set: {
+      advertiser = await prisma.advertiser.update({
+        where: { wallet },
+        data: {
           email,
           company,
           subscriptionPlan: plan,
           subscriptionActive: true,
           subscriptionDate: new Date(),
-          updatedAt: new Date(),
-        } }
-      )
-      advertiser = await advertisers.findOne({ wallet })
+        }
+      })
       return NextResponse.json({ 
         message: 'Subscription updated successfully', 
         advertiser 
@@ -35,19 +34,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new advertiser subscription
-    const doc = {
-      wallet,
-      email,
-      company,
-      subscriptionPlan: plan,
-      subscriptionActive: true,
-      subscriptionDate: new Date(),
-      totalSpent: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    await advertisers.insertOne(doc as any)
-    advertiser = await advertisers.findOne({ wallet })
+    advertiser = await prisma.advertiser.create({
+      data: {
+        wallet,
+        email,
+        company,
+        subscriptionPlan: plan,
+        subscriptionActive: true,
+        subscriptionDate: new Date(),
+        totalSpent: 0,
+      }
+    })
 
     return NextResponse.json({ 
       message: 'Subscription created successfully', 
@@ -72,8 +69,9 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const { advertisers } = await getCollections()
-    const advertiser = await advertisers.findOne({ wallet })
+    const advertiser = await prisma.advertiser.findUnique({
+      where: { wallet }
+    })
 
     if (!advertiser) {
       return NextResponse.json({ 

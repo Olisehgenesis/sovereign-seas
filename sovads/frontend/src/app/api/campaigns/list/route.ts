@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCollections } from '@/lib/db'
+import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,43 +10,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing wallet parameter' }, { status: 400 })
     }
 
-    const { advertisers, campaigns } = await getCollections()
-    const advertiser = await advertisers.findOne({ wallet })
+    const advertiser = await prisma.advertiser.findUnique({
+      where: { wallet },
+      include: {
+        campaigns: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            bannerUrl: true,
+            targetUrl: true,
+            budget: true,
+            spent: true,
+            cpc: true,
+            active: true,
+            tokenAddress: true,
+          }
+        }
+      }
+    })
 
     if (!advertiser) {
       return NextResponse.json({ campaigns: [] }, { status: 200 })
     }
 
-    const docs = await campaigns
-      .find({ advertiserId: advertiser._id })
-      .sort({ createdAt: -1 })
-      .project({
-        name: 1,
-        description: 1,
-        bannerUrl: 1,
-        targetUrl: 1,
-        budget: 1,
-        spent: 1,
-        cpc: 1,
-        active: 1,
-        tokenAddress: 1,
-      })
-      .toArray()
-
-    const shaped = docs.map((c: any) => ({
-      id: c._id.toString(),
+    const campaigns = advertiser.campaigns.map(c => ({
+      id: c.id,
       name: c.name,
       description: c.description,
       bannerUrl: c.bannerUrl,
       targetUrl: c.targetUrl,
       budget: Number(c.budget),
-      spent: Number(c.spent ?? 0),
+      spent: Number(c.spent),
       cpc: Number(c.cpc),
       active: c.active,
       tokenAddress: c.tokenAddress || undefined,
     }))
 
-    return NextResponse.json({ campaigns: shaped }, { status: 200 })
+    return NextResponse.json({ campaigns }, { status: 200 })
   } catch (error) {
     console.error('List campaigns error:', error)
     return NextResponse.json({ error: 'Failed to list campaigns' }, { status: 500 })

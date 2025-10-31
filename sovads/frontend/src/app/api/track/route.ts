@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma, redis } from '@/lib/db'
+import { prisma } from '@/lib/db'
 import { EventType } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
@@ -36,20 +36,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campaign not found or inactive' }, { status: 404 })
     }
 
-    // Check for duplicate events (fraud prevention)
-    const eventKey = `event:${type}:${campaignId}:${adId}:${siteId}:${fingerprint}`
-    const existingEvent = await redis.get(eventKey)
+    // Check for duplicate events (fraud prevention) - within last hour
+    const oneHourAgo = new Date(Date.now() - 3600 * 1000)
+    const existingEvent = await prisma.event.findFirst({
+      where: {
+        type: type as EventType,
+        campaignId,
+        adId,
+        siteId,
+        fingerprint: fingerprint || null,
+        timestamp: {
+          gte: oneHourAgo
+        }
+      }
+    })
     
     if (existingEvent) {
       return NextResponse.json({ error: 'Duplicate event detected' }, { status: 409 })
     }
 
-    // Rate limiting per campaign
-    const rateLimitKey = `rate_limit:${type}:${campaignId}:${siteId}`
-    const rateLimitCount = await redis.incr(rateLimitKey)
-    await redis.expire(rateLimitKey, 3600) // 1 hour
+    // Rate limiting per campaign - check events in last hour
+    const recentEvents = await prisma.event.count({
+      where: {
+        type: type as EventType,
+        campaignId,
+        siteId,
+        timestamp: {
+          gte: oneHourAgo
+        }
+      }
+    })
 
-    if (rateLimitCount > 100) { // Max 100 events per hour per campaign per site
+    if (recentEvents > 100) { // Max 100 events per hour per campaign per site
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
 
@@ -66,9 +84,6 @@ export async function POST(request: NextRequest) {
         fingerprint: fingerprint || null
       }
     })
-
-    // Cache event for duplicate detection
-    await redis.setex(eventKey, 3600, '1') // 1 hour
 
     // Update campaign spent amount for clicks
     if (type === EventType.CLICK) {

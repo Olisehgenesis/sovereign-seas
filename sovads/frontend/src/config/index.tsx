@@ -7,6 +7,7 @@ export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || 'b56e18d47c72ab68
 
 if (!projectId) {
   throw new Error('Project ID is not defined')
+  
 }
 
 export const networks = [ celoSepolia ]

@@ -31,15 +31,34 @@ model Advertiser {
 model Publisher {
   id          String   @id @default(cuid())
   wallet      String   @unique
-  domain      String
+  domain      String   // Deprecated: kept for backwards compatibility
   verified    Boolean  @default(false)
   totalEarned Decimal  @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  events Event[]
+  sites       PublisherSite[]
+  events      Event[]
 
   @@map("publishers")
+}
+
+model PublisherSite {
+  id          String   @id @default(cuid())
+  publisherId String
+  publisher   Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  domain      String
+  siteId      String   @unique // site_${publisher.id}_${index} or similar
+  apiKey      String   @unique // API key for SDK authentication (auto-generated)
+  apiSecret   String   // Hashed secret for signature verification (never returned to frontend)
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events      Event[]
+
+  @@unique([publisherId, domain])
+  @@map("publisher_sites")
 }
 
 model Campaign {
@@ -55,6 +74,7 @@ model Campaign {
   spent         Decimal  @default(0)
   cpc          Decimal  // Cost per click
   active        Boolean  @default(true)
+  tokenAddress String?  // ERC20 token address used for payment
   metadataURI   String?  // IPFS URI for additional metadata
   
   createdAt    DateTime @default(now())
@@ -72,8 +92,9 @@ model Event {
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   publisherId String
   publisher  Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
-  
-  siteId     String
+  siteId     String? // Optional: can reference PublisherSite.id or be a legacy siteId
+  publisherSiteId String? // Optional: reference to PublisherSite
+  publisherSite PublisherSite? @relation(fields: [publisherSiteId], references: [id], onDelete: Cascade)
   adId       String
   ipAddress  String?
   userAgent  String?

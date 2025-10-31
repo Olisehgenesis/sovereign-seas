@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma, redis } from '@/lib/db'
+import { prisma } from '@/lib/db'
 import { EventType } from '@prisma/client'
+
+// Analytics route - uses Prisma/SQLite (Redis removed)
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,15 +51,6 @@ export async function GET(request: NextRequest) {
       .filter(e => e.type === EventType.CLICK)
       .reduce((sum, event) => sum + parseFloat(event.campaign.cpc.toString()), 0)
 
-    // Get cached aggregated data from Redis
-    const cacheKey = `analytics:${campaignId || publisherId}:${days}d`
-    const cachedData = await redis.get(cacheKey)
-
-    let aggregatedData = null
-    if (cachedData) {
-      aggregatedData = JSON.parse(cachedData)
-    }
-
     const analytics = {
       period: `${days} days`,
       impressions,
@@ -70,8 +63,7 @@ export async function GET(request: NextRequest) {
         timestamp: event.timestamp,
         campaignName: event.campaign.name,
         publisherDomain: event.publisher.domain
-      })),
-      aggregatedData
+      }))
     }
 
     return NextResponse.json(analytics)
@@ -159,11 +151,8 @@ export async function POST(request: NextRequest) {
       totalEvents: events.length
     }
 
-    // Cache aggregated data
-    const cacheKey = `analytics:aggregated:${targetDate.toISOString().split('T')[0]}`
-    await redis.setex(cacheKey, 86400 * 30, JSON.stringify(aggregatedData)) // 30 days
-
     // Generate hash for on-chain storage (placeholder)
+    // Note: In production, you might want to store aggregated data in a separate table
     const hash = `0x${Buffer.from(JSON.stringify(aggregatedData)).toString('hex').slice(0, 64)}`
 
     return NextResponse.json({

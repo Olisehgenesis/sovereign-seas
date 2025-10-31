@@ -119,28 +119,28 @@ export const useAds = (): UseAdsReturn => {
     address: address as `0x${string}`,
     abi: sovAdsManagerAbi,
     functionName: 'claimOrderCount',
-    chainId: 44787,
+    chainId: 11142220,
   });
 
   const { data: feePercent } = useReadContract({
     address: address as `0x${string}`,
     abi: sovAdsManagerAbi,
     functionName: 'feePercent',
-    chainId: 44787,
+    chainId: 11142220,
   });
 
   const { data: protocolFees } = useReadContract({
     address: address as `0x${string}`,
     abi: sovAdsManagerAbi,
     functionName: 'protocolFees',
-    chainId: 44787,
+    chainId: 11142220,
   });
 
   const { data: paused } = useReadContract({
     address: address as `0x${string}`,
     abi: sovAdsManagerAbi,
     functionName: 'paused',
-    chainId: 44787,
+    chainId: 11142220,
   });
 
   // Write contract hooks
@@ -197,7 +197,7 @@ export const useAds = (): UseAdsReturn => {
       address: tokenAddress as `0x${string}`,
       abi: erc20Abi,
       functionName: 'approve',
-      chainId: 44787,
+      chainId: 11142220,
       args: [spender as `0x${string}`, requiredAmountWei],
     });
 
@@ -272,17 +272,17 @@ export const useAds = (): UseAdsReturn => {
     }, 'get publisher sites');
   }, [publicClient, handleContractCall]);
 
-  const isPublisher = useCallback(async (address: string): Promise<boolean | undefined> => {
+  const isPublisher = useCallback(async (publisherAddress: string): Promise<boolean | undefined> => {
     return handleContractCall(async () => {
       if (!publicClient) {
         throw new Error('Public client not available');
       }
       
       const result = await publicClient.readContract({
-        address: address as `0x${string}`,
+        address: address as `0x${string}`, // Contract address
         abi: sovAdsManagerAbi,
         functionName: 'isPublisher',
-        args: [address as `0x${string}`],
+        args: [publisherAddress as `0x${string}`], // Publisher address to check
       });
       
       return result as boolean;

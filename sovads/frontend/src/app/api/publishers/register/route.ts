@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCollections } from '@/lib/db'
+import { prisma } from '@/lib/db'
 
+/**
+ * Publisher registration API
+ * Note: This only saves to database. 
+ * To register on-chain, use the subscribePublisher function from useAds hook
+ * which calls the SovAdsManager contract's subscribePublisher function.
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -10,33 +16,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet and domain are required' }, { status: 400 })
     }
 
-    const { publishers } = await getCollections()
-    const existingPublisher = await publishers.findOne({ wallet })
+    const existingPublisher = await prisma.publisher.findUnique({
+      where: { wallet }
+    })
 
     if (existingPublisher) {
       return NextResponse.json({ 
         success: true, 
+        id: existingPublisher.id,
         siteId: `site_${existingPublisher.id}`,
+        domain: existingPublisher.domain,
         verified: existingPublisher.verified 
       })
     }
 
-    // Create new publisher
-    const doc = {
-      wallet,
-      domain,
-      verified: false,
-      totalEarned: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    const res = await publishers.insertOne(doc as any)
-    const publisher = { _id: res.insertedId, ...doc }
+    // Create new publisher in database
+    // NOTE: To register on-chain, call subscribePublisher from useAds hook
+    const publisher = await prisma.publisher.create({
+      data: {
+        wallet,
+        domain,
+        verified: false,
+        totalEarned: 0,
+      }
+    })
 
     return NextResponse.json({ 
-      success: true, 
+      success: true,
+      id: publisher.id,
       siteId: `site_${publisher.id}`,
-      verified: false 
+      domain: publisher.domain,
+      verified: false,
+      note: 'Register on-chain using subscribePublisher from useAds hook'
     })
   } catch (error) {
     console.error('Error registering publisher:', error)
@@ -53,14 +64,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
     }
 
-    const { publishers } = await getCollections()
-    const publisher = await publishers.findOne({ wallet })
+    const publisher = await prisma.publisher.findUnique({
+      where: { wallet }
+    })
 
     if (!publisher) {
       return NextResponse.json({ error: 'Publisher not found' }, { status: 404 })
     }
 
-    return NextResponse.json(publisher)
+    return NextResponse.json({
+      id: publisher.id,
+      wallet: publisher.wallet,
+      domain: publisher.domain,
+      verified: publisher.verified,
+      totalEarned: Number(publisher.totalEarned),
+      createdAt: publisher.createdAt,
+      updatedAt: publisher.updatedAt,
+    })
   } catch (error) {
     console.error('Error fetching publisher:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

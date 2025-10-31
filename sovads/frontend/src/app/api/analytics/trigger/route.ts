@@ -8,11 +8,11 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'aggregate':
-        const aggregationJob = await triggerAnalyticsAggregation(date)
+        const aggregationResult = await triggerAnalyticsAggregation(date)
         return NextResponse.json({
           success: true,
-          jobId: aggregationJob.id,
-          message: 'Analytics aggregation triggered'
+          message: 'Analytics aggregation completed',
+          result: aggregationResult
         })
 
       case 'payout':
@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
           }, { status: 400 })
         }
         
-        const payoutJob = await triggerPayoutProcessing(publisherId, amount)
+        const payoutResult = await triggerPayoutProcessing(publisherId, amount)
         return NextResponse.json({
           success: true,
-          jobId: payoutJob.id,
-          message: 'Payout processing triggered'
+          message: 'Payout processing completed',
+          result: payoutResult
         })
 
       default:

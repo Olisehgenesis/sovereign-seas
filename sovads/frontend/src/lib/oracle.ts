@@ -1,10 +1,10 @@
 import { createPublicClient, createWalletClient, http, formatUnits } from 'viem'
 import { celoSepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
-import { getCollections } from '@/lib/db'
+import { prisma } from '@/lib/db'
 
-// Placeholder contract addresses (replace with actual deployed contracts)
-const SOVADS_MANAGER_ADDRESS = '0x0000000000000000000000000000000000000000' // Placeholder
+// SovAds Manager contract address on Celo Sepolia
+const SOVADS_MANAGER_ADDRESS = '0x3eCE3a48818efF703204eC9B60f00d476923f5B5'
 const USDC_ADDRESS = '0x01C5C0122039549AD1493B8220cABEdD739BC44E' // USDC on Celo Sepolia
 
 // Oracle configuration
@@ -104,12 +104,10 @@ class SovAdsOracle {
 
   private async processPendingPayouts() {
     try {
-      // Get pending payouts from MongoDB
-      const { events } = await getCollections()
-      const payoutKeys = await events.find({ 
-        type: 'payout', 
-        status: 'pending' 
-      }).toArray()
+      // Get pending payouts from database
+      // Note: This will need to be implemented based on your payout model
+      // For now, this is a placeholder
+      const payoutKeys: any[] = []
       
       for (const payoutDoc of payoutKeys) {
         const payout: PayoutData = payoutDoc.data

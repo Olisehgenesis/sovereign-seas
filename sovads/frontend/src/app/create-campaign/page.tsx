@@ -161,7 +161,9 @@ export default function CreateCampaign() {
       })
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}))
-        throw new Error(data?.error || 'Failed to save campaign to database')
+        const errorMessage = data?.error || data?.details || 'Failed to save campaign to database'
+        console.error('API error response:', data)
+        throw new Error(errorMessage)
       }
       const result = await resp.json()
       console.log('Campaign saved to database:', result.campaign.id);
