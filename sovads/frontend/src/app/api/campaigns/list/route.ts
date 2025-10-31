@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
         spent: 1,
         cpc: 1,
         active: 1,
+        tokenAddress: 1,
       })
       .toArray()
 
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
       spent: Number(c.spent ?? 0),
       cpc: Number(c.cpc),
       active: c.active,
+      tokenAddress: c.tokenAddress || undefined,
     }))
 
     return NextResponse.json({ campaigns: shaped }, { status: 200 })

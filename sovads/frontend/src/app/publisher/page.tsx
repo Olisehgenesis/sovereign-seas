@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
+import { getTokenSymbol } from '@/lib/tokens'
 
 interface PublisherStats {
   impressions: number
@@ -187,7 +188,7 @@ export default function PublisherDashboard() {
               </div>
               <div className="bg-gray-900 border border-gray-700 rounded-lg p-6">
                 <div className="text-2xl font-bold text-white">{stats.totalRevenue.toFixed(6)}</div>
-                <div className="text-gray-400">Total Revenue (USDC)</div>
+                <div className="text-gray-400">Total Revenue</div>
               </div>
             </div>
 
@@ -257,7 +258,7 @@ const sovads = new SovAds({
               <h2 className="text-xl font-semibold text-white mb-4">Withdraw Earnings</h2>
               <div className="space-y-4">
                 <div className="text-gray-300">
-                  Available Balance: <span className="text-white font-semibold">{stats.totalRevenue.toFixed(6)} USDC</span>
+                  Available Balance: <span className="text-white font-semibold">{stats.totalRevenue.toFixed(6)}</span>
                 </div>
                 <button
                   className="bg-white text-black px-6 py-2 rounded-md font-medium hover:bg-gray-100"

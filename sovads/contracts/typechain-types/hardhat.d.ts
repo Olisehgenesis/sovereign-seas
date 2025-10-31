@@ -4,10 +4,9 @@
 
 import { ethers } from "ethers";
 import {
-  DeployContractOptions,
   FactoryOptions,
   HardhatEthersHelpers as HardhatEthersHelpersBase,
-} from "@nomicfoundation/hardhat-ethers/types";
+} from "@nomiclabs/hardhat-ethers/types";
 
 import * as Contracts from ".";
 
@@ -32,61 +31,23 @@ declare module "hardhat/types/runtime" {
 
     getContractAt(
       name: "Ownable",
-      address: string | ethers.Addressable,
+      address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.Ownable>;
     getContractAt(
       name: "Pausable",
-      address: string | ethers.Addressable,
+      address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.Pausable>;
     getContractAt(
       name: "IERC20",
-      address: string | ethers.Addressable,
+      address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.IERC20>;
     getContractAt(
       name: "SovAdsManager",
-      address: string | ethers.Addressable,
+      address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.SovAdsManager>;
-
-    deployContract(
-      name: "Ownable",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Ownable>;
-    deployContract(
-      name: "Pausable",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Pausable>;
-    deployContract(
-      name: "IERC20",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC20>;
-    deployContract(
-      name: "SovAdsManager",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.SovAdsManager>;
-
-    deployContract(
-      name: "Ownable",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Ownable>;
-    deployContract(
-      name: "Pausable",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Pausable>;
-    deployContract(
-      name: "IERC20",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IERC20>;
-    deployContract(
-      name: "SovAdsManager",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.SovAdsManager>;
 
     // default types
@@ -96,22 +57,13 @@ declare module "hardhat/types/runtime" {
     ): Promise<ethers.ContractFactory>;
     getContractFactory(
       abi: any[],
-      bytecode: ethers.BytesLike,
+      bytecode: ethers.utils.BytesLike,
       signer?: ethers.Signer
     ): Promise<ethers.ContractFactory>;
     getContractAt(
       nameOrAbi: string | any[],
-      address: string | ethers.Addressable,
+      address: string,
       signer?: ethers.Signer
-    ): Promise<ethers.Contract>;
-    deployContract(
-      name: string,
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<ethers.Contract>;
-    deployContract(
-      name: string,
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<ethers.Contract>;
   }
 }

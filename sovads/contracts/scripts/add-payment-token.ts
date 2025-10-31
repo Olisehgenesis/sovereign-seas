@@ -1,14 +1,13 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  console.log("🔧 Adding cUSD as supported payment token...");
+  console.log("🔧 Adding ERC20 as supported payment token...");
 
-  // Get the deployed contract address from deployments
-  const deploymentInfo = require("../deployments/.alfajores.json");
-  const contractAddress = deploymentInfo.contracts.SovAdsManager.address;
+  // Get the deployed contract address from env
+  const contractAddress = process.env.SOVADS_MANAGER_ADDRESS;
   
   if (!contractAddress) {
-    throw new Error("Contract address not found in deployment info. Please deploy first.");
+    throw new Error("SOVADS_MANAGER_ADDRESS not set. Please export the manager address.");
   }
 
   console.log("📋 Contract Address:", contractAddress);
@@ -17,29 +16,32 @@ async function main() {
   const SovAdsManager = await ethers.getContractFactory("SovAdsManager");
   const sovAdsManager = SovAdsManager.attach(contractAddress);
 
-  // cUSD token address on Celo Alfajores
-  const cUSD_ADDRESS = "0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9";
+  // Token to add (e.g., CELO ERC20 on Sepolia)
+  const tokenToAdd = process.env.TOKEN_TO_ADD;
+  if (!tokenToAdd) {
+    throw new Error("TOKEN_TO_ADD not set. Please export the ERC20 token address to add.");
+  }
 
   try {
     // Check if token is already supported
-    const isSupported = await sovAdsManager.supportedTokens(cUSD_ADDRESS);
+    const isSupported = await sovAdsManager.supportedTokens(tokenToAdd);
     
     if (isSupported) {
-      console.log("⚠️  Token is already supported:", cUSD_ADDRESS);
+      console.log("⚠️  Token is already supported:", tokenToAdd);
       return;
     }
 
     // Add the token as supported
-    console.log("➕ Adding token:", cUSD_ADDRESS);
-    const tx = await sovAdsManager.addSupportedToken(cUSD_ADDRESS);
+    console.log("➕ Adding token:", tokenToAdd);
+    const tx = await sovAdsManager.addSupportedToken(tokenToAdd);
     await tx.wait();
 
-    console.log("✅ Successfully added cUSD as supported payment token!");
+    console.log("✅ Successfully added token as supported payment token!");
     console.log("📋 Transaction hash:", tx.hash);
-    console.log("🎯 Token address:", cUSD_ADDRESS);
+    console.log("🎯 Token address:", tokenToAdd);
 
     // Verify it was added
-    const nowSupported = await sovAdsManager.supportedTokens(cUSD_ADDRESS);
+    const nowSupported = await sovAdsManager.supportedTokens(tokenToAdd);
     console.log("✅ Verification - Token supported:", nowSupported);
 
     // Get all supported tokens

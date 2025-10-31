@@ -21,6 +21,11 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 1337,
     },
+    celoSepolia: {
+      url: process.env.CELO_SEPOLIA_RPC_URL || "https://rpc.ankr.com/celo_sepolia",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 11142220,
+    },
     alfajores: {
       url: process.env.CELO_RPC_URL || "https://alfajores-forno.celo-testnet.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
@@ -50,6 +55,11 @@ const config: HardhatUserConfig = {
     apiKey: {
       celo: process.env.CELOSCAN_API_KEY || "",
       base: process.env.BASESCAN_API_KEY || "",
+    },
+  },
+  verify: {
+    blockscout: {
+      enabled: false,
     },
   },
 };

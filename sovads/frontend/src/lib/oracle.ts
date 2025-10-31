@@ -1,20 +1,19 @@
 import { createPublicClient, createWalletClient, http, formatUnits } from 'viem'
-import { celoAlfajores } from 'viem/chains'
+import { celoSepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { getCollections } from '@/lib/db'
 
 // Placeholder contract addresses (replace with actual deployed contracts)
 const SOVADS_MANAGER_ADDRESS = '0x0000000000000000000000000000000000000000' // Placeholder
-const USDC_ADDRESS = '0x874069Fa1Eb16D44d62F6aD4436B8c4C5C5C5C5C' // Placeholder USDC on Celo Alfajores
-0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9
+const USDC_ADDRESS = '0x01C5C0122039549AD1493B8220cABEdD739BC44E' // USDC on Celo Sepolia
 
 // Oracle configuration
 const ORACLE_PRIVATE_KEY = process.env.ORACLE_PRIVATE_KEY || '0x0000000000000000000000000000000000000000000000000000000000000000'
-const RPC_URL = process.env.CELO_RPC_URL || 'https://alfajores-forno.celo-testnet.org'
+const RPC_URL = process.env.CELO_SEPOLIA_RPC_URL || 'https://rpc.ankr.com/celo_sepolia'
 
 // Create clients
 const publicClient = createPublicClient({
-  chain: celoAlfajores,
+  chain: celoSepolia,
   transport: http(RPC_URL)
 })
 
@@ -22,7 +21,7 @@ const account = privateKeyToAccount(ORACLE_PRIVATE_KEY as `0x${string}`)
 
 const walletClient = createWalletClient({
   account,
-  chain: celoAlfajores,
+  chain: celoSepolia,
   transport: http(RPC_URL)
 })
 
@@ -311,7 +310,7 @@ class SovAdsOracle {
   async getOracleStatus() {
     return {
       isRunning: this.isRunning,
-      chain: celoAlfajores.name,
+      chain: celoSepolia.name,
       managerAddress: SOVADS_MANAGER_ADDRESS,
       oracleAddress: account.address
     }

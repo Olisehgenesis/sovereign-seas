@@ -103,7 +103,7 @@ export interface UseAdsReturn {
 
 export const useAds = (): UseAdsReturn => {
   const { address: userAddress } = useAccount();
-  const publicClient = usePublicClient({ chainId: 44787 });
+  const publicClient = usePublicClient({ chainId: 11142220 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,7 +112,7 @@ export const useAds = (): UseAdsReturn => {
     address: address as `0x${string}`,
     abi: sovAdsManagerAbi,
     functionName: 'campaignCount',
-    chainId: 44787,
+    chainId: 11142220,
   });
 
   const { data: claimOrderCount } = useReadContract({
@@ -365,7 +365,7 @@ export const useAds = (): UseAdsReturn => {
         address: address as `0x${string}`,
         abi: sovAdsManagerAbi,
         functionName: 'createCampaign',
-        chainId: 44787,
+        chainId: 11142220,
         args: [
           token as `0x${string}`,
           amountWei,
@@ -397,7 +397,7 @@ export const useAds = (): UseAdsReturn => {
         address: address as `0x${string}`,
         abi: sovAdsManagerAbi,
         functionName: 'createClaimOrder',
-        chainId: 44787,
+        chainId: 11142220,
         args: [
           BigInt(campaignId),
           parseEther(requestedAmount)
@@ -421,7 +421,7 @@ export const useAds = (): UseAdsReturn => {
         address: address as `0x${string}`,
         abi: sovAdsManagerAbi,
         functionName: 'subscribePublisher',
-        chainId: 44787,
+        chainId: 11142220,
         args: [sites],
       });
       
@@ -442,7 +442,7 @@ export const useAds = (): UseAdsReturn => {
         address: address as `0x${string}`,
         abi: sovAdsManagerAbi,
         functionName: 'addSite',
-        chainId: 44787,
+        chainId: 11142220,
         args: [site],
       });
       
@@ -463,7 +463,7 @@ export const useAds = (): UseAdsReturn => {
         address: address as `0x${string}`,
         abi: sovAdsManagerAbi,
         functionName: 'removeSite',
-        chainId: 44787,
+        chainId: 11142220,
         args: [BigInt(siteIndex)],
       });
       

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useAds } from '../../hooks/useAds';
+import { getTokenInfo, getTokenLabel, getTokenSymbol, getTokenName } from '@/lib/tokens';
 
 interface CampaignFormData {
   name: string;
@@ -25,10 +26,16 @@ export default function CreateCampaign() {
     bannerUrl: '',
     targetUrl: '',
     budget: '',
-    cpc: '',
+    cpc: '0.002',
     duration: '',
     tokenAddress: ''
   });
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'details' | 'budget' | 'dates'>('details');
+
+  // Get token info for selected token
+  const selectedTokenInfo = getTokenInfo(formData.tokenAddress) || { symbol: 'TOKEN', name: 'Token', decimals: 18, address: '' };
   
   const [supportedTokens, setSupportedTokens] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -80,9 +87,10 @@ export default function CreateCampaign() {
     if (!formData.bannerUrl.trim()) return 'Banner URL is required';
     if (!formData.targetUrl.trim()) return 'Target URL is required';
     if (!formData.budget || parseFloat(formData.budget) < 0.0001) return 'Budget must be at least 0.0001';
-    if (!formData.cpc || parseFloat(formData.cpc) < 0.0001) return 'CPC must be at least 0.0001';
-    if (!formData.duration || parseInt(formData.duration) <= 0) return 'Duration must be greater than 0';
     if (!formData.tokenAddress) return 'Token address is required';
+    if (!startDate) return 'Start date is required';
+    if (!endDate) return 'End date is required';
+    if (new Date(startDate) > new Date(endDate)) return 'Start date must be before end date';
     
     // Validate URLs
     try { new URL(formData.targetUrl); } catch { return 'Please enter a valid target URL'; }
@@ -119,15 +127,20 @@ export default function CreateCampaign() {
         bannerUrl: formData.bannerUrl,
         targetUrl: formData.targetUrl,
         cpc: formData.cpc,
+        startDate,
+        endDate,
         createdAt: new Date().toISOString()
       });
 
       // Step 1: Create campaign on contract first
       console.log('Creating campaign on contract...');
+      const start = new Date(startDate).getTime();
+      const end = new Date(endDate).getTime();
+      const durationSeconds = Math.max(1, Math.floor((end - start) / 1000));
       const txHash = await createCampaign(
         formData.tokenAddress,
         formData.budget,
-        parseInt(formData.duration) * 24 * 60 * 60, // Convert days to seconds
+        durationSeconds,
         metadata
       );
 
@@ -162,10 +175,12 @@ export default function CreateCampaign() {
         bannerUrl: '',
         targetUrl: '',
         budget: '',
-        cpc: '',
+        cpc: '0.002',
         duration: '',
         tokenAddress: supportedTokens[0] || ''
       });
+      setStartDate('');
+      setEndDate('');
 
     } catch (err) {
       console.error('Error creating campaign:', err);
@@ -197,175 +212,224 @@ export default function CreateCampaign() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-card border border-border rounded-xl shadow-sm">
-      <h1 className="text-3xl font-bold text-foreground mb-6">Create New Campaign</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => { if (typeof window !== 'undefined') window.history.back(); }}
+          className="btn btn-outline px-4 py-2"
+        >
+          Back
+        </button>
+      </div>
+      <h1 className="text-3xl font-bold text-foreground mb-4">Create New Campaign</h1>
+
+      {/* Tabs */}
+      <div className="mb-6 flex gap-2">
+        <button
+          type="button"
+          className={`px-4 py-2 rounded-full text-sm font-medium ${activeTab === 'details' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
+          onClick={() => setActiveTab('details')}
+        >
+          Details
+        </button>
+        <button
+          type="button"
+          className={`px-4 py-2 rounded-full text-sm font-medium ${activeTab === 'budget' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
+          onClick={() => setActiveTab('budget')}
+        >
+          Budget
+        </button>
+        <button
+          type="button"
+          className={`px-4 py-2 rounded-full text-sm font-medium ${activeTab === 'dates' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
+          onClick={() => setActiveTab('dates')}
+        >
+          Dates
+        </button>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Campaign Name */}
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-foreground/80 mb-2">
-            Campaign Name *
-          </label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Enter campaign name"
-            required
-          />
-        </div>
-
-        {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-foreground/80 mb-2">
-            Description *
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            rows={3}
-            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="Describe your campaign"
-            required
-          />
-        </div>
-
-        {/* Banner Image Upload */}
-        <div>
-          <label className="block text-sm font-medium text-foreground/80 mb-2">Banner Image *</nlabel>
-          <div className="flex items-center gap-3">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                setUploading(true)
-                try {
-                  const form = new FormData()
-                  form.append('image', file)
-                  const res = await fetch('/api/uploads/image', { method: 'POST', body: form })
-                  if (!res.ok) throw new Error('Upload failed')
-                  const data = await res.json()
-                  setFormData(prev => ({ ...prev, bannerUrl: data.url }))
-                  setBannerPreview(data.url)
-                } catch (err) {
-                  console.error('Upload error', err)
-                  setSubmitError('Failed to upload image')
-                } finally {
-                  setUploading(false)
-                }
-              }}
-              className="block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground hover:file:bg-primary/90"
-              required
-            />
-          </div>
-          {uploading && <p className="text-sm text-foreground/60 mt-2">Uploading...</p>}
-          {bannerPreview && (
-            <div className="mt-3">
-              <img src={bannerPreview} alt="Banner preview" className="max-h-32 rounded-md border border-border" />
+        {activeTab === 'details' && (
+          <>
+            {/* Campaign Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-foreground/80 mb-2">
+                Campaign Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter campaign name"
+                required
+              />
             </div>
-          )}
-        </div>
 
-        {/* Target URL */}
-        <div>
-          <label htmlFor="targetUrl" className="block text-sm font-medium text-foreground/80 mb-2">
-            Target URL *
-          </label>
-          <input
-            type="url"
-            id="targetUrl"
-            name="targetUrl"
-            value={formData.targetUrl}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="https://example.com/landing-page"
-            required
-          />
-        </div>
+            {/* Description */}
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-foreground/80 mb-2">
+                Description *
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Describe your campaign"
+                required
+              />
+            </div>
 
-        {/* Budget and CPC */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="budget" className="block text-sm font-medium text-foreground/80 mb-2">
-              Budget (ETH) *
-            </label>
-            <input
-              type="number"
-              id="budget"
-              name="budget"
-              value={formData.budget}
-              onChange={handleInputChange}
-              step="0.0001"
-              min="0.0001"
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="1.0"
-              required
-            />
+            {/* Banner Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-foreground/80 mb-2">Banner Image *</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    setUploading(true)
+                    try {
+                      const form = new FormData()
+                      form.append('image', file)
+                      const res = await fetch('/api/uploads/image', { method: 'POST', body: form })
+                      if (!res.ok) throw new Error('Upload failed')
+                      const data = await res.json()
+                      setFormData(prev => ({ ...prev, bannerUrl: data.url }))
+                      setBannerPreview(data.url)
+                    } catch (err) {
+                      console.error('Upload error', err)
+                      setSubmitError('Failed to upload image')
+                    } finally {
+                      setUploading(false)
+                    }
+                  }}
+                  className="block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground hover:file:bg-primary/90"
+                  required
+                />
+              </div>
+              {uploading && <p className="text-sm text-foreground/60 mt-2">Uploading...</p>}
+              {bannerPreview && (
+                <div className="mt-3">
+                  <img src={bannerPreview} alt="Banner preview" className="max-h-32 rounded-md border border-border" />
+                </div>
+              )}
+            </div>
+
+            {/* Target URL */}
+            <div>
+              <label htmlFor="targetUrl" className="block text-sm font-medium text-foreground/80 mb-2">
+                Target URL *
+              </label>
+              <input
+                type="url"
+                id="targetUrl"
+                name="targetUrl"
+                value={formData.targetUrl}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="https://example.com/landing-page"
+                required
+              />
+            </div>
+          </>
+        )}
+
+        {activeTab === 'budget' && (
+          <>
+            {/* Token first */}
+            <div>
+              <label htmlFor="tokenAddress" className="block text-sm font-medium text-foreground/80 mb-2">
+                Payment Token *
+              </label>
+              <select
+                id="tokenAddress"
+                name="tokenAddress"
+                value={formData.tokenAddress}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+              >
+                <option value="">Select a token</option>
+                {supportedTokens.map((token, index) => {
+                  const label = getTokenLabel(token);
+                  return (
+                    <option key={index} value={token}>{label}</option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="budget" className="block text-sm font-medium text-foreground/80 mb-2">
+                  Budget ({selectedTokenInfo.symbol}) *
+                </label>
+                <input
+                  type="number"
+                  id="budget"
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleInputChange}
+                  step="0.0001"
+                  min="0.0001"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="1.0"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="cpc" className="block text-sm font-medium text-foreground/80 mb-2">
+                  Cost Per Click ({selectedTokenInfo.symbol})
+                </label>
+                <input
+                  type="number"
+                  id="cpc"
+                  name="cpc"
+                  value={formData.cpc}
+                  readOnly
+                  disabled
+                  className="w-full px-3 py-2 border border-border rounded-md bg-secondary text-foreground/70"
+                />
+                <p className="text-xs text-foreground/60 mt-1">Fixed at 0.002 {selectedTokenInfo.symbol} for now.</p>
+              </div>
+            </div>
+
+            {/* Duration removed; computed from Start and End dates */}
+          </>
+        )}
+
+        {activeTab === 'dates' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground/80 mb-2">Start Date & Time *</label>
+              <input
+                type="datetime-local"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground/80 mb-2">End Date & Time *</label>
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+              />
+            </div>
           </div>
-          <div>
-            <label htmlFor="cpc" className="block text-sm font-medium text-foreground/80 mb-2">
-              Cost Per Click (ETH) *
-            </label>
-            <input
-              type="number"
-              id="cpc"
-              name="cpc"
-              value={formData.cpc}
-              onChange={handleInputChange}
-              step="0.0001"
-              min="0.0001"
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="0.01"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Duration */}
-        <div>
-          <label htmlFor="duration" className="block text-sm font-medium text-foreground/80 mb-2">
-            Campaign Duration (Days) *
-          </label>
-          <input
-            type="number"
-            id="duration"
-            name="duration"
-            value={formData.duration}
-            onChange={handleInputChange}
-            min="1"
-            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="30"
-            required
-          />
-        </div>
-
-        {/* Token Address */}
-        <div>
-          <label htmlFor="tokenAddress" className="block text-sm font-medium text-foreground/80 mb-2">
-            Payment Token *
-          </label>
-          <select
-            id="tokenAddress"
-            name="tokenAddress"
-            value={formData.tokenAddress}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            required
-          >
-            <option value="">Select a token</option>
-            {supportedTokens.map((token, index) => (
-              <option key={index} value={token}>
-                {token.slice(0, 6)}...{token.slice(-4)} ({index === 0 ? 'ETH' : `Token ${index}`})
-              </option>
-            ))}
-          </select>
-        </div>
+        )}
 
         {/* Error Messages */}
         {(error || submitError) && (
@@ -374,14 +438,37 @@ export default function CreateCampaign() {
           </div>
         )}
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting || isLoading || !address}
-          className="w-full btn btn-primary py-3 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? 'Creating Campaign...' : 'Create Campaign'}
-        </button>
+        {/* Wizard Controls */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            className="btn btn-outline px-4 py-2"
+            onClick={() => {
+              if (activeTab === 'budget') setActiveTab('details')
+              else if (activeTab === 'dates') setActiveTab('budget')
+            }}
+            disabled={activeTab === 'details'}
+          >&lt; Back</button>
+
+          {activeTab !== 'dates' ? (
+            <button
+              type="button"
+              className="btn btn-primary px-6 py-2"
+              onClick={() => {
+                if (activeTab === 'details') setActiveTab('budget')
+                else if (activeTab === 'budget') setActiveTab('dates')
+              }}
+            >Next &gt;</button>
+          ) : (
+            <button
+              type="submit"
+              disabled={isSubmitting || isLoading || !address}
+              className="btn btn-primary px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Creating Campaign...' : 'Create Campaign'}
+            </button>
+          )}
+        </div>
 
         {!address && (
           <p className="text-center text-gray-500 text-sm">

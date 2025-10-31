@@ -13,27 +13,27 @@ async function main() {
 
   console.log("✅ SovAdsManager deployed to:", sovAdsManager.address);
 
-  // Add default supported tokens (Celo testnet tokens)
-  console.log("🔧 Adding supported tokens...");
-  
-  // cUSD on Celo Alfajores testnet (main cUSD)
-  const cUSD_ALFAJORES = "0x874069fa1eb16d44d622f2e0ca25eea172369bc1";
-  
-  // cUSD on Celo Alfajores testnet (alternative)
-  const cUSD_ALFAJORES_ALT = "0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9";
-  
-  // USDC on Celo Alfajores testnet  
-  const USDC_ALFAJORES = "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B";
-  
+  // Add default supported tokens (Celo Sepolia)
+  console.log("🔧 Adding supported tokens (Celo Sepolia)...");
+
+  // ERC20 token addresses on Celo Sepolia
+  const CUSD_SEPOLIA = "0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80";
+  const USDC_SEPOLIA = "0x01C5C0122039549AD1493B8220cABEdD739BC44E";
+  const USDT_SEPOLIA = "0xd077A400968890Eacc75cdc901F0356c943e4fDb";
+  const CELO_SEPOLIA = "0x471EcE3750Da237f93B8E339c536989b8978a438";
+
   // Add supported tokens
-  await sovAdsManager.addSupportedToken(cUSD_ALFAJORES);
-  console.log("✅ Added cUSD as supported token");
-  
-  await sovAdsManager.addSupportedToken(cUSD_ALFAJORES_ALT);
-  console.log("✅ Added cUSD (alt) as supported token");
-  
-  await sovAdsManager.addSupportedToken(USDC_ALFAJORES);
-  console.log("✅ Added USDC as supported token");
+  await sovAdsManager.addSupportedToken(CUSD_SEPOLIA);
+  console.log("✅ Added cUSD (Sepolia) as supported token");
+
+  await sovAdsManager.addSupportedToken(USDC_SEPOLIA);
+  console.log("✅ Added USDC (Sepolia) as supported token");
+
+  await sovAdsManager.addSupportedToken(USDT_SEPOLIA);
+  console.log("✅ Added USDT (Sepolia) as supported token");
+
+  await sovAdsManager.addSupportedToken(CELO_SEPOLIA);
+  console.log("✅ Added CELO (Sepolia) as supported token");
 
   // Set initial fee percentage (5%)
   await sovAdsManager.setFeePercent(5);
@@ -42,10 +42,11 @@ async function main() {
   console.log("\n🎉 Deployment completed successfully!");
   console.log("📋 Contract Addresses:");
   console.log("   SovAdsManager:", sovAdsManager.address);
-  console.log("\n📋 Supported Tokens:");
-  console.log("   cUSD (Alfajores):", cUSD_ALFAJORES);
-  console.log("   cUSD Alt (Alfajores):", cUSD_ALFAJORES_ALT);
-  console.log("   USDC (Alfajores):", USDC_ALFAJORES);
+  console.log("\n📋 Supported Tokens (Sepolia):");
+  console.log("   cUSD:", CUSD_SEPOLIA);
+  console.log("   USDC:", USDC_SEPOLIA);
+  console.log("   USDT:", USDT_SEPOLIA);
+  console.log("   CELO:", CELO_SEPOLIA);
   
   console.log("\n🔗 Network:", await ethers.provider.getNetwork());
   
@@ -57,7 +58,7 @@ async function main() {
       SovAdsManager: {
         address: sovAdsManager.address,
         deployedAt: new Date().toISOString(),
-        supportedTokens: [cUSD_ALFAJORES, cUSD_ALFAJORES_ALT, USDC_ALFAJORES]
+        supportedTokens: [CUSD_SEPOLIA, USDC_SEPOLIA, USDT_SEPOLIA, CELO_SEPOLIA]
       }
     }
   };

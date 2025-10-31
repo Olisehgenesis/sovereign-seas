@@ -7,6 +7,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:alfajores": "hardhat run scripts/deploy.ts --network alfajores",
+    "deploy:celoSepolia": "hardhat run scripts/deploy.ts --network celoSepolia",
     "deploy:base": "hardhat run scripts/deploy.ts --network base",
     "add-token": "hardhat run scripts/add-payment-token.ts --network alfajores",
     "verify": "hardhat verify",

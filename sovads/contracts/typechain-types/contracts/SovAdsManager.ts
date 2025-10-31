@@ -3,133 +3,182 @@
 /* eslint-disable */
 import type {
   BaseContract,
+  BigNumber,
   BigNumberish,
   BytesLike,
-  FunctionFragment,
-  Result,
-  Interface,
-  EventFragment,
-  AddressLike,
-  ContractRunner,
-  ContractMethod,
-  Listener,
+  CallOverrides,
+  ContractTransaction,
+  Overrides,
+  PopulatedTransaction,
+  Signer,
+  utils,
 } from "ethers";
 import type {
-  TypedContractEvent,
-  TypedDeferredTopicFilter,
-  TypedEventLog,
-  TypedLogDescription,
+  FunctionFragment,
+  Result,
+  EventFragment,
+} from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
+import type {
+  TypedEventFilter,
+  TypedEvent,
   TypedListener,
-  TypedContractMethod,
+  OnEvent,
+  PromiseOrValue,
 } from "../common";
 
 export declare namespace SovAdsManager {
   export type CampaignStruct = {
-    id: BigNumberish;
-    creator: AddressLike;
-    token: AddressLike;
-    amount: BigNumberish;
-    startTime: BigNumberish;
-    endTime: BigNumberish;
-    metadata: string;
-    active: boolean;
-    spent: BigNumberish;
-    paused: boolean;
+    id: PromiseOrValue<BigNumberish>;
+    creator: PromiseOrValue<string>;
+    token: PromiseOrValue<string>;
+    amount: PromiseOrValue<BigNumberish>;
+    startTime: PromiseOrValue<BigNumberish>;
+    endTime: PromiseOrValue<BigNumberish>;
+    metadata: PromiseOrValue<string>;
+    active: PromiseOrValue<boolean>;
+    spent: PromiseOrValue<BigNumberish>;
+    paused: PromiseOrValue<boolean>;
   };
 
   export type CampaignStructOutput = [
-    id: bigint,
-    creator: string,
-    token: string,
-    amount: bigint,
-    startTime: bigint,
-    endTime: bigint,
-    metadata: string,
-    active: boolean,
-    spent: bigint,
-    paused: boolean
+    BigNumber,
+    string,
+    string,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    string,
+    boolean,
+    BigNumber,
+    boolean
   ] & {
-    id: bigint;
+    id: BigNumber;
     creator: string;
     token: string;
-    amount: bigint;
-    startTime: bigint;
-    endTime: bigint;
+    amount: BigNumber;
+    startTime: BigNumber;
+    endTime: BigNumber;
     metadata: string;
     active: boolean;
-    spent: bigint;
+    spent: BigNumber;
     paused: boolean;
   };
 
   export type ClaimOrderStruct = {
-    id: BigNumberish;
-    publisher: AddressLike;
-    campaignId: BigNumberish;
-    requestedAmount: BigNumberish;
-    approvedAmount: BigNumberish;
-    processed: boolean;
-    rejected: boolean;
-    reason: string;
-    createdAt: BigNumberish;
-    processedAt: BigNumberish;
+    id: PromiseOrValue<BigNumberish>;
+    publisher: PromiseOrValue<string>;
+    campaignId: PromiseOrValue<BigNumberish>;
+    requestedAmount: PromiseOrValue<BigNumberish>;
+    approvedAmount: PromiseOrValue<BigNumberish>;
+    processed: PromiseOrValue<boolean>;
+    rejected: PromiseOrValue<boolean>;
+    reason: PromiseOrValue<string>;
+    createdAt: PromiseOrValue<BigNumberish>;
+    processedAt: PromiseOrValue<BigNumberish>;
   };
 
   export type ClaimOrderStructOutput = [
-    id: bigint,
-    publisher: string,
-    campaignId: bigint,
-    requestedAmount: bigint,
-    approvedAmount: bigint,
-    processed: boolean,
-    rejected: boolean,
-    reason: string,
-    createdAt: bigint,
-    processedAt: bigint
+    BigNumber,
+    string,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    boolean,
+    boolean,
+    string,
+    BigNumber,
+    BigNumber
   ] & {
-    id: bigint;
+    id: BigNumber;
     publisher: string;
-    campaignId: bigint;
-    requestedAmount: bigint;
-    approvedAmount: bigint;
+    campaignId: BigNumber;
+    requestedAmount: BigNumber;
+    approvedAmount: BigNumber;
     processed: boolean;
     rejected: boolean;
     reason: string;
-    createdAt: bigint;
-    processedAt: bigint;
+    createdAt: BigNumber;
+    processedAt: BigNumber;
   };
 
   export type PublisherStruct = {
-    wallet: AddressLike;
-    sites: string[];
-    banned: boolean;
-    totalEarned: BigNumberish;
-    totalClaimed: BigNumberish;
-    verified: boolean;
-    subscriptionDate: BigNumberish;
+    wallet: PromiseOrValue<string>;
+    sites: PromiseOrValue<string>[];
+    banned: PromiseOrValue<boolean>;
+    totalEarned: PromiseOrValue<BigNumberish>;
+    totalClaimed: PromiseOrValue<BigNumberish>;
+    verified: PromiseOrValue<boolean>;
+    subscriptionDate: PromiseOrValue<BigNumberish>;
   };
 
   export type PublisherStructOutput = [
-    wallet: string,
-    sites: string[],
-    banned: boolean,
-    totalEarned: bigint,
-    totalClaimed: bigint,
-    verified: boolean,
-    subscriptionDate: bigint
+    string,
+    string[],
+    boolean,
+    BigNumber,
+    BigNumber,
+    boolean,
+    BigNumber
   ] & {
     wallet: string;
     sites: string[];
     banned: boolean;
-    totalEarned: bigint;
-    totalClaimed: bigint;
+    totalEarned: BigNumber;
+    totalClaimed: BigNumber;
     verified: boolean;
-    subscriptionDate: bigint;
+    subscriptionDate: BigNumber;
   };
 }
 
-export interface SovAdsManagerInterface extends Interface {
+export interface SovAdsManagerInterface extends utils.Interface {
+  functions: {
+    "activeCampaigns(uint256)": FunctionFragment;
+    "addSite(string)": FunctionFragment;
+    "addSupportedToken(address)": FunctionFragment;
+    "banUser(address,string)": FunctionFragment;
+    "bannedUsers(address)": FunctionFragment;
+    "campaignCount()": FunctionFragment;
+    "campaigns(uint256)": FunctionFragment;
+    "claimOrderCount()": FunctionFragment;
+    "claimOrders(uint256)": FunctionFragment;
+    "collectFees(address,uint256)": FunctionFragment;
+    "createCampaign(address,uint256,uint256,string)": FunctionFragment;
+    "createClaimOrder(uint256,uint256)": FunctionFragment;
+    "disburseFunds(uint256,address,uint256)": FunctionFragment;
+    "editCampaign(uint256,string,uint256)": FunctionFragment;
+    "feePercent()": FunctionFragment;
+    "getActiveCampaignsCount()": FunctionFragment;
+    "getCampaign(uint256)": FunctionFragment;
+    "getClaimOrder(uint256)": FunctionFragment;
+    "getPublisher(address)": FunctionFragment;
+    "getPublisherSites(address)": FunctionFragment;
+    "getSupportedTokens()": FunctionFragment;
+    "getTotalProtocolFees()": FunctionFragment;
+    "isPublisher(address)": FunctionFragment;
+    "isUserBanned(address)": FunctionFragment;
+    "owner()": FunctionFragment;
+    "pause()": FunctionFragment;
+    "pauseCampaign(uint256)": FunctionFragment;
+    "paused()": FunctionFragment;
+    "processClaimOrder(uint256,uint256,bool,string)": FunctionFragment;
+    "protocolFees()": FunctionFragment;
+    "publishers(address)": FunctionFragment;
+    "removeSite(uint256)": FunctionFragment;
+    "removeSupportedToken(address)": FunctionFragment;
+    "renounceOwnership()": FunctionFragment;
+    "resumeCampaign(uint256)": FunctionFragment;
+    "setFeePercent(uint256)": FunctionFragment;
+    "subscribePublisher(string[])": FunctionFragment;
+    "supportedTokens(address)": FunctionFragment;
+    "supportedTokensList(uint256)": FunctionFragment;
+    "transferOwnership(address)": FunctionFragment;
+    "unbanUser(address)": FunctionFragment;
+    "unpause()": FunctionFragment;
+  };
+
   getFunction(
-    nameOrSignature:
+    nameOrSignatureOrTopic:
       | "activeCampaigns"
       | "addSite"
       | "addSupportedToken"
@@ -174,44 +223,25 @@ export interface SovAdsManagerInterface extends Interface {
       | "unpause"
   ): FunctionFragment;
 
-  getEvent(
-    nameOrSignatureOrTopic:
-      | "CampaignCreated"
-      | "CampaignEdited"
-      | "CampaignPaused"
-      | "CampaignResumed"
-      | "ClaimOrderCreated"
-      | "ClaimOrderProcessed"
-      | "FeeCollected"
-      | "FundsDisbursed"
-      | "OwnershipTransferred"
-      | "Paused"
-      | "PublisherBanned"
-      | "PublisherSubscribed"
-      | "PublisherUnbanned"
-      | "SiteAdded"
-      | "SiteRemoved"
-      | "SupportedTokenAdded"
-      | "SupportedTokenRemoved"
-      | "Unpaused"
-  ): EventFragment;
-
   encodeFunctionData(
     functionFragment: "activeCampaigns",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
-  encodeFunctionData(functionFragment: "addSite", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "addSite",
+    values: [PromiseOrValue<string>]
+  ): string;
   encodeFunctionData(
     functionFragment: "addSupportedToken",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "banUser",
-    values: [AddressLike, string]
+    values: [PromiseOrValue<string>, PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "bannedUsers",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "campaignCount",
@@ -219,7 +249,7 @@ export interface SovAdsManagerInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "campaigns",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "claimOrderCount",
@@ -227,27 +257,40 @@ export interface SovAdsManagerInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "claimOrders",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "collectFees",
-    values: [AddressLike, BigNumberish]
+    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "createCampaign",
-    values: [AddressLike, BigNumberish, BigNumberish, string]
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<string>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "createClaimOrder",
-    values: [BigNumberish, BigNumberish]
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "disburseFunds",
-    values: [BigNumberish, AddressLike, BigNumberish]
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "editCampaign",
-    values: [BigNumberish, string, BigNumberish]
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "feePercent",
@@ -259,19 +302,19 @@ export interface SovAdsManagerInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getCampaign",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "getClaimOrder",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "getPublisher",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "getPublisherSites",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "getSupportedTokens",
@@ -283,22 +326,27 @@ export interface SovAdsManagerInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "isPublisher",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "isUserBanned",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "pause", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "pauseCampaign",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "processClaimOrder",
-    values: [BigNumberish, BigNumberish, boolean, string]
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<boolean>,
+      PromiseOrValue<string>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "protocolFees",
@@ -306,15 +354,15 @@ export interface SovAdsManagerInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "publishers",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "removeSite",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "removeSupportedToken",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -322,31 +370,31 @@ export interface SovAdsManagerInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "resumeCampaign",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "setFeePercent",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "subscribePublisher",
-    values: [string[]]
+    values: [PromiseOrValue<string>[]]
   ): string;
   encodeFunctionData(
     functionFragment: "supportedTokens",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "supportedTokensList",
-    values: [BigNumberish]
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "transferOwnership",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "unbanUser",
-    values: [AddressLike]
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(functionFragment: "unpause", values?: undefined): string;
 
@@ -485,1167 +533,1582 @@ export interface SovAdsManagerInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "unbanUser", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
+
+  events: {
+    "CampaignCreated(uint256,address,address,uint256,uint256,uint256,string)": EventFragment;
+    "CampaignEdited(uint256,string,uint256)": EventFragment;
+    "CampaignPaused(uint256)": EventFragment;
+    "CampaignResumed(uint256)": EventFragment;
+    "ClaimOrderCreated(uint256,address,uint256,uint256)": EventFragment;
+    "ClaimOrderProcessed(uint256,uint256,bool,string)": EventFragment;
+    "FeeCollected(address,uint256)": EventFragment;
+    "FundsDisbursed(uint256,address,uint256)": EventFragment;
+    "OwnershipTransferred(address,address)": EventFragment;
+    "Paused(address)": EventFragment;
+    "PublisherBanned(address,string)": EventFragment;
+    "PublisherSubscribed(address,string[],uint256)": EventFragment;
+    "PublisherUnbanned(address)": EventFragment;
+    "SiteAdded(address,string)": EventFragment;
+    "SiteRemoved(address,string)": EventFragment;
+    "SupportedTokenAdded(address)": EventFragment;
+    "SupportedTokenRemoved(address)": EventFragment;
+    "Unpaused(address)": EventFragment;
+  };
+
+  getEvent(nameOrSignatureOrTopic: "CampaignCreated"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "CampaignEdited"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "CampaignPaused"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "CampaignResumed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "ClaimOrderCreated"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "ClaimOrderProcessed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "FeeCollected"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "FundsDisbursed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "PublisherBanned"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "PublisherSubscribed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "PublisherUnbanned"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SiteAdded"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SiteRemoved"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SupportedTokenAdded"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SupportedTokenRemoved"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Unpaused"): EventFragment;
 }
 
-export namespace CampaignCreatedEvent {
-  export type InputTuple = [
-    id: BigNumberish,
-    creator: AddressLike,
-    token: AddressLike,
-    amount: BigNumberish,
-    startTime: BigNumberish,
-    endTime: BigNumberish,
-    metadata: string
-  ];
-  export type OutputTuple = [
-    id: bigint,
-    creator: string,
-    token: string,
-    amount: bigint,
-    startTime: bigint,
-    endTime: bigint,
-    metadata: string
-  ];
-  export interface OutputObject {
-    id: bigint;
-    creator: string;
-    token: string;
-    amount: bigint;
-    startTime: bigint;
-    endTime: bigint;
-    metadata: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface CampaignCreatedEventObject {
+  id: BigNumber;
+  creator: string;
+  token: string;
+  amount: BigNumber;
+  startTime: BigNumber;
+  endTime: BigNumber;
+  metadata: string;
 }
+export type CampaignCreatedEvent = TypedEvent<
+  [BigNumber, string, string, BigNumber, BigNumber, BigNumber, string],
+  CampaignCreatedEventObject
+>;
 
-export namespace CampaignEditedEvent {
-  export type InputTuple = [
-    id: BigNumberish,
-    newMetadata: string,
-    newEndTime: BigNumberish
-  ];
-  export type OutputTuple = [
-    id: bigint,
-    newMetadata: string,
-    newEndTime: bigint
-  ];
-  export interface OutputObject {
-    id: bigint;
-    newMetadata: string;
-    newEndTime: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type CampaignCreatedEventFilter = TypedEventFilter<CampaignCreatedEvent>;
 
-export namespace CampaignPausedEvent {
-  export type InputTuple = [id: BigNumberish];
-  export type OutputTuple = [id: bigint];
-  export interface OutputObject {
-    id: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface CampaignEditedEventObject {
+  id: BigNumber;
+  newMetadata: string;
+  newEndTime: BigNumber;
 }
+export type CampaignEditedEvent = TypedEvent<
+  [BigNumber, string, BigNumber],
+  CampaignEditedEventObject
+>;
 
-export namespace CampaignResumedEvent {
-  export type InputTuple = [id: BigNumberish];
-  export type OutputTuple = [id: bigint];
-  export interface OutputObject {
-    id: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type CampaignEditedEventFilter = TypedEventFilter<CampaignEditedEvent>;
 
-export namespace ClaimOrderCreatedEvent {
-  export type InputTuple = [
-    orderId: BigNumberish,
-    publisher: AddressLike,
-    campaignId: BigNumberish,
-    requestedAmount: BigNumberish
-  ];
-  export type OutputTuple = [
-    orderId: bigint,
-    publisher: string,
-    campaignId: bigint,
-    requestedAmount: bigint
-  ];
-  export interface OutputObject {
-    orderId: bigint;
-    publisher: string;
-    campaignId: bigint;
-    requestedAmount: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface CampaignPausedEventObject {
+  id: BigNumber;
 }
+export type CampaignPausedEvent = TypedEvent<
+  [BigNumber],
+  CampaignPausedEventObject
+>;
 
-export namespace ClaimOrderProcessedEvent {
-  export type InputTuple = [
-    orderId: BigNumberish,
-    approvedAmount: BigNumberish,
-    rejected: boolean,
-    reason: string
-  ];
-  export type OutputTuple = [
-    orderId: bigint,
-    approvedAmount: bigint,
-    rejected: boolean,
-    reason: string
-  ];
-  export interface OutputObject {
-    orderId: bigint;
-    approvedAmount: bigint;
-    rejected: boolean;
-    reason: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type CampaignPausedEventFilter = TypedEventFilter<CampaignPausedEvent>;
 
-export namespace FeeCollectedEvent {
-  export type InputTuple = [admin: AddressLike, amount: BigNumberish];
-  export type OutputTuple = [admin: string, amount: bigint];
-  export interface OutputObject {
-    admin: string;
-    amount: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface CampaignResumedEventObject {
+  id: BigNumber;
 }
+export type CampaignResumedEvent = TypedEvent<
+  [BigNumber],
+  CampaignResumedEventObject
+>;
 
-export namespace FundsDisbursedEvent {
-  export type InputTuple = [
-    campaignId: BigNumberish,
-    recipient: AddressLike,
-    amount: BigNumberish
-  ];
-  export type OutputTuple = [
-    campaignId: bigint,
-    recipient: string,
-    amount: bigint
-  ];
-  export interface OutputObject {
-    campaignId: bigint;
-    recipient: string;
-    amount: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type CampaignResumedEventFilter = TypedEventFilter<CampaignResumedEvent>;
 
-export namespace OwnershipTransferredEvent {
-  export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
-  export type OutputTuple = [previousOwner: string, newOwner: string];
-  export interface OutputObject {
-    previousOwner: string;
-    newOwner: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface ClaimOrderCreatedEventObject {
+  orderId: BigNumber;
+  publisher: string;
+  campaignId: BigNumber;
+  requestedAmount: BigNumber;
 }
+export type ClaimOrderCreatedEvent = TypedEvent<
+  [BigNumber, string, BigNumber, BigNumber],
+  ClaimOrderCreatedEventObject
+>;
 
-export namespace PausedEvent {
-  export type InputTuple = [account: AddressLike];
-  export type OutputTuple = [account: string];
-  export interface OutputObject {
-    account: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type ClaimOrderCreatedEventFilter =
+  TypedEventFilter<ClaimOrderCreatedEvent>;
 
-export namespace PublisherBannedEvent {
-  export type InputTuple = [publisher: AddressLike, reason: string];
-  export type OutputTuple = [publisher: string, reason: string];
-  export interface OutputObject {
-    publisher: string;
-    reason: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface ClaimOrderProcessedEventObject {
+  orderId: BigNumber;
+  approvedAmount: BigNumber;
+  rejected: boolean;
+  reason: string;
 }
+export type ClaimOrderProcessedEvent = TypedEvent<
+  [BigNumber, BigNumber, boolean, string],
+  ClaimOrderProcessedEventObject
+>;
 
-export namespace PublisherSubscribedEvent {
-  export type InputTuple = [
-    publisher: AddressLike,
-    sites: string[],
-    subscriptionDate: BigNumberish
-  ];
-  export type OutputTuple = [
-    publisher: string,
-    sites: string[],
-    subscriptionDate: bigint
-  ];
-  export interface OutputObject {
-    publisher: string;
-    sites: string[];
-    subscriptionDate: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type ClaimOrderProcessedEventFilter =
+  TypedEventFilter<ClaimOrderProcessedEvent>;
 
-export namespace PublisherUnbannedEvent {
-  export type InputTuple = [publisher: AddressLike];
-  export type OutputTuple = [publisher: string];
-  export interface OutputObject {
-    publisher: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface FeeCollectedEventObject {
+  admin: string;
+  amount: BigNumber;
 }
+export type FeeCollectedEvent = TypedEvent<
+  [string, BigNumber],
+  FeeCollectedEventObject
+>;
 
-export namespace SiteAddedEvent {
-  export type InputTuple = [publisher: AddressLike, site: string];
-  export type OutputTuple = [publisher: string, site: string];
-  export interface OutputObject {
-    publisher: string;
-    site: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type FeeCollectedEventFilter = TypedEventFilter<FeeCollectedEvent>;
 
-export namespace SiteRemovedEvent {
-  export type InputTuple = [publisher: AddressLike, site: string];
-  export type OutputTuple = [publisher: string, site: string];
-  export interface OutputObject {
-    publisher: string;
-    site: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface FundsDisbursedEventObject {
+  campaignId: BigNumber;
+  recipient: string;
+  amount: BigNumber;
 }
+export type FundsDisbursedEvent = TypedEvent<
+  [BigNumber, string, BigNumber],
+  FundsDisbursedEventObject
+>;
 
-export namespace SupportedTokenAddedEvent {
-  export type InputTuple = [token: AddressLike];
-  export type OutputTuple = [token: string];
-  export interface OutputObject {
-    token: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
+export type FundsDisbursedEventFilter = TypedEventFilter<FundsDisbursedEvent>;
 
-export namespace SupportedTokenRemovedEvent {
-  export type InputTuple = [token: AddressLike];
-  export type OutputTuple = [token: string];
-  export interface OutputObject {
-    token: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export interface OwnershipTransferredEventObject {
+  previousOwner: string;
+  newOwner: string;
 }
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string],
+  OwnershipTransferredEventObject
+>;
 
-export namespace UnpausedEvent {
-  export type InputTuple = [account: AddressLike];
-  export type OutputTuple = [account: string];
-  export interface OutputObject {
-    account: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
+export type OwnershipTransferredEventFilter =
+  TypedEventFilter<OwnershipTransferredEvent>;
+
+export interface PausedEventObject {
+  account: string;
 }
+export type PausedEvent = TypedEvent<[string], PausedEventObject>;
+
+export type PausedEventFilter = TypedEventFilter<PausedEvent>;
+
+export interface PublisherBannedEventObject {
+  publisher: string;
+  reason: string;
+}
+export type PublisherBannedEvent = TypedEvent<
+  [string, string],
+  PublisherBannedEventObject
+>;
+
+export type PublisherBannedEventFilter = TypedEventFilter<PublisherBannedEvent>;
+
+export interface PublisherSubscribedEventObject {
+  publisher: string;
+  sites: string[];
+  subscriptionDate: BigNumber;
+}
+export type PublisherSubscribedEvent = TypedEvent<
+  [string, string[], BigNumber],
+  PublisherSubscribedEventObject
+>;
+
+export type PublisherSubscribedEventFilter =
+  TypedEventFilter<PublisherSubscribedEvent>;
+
+export interface PublisherUnbannedEventObject {
+  publisher: string;
+}
+export type PublisherUnbannedEvent = TypedEvent<
+  [string],
+  PublisherUnbannedEventObject
+>;
+
+export type PublisherUnbannedEventFilter =
+  TypedEventFilter<PublisherUnbannedEvent>;
+
+export interface SiteAddedEventObject {
+  publisher: string;
+  site: string;
+}
+export type SiteAddedEvent = TypedEvent<[string, string], SiteAddedEventObject>;
+
+export type SiteAddedEventFilter = TypedEventFilter<SiteAddedEvent>;
+
+export interface SiteRemovedEventObject {
+  publisher: string;
+  site: string;
+}
+export type SiteRemovedEvent = TypedEvent<
+  [string, string],
+  SiteRemovedEventObject
+>;
+
+export type SiteRemovedEventFilter = TypedEventFilter<SiteRemovedEvent>;
+
+export interface SupportedTokenAddedEventObject {
+  token: string;
+}
+export type SupportedTokenAddedEvent = TypedEvent<
+  [string],
+  SupportedTokenAddedEventObject
+>;
+
+export type SupportedTokenAddedEventFilter =
+  TypedEventFilter<SupportedTokenAddedEvent>;
+
+export interface SupportedTokenRemovedEventObject {
+  token: string;
+}
+export type SupportedTokenRemovedEvent = TypedEvent<
+  [string],
+  SupportedTokenRemovedEventObject
+>;
+
+export type SupportedTokenRemovedEventFilter =
+  TypedEventFilter<SupportedTokenRemovedEvent>;
+
+export interface UnpausedEventObject {
+  account: string;
+}
+export type UnpausedEvent = TypedEvent<[string], UnpausedEventObject>;
+
+export type UnpausedEventFilter = TypedEventFilter<UnpausedEvent>;
 
 export interface SovAdsManager extends BaseContract {
-  connect(runner?: ContractRunner | null): SovAdsManager;
-  waitForDeployment(): Promise<this>;
+  connect(signerOrProvider: Signer | Provider | string): this;
+  attach(addressOrName: string): this;
+  deployed(): Promise<this>;
 
   interface: SovAdsManagerInterface;
 
-  queryFilter<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
+  queryFilter<TEvent extends TypedEvent>(
+    event: TypedEventFilter<TEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
     toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
-  queryFilter<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
-  ): Promise<Array<TypedEventLog<TCEvent>>>;
+  ): Promise<Array<TEvent>>;
 
-  on<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  on<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  listeners<TEvent extends TypedEvent>(
+    eventFilter?: TypedEventFilter<TEvent>
+  ): Array<TypedListener<TEvent>>;
+  listeners(eventName?: string): Array<Listener>;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
+  removeAllListeners(eventName?: string): this;
+  off: OnEvent<this>;
+  on: OnEvent<this>;
+  once: OnEvent<this>;
+  removeListener: OnEvent<this>;
 
-  once<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
-  once<TCEvent extends TypedContractEvent>(
-    filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>
-  ): Promise<this>;
+  functions: {
+    activeCampaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
-  listeners<TCEvent extends TypedContractEvent>(
-    event: TCEvent
-  ): Promise<Array<TypedListener<TCEvent>>>;
-  listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(
-    event?: TCEvent
-  ): Promise<this>;
+    addSite(
+      _site: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  activeCampaigns: TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
+    addSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  addSite: TypedContractMethod<[_site: string], [void], "nonpayable">;
+    banUser(
+      _user: PromiseOrValue<string>,
+      _reason: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  addSupportedToken: TypedContractMethod<
-    [_token: AddressLike],
-    [void],
-    "nonpayable"
-  >;
+    bannedUsers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  banUser: TypedContractMethod<
-    [_user: AddressLike, _reason: string],
-    [void],
-    "nonpayable"
-  >;
+    campaignCount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  bannedUsers: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
-
-  campaignCount: TypedContractMethod<[], [bigint], "view">;
-
-  campaigns: TypedContractMethod<
-    [arg0: BigNumberish],
-    [
+    campaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<
       [
-        bigint,
+        BigNumber,
         string,
         string,
-        bigint,
-        bigint,
-        bigint,
+        BigNumber,
+        BigNumber,
+        BigNumber,
         string,
         boolean,
-        bigint,
+        BigNumber,
         boolean
       ] & {
-        id: bigint;
+        id: BigNumber;
         creator: string;
         token: string;
-        amount: bigint;
-        startTime: bigint;
-        endTime: bigint;
+        amount: BigNumber;
+        startTime: BigNumber;
+        endTime: BigNumber;
         metadata: string;
         active: boolean;
-        spent: bigint;
+        spent: BigNumber;
         paused: boolean;
       }
-    ],
-    "view"
-  >;
+    >;
 
-  claimOrderCount: TypedContractMethod<[], [bigint], "view">;
+    claimOrderCount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  claimOrders: TypedContractMethod<
-    [arg0: BigNumberish],
-    [
+    claimOrders(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<
       [
-        bigint,
+        BigNumber,
         string,
-        bigint,
-        bigint,
-        bigint,
+        BigNumber,
+        BigNumber,
+        BigNumber,
         boolean,
         boolean,
         string,
-        bigint,
-        bigint
+        BigNumber,
+        BigNumber
       ] & {
-        id: bigint;
+        id: BigNumber;
         publisher: string;
-        campaignId: bigint;
-        requestedAmount: bigint;
-        approvedAmount: bigint;
+        campaignId: BigNumber;
+        requestedAmount: BigNumber;
+        approvedAmount: BigNumber;
         processed: boolean;
         rejected: boolean;
         reason: string;
-        createdAt: bigint;
-        processedAt: bigint;
+        createdAt: BigNumber;
+        processedAt: BigNumber;
       }
-    ],
-    "view"
-  >;
+    >;
 
-  collectFees: TypedContractMethod<
-    [_token: AddressLike, _amount: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    collectFees(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  createCampaign: TypedContractMethod<
-    [
-      _token: AddressLike,
-      _amount: BigNumberish,
-      _duration: BigNumberish,
-      _metadata: string
-    ],
-    [void],
-    "nonpayable"
-  >;
+    createCampaign(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      _duration: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  createClaimOrder: TypedContractMethod<
-    [_campaignId: BigNumberish, _requestedAmount: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    createClaimOrder(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _requestedAmount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  disburseFunds: TypedContractMethod<
-    [_campaignId: BigNumberish, _recipient: AddressLike, _amount: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    disburseFunds(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _recipient: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  editCampaign: TypedContractMethod<
-    [_campaignId: BigNumberish, _metadata: string, _newDuration: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    editCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      _newDuration: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  feePercent: TypedContractMethod<[], [bigint], "view">;
+    feePercent(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  getActiveCampaignsCount: TypedContractMethod<[], [bigint], "view">;
+    getActiveCampaignsCount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  getCampaign: TypedContractMethod<
-    [_campaignId: BigNumberish],
-    [SovAdsManager.CampaignStructOutput],
-    "view"
-  >;
+    getCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[SovAdsManager.CampaignStructOutput]>;
 
-  getClaimOrder: TypedContractMethod<
-    [_orderId: BigNumberish],
-    [SovAdsManager.ClaimOrderStructOutput],
-    "view"
-  >;
+    getClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[SovAdsManager.ClaimOrderStructOutput]>;
 
-  getPublisher: TypedContractMethod<
-    [_publisher: AddressLike],
-    [SovAdsManager.PublisherStructOutput],
-    "view"
-  >;
+    getPublisher(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[SovAdsManager.PublisherStructOutput]>;
 
-  getPublisherSites: TypedContractMethod<
-    [_publisher: AddressLike],
-    [string[]],
-    "view"
-  >;
+    getPublisherSites(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[string[]]>;
 
-  getSupportedTokens: TypedContractMethod<[], [string[]], "view">;
+    getSupportedTokens(overrides?: CallOverrides): Promise<[string[]]>;
 
-  getTotalProtocolFees: TypedContractMethod<[], [bigint], "view">;
+    getTotalProtocolFees(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  isPublisher: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+    isPublisher(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  isUserBanned: TypedContractMethod<[_user: AddressLike], [boolean], "view">;
+    isUserBanned(
+      _user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  owner: TypedContractMethod<[], [string], "view">;
+    owner(overrides?: CallOverrides): Promise<[string]>;
 
-  pause: TypedContractMethod<[], [void], "nonpayable">;
+    pause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  pauseCampaign: TypedContractMethod<
-    [_campaignId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    pauseCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  paused: TypedContractMethod<[], [boolean], "view">;
+    paused(overrides?: CallOverrides): Promise<[boolean]>;
 
-  processClaimOrder: TypedContractMethod<
-    [
-      _orderId: BigNumberish,
-      _approvedAmount: BigNumberish,
-      _rejected: boolean,
-      _reason: string
-    ],
-    [void],
-    "nonpayable"
-  >;
+    processClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      _approvedAmount: PromiseOrValue<BigNumberish>,
+      _rejected: PromiseOrValue<boolean>,
+      _reason: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  protocolFees: TypedContractMethod<[], [bigint], "view">;
+    protocolFees(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-  publishers: TypedContractMethod<
-    [arg0: AddressLike],
-    [
-      [string, boolean, bigint, bigint, boolean, bigint] & {
+    publishers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<
+      [string, boolean, BigNumber, BigNumber, boolean, BigNumber] & {
         wallet: string;
         banned: boolean;
-        totalEarned: bigint;
-        totalClaimed: bigint;
+        totalEarned: BigNumber;
+        totalClaimed: BigNumber;
         verified: boolean;
-        subscriptionDate: bigint;
+        subscriptionDate: BigNumber;
       }
-    ],
-    "view"
-  >;
+    >;
 
-  removeSite: TypedContractMethod<
-    [_siteIndex: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    removeSite(
+      _siteIndex: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  removeSupportedToken: TypedContractMethod<
-    [_token: AddressLike],
-    [void],
-    "nonpayable"
-  >;
+    removeSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
+    renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  resumeCampaign: TypedContractMethod<
-    [_campaignId: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    resumeCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  setFeePercent: TypedContractMethod<
-    [_feePercent: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
+    setFeePercent(
+      _feePercent: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  subscribePublisher: TypedContractMethod<
-    [_sites: string[]],
-    [void],
-    "nonpayable"
-  >;
+    subscribePublisher(
+      _sites: PromiseOrValue<string>[],
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  supportedTokens: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+    supportedTokens(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
-  supportedTokensList: TypedContractMethod<
-    [arg0: BigNumberish],
-    [string],
-    "view"
-  >;
+    supportedTokensList(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
 
-  transferOwnership: TypedContractMethod<
-    [newOwner: AddressLike],
-    [void],
-    "nonpayable"
-  >;
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  unbanUser: TypedContractMethod<[_user: AddressLike], [void], "nonpayable">;
+    unbanUser(
+      _user: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
-  unpause: TypedContractMethod<[], [void], "nonpayable">;
+    unpause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+  };
 
-  getFunction<T extends ContractMethod = ContractMethod>(
-    key: string | FunctionFragment
-  ): T;
+  activeCampaigns(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
-  getFunction(
-    nameOrSignature: "activeCampaigns"
-  ): TypedContractMethod<[arg0: BigNumberish], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "addSite"
-  ): TypedContractMethod<[_site: string], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "addSupportedToken"
-  ): TypedContractMethod<[_token: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "banUser"
-  ): TypedContractMethod<
-    [_user: AddressLike, _reason: string],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "bannedUsers"
-  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "campaignCount"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "campaigns"
-  ): TypedContractMethod<
-    [arg0: BigNumberish],
+  addSite(
+    _site: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  addSupportedToken(
+    _token: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  banUser(
+    _user: PromiseOrValue<string>,
+    _reason: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  bannedUsers(
+    arg0: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  campaignCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+  campaigns(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<
     [
+      BigNumber,
+      string,
+      string,
+      BigNumber,
+      BigNumber,
+      BigNumber,
+      string,
+      boolean,
+      BigNumber,
+      boolean
+    ] & {
+      id: BigNumber;
+      creator: string;
+      token: string;
+      amount: BigNumber;
+      startTime: BigNumber;
+      endTime: BigNumber;
+      metadata: string;
+      active: boolean;
+      spent: BigNumber;
+      paused: boolean;
+    }
+  >;
+
+  claimOrderCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+  claimOrders(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<
+    [
+      BigNumber,
+      string,
+      BigNumber,
+      BigNumber,
+      BigNumber,
+      boolean,
+      boolean,
+      string,
+      BigNumber,
+      BigNumber
+    ] & {
+      id: BigNumber;
+      publisher: string;
+      campaignId: BigNumber;
+      requestedAmount: BigNumber;
+      approvedAmount: BigNumber;
+      processed: boolean;
+      rejected: boolean;
+      reason: string;
+      createdAt: BigNumber;
+      processedAt: BigNumber;
+    }
+  >;
+
+  collectFees(
+    _token: PromiseOrValue<string>,
+    _amount: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  createCampaign(
+    _token: PromiseOrValue<string>,
+    _amount: PromiseOrValue<BigNumberish>,
+    _duration: PromiseOrValue<BigNumberish>,
+    _metadata: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  createClaimOrder(
+    _campaignId: PromiseOrValue<BigNumberish>,
+    _requestedAmount: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  disburseFunds(
+    _campaignId: PromiseOrValue<BigNumberish>,
+    _recipient: PromiseOrValue<string>,
+    _amount: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  editCampaign(
+    _campaignId: PromiseOrValue<BigNumberish>,
+    _metadata: PromiseOrValue<string>,
+    _newDuration: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  feePercent(overrides?: CallOverrides): Promise<BigNumber>;
+
+  getActiveCampaignsCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+  getCampaign(
+    _campaignId: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<SovAdsManager.CampaignStructOutput>;
+
+  getClaimOrder(
+    _orderId: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<SovAdsManager.ClaimOrderStructOutput>;
+
+  getPublisher(
+    _publisher: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<SovAdsManager.PublisherStructOutput>;
+
+  getPublisherSites(
+    _publisher: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<string[]>;
+
+  getSupportedTokens(overrides?: CallOverrides): Promise<string[]>;
+
+  getTotalProtocolFees(overrides?: CallOverrides): Promise<BigNumber>;
+
+  isPublisher(
+    arg0: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  isUserBanned(
+    _user: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  owner(overrides?: CallOverrides): Promise<string>;
+
+  pause(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  pauseCampaign(
+    _campaignId: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  paused(overrides?: CallOverrides): Promise<boolean>;
+
+  processClaimOrder(
+    _orderId: PromiseOrValue<BigNumberish>,
+    _approvedAmount: PromiseOrValue<BigNumberish>,
+    _rejected: PromiseOrValue<boolean>,
+    _reason: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  protocolFees(overrides?: CallOverrides): Promise<BigNumber>;
+
+  publishers(
+    arg0: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<
+    [string, boolean, BigNumber, BigNumber, boolean, BigNumber] & {
+      wallet: string;
+      banned: boolean;
+      totalEarned: BigNumber;
+      totalClaimed: BigNumber;
+      verified: boolean;
+      subscriptionDate: BigNumber;
+    }
+  >;
+
+  removeSite(
+    _siteIndex: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  removeSupportedToken(
+    _token: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  renounceOwnership(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  resumeCampaign(
+    _campaignId: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setFeePercent(
+    _feePercent: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  subscribePublisher(
+    _sites: PromiseOrValue<string>[],
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  supportedTokens(
+    arg0: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  supportedTokensList(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<string>;
+
+  transferOwnership(
+    newOwner: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  unbanUser(
+    _user: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  unpause(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  callStatic: {
+    activeCampaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    addSite(
+      _site: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    addSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    banUser(
+      _user: PromiseOrValue<string>,
+      _reason: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    bannedUsers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    campaignCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    campaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<
       [
-        bigint,
+        BigNumber,
         string,
         string,
-        bigint,
-        bigint,
-        bigint,
+        BigNumber,
+        BigNumber,
+        BigNumber,
         string,
         boolean,
-        bigint,
+        BigNumber,
         boolean
       ] & {
-        id: bigint;
+        id: BigNumber;
         creator: string;
         token: string;
-        amount: bigint;
-        startTime: bigint;
-        endTime: bigint;
+        amount: BigNumber;
+        startTime: BigNumber;
+        endTime: BigNumber;
         metadata: string;
         active: boolean;
-        spent: bigint;
+        spent: BigNumber;
         paused: boolean;
       }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "claimOrderCount"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "claimOrders"
-  ): TypedContractMethod<
-    [arg0: BigNumberish],
-    [
+    >;
+
+    claimOrderCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    claimOrders(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<
       [
-        bigint,
+        BigNumber,
         string,
-        bigint,
-        bigint,
-        bigint,
+        BigNumber,
+        BigNumber,
+        BigNumber,
         boolean,
         boolean,
         string,
-        bigint,
-        bigint
+        BigNumber,
+        BigNumber
       ] & {
-        id: bigint;
+        id: BigNumber;
         publisher: string;
-        campaignId: bigint;
-        requestedAmount: bigint;
-        approvedAmount: bigint;
+        campaignId: BigNumber;
+        requestedAmount: BigNumber;
+        approvedAmount: BigNumber;
         processed: boolean;
         rejected: boolean;
         reason: string;
-        createdAt: bigint;
-        processedAt: bigint;
+        createdAt: BigNumber;
+        processedAt: BigNumber;
       }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "collectFees"
-  ): TypedContractMethod<
-    [_token: AddressLike, _amount: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "createCampaign"
-  ): TypedContractMethod<
-    [
-      _token: AddressLike,
-      _amount: BigNumberish,
-      _duration: BigNumberish,
-      _metadata: string
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "createClaimOrder"
-  ): TypedContractMethod<
-    [_campaignId: BigNumberish, _requestedAmount: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "disburseFunds"
-  ): TypedContractMethod<
-    [_campaignId: BigNumberish, _recipient: AddressLike, _amount: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "editCampaign"
-  ): TypedContractMethod<
-    [_campaignId: BigNumberish, _metadata: string, _newDuration: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "feePercent"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "getActiveCampaignsCount"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "getCampaign"
-  ): TypedContractMethod<
-    [_campaignId: BigNumberish],
-    [SovAdsManager.CampaignStructOutput],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getClaimOrder"
-  ): TypedContractMethod<
-    [_orderId: BigNumberish],
-    [SovAdsManager.ClaimOrderStructOutput],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getPublisher"
-  ): TypedContractMethod<
-    [_publisher: AddressLike],
-    [SovAdsManager.PublisherStructOutput],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getPublisherSites"
-  ): TypedContractMethod<[_publisher: AddressLike], [string[]], "view">;
-  getFunction(
-    nameOrSignature: "getSupportedTokens"
-  ): TypedContractMethod<[], [string[]], "view">;
-  getFunction(
-    nameOrSignature: "getTotalProtocolFees"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "isPublisher"
-  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "isUserBanned"
-  ): TypedContractMethod<[_user: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "owner"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "pause"
-  ): TypedContractMethod<[], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "pauseCampaign"
-  ): TypedContractMethod<[_campaignId: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "paused"
-  ): TypedContractMethod<[], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "processClaimOrder"
-  ): TypedContractMethod<
-    [
-      _orderId: BigNumberish,
-      _approvedAmount: BigNumberish,
-      _rejected: boolean,
-      _reason: string
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "protocolFees"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "publishers"
-  ): TypedContractMethod<
-    [arg0: AddressLike],
-    [
-      [string, boolean, bigint, bigint, boolean, bigint] & {
+    >;
+
+    collectFees(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    createCampaign(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      _duration: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    createClaimOrder(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _requestedAmount: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    disburseFunds(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _recipient: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    editCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      _newDuration: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    feePercent(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getActiveCampaignsCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<SovAdsManager.CampaignStructOutput>;
+
+    getClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<SovAdsManager.ClaimOrderStructOutput>;
+
+    getPublisher(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<SovAdsManager.PublisherStructOutput>;
+
+    getPublisherSites(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<string[]>;
+
+    getSupportedTokens(overrides?: CallOverrides): Promise<string[]>;
+
+    getTotalProtocolFees(overrides?: CallOverrides): Promise<BigNumber>;
+
+    isPublisher(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    isUserBanned(
+      _user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    owner(overrides?: CallOverrides): Promise<string>;
+
+    pause(overrides?: CallOverrides): Promise<void>;
+
+    pauseCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    paused(overrides?: CallOverrides): Promise<boolean>;
+
+    processClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      _approvedAmount: PromiseOrValue<BigNumberish>,
+      _rejected: PromiseOrValue<boolean>,
+      _reason: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    protocolFees(overrides?: CallOverrides): Promise<BigNumber>;
+
+    publishers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<
+      [string, boolean, BigNumber, BigNumber, boolean, BigNumber] & {
         wallet: string;
         banned: boolean;
-        totalEarned: bigint;
-        totalClaimed: bigint;
+        totalEarned: BigNumber;
+        totalClaimed: BigNumber;
         verified: boolean;
-        subscriptionDate: bigint;
+        subscriptionDate: BigNumber;
       }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "removeSite"
-  ): TypedContractMethod<[_siteIndex: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "removeSupportedToken"
-  ): TypedContractMethod<[_token: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "renounceOwnership"
-  ): TypedContractMethod<[], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "resumeCampaign"
-  ): TypedContractMethod<[_campaignId: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "setFeePercent"
-  ): TypedContractMethod<[_feePercent: BigNumberish], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "subscribePublisher"
-  ): TypedContractMethod<[_sites: string[]], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "supportedTokens"
-  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "supportedTokensList"
-  ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
-  getFunction(
-    nameOrSignature: "transferOwnership"
-  ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "unbanUser"
-  ): TypedContractMethod<[_user: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "unpause"
-  ): TypedContractMethod<[], [void], "nonpayable">;
+    >;
 
-  getEvent(
-    key: "CampaignCreated"
-  ): TypedContractEvent<
-    CampaignCreatedEvent.InputTuple,
-    CampaignCreatedEvent.OutputTuple,
-    CampaignCreatedEvent.OutputObject
-  >;
-  getEvent(
-    key: "CampaignEdited"
-  ): TypedContractEvent<
-    CampaignEditedEvent.InputTuple,
-    CampaignEditedEvent.OutputTuple,
-    CampaignEditedEvent.OutputObject
-  >;
-  getEvent(
-    key: "CampaignPaused"
-  ): TypedContractEvent<
-    CampaignPausedEvent.InputTuple,
-    CampaignPausedEvent.OutputTuple,
-    CampaignPausedEvent.OutputObject
-  >;
-  getEvent(
-    key: "CampaignResumed"
-  ): TypedContractEvent<
-    CampaignResumedEvent.InputTuple,
-    CampaignResumedEvent.OutputTuple,
-    CampaignResumedEvent.OutputObject
-  >;
-  getEvent(
-    key: "ClaimOrderCreated"
-  ): TypedContractEvent<
-    ClaimOrderCreatedEvent.InputTuple,
-    ClaimOrderCreatedEvent.OutputTuple,
-    ClaimOrderCreatedEvent.OutputObject
-  >;
-  getEvent(
-    key: "ClaimOrderProcessed"
-  ): TypedContractEvent<
-    ClaimOrderProcessedEvent.InputTuple,
-    ClaimOrderProcessedEvent.OutputTuple,
-    ClaimOrderProcessedEvent.OutputObject
-  >;
-  getEvent(
-    key: "FeeCollected"
-  ): TypedContractEvent<
-    FeeCollectedEvent.InputTuple,
-    FeeCollectedEvent.OutputTuple,
-    FeeCollectedEvent.OutputObject
-  >;
-  getEvent(
-    key: "FundsDisbursed"
-  ): TypedContractEvent<
-    FundsDisbursedEvent.InputTuple,
-    FundsDisbursedEvent.OutputTuple,
-    FundsDisbursedEvent.OutputObject
-  >;
-  getEvent(
-    key: "OwnershipTransferred"
-  ): TypedContractEvent<
-    OwnershipTransferredEvent.InputTuple,
-    OwnershipTransferredEvent.OutputTuple,
-    OwnershipTransferredEvent.OutputObject
-  >;
-  getEvent(
-    key: "Paused"
-  ): TypedContractEvent<
-    PausedEvent.InputTuple,
-    PausedEvent.OutputTuple,
-    PausedEvent.OutputObject
-  >;
-  getEvent(
-    key: "PublisherBanned"
-  ): TypedContractEvent<
-    PublisherBannedEvent.InputTuple,
-    PublisherBannedEvent.OutputTuple,
-    PublisherBannedEvent.OutputObject
-  >;
-  getEvent(
-    key: "PublisherSubscribed"
-  ): TypedContractEvent<
-    PublisherSubscribedEvent.InputTuple,
-    PublisherSubscribedEvent.OutputTuple,
-    PublisherSubscribedEvent.OutputObject
-  >;
-  getEvent(
-    key: "PublisherUnbanned"
-  ): TypedContractEvent<
-    PublisherUnbannedEvent.InputTuple,
-    PublisherUnbannedEvent.OutputTuple,
-    PublisherUnbannedEvent.OutputObject
-  >;
-  getEvent(
-    key: "SiteAdded"
-  ): TypedContractEvent<
-    SiteAddedEvent.InputTuple,
-    SiteAddedEvent.OutputTuple,
-    SiteAddedEvent.OutputObject
-  >;
-  getEvent(
-    key: "SiteRemoved"
-  ): TypedContractEvent<
-    SiteRemovedEvent.InputTuple,
-    SiteRemovedEvent.OutputTuple,
-    SiteRemovedEvent.OutputObject
-  >;
-  getEvent(
-    key: "SupportedTokenAdded"
-  ): TypedContractEvent<
-    SupportedTokenAddedEvent.InputTuple,
-    SupportedTokenAddedEvent.OutputTuple,
-    SupportedTokenAddedEvent.OutputObject
-  >;
-  getEvent(
-    key: "SupportedTokenRemoved"
-  ): TypedContractEvent<
-    SupportedTokenRemovedEvent.InputTuple,
-    SupportedTokenRemovedEvent.OutputTuple,
-    SupportedTokenRemovedEvent.OutputObject
-  >;
-  getEvent(
-    key: "Unpaused"
-  ): TypedContractEvent<
-    UnpausedEvent.InputTuple,
-    UnpausedEvent.OutputTuple,
-    UnpausedEvent.OutputObject
-  >;
+    removeSite(
+      _siteIndex: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    removeSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
+    resumeCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setFeePercent(
+      _feePercent: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    subscribePublisher(
+      _sites: PromiseOrValue<string>[],
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    supportedTokens(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    supportedTokensList(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    unbanUser(
+      _user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    unpause(overrides?: CallOverrides): Promise<void>;
+  };
 
   filters: {
-    "CampaignCreated(uint256,address,address,uint256,uint256,uint256,string)": TypedContractEvent<
-      CampaignCreatedEvent.InputTuple,
-      CampaignCreatedEvent.OutputTuple,
-      CampaignCreatedEvent.OutputObject
-    >;
-    CampaignCreated: TypedContractEvent<
-      CampaignCreatedEvent.InputTuple,
-      CampaignCreatedEvent.OutputTuple,
-      CampaignCreatedEvent.OutputObject
-    >;
+    "CampaignCreated(uint256,address,address,uint256,uint256,uint256,string)"(
+      id?: PromiseOrValue<BigNumberish> | null,
+      creator?: PromiseOrValue<string> | null,
+      token?: PromiseOrValue<string> | null,
+      amount?: null,
+      startTime?: null,
+      endTime?: null,
+      metadata?: null
+    ): CampaignCreatedEventFilter;
+    CampaignCreated(
+      id?: PromiseOrValue<BigNumberish> | null,
+      creator?: PromiseOrValue<string> | null,
+      token?: PromiseOrValue<string> | null,
+      amount?: null,
+      startTime?: null,
+      endTime?: null,
+      metadata?: null
+    ): CampaignCreatedEventFilter;
 
-    "CampaignEdited(uint256,string,uint256)": TypedContractEvent<
-      CampaignEditedEvent.InputTuple,
-      CampaignEditedEvent.OutputTuple,
-      CampaignEditedEvent.OutputObject
-    >;
-    CampaignEdited: TypedContractEvent<
-      CampaignEditedEvent.InputTuple,
-      CampaignEditedEvent.OutputTuple,
-      CampaignEditedEvent.OutputObject
-    >;
+    "CampaignEdited(uint256,string,uint256)"(
+      id?: PromiseOrValue<BigNumberish> | null,
+      newMetadata?: null,
+      newEndTime?: null
+    ): CampaignEditedEventFilter;
+    CampaignEdited(
+      id?: PromiseOrValue<BigNumberish> | null,
+      newMetadata?: null,
+      newEndTime?: null
+    ): CampaignEditedEventFilter;
 
-    "CampaignPaused(uint256)": TypedContractEvent<
-      CampaignPausedEvent.InputTuple,
-      CampaignPausedEvent.OutputTuple,
-      CampaignPausedEvent.OutputObject
-    >;
-    CampaignPaused: TypedContractEvent<
-      CampaignPausedEvent.InputTuple,
-      CampaignPausedEvent.OutputTuple,
-      CampaignPausedEvent.OutputObject
-    >;
+    "CampaignPaused(uint256)"(
+      id?: PromiseOrValue<BigNumberish> | null
+    ): CampaignPausedEventFilter;
+    CampaignPaused(
+      id?: PromiseOrValue<BigNumberish> | null
+    ): CampaignPausedEventFilter;
 
-    "CampaignResumed(uint256)": TypedContractEvent<
-      CampaignResumedEvent.InputTuple,
-      CampaignResumedEvent.OutputTuple,
-      CampaignResumedEvent.OutputObject
-    >;
-    CampaignResumed: TypedContractEvent<
-      CampaignResumedEvent.InputTuple,
-      CampaignResumedEvent.OutputTuple,
-      CampaignResumedEvent.OutputObject
-    >;
+    "CampaignResumed(uint256)"(
+      id?: PromiseOrValue<BigNumberish> | null
+    ): CampaignResumedEventFilter;
+    CampaignResumed(
+      id?: PromiseOrValue<BigNumberish> | null
+    ): CampaignResumedEventFilter;
 
-    "ClaimOrderCreated(uint256,address,uint256,uint256)": TypedContractEvent<
-      ClaimOrderCreatedEvent.InputTuple,
-      ClaimOrderCreatedEvent.OutputTuple,
-      ClaimOrderCreatedEvent.OutputObject
-    >;
-    ClaimOrderCreated: TypedContractEvent<
-      ClaimOrderCreatedEvent.InputTuple,
-      ClaimOrderCreatedEvent.OutputTuple,
-      ClaimOrderCreatedEvent.OutputObject
-    >;
+    "ClaimOrderCreated(uint256,address,uint256,uint256)"(
+      orderId?: PromiseOrValue<BigNumberish> | null,
+      publisher?: PromiseOrValue<string> | null,
+      campaignId?: PromiseOrValue<BigNumberish> | null,
+      requestedAmount?: null
+    ): ClaimOrderCreatedEventFilter;
+    ClaimOrderCreated(
+      orderId?: PromiseOrValue<BigNumberish> | null,
+      publisher?: PromiseOrValue<string> | null,
+      campaignId?: PromiseOrValue<BigNumberish> | null,
+      requestedAmount?: null
+    ): ClaimOrderCreatedEventFilter;
 
-    "ClaimOrderProcessed(uint256,uint256,bool,string)": TypedContractEvent<
-      ClaimOrderProcessedEvent.InputTuple,
-      ClaimOrderProcessedEvent.OutputTuple,
-      ClaimOrderProcessedEvent.OutputObject
-    >;
-    ClaimOrderProcessed: TypedContractEvent<
-      ClaimOrderProcessedEvent.InputTuple,
-      ClaimOrderProcessedEvent.OutputTuple,
-      ClaimOrderProcessedEvent.OutputObject
-    >;
+    "ClaimOrderProcessed(uint256,uint256,bool,string)"(
+      orderId?: PromiseOrValue<BigNumberish> | null,
+      approvedAmount?: null,
+      rejected?: null,
+      reason?: null
+    ): ClaimOrderProcessedEventFilter;
+    ClaimOrderProcessed(
+      orderId?: PromiseOrValue<BigNumberish> | null,
+      approvedAmount?: null,
+      rejected?: null,
+      reason?: null
+    ): ClaimOrderProcessedEventFilter;
 
-    "FeeCollected(address,uint256)": TypedContractEvent<
-      FeeCollectedEvent.InputTuple,
-      FeeCollectedEvent.OutputTuple,
-      FeeCollectedEvent.OutputObject
-    >;
-    FeeCollected: TypedContractEvent<
-      FeeCollectedEvent.InputTuple,
-      FeeCollectedEvent.OutputTuple,
-      FeeCollectedEvent.OutputObject
-    >;
+    "FeeCollected(address,uint256)"(
+      admin?: PromiseOrValue<string> | null,
+      amount?: null
+    ): FeeCollectedEventFilter;
+    FeeCollected(
+      admin?: PromiseOrValue<string> | null,
+      amount?: null
+    ): FeeCollectedEventFilter;
 
-    "FundsDisbursed(uint256,address,uint256)": TypedContractEvent<
-      FundsDisbursedEvent.InputTuple,
-      FundsDisbursedEvent.OutputTuple,
-      FundsDisbursedEvent.OutputObject
-    >;
-    FundsDisbursed: TypedContractEvent<
-      FundsDisbursedEvent.InputTuple,
-      FundsDisbursedEvent.OutputTuple,
-      FundsDisbursedEvent.OutputObject
-    >;
+    "FundsDisbursed(uint256,address,uint256)"(
+      campaignId?: PromiseOrValue<BigNumberish> | null,
+      recipient?: PromiseOrValue<string> | null,
+      amount?: null
+    ): FundsDisbursedEventFilter;
+    FundsDisbursed(
+      campaignId?: PromiseOrValue<BigNumberish> | null,
+      recipient?: PromiseOrValue<string> | null,
+      amount?: null
+    ): FundsDisbursedEventFilter;
 
-    "OwnershipTransferred(address,address)": TypedContractEvent<
-      OwnershipTransferredEvent.InputTuple,
-      OwnershipTransferredEvent.OutputTuple,
-      OwnershipTransferredEvent.OutputObject
-    >;
-    OwnershipTransferred: TypedContractEvent<
-      OwnershipTransferredEvent.InputTuple,
-      OwnershipTransferredEvent.OutputTuple,
-      OwnershipTransferredEvent.OutputObject
-    >;
+    "OwnershipTransferred(address,address)"(
+      previousOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
+    ): OwnershipTransferredEventFilter;
+    OwnershipTransferred(
+      previousOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
+    ): OwnershipTransferredEventFilter;
 
-    "Paused(address)": TypedContractEvent<
-      PausedEvent.InputTuple,
-      PausedEvent.OutputTuple,
-      PausedEvent.OutputObject
-    >;
-    Paused: TypedContractEvent<
-      PausedEvent.InputTuple,
-      PausedEvent.OutputTuple,
-      PausedEvent.OutputObject
-    >;
+    "Paused(address)"(account?: null): PausedEventFilter;
+    Paused(account?: null): PausedEventFilter;
 
-    "PublisherBanned(address,string)": TypedContractEvent<
-      PublisherBannedEvent.InputTuple,
-      PublisherBannedEvent.OutputTuple,
-      PublisherBannedEvent.OutputObject
-    >;
-    PublisherBanned: TypedContractEvent<
-      PublisherBannedEvent.InputTuple,
-      PublisherBannedEvent.OutputTuple,
-      PublisherBannedEvent.OutputObject
-    >;
+    "PublisherBanned(address,string)"(
+      publisher?: PromiseOrValue<string> | null,
+      reason?: null
+    ): PublisherBannedEventFilter;
+    PublisherBanned(
+      publisher?: PromiseOrValue<string> | null,
+      reason?: null
+    ): PublisherBannedEventFilter;
 
-    "PublisherSubscribed(address,string[],uint256)": TypedContractEvent<
-      PublisherSubscribedEvent.InputTuple,
-      PublisherSubscribedEvent.OutputTuple,
-      PublisherSubscribedEvent.OutputObject
-    >;
-    PublisherSubscribed: TypedContractEvent<
-      PublisherSubscribedEvent.InputTuple,
-      PublisherSubscribedEvent.OutputTuple,
-      PublisherSubscribedEvent.OutputObject
-    >;
+    "PublisherSubscribed(address,string[],uint256)"(
+      publisher?: PromiseOrValue<string> | null,
+      sites?: null,
+      subscriptionDate?: null
+    ): PublisherSubscribedEventFilter;
+    PublisherSubscribed(
+      publisher?: PromiseOrValue<string> | null,
+      sites?: null,
+      subscriptionDate?: null
+    ): PublisherSubscribedEventFilter;
 
-    "PublisherUnbanned(address)": TypedContractEvent<
-      PublisherUnbannedEvent.InputTuple,
-      PublisherUnbannedEvent.OutputTuple,
-      PublisherUnbannedEvent.OutputObject
-    >;
-    PublisherUnbanned: TypedContractEvent<
-      PublisherUnbannedEvent.InputTuple,
-      PublisherUnbannedEvent.OutputTuple,
-      PublisherUnbannedEvent.OutputObject
-    >;
+    "PublisherUnbanned(address)"(
+      publisher?: PromiseOrValue<string> | null
+    ): PublisherUnbannedEventFilter;
+    PublisherUnbanned(
+      publisher?: PromiseOrValue<string> | null
+    ): PublisherUnbannedEventFilter;
 
-    "SiteAdded(address,string)": TypedContractEvent<
-      SiteAddedEvent.InputTuple,
-      SiteAddedEvent.OutputTuple,
-      SiteAddedEvent.OutputObject
-    >;
-    SiteAdded: TypedContractEvent<
-      SiteAddedEvent.InputTuple,
-      SiteAddedEvent.OutputTuple,
-      SiteAddedEvent.OutputObject
-    >;
+    "SiteAdded(address,string)"(
+      publisher?: PromiseOrValue<string> | null,
+      site?: null
+    ): SiteAddedEventFilter;
+    SiteAdded(
+      publisher?: PromiseOrValue<string> | null,
+      site?: null
+    ): SiteAddedEventFilter;
 
-    "SiteRemoved(address,string)": TypedContractEvent<
-      SiteRemovedEvent.InputTuple,
-      SiteRemovedEvent.OutputTuple,
-      SiteRemovedEvent.OutputObject
-    >;
-    SiteRemoved: TypedContractEvent<
-      SiteRemovedEvent.InputTuple,
-      SiteRemovedEvent.OutputTuple,
-      SiteRemovedEvent.OutputObject
-    >;
+    "SiteRemoved(address,string)"(
+      publisher?: PromiseOrValue<string> | null,
+      site?: null
+    ): SiteRemovedEventFilter;
+    SiteRemoved(
+      publisher?: PromiseOrValue<string> | null,
+      site?: null
+    ): SiteRemovedEventFilter;
 
-    "SupportedTokenAdded(address)": TypedContractEvent<
-      SupportedTokenAddedEvent.InputTuple,
-      SupportedTokenAddedEvent.OutputTuple,
-      SupportedTokenAddedEvent.OutputObject
-    >;
-    SupportedTokenAdded: TypedContractEvent<
-      SupportedTokenAddedEvent.InputTuple,
-      SupportedTokenAddedEvent.OutputTuple,
-      SupportedTokenAddedEvent.OutputObject
-    >;
+    "SupportedTokenAdded(address)"(
+      token?: PromiseOrValue<string> | null
+    ): SupportedTokenAddedEventFilter;
+    SupportedTokenAdded(
+      token?: PromiseOrValue<string> | null
+    ): SupportedTokenAddedEventFilter;
 
-    "SupportedTokenRemoved(address)": TypedContractEvent<
-      SupportedTokenRemovedEvent.InputTuple,
-      SupportedTokenRemovedEvent.OutputTuple,
-      SupportedTokenRemovedEvent.OutputObject
-    >;
-    SupportedTokenRemoved: TypedContractEvent<
-      SupportedTokenRemovedEvent.InputTuple,
-      SupportedTokenRemovedEvent.OutputTuple,
-      SupportedTokenRemovedEvent.OutputObject
-    >;
+    "SupportedTokenRemoved(address)"(
+      token?: PromiseOrValue<string> | null
+    ): SupportedTokenRemovedEventFilter;
+    SupportedTokenRemoved(
+      token?: PromiseOrValue<string> | null
+    ): SupportedTokenRemovedEventFilter;
 
-    "Unpaused(address)": TypedContractEvent<
-      UnpausedEvent.InputTuple,
-      UnpausedEvent.OutputTuple,
-      UnpausedEvent.OutputObject
-    >;
-    Unpaused: TypedContractEvent<
-      UnpausedEvent.InputTuple,
-      UnpausedEvent.OutputTuple,
-      UnpausedEvent.OutputObject
-    >;
+    "Unpaused(address)"(account?: null): UnpausedEventFilter;
+    Unpaused(account?: null): UnpausedEventFilter;
+  };
+
+  estimateGas: {
+    activeCampaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    addSite(
+      _site: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    addSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    banUser(
+      _user: PromiseOrValue<string>,
+      _reason: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    bannedUsers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    campaignCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    campaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    claimOrderCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    claimOrders(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    collectFees(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    createCampaign(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      _duration: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    createClaimOrder(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _requestedAmount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    disburseFunds(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _recipient: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    editCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      _newDuration: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    feePercent(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getActiveCampaignsCount(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getPublisher(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getPublisherSites(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getSupportedTokens(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getTotalProtocolFees(overrides?: CallOverrides): Promise<BigNumber>;
+
+    isPublisher(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    isUserBanned(
+      _user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    owner(overrides?: CallOverrides): Promise<BigNumber>;
+
+    pause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    pauseCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    paused(overrides?: CallOverrides): Promise<BigNumber>;
+
+    processClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      _approvedAmount: PromiseOrValue<BigNumberish>,
+      _rejected: PromiseOrValue<boolean>,
+      _reason: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    protocolFees(overrides?: CallOverrides): Promise<BigNumber>;
+
+    publishers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    removeSite(
+      _siteIndex: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    removeSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    resumeCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setFeePercent(
+      _feePercent: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    subscribePublisher(
+      _sites: PromiseOrValue<string>[],
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    supportedTokens(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    supportedTokensList(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    unbanUser(
+      _user: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    unpause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+  };
+
+  populateTransaction: {
+    activeCampaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    addSite(
+      _site: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    addSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    banUser(
+      _user: PromiseOrValue<string>,
+      _reason: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    bannedUsers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    campaignCount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    campaigns(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    claimOrderCount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    claimOrders(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    collectFees(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    createCampaign(
+      _token: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      _duration: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    createClaimOrder(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _requestedAmount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    disburseFunds(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _recipient: PromiseOrValue<string>,
+      _amount: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    editCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      _metadata: PromiseOrValue<string>,
+      _newDuration: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    feePercent(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    getActiveCampaignsCount(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getPublisher(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getPublisherSites(
+      _publisher: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getSupportedTokens(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getTotalProtocolFees(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    isPublisher(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    isUserBanned(
+      _user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    pause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    pauseCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    paused(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    processClaimOrder(
+      _orderId: PromiseOrValue<BigNumberish>,
+      _approvedAmount: PromiseOrValue<BigNumberish>,
+      _rejected: PromiseOrValue<boolean>,
+      _reason: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    protocolFees(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    publishers(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    removeSite(
+      _siteIndex: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    removeSupportedToken(
+      _token: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    resumeCampaign(
+      _campaignId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setFeePercent(
+      _feePercent: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    subscribePublisher(
+      _sites: PromiseOrValue<string>[],
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    supportedTokens(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    supportedTokensList(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    unbanUser(
+      _user: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    unpause(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
   };
 }

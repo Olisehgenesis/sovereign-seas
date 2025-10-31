@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
+import { getTokenSymbol, getTokenInfo } from '@/lib/tokens'
 
 interface Campaign {
   id: string
@@ -15,6 +16,7 @@ interface Campaign {
   spent: number
   cpc: number
   active: boolean
+  tokenAddress?: string
 }
 
 interface CampaignStats {
@@ -116,12 +118,19 @@ export default function AdvertiserDashboard() {
                         <h3 className="text-lg font-medium">{campaign.name}</h3>
                         <p className="text-foreground/70">{campaign.description}</p>
                         <div className="flex space-x-4 mt-2 text-sm text-foreground/60">
-                          <span>Budget: {campaign.budget} USDC</span>
-                          <span>Spent: {campaign.spent} USDC</span>
-                          <span>CPC: {campaign.cpc} USDC</span>
-                          <span className={campaign.active ? 'text-green-600' : 'text-red-600'}>
-                            {campaign.active ? 'Active' : 'Inactive'}
-                          </span>
+                          {(() => {
+                            const tokenSymbol = getTokenSymbol(campaign.tokenAddress);
+                            return (
+                              <>
+                                <span>Budget: {campaign.budget} {tokenSymbol}</span>
+                                <span>Spent: {campaign.spent} {tokenSymbol}</span>
+                                <span>CPC: {campaign.cpc} {tokenSymbol}</span>
+                                <span className={campaign.active ? 'text-green-600' : 'text-red-600'}>
+                                  {campaign.active ? 'Active' : 'Inactive'}
+                                </span>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                       <div className="text-right">
@@ -157,7 +166,9 @@ export default function AdvertiserDashboard() {
                   </div>
                   <div className="bg-secondary border border-border rounded-lg p-4">
                     <div className="text-2xl font-bold">{campaignStats.totalSpent.toFixed(6)}</div>
-                    <div className="text-foreground/60">Total Spent (USDC)</div>
+                    <div className="text-foreground/60">
+                      Total Spent {selectedCampaign?.tokenAddress ? `(${getTokenSymbol(selectedCampaign.tokenAddress)})` : ''}
+                    </div>
                   </div>
                 </div>
               </div>

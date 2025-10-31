@@ -26,6 +26,7 @@ export default function Header() {
       case 1: return 'Ethereum'
       case 137: return 'Polygon'
       case 44787: return 'Alfajores'
+      case 11142220: return 'Celo Sepolia'
       case 42220: return 'Celo'
       default: return `Chain ${id}`
     }
