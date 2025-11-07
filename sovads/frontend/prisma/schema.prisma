@@ -39,6 +39,7 @@ model Publisher {
 
   sites       PublisherSite[]
   events      Event[]
+  payouts     Payout[]
 
   @@map("publishers")
 }
@@ -130,4 +131,103 @@ model Asset {
   createdAt   DateTime @default(now())
 
   @@map("assets")
+}
+
+model Payout {
+  id              String   @id @default(cuid())
+  publisherId     String
+  publisher       Publisher @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  publisherWallet String
+  amount          Decimal
+  proof           String   // bytes32 hash proof for on-chain verification
+  date            String   // YYYY-MM-DD format
+  status          String   @default("pending") // pending, completed, failed
+  txHash          String?  // Transaction hash after execution
+  error           String?  // Error message if failed
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("payouts")
+}
+
+// Debug/Dummy Database - Tracks all SDK interactions and requests
+model SdkRequest {
+  id          String   @id @default(cuid())
+  type        String   // PAGE_LOAD, AD_REQUEST, SITE_DETECT, BEACON, etc.
+  endpoint    String   // API endpoint called
+  method      String   // GET, POST, etc.
+  siteId      String?
+  domain      String?
+  pageUrl     String?
+  userAgent   String?
+  ipAddress   String?
+  fingerprint String?
+  requestBody String?  // JSON string of request body
+  responseStatus Int?
+  responseBody String? // JSON string of response body
+  error       String?
+  duration    Int?     // Request duration in ms
+  timestamp   DateTime @default(now())
+  
+  interactions SdkInteraction[]
+
+  @@index([type])
+  @@index([timestamp])
+  @@index([siteId])
+  @@map("sdk_requests")
+}
+
+model SdkInteraction {
+  id          String   @id @default(cuid())
+  requestId   String?
+  request     SdkRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  type        String   // IMPRESSION, CLICK, IMAGE_LOAD, VISIBILITY_CHANGE, etc.
+  adId        String?
+  campaignId  String?
+  siteId      String?
+  pageUrl     String?
+  elementType String?  // BANNER, POPUP, SIDEBAR
+  metadata    String?  // JSON string of additional metadata
+  timestamp   DateTime @default(now())
+
+  @@index([type])
+  @@index([timestamp])
+  @@index([adId])
+  @@map("sdk_interactions")
+}
+
+model ApiRouteCall {
+  id          String   @id @default(cuid())
+  route       String   // /api/ads, /api/sites/detect, etc.
+  method      String   // GET, POST, etc.
+  statusCode  Int
+  ipAddress   String?
+  userAgent   String?
+  requestBody String?  // JSON string
+  responseBody String? // JSON string (truncated if too long)
+  error       String?
+  duration    Int?     // Request duration in ms
+  timestamp   DateTime @default(now())
+
+  @@index([route])
+  @@index([timestamp])
+  @@index([statusCode])
+  @@map("api_route_calls")
+}
+
+model CallbackLog {
+  id          String   @id @default(cuid())
+  type        String   // BEACON, WEBHOOK, TRACK, etc.
+  endpoint    String   // /api/webhook/beacon, etc.
+  payload     String   // JSON string of payload
+  ipAddress   String?
+  userAgent   String?
+  fingerprint String?
+  statusCode  Int?
+  error       String?
+  timestamp   DateTime @default(now())
+
+  @@index([type])
+  @@index([timestamp])
+  @@map("callback_logs")
 }

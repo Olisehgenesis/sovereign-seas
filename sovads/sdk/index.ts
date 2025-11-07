@@ -38,6 +38,7 @@ class SovAds {
   private components: Map<string, any> = new Map()
   private siteId: string | null = null
   private renderObservers: Map<string, IntersectionObserver> = new Map()
+  private debugLoggingEnabled: boolean = true
 
   constructor(config: SovAdsConfig = {}) {
     this.config = {
@@ -95,13 +96,30 @@ class SovAds {
         timestamp: Date.now()
       }
 
+      const startTime = Date.now()
+      const endpoint = `${this.config.apiUrl}/api/sites/detect`
       // Send detection request using fetch (beacon doesn't support response)
-      const response = await this.fetchWithRetry(`${this.config.apiUrl}/api/sites/detect`, {
+      const response = await this.fetchWithRetry(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
+      })
+      const duration = Date.now() - startTime
+
+      // Log SDK request
+      await this.logDebug('SDK_REQUEST', {
+        type: 'SITE_DETECT',
+        endpoint: '/api/sites/detect',
+        method: 'POST',
+        domain,
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+        fingerprint: this.fingerprint,
+        requestBody: payload,
+        responseStatus: response.status,
+        duration,
       })
 
       if (response.ok) {
@@ -302,6 +320,7 @@ class SovAds {
   }
 
   async loadAd(consumerId?: string): Promise<AdComponent | null> {
+    const startTime = Date.now()
     try {
       const siteId = await this.detectSiteId()
       
@@ -310,7 +329,24 @@ class SovAds {
         ...(consumerId && { consumerId })
       })
 
-      const response = await this.fetchWithRetry(`${this.config.apiUrl}/api/ads?${params}`)
+      const endpoint = `${this.config.apiUrl}/api/ads?${params}`
+      const response = await this.fetchWithRetry(endpoint)
+      const duration = Date.now() - startTime
+      
+      // Log SDK request
+      await this.logDebug('SDK_REQUEST', {
+        type: 'AD_REQUEST',
+        endpoint: '/api/ads',
+        method: 'GET',
+        siteId,
+        domain: window.location.hostname,
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+        fingerprint: this.fingerprint,
+        requestBody: { siteId, consumerId },
+        responseStatus: response.status,
+        duration,
+      })
       
       if (!response.ok) {
         throw new Error(`Failed to load ad: ${response.statusText}`)
@@ -345,8 +381,31 @@ class SovAds {
         console.log('Ad loaded:', ad)
       }
 
+      // Log interaction
+      await this.logDebug('SDK_INTERACTION', {
+        type: 'AD_LOADED',
+        adId: ad.id,
+        campaignId: ad.campaignId,
+        siteId,
+        pageUrl: window.location.href,
+      })
+
       return ad
     } catch (error) {
+      const duration = Date.now() - startTime
+      await this.logDebug('SDK_REQUEST', {
+        type: 'AD_REQUEST',
+        endpoint: '/api/ads',
+        method: 'GET',
+        siteId: this.siteId,
+        domain: window.location.hostname,
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+        fingerprint: this.fingerprint,
+        error: error instanceof Error ? error.message : String(error),
+        duration,
+      })
+      
       if (this.config.debug) {
         console.error('Error loading ad:', error)
       }
@@ -514,6 +573,48 @@ class SovAds {
   }
 
   /**
+   * Log interaction (public method for components)
+   */
+  public async logInteraction(type: string, data: any): Promise<void> {
+    await this.logDebug('SDK_INTERACTION', {
+      type,
+      ...data,
+      siteId: this.siteId,
+      pageUrl: window.location.href,
+    })
+  }
+
+  /**
+   * Log debug event to server
+   */
+  private async logDebug(type: 'SDK_REQUEST' | 'SDK_INTERACTION', data: any): Promise<void> {
+    if (!this.debugLoggingEnabled) return
+
+    try {
+      const logUrl = `${this.config.apiUrl}/api/debug/log`
+      const payload = { type, data }
+
+      // Use sendBeacon for non-blocking logging
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
+        navigator.sendBeacon(logUrl, blob)
+      } else {
+        // Fallback to fetch (fire and forget)
+        fetch(logUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        }).catch(() => {
+          // Silently fail - debug logging shouldn't break the app
+        })
+      }
+    } catch (error) {
+      // Silently fail - debug logging shouldn't break the app
+    }
+  }
+
+  /**
    * Clean up observers when SDK is destroyed
    */
   public destroy(): void {
@@ -628,6 +729,15 @@ export class Banner {
           viewportVisible: true,
           renderTime: Date.now() - this.renderStartTime
         })
+        
+        // Log interaction
+        this.sovads.logInteraction('CLICK', {
+          adId: this.currentAd!.id,
+          campaignId: this.currentAd!.campaignId,
+          elementType: 'BANNER',
+          metadata: { renderTime: Date.now() - this.renderStartTime },
+        })
+        
         window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
       })
 
@@ -694,6 +804,14 @@ export class Popup {
       rendered: true,
       viewportVisible: true,
       renderTime: 0 // Will be updated when image loads
+    })
+    
+    // Log interaction
+    this.sovads.logInteraction('IMPRESSION', {
+      adId: this.currentAd.id,
+      campaignId: this.currentAd.campaignId,
+      elementType: 'POPUP',
+      metadata: { renderTime: 0 },
     })
 
     // Create overlay
@@ -775,6 +893,15 @@ export class Popup {
         viewportVisible: true,
         renderTime: Date.now() - renderStartTime
       })
+      
+      // Log interaction
+      this.sovads.logInteraction('CLICK', {
+        adId: this.currentAd!.id,
+        campaignId: this.currentAd!.campaignId,
+        elementType: 'POPUP',
+        metadata: { renderTime: Date.now() - renderStartTime },
+      })
+      
       window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
       this.hide()
     })
@@ -906,6 +1033,15 @@ export class Sidebar {
           viewportVisible: true,
           renderTime: Date.now() - this.renderStartTime
         })
+        
+        // Log interaction
+        this.sovads.logInteraction('CLICK', {
+          adId: this.currentAd!.id,
+          campaignId: this.currentAd!.campaignId,
+          elementType: 'SIDEBAR',
+          metadata: { renderTime: Date.now() - this.renderStartTime },
+        })
+        
         window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
       })
 
