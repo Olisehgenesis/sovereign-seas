@@ -10,7 +10,14 @@ import { decryptPayloadServer, verifySignatureServer } from '@/lib/crypto-server
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { apiKey, encrypted, iv, signature, timestamp, siteId } = body
+    const { apiKey, encrypted, iv, signature, timestamp, siteId } = body as {
+      apiKey?: string
+      encrypted?: string
+      iv?: string
+      signature?: string
+      timestamp?: number
+      siteId?: string
+    }
 
     if (!apiKey || !encrypted || !iv || !signature || !timestamp || !siteId) {
       return NextResponse.json({ 
@@ -28,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find publisher site by API key
-    const site = await (prisma as any).publisherSite.findUnique({
+    const site = await prisma.publisherSite.findUnique({
       where: { apiKey },
       include: { publisher: true }
     })
@@ -85,7 +92,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse decrypted payload
-    const { type, campaignId, adId, fingerprint } = JSON.parse(decryptedPayload)
+    const {
+      type,
+      campaignId,
+      adId,
+      fingerprint,
+    } = JSON.parse(decryptedPayload) as {
+      type?: EventType
+      campaignId?: string
+      adId?: string
+      fingerprint?: string | null
+    }
 
     if (!type || !campaignId || !adId) {
       return NextResponse.json({ error: 'Missing required fields in decrypted payload' }, { status: 400 })
@@ -148,7 +165,12 @@ export async function POST(request: NextRequest) {
         publisherId: site.publisherId,
         siteId: site.siteId,
         adId,
-        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown',
+        ipAddress:
+          request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+          request.headers.get('x-real-ip') ||
+          request.headers.get('cf-connecting-ip') ||
+          request.headers.get('x-client-ip') ||
+          'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
         fingerprint: fingerprint || null,
         verified: true // Mark as verified since it came through encrypted webhook

@@ -113,14 +113,6 @@ export async function GET(request: NextRequest) {
       _avg: { duration: true },
     })
 
-    const formatGroupByCount = (value: Prisma.SdkRequestGroupByOutputType | Prisma.SdkInteractionGroupByOutputType) => {
-      const count = value._count?.type ?? 0
-      return {
-        type: value.type,
-        count,
-      }
-    }
-
     return NextResponse.json({
       summary: {
         sdkRequests,
@@ -135,8 +127,14 @@ export async function GET(request: NextRequest) {
         avgResponseTime: avgResponseTime._avg.duration ?? 0,
       },
       breakdowns: {
-        sdkRequestTypes: sdkRequestTypes.map(formatGroupByCount),
-        interactionTypes: interactionTypes.map(formatGroupByCount),
+        sdkRequestTypes: sdkRequestTypes.map((group) => ({
+          type: group.type,
+          count: group._count?.type ?? 0,
+        })),
+        interactionTypes: interactionTypes.map((group) => ({
+          type: group.type,
+          count: group._count?.type ?? 0,
+        })),
         apiRoutes: apiRoutes.map((routeGroup) => ({
           route: routeGroup.route,
           count: routeGroup._count.route ?? 0,

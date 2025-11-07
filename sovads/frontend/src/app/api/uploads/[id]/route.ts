@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) {
@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         'Cache-Control': 'public, max-age=31536000, immutable'
       }
     })
-  } catch (e) {
+  } catch {
     return new Response('Server Error', { status: 500 })
   }
 }

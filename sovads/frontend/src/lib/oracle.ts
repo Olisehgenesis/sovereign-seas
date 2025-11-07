@@ -5,11 +5,15 @@ import { prisma } from '@/lib/db'
 
 // SovAds Manager contract address on Celo Sepolia
 const SOVADS_MANAGER_ADDRESS = '0x3eCE3a48818efF703204eC9B60f00d476923f5B5'
-const USDC_ADDRESS = '0x01C5C0122039549AD1493B8220cABEdD739BC44E' // USDC on Celo Sepolia
 
 // Oracle configuration
-const ORACLE_PRIVATE_KEY = process.env.ORACLE_PRIVATE_KEY || '0x0000000000000000000000000000000000000000000000000000000000000000'
+const RAW_PRIVATE_KEY = process.env.ORACLE_PRIVATE_KEY
 const RPC_URL = process.env.CELO_SEPOLIA_RPC_URL || 'https://rpc.ankr.com/celo_sepolia'
+
+const hasValidPrivateKey =
+  typeof RAW_PRIVATE_KEY === 'string' &&
+  /^0x[0-9a-fA-F]{64}$/.test(RAW_PRIVATE_KEY) &&
+  !/^0x0+$/.test(RAW_PRIVATE_KEY.slice(2))
 
 // Create clients
 const publicClient = createPublicClient({
@@ -17,13 +21,15 @@ const publicClient = createPublicClient({
   transport: http(RPC_URL)
 })
 
-const account = privateKeyToAccount(ORACLE_PRIVATE_KEY as `0x${string}`)
+const account = hasValidPrivateKey ? privateKeyToAccount(RAW_PRIVATE_KEY as `0x${string}`) : null
 
-const walletClient = createWalletClient({
-  account,
-  chain: celoSepolia,
-  transport: http(RPC_URL)
-})
+const walletClient = account
+  ? createWalletClient({
+      account,
+      chain: celoSepolia,
+      transport: http(RPC_URL)
+    })
+  : null
 
 // Placeholder contract ABI (replace with actual contract ABI)
 const SOVADS_MANAGER_ABI = [
@@ -72,6 +78,11 @@ class SovAdsOracle {
   async start() {
     if (this.isRunning) {
       console.log('Oracle is already running')
+      return
+    }
+
+    if (!walletClient) {
+      console.warn('SovAds Oracle disabled: ORACLE_PRIVATE_KEY is not configured')
       return
     }
 
@@ -168,6 +179,10 @@ class SovAdsOracle {
   }
 
   private async executePayout(payout: PayoutData): Promise<string> {
+    if (!walletClient) {
+      throw new Error('Oracle wallet client is not configured')
+    }
+
     try {
       console.log(`Executing payout: ${payout.publisherWallet} -> ${payout.amount} USDC`)
       
@@ -184,7 +199,7 @@ class SovAdsOracle {
       })
 
       console.log(`Payout transaction submitted: ${txHash}`)
-      return txHash
+      return txHash || 'N/A' // Return 'N/A' if walletClient is null
     } catch (error) {
       console.error('Error executing payout transaction:', error)
       throw error
@@ -230,7 +245,7 @@ class SovAdsOracle {
       console.log(`Submitting metrics hash for ${dateString}: ${analyticsHash.hash}`)
       
       // Execute contract interaction
-      const txHash = await walletClient.writeContract({
+      const txHash = await walletClient?.writeContract({
         address: SOVADS_MANAGER_ADDRESS,
         abi: SOVADS_MANAGER_ABI,
         functionName: 'submitMetricsHash',
@@ -299,7 +314,7 @@ class SovAdsOracle {
       isRunning: this.isRunning,
       chain: celoSepolia.name,
       managerAddress: SOVADS_MANAGER_ADDRESS,
-      oracleAddress: account.address
+      oracleAddress: account?.address || 'N/A'
     }
   }
 }

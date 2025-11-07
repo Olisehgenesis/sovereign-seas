@@ -1,10 +1,5 @@
 import Link from 'next/link'
-import WalletButton from '@/components/WalletButton'
-import dynamic from 'next/dynamic'
-
-const BannerAd = dynamic(() => import('@/components/ads/AdSlots').then((mod) => mod.BannerAd), {
-  ssr: false,
-})
+import BannerAdPreview from '@/components/ads/BannerAdPreview'
 
 export default function Home() {
   return (
@@ -47,10 +42,10 @@ export default function Home() {
               </div>
               <pre className="bg-neutral-950 text-neutral-100 text-sm leading-6 p-4 overflow-x-auto">
                 <code>
-                  <span className="text-white">// Site ID auto-detected from domain</span>{'\n'}
+                  <span className="text-white">{`// Site ID auto-detected from domain`}</span>{'\n'}
                   <span className="text-primary">const</span> adsClient = <span className="text-accent">new</span> SovAds(<span className="text-blue-400">publicId</span>);{'\n'}
-                  <span className="text-primary">const</span> banner = <span className="text-accent">new</span> Banner(adsClient, <span className="text-green-400">'banner'</span>);{'\n'}
-                  <span className="text-primary">await</span> banner.render(); <span className="text-neutral-400">// renders after site ready</span>
+                  <span className="text-primary">const</span> banner = <span className="text-accent">new</span> Banner(adsClient, <span className="text-green-400">&apos;banner&apos;</span>);{'\n'}
+                  <span className="text-primary">await</span> banner.render(); <span className="text-neutral-400">{`// renders after site ready`}</span>
                 </code>
               </pre>
             </div>
@@ -59,7 +54,7 @@ export default function Home() {
       </div>
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <h2 className="text-2xl font-semibold mb-4 text-center">Live SovAds Preview</h2>
-        <BannerAd className="min-h-[200px] rounded-2xl border border-border bg-card" />
+        <BannerAdPreview className="min-h-[200px] rounded-2xl border border-border bg-card" />
       </section>
     </div>
   )

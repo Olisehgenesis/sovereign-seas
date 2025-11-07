@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { EventType } from '@prisma/client'
+import { EventType, type Prisma } from '@prisma/client'
 import { logCallback, getIpAddress } from '@/lib/debug-logger'
 
 /**
@@ -28,20 +28,27 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const { 
-      type, 
-      campaignId, 
-      adId, 
-      siteId, 
+    const {
+      type,
+      campaignId,
+      adId,
+      siteId,
       fingerprint,
-      consumerId,
       rendered,
       viewportVisible,
       renderTime,
-      timestamp,
-      pageUrl,
-      userAgent: clientUserAgent
-    } = body
+      userAgent: clientUserAgent,
+    } = body as {
+      type?: EventType
+      campaignId?: string
+      adId?: string
+      siteId?: string
+      fingerprint?: string | null
+      rendered?: boolean
+      viewportVisible?: boolean
+      renderTime?: number
+      userAgent?: string
+    }
 
     // Validate required fields
     if (!type || !campaignId || !adId || !siteId) {
@@ -59,8 +66,8 @@ export async function POST(request: NextRequest) {
 
     // Verify site ID exists and is valid
     // First check PublisherSite (new structure)
-    const publisherSite = await (prisma as any).publisherSite.findUnique({
-      where: { siteId: siteId },
+    const publisherSite = await prisma.publisherSite.findUnique({
+      where: { siteId },
       include: { publisher: true }
     })
 
@@ -164,25 +171,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create event with enhanced metadata
-    const eventData: any = {
+    const eventData: Prisma.EventUncheckedCreateInput = {
       type: type as EventType,
       campaignId,
-      publisherId: publisherId || 'temp', // Use temp for development
-      siteId: siteId,
+      publisherId: publisherId ?? 'temp',
+      siteId,
       adId,
       ipAddress,
-      userAgent: clientUserAgent || userAgent,
-      fingerprint: fingerprint || null,
-      verified: renderVerified && (viewportVisible !== false), // Mark as verified if rendered and visible
+      userAgent: clientUserAgent ?? userAgent,
+      fingerprint: fingerprint ?? null,
+      verified: renderVerified && viewportVisible !== false,
+      publisherSiteId: publisherSite?.id ?? null,
     }
-    
-    // Add publisherSiteId if available (may require Prisma regenerate)
-    if (publisherSite?.id) {
-      eventData.publisherSiteId = publisherSite.id
-    }
-    
+
     const event = await prisma.event.create({
-      data: eventData
+      data: eventData,
     })
 
     // Update campaign spent amount for clicks
@@ -208,7 +211,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const duration = Date.now() - startTime
     const response = NextResponse.json({ 
       success: true, 
       eventId: event.id,
@@ -227,13 +229,12 @@ export async function POST(request: NextRequest) {
       payload: body,
       ipAddress,
       userAgent,
-      fingerprint,
+      fingerprint: fingerprint ?? undefined,
       statusCode: 200,
     })
 
     return response
   } catch (error) {
-    const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     
     // Log failed callback
@@ -259,7 +260,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Support OPTIONS for CORS preflight
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {

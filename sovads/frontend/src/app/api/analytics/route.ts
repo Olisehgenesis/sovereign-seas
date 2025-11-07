@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { EventType } from '@prisma/client'
+import { EventType, type Prisma } from '@prisma/client'
 
 // Analytics route - uses Prisma/SQLite (Redis removed)
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const campaignId = searchParams.get('campaignId')
     const publisherId = searchParams.get('publisherId')
-    const days = parseInt(searchParams.get('days') || '7')
+    const days = Number.parseInt(searchParams.get('days') ?? '7', 10)
 
     if (!campaignId && !publisherId) {
       return NextResponse.json({ error: 'Campaign ID or Publisher ID is required' }, { status: 400 })
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
-    let whereClause: any = {
+    const whereClause: Prisma.EventWhereInput = {
       timestamp: {
         gte: startDate
       }

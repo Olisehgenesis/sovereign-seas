@@ -1,7 +1,7 @@
 'use client'
+/* eslint-disable react/no-unescaped-entities */
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
 import { getTokenSymbol } from '@/lib/tokens'
@@ -94,10 +94,10 @@ export default function PublisherDashboard() {
       }
 
       if (sitesResponse.ok) {
-        const sitesData = await sitesResponse.json()
-        const dbSites = (sitesData.sites || []).map((site: any) => ({
+        const sitesData = (await sitesResponse.json()) as { sites?: PublisherSite[] }
+        const dbSites: PublisherSite[] = (sitesData.sites ?? []).map((site) => ({
           ...site,
-          apiSecret: site.apiSecret || undefined // Only set if returned (new sites)
+          apiSecret: site.apiSecret ?? undefined,
         }))
         setSites(dbSites)
         

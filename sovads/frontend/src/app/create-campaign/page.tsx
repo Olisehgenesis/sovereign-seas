@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useAds } from '../../hooks/useAds';
-import { getTokenInfo, getTokenLabel, getTokenSymbol, getTokenName } from '@/lib/tokens';
+import { getTokenInfo, getTokenLabel } from '@/lib/tokens';
 
 interface CampaignFormData {
   name: string;

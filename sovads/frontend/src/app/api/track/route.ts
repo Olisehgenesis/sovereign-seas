@@ -79,7 +79,12 @@ export async function POST(request: NextRequest) {
         publisherId: publisher.id,
         siteId,
         adId,
-        ipAddress: request.ip || request.headers.get('x-forwarded-for') || 'unknown',
+        ipAddress:
+          request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+          request.headers.get('x-real-ip') ||
+          request.headers.get('cf-connecting-ip') ||
+          request.headers.get('x-client-ip') ||
+          'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
         fingerprint: fingerprint || null
       }

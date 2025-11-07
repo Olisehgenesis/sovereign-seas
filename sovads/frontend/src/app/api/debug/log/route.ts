@@ -37,15 +37,19 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
       })
-      
+
       return NextResponse.json({ success: true, requestId })
+    }
+
     if (type === 'SDK_INTERACTION') {
       await logSdkInteraction({
         ...data,
       })
-      
+
       return NextResponse.json({ success: true })
     }
+
+    return NextResponse.json({ error: 'Invalid log type' }, { status: 400 })
   } catch (error) {
     console.error('Error in debug log endpoint:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

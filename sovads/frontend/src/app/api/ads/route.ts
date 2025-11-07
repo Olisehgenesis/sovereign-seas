@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: corsHeaders,
@@ -25,20 +25,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Check PublisherSite first (new structure)
-    let publisherSite = null
-    let publisher = null
+    const publisherSite = await prisma.publisherSite.findUnique({
+      where: { siteId },
+      include: { publisher: true }
+    })
 
-    try {
-      publisherSite = await (prisma as any).publisherSite.findUnique({
-        where: { siteId: siteId },
-        include: { publisher: true }
-      })
-      if (publisherSite?.publisher) {
-        publisher = publisherSite.publisher
-      }
-    } catch (error) {
-      // PublisherSite might not exist, continue to check Publisher
-    }
+    let publisher = publisherSite?.publisher ?? null
 
     // If not found in PublisherSite, check Publisher (legacy or direct ID)
     if (!publisher) {
@@ -84,11 +76,9 @@ export async function GET(request: NextRequest) {
     })
 
     // Filter campaigns where budget > spent
-    const campaigns = allCampaigns.filter(campaign => {
-      const budget = Number(campaign.budget)
-      const spent = Number(campaign.spent)
-      return budget > spent
-    }).slice(0, 10) // Take top 10 after filtering
+    const campaigns = allCampaigns
+      .filter((campaign) => Number(campaign.budget) > Number(campaign.spent))
+      .slice(0, 10)
 
     if (campaigns.length === 0) {
       return NextResponse.json({ error: 'No active campaigns available' }, { status: 404 })

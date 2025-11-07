@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: corsHeaders,
@@ -17,7 +17,7 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { domain, fingerprint, userAgent, timestamp } = await request.json()
+    const { domain } = (await request.json()) as { domain?: string }
 
     if (!domain) {
       return NextResponse.json({ 
@@ -26,15 +26,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check PublisherSite first (new structure)
-    let publisherSite = null
-    try {
-      publisherSite = await (prisma as any).publisherSite.findFirst({
-        where: { domain: domain },
-        include: { publisher: true }
-      })
-    } catch (error) {
-      // PublisherSite might not exist, continue to check Publisher
-    }
+    const publisherSite = await prisma.publisherSite.findFirst({
+      where: { domain },
+      include: { publisher: true }
+    })
 
     if (publisherSite) {
       return NextResponse.json({ 
@@ -45,9 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if site already exists in Publisher (legacy)
-    let site = await prisma.publisher.findFirst({
+    const site = await prisma.publisher.findFirst({
       where: { 
-        domain: domain,
+        domain,
         verified: true 
       }
     })
@@ -61,9 +56,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for unverified site
-    let unverifiedSite = await prisma.publisher.findFirst({
+    const unverifiedSite = await prisma.publisher.findFirst({
       where: { 
-        domain: domain,
+        domain,
         verified: false 
       }
     })
