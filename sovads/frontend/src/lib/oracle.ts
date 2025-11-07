@@ -105,55 +105,61 @@ class SovAdsOracle {
   private async processPendingPayouts() {
     try {
       // Get pending payouts from database
-      // Note: This will need to be implemented based on your payout model
-      // For now, this is a placeholder
-      const payoutKeys: any[] = []
+      const pendingPayouts = await prisma.payout.findMany({
+        where: { status: 'pending' },
+        include: { publisher: true }
+      })
       
-      for (const payoutDoc of payoutKeys) {
-        const payout: PayoutData = payoutDoc.data
+      if (pendingPayouts.length === 0) {
+        return // No payouts to process
+      }
+      
+      console.log(`Processing ${pendingPayouts.length} pending payout(s)`)
+      
+      for (const payoutDoc of pendingPayouts) {
+        const payout: PayoutData = {
+          publisherId: payoutDoc.publisherId,
+          publisherWallet: payoutDoc.publisherWallet,
+          amount: Number(payoutDoc.amount),
+          date: payoutDoc.date,
+          proof: payoutDoc.proof
+        }
         
         try {
           const txHash = await this.executePayout(payout)
+          console.log(`Payout completed for ${payout.publisherWallet}: ${txHash}`)
           
-          // Update payout record with transaction hash
-          await events.updateOne(
-            { _id: payoutDoc._id },
-            { 
-              $set: {
-                ...payoutDoc,
-                data: {
-                  ...payout,
-                  txHash,
-                  status: 'completed',
-                  timestamp: new Date().toISOString()
-                },
-                status: 'completed',
-                updatedAt: new Date()
+          // Update payout record in database
+          await prisma.payout.update({
+            where: { id: payoutDoc.id },
+            data: {
+              txHash,
+              status: 'completed',
+              updatedAt: new Date()
+            }
+          })
+
+          // Update publisher's total earnings
+          await prisma.publisher.update({
+            where: { id: payout.publisherId },
+            data: {
+              totalEarned: {
+                increment: payoutDoc.amount
               }
             }
-          )
-
-          console.log(`Payout completed for ${payout.publisherWallet}: ${txHash}`)
+          })
         } catch (error) {
           console.error(`Failed to process payout for ${payout.publisherWallet}:`, error)
           
-          // Mark as failed
-          await events.updateOne(
-            { _id: payoutDoc._id },
-            { 
-              $set: {
-                ...payoutDoc,
-                data: {
-                  ...payout,
-                  error: error instanceof Error ? error.message : 'Unknown error',
-                  status: 'failed',
-                  timestamp: new Date().toISOString()
-                },
-                status: 'failed',
-                updatedAt: new Date()
-              }
+          // Mark as failed in database
+          await prisma.payout.update({
+            where: { id: payoutDoc.id },
+            data: {
+              status: 'failed',
+              error: error instanceof Error ? error.message : 'Unknown error',
+              updatedAt: new Date()
             }
-          )
+          })
         }
       }
     } catch (error) {
@@ -163,11 +169,9 @@ class SovAdsOracle {
 
   private async executePayout(payout: PayoutData): Promise<string> {
     try {
-      // For now, simulate the transaction (replace with actual contract call)
-      console.log(`Simulating payout: ${payout.publisherWallet} -> ${payout.amount} USDC`)
+      console.log(`Executing payout: ${payout.publisherWallet} -> ${payout.amount} USDC`)
       
-      // TODO: Replace with actual contract interaction
-      /*
+      // Execute contract interaction
       const txHash = await walletClient.writeContract({
         address: SOVADS_MANAGER_ADDRESS,
         abi: SOVADS_MANAGER_ABI,
@@ -178,11 +182,8 @@ class SovAdsOracle {
           payout.proof as `0x${string}`
         ]
       })
-      */
 
-      // Simulate transaction hash
-      const txHash = `0x${Math.random().toString(16).substr(2, 64)}`
-      
+      console.log(`Payout transaction submitted: ${txHash}`)
       return txHash
     } catch (error) {
       console.error('Error executing payout transaction:', error)
@@ -214,21 +215,21 @@ class SovAdsOracle {
       yesterday.setDate(yesterday.getDate() - 1)
       yesterday.setHours(0, 0, 0, 0)
 
-      // Get analytics hash from database
-      const { events } = await getCollections()
-      // Assuming we store daily analytics hashes in an 'events' collection with type 'analyticsHash'
-      const analyticsHash = await events.findOne({ type: 'analyticsHash', date: yesterday.toISOString().split('T')[0] })
+      // Get analytics hash from database using Prisma
+      const dateString = yesterday.toISOString().split('T')[0]
+      const analyticsHash = await prisma.analyticsHash.findUnique({
+        where: { date: new Date(dateString) }
+      })
 
       if (!analyticsHash) {
-        console.log(`No analytics hash found for ${yesterday.toISOString().split('T')[0]}`)
+        console.log(`No analytics hash found for ${dateString}`)
         return
       }
 
       // Submit hash to contract
-      console.log(`Submitting metrics hash for ${yesterday.toISOString().split('T')[0]}: ${analyticsHash.hash}`)
+      console.log(`Submitting metrics hash for ${dateString}: ${analyticsHash.hash}`)
       
-      // TODO: Replace with actual contract interaction
-      /*
+      // Execute contract interaction
       const txHash = await walletClient.writeContract({
         address: SOVADS_MANAGER_ADDRESS,
         abi: SOVADS_MANAGER_ABI,
@@ -238,9 +239,8 @@ class SovAdsOracle {
           analyticsHash.hash as `0x${string}`
         ]
       })
-      */
 
-      console.log(`Metrics hash submitted successfully`)
+      console.log(`Metrics hash submitted successfully: ${txHash}`)
     } catch (error) {
       console.error('Error submitting daily metrics hash:', error)
     }
@@ -249,34 +249,28 @@ class SovAdsOracle {
   // Public methods for manual operations
   async queuePayout(publisherId: string, amount: number, proof: string) {
     try {
-      const { publishers, events } = await getCollections()
-      const publisher = await publishers.findOne({ _id: new (await import('mongodb')).ObjectId(publisherId) })
+      const publisher = await prisma.publisher.findUnique({
+        where: { id: publisherId }
+      })
 
       if (!publisher) {
         throw new Error(`Publisher ${publisherId} not found`)
       }
 
-      const payoutData: PayoutData = {
-        publisherId,
-        publisherWallet: publisher.wallet,
-        amount,
-        date: new Date().toISOString().split('T')[0],
-        proof
-      }
+      // Store payout in database
+      const payout = await prisma.payout.create({
+        data: {
+          publisherId,
+          publisherWallet: publisher.wallet,
+          amount,
+          date: new Date().toISOString().split('T')[0],
+          proof,
+          status: 'pending'
+        }
+      })
 
-      const payoutDoc = {
-        type: 'payout',
-        status: 'pending',
-        data: payoutData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      
-      const result = await events.insertOne(payoutDoc as any)
-      const key = result.insertedId.toString()
-
-      console.log(`Payout queued for ${publisher.wallet}: ${amount} USDC`)
-      return key
+      console.log(`Payout queued for ${publisher.wallet}: ${amount} USDC (ID: ${payout.id})`)
+      return payout.id
     } catch (error) {
       console.error('Error queuing payout:', error)
       throw error
@@ -285,8 +279,7 @@ class SovAdsOracle {
 
   async getPublisherBalance(publisherWallet: string): Promise<number> {
     try {
-      // TODO: Replace with actual contract call
-      /*
+      // Get balance from contract
       const balance = await publicClient.readContract({
         address: SOVADS_MANAGER_ADDRESS,
         abi: SOVADS_MANAGER_ABI,
@@ -294,11 +287,7 @@ class SovAdsOracle {
         args: [publisherWallet as `0x${string}`]
       })
 
-      return parseFloat(formatUnits(balance, 6)) // USDC has 6 decimals
-      */
-
-      // Simulate balance
-      return Math.random() * 100
+      return parseFloat(formatUnits(balance as bigint, 6)) // USDC has 6 decimals
     } catch (error) {
       console.error('Error getting publisher balance:', error)
       return 0
