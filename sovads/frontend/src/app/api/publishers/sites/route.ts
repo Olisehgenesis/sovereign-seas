@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
     }
 
-    const publisher = await (prisma as any).publisher.findUnique({
+    const publisher = await prisma.publisher.findUnique({
       where: { wallet },
       include: {
         sites: true
@@ -23,16 +23,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Publisher not found' }, { status: 404 })
     }
 
-    return NextResponse.json({
-      sites: ((publisher.sites || []) as any[]).map((site: any) => ({
-          id: site.id,
-          domain: site.domain,
-          siteId: site.siteId,
-          apiKey: site.apiKey, // Return API key for SDK integration
-          verified: site.verified,
-          createdAt: site.createdAt
-        }))
-      })
+    const sites = (publisher.sites ?? []).map((site) => ({
+      id: site.id,
+      domain: site.domain,
+      siteId: site.siteId,
+      apiKey: site.apiKey,
+      verified: site.verified,
+      createdAt: site.createdAt,
+    }))
+
+    return NextResponse.json({ sites })
   } catch (error) {
     console.error('Error fetching publisher sites:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 // Add a new site
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const body = (await request.json()) as Partial<{ wallet: string; domain: string }>
     const { wallet, domain } = body
 
     if (!wallet || !domain) {
@@ -50,14 +50,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Find or create publisher
-    let publisher = await (prisma as any).publisher.findUnique({
+    const existingPublisher = await prisma.publisher.findUnique({
       where: { wallet },
       include: { sites: true }
     })
 
-    if (!publisher) {
+    if (!existingPublisher) {
       // Create publisher first
-      publisher = await (prisma as any).publisher.create({
+      const newPublisher = await prisma.publisher.create({
         data: {
           wallet,
           domain, // Legacy field for backwards compatibility
@@ -72,11 +72,11 @@ export async function POST(request: NextRequest) {
       const apiSecret = generateSecretServer() // Store plain secret for decryption (secure this in production!)
       
       // Create first site  
-      const newSite = await (prisma as any).publisherSite.create({
+      const newSite = await prisma.publisherSite.create({
         data: {
-          publisherId: publisher.id,
+          publisherId: newPublisher.id,
           domain,
-          siteId: `site_${publisher.id}_0`,
+          siteId: `site_${newPublisher.id}_0`,
           apiKey,
           apiSecret, // TODO: In production, encrypt this or use secure storage
           verified: false
@@ -94,18 +94,8 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
-      // Load sites for existing publisher
-      const publisherWithSites = await (prisma as any).publisher.findUnique({
-        where: { wallet },
-        include: { sites: true }
-      })
-      
-      if (!publisherWithSites) {
-        return NextResponse.json({ error: 'Publisher not found' }, { status: 404 })
-      }
-      
       // Check if site already exists
-      const existingSite = ((publisherWithSites.sites || []) as any[]).find((s: any) => s.domain === domain)
+      const existingSite = (existingPublisher.sites ?? []).find((site) => site.domain === domain)
       if (existingSite) {
         return NextResponse.json({
           error: 'Site already registered',
@@ -123,12 +113,12 @@ export async function POST(request: NextRequest) {
       const apiSecret = generateSecretServer() // Store plain secret for decryption (secure this in production!)
       
       // Add new site
-      const siteCount = ((publisherWithSites.sites || []) as any[]).length
-      const newSite = await (prisma as any).publisherSite.create({
+      const siteCount = (existingPublisher.sites ?? []).length
+      const newSite = await prisma.publisherSite.create({
         data: {
-          publisherId: publisher.id,
+          publisherId: existingPublisher.id,
           domain,
-          siteId: `site_${publisher.id}_${siteCount}`,
+          siteId: `site_${existingPublisher.id}_${siteCount}`,
           apiKey,
           apiSecret, // TODO: In production, encrypt this or use secure storage
           verified: false
@@ -164,7 +154,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Site ID is required' }, { status: 400 })
     }
 
-    const site = await (prisma as any).publisherSite.findUnique({
+    const site = await prisma.publisherSite.findUnique({
       where: { id: siteId }
     })
 
@@ -172,7 +162,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Site not found' }, { status: 404 })
     }
 
-    await (prisma as any).publisherSite.delete({
+    await prisma.publisherSite.delete({
       where: { id: siteId }
     })
 

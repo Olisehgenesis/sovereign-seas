@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
-import { getTokenSymbol, getTokenInfo } from '@/lib/tokens'
+import { getTokenSymbol } from '@/lib/tokens'
+import { BannerAd } from '@/components/ads/AdSlots'
 
 interface Campaign {
   id: string
@@ -84,6 +85,11 @@ export default function AdvertiserDashboard() {
               Create Campaign
             </Link>
           ) : null}
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Preview Live Banner Placement</h2>
+          <BannerAd className="min-h-[180px] rounded-lg border border-dashed border-border" />
         </div>
 
         {!isConnected ? (

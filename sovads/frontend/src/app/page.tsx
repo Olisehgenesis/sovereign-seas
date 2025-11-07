@@ -1,5 +1,10 @@
 import Link from 'next/link'
 import WalletButton from '@/components/WalletButton'
+import dynamic from 'next/dynamic'
+
+const BannerAd = dynamic(() => import('@/components/ads/AdSlots').then((mod) => mod.BannerAd), {
+  ssr: false,
+})
 
 export default function Home() {
   return (
@@ -52,8 +57,10 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <h2 className="text-2xl font-semibold mb-4 text-center">Live SovAds Preview</h2>
+        <BannerAd className="min-h-[200px] rounded-2xl border border-border bg-card" />
+      </section>
     </div>
   )
 }

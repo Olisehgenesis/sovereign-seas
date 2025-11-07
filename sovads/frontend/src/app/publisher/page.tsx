@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
 import { getTokenSymbol } from '@/lib/tokens'
+import { BannerAd, SidebarAd } from '@/components/ads/AdSlots'
 import { useAds } from '@/hooks/useAds'
 
 interface PublisherStats {
@@ -436,6 +437,18 @@ export default function PublisherDashboard() {
               <div className="bg-card/80 backdrop-blur-sm border border-border rounded-lg p-6">
                 <div className="text-2xl font-bold text-foreground">{stats.totalRevenue.toFixed(6)}</div>
                 <div className="text-muted-foreground">Total Revenue</div>
+              </div>
+            </div>
+
+            {/* Live Ad Preview */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-card/80 backdrop-blur-sm border border-border rounded-lg p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Banner Placement Preview</h2>
+                <BannerAd className="min-h-[180px] rounded-md border border-dashed border-border" />
+              </div>
+              <div className="bg-card/80 backdrop-blur-sm border border-border rounded-lg p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Sidebar Placement Preview</h2>
+                <SidebarAd className="min-h-[260px] rounded-md border border-dashed border-border" />
               </div>
             </div>
 

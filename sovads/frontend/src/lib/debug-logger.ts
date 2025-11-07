@@ -2,6 +2,25 @@ import 'server-only'
 import { prisma } from './db'
 import { NextRequest } from 'next/server'
 
+const MAX_RESPONSE_LOG_LENGTH = 10_000
+
+const safeStringify = (value: unknown): string | null => {
+  if (value === undefined || value === null) {
+    return null
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  try {
+    return JSON.stringify(value)
+  } catch (error) {
+    console.error('Failed to stringify value for debug log:', error)
+    return null
+  }
+}
+
 /**
  * Debug Logger - Tracks all SDK interactions and API calls
  */
@@ -16,9 +35,9 @@ export interface SdkRequestLog {
   userAgent?: string
   ipAddress?: string
   fingerprint?: string
-  requestBody?: any
+  requestBody?: unknown
   responseStatus?: number
-  responseBody?: any
+  responseBody?: unknown
   error?: string
   duration?: number
 }
@@ -31,7 +50,7 @@ export interface SdkInteractionLog {
   siteId?: string
   pageUrl?: string
   elementType?: string
-  metadata?: any
+  metadata?: Record<string, unknown>
 }
 
 export interface ApiRouteCallLog {
@@ -40,8 +59,8 @@ export interface ApiRouteCallLog {
   statusCode: number
   ipAddress?: string
   userAgent?: string
-  requestBody?: any
-  responseBody?: any
+  requestBody?: unknown
+  responseBody?: unknown
   error?: string
   duration?: number
 }
@@ -49,7 +68,7 @@ export interface ApiRouteCallLog {
 export interface CallbackLogData {
   type: string
   endpoint: string
-  payload: any
+  payload: unknown
   ipAddress?: string
   userAgent?: string
   fingerprint?: string
@@ -75,7 +94,7 @@ export function getIpAddress(request: NextRequest): string | undefined {
  */
 export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
   try {
-    const request = await (prisma as any).sdkRequest.create({
+    const request = await prisma.sdkRequest.create({
       data: {
         type: data.type,
         endpoint: data.endpoint,
@@ -86,9 +105,9 @@ export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
         userAgent: data.userAgent,
         ipAddress: data.ipAddress,
         fingerprint: data.fingerprint,
-        requestBody: data.requestBody ? JSON.stringify(data.requestBody) : null,
+        requestBody: safeStringify(data.requestBody),
         responseStatus: data.responseStatus,
-        responseBody: data.responseBody ? JSON.stringify(data.responseBody) : null,
+        responseBody: safeStringify(data.responseBody),
         error: data.error,
         duration: data.duration,
       },
@@ -105,7 +124,7 @@ export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
  */
 export async function logSdkInteraction(data: SdkInteractionLog): Promise<void> {
   try {
-    await (prisma as any).sdkInteraction.create({
+    await prisma.sdkInteraction.create({
       data: {
         requestId: data.requestId,
         type: data.type,
@@ -114,7 +133,7 @@ export async function logSdkInteraction(data: SdkInteractionLog): Promise<void> 
         siteId: data.siteId,
         pageUrl: data.pageUrl,
         elementType: data.elementType,
-        metadata: data.metadata ? JSON.stringify(data.metadata) : null,
+        metadata: safeStringify(data.metadata),
       },
     })
   } catch (error) {
@@ -127,28 +146,21 @@ export async function logSdkInteraction(data: SdkInteractionLog): Promise<void> 
  */
 export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
   try {
-    // Truncate response body if too long (max 10KB)
-    let responseBody = data.responseBody
-    if (responseBody && typeof responseBody === 'string' && responseBody.length > 10000) {
-      responseBody = responseBody.substring(0, 10000) + '... [truncated]'
-    } else if (responseBody && typeof responseBody === 'object') {
-      const str = JSON.stringify(responseBody)
-      if (str.length > 10000) {
-        responseBody = str.substring(0, 10000) + '... [truncated]'
-      } else {
-        responseBody = str
-      }
-    }
+    const responseBodyString = safeStringify(data.responseBody)
+    const truncatedResponseBody =
+      responseBodyString && responseBodyString.length > MAX_RESPONSE_LOG_LENGTH
+        ? `${responseBodyString.substring(0, MAX_RESPONSE_LOG_LENGTH)}... [truncated]`
+        : responseBodyString
 
-    await (prisma as any).apiRouteCall.create({
+    await prisma.apiRouteCall.create({
       data: {
         route: data.route,
         method: data.method,
         statusCode: data.statusCode,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
-        requestBody: data.requestBody ? JSON.stringify(data.requestBody) : null,
-        responseBody: typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody),
+        requestBody: safeStringify(data.requestBody),
+        responseBody: truncatedResponseBody,
         error: data.error,
         duration: data.duration,
       },
@@ -163,11 +175,11 @@ export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
  */
 export async function logCallback(data: CallbackLogData): Promise<void> {
   try {
-    await (prisma as any).callbackLog.create({
+    await prisma.callbackLog.create({
       data: {
         type: data.type,
         endpoint: data.endpoint,
-        payload: JSON.stringify(data.payload),
+        payload: safeStringify(data.payload) ?? '',
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
         fingerprint: data.fingerprint,

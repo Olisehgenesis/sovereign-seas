@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import dynamic from 'next/dynamic'
 import { headers } from 'next/headers'
 import ContextProvider from '@/context'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+
+const PopupAd = dynamic(
+  () => import('@/components/ads/AdSlots').then((mod) => mod.PopupAd),
+  { ssr: false }
+)
 
 export const metadata: Metadata = {
   title: "SovAds - Decentralized Ad Network",
@@ -37,6 +43,7 @@ export default async function RootLayout({
               {children}
             </main>
             <Footer />
+            <PopupAd delay={4000} />
           </ContextProvider>
         </div>
       </body>

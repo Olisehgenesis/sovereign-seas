@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logSdkRequest, logSdkInteraction, getIpAddress } from '@/lib/debug-logger'
+import type { SdkRequestLog, SdkInteractionLog } from '@/lib/debug-logger'
+
+type DebugLogRequestBody =
+  | { type: 'SDK_REQUEST'; data: SdkRequestLog }
+  | { type: 'SDK_INTERACTION'; data: SdkInteractionLog }
+
+const isDebugLogRequest = (value: unknown): value is DebugLogRequestBody => {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as { type?: unknown; data?: unknown }
+  return candidate.type === 'SDK_REQUEST' || candidate.type === 'SDK_INTERACTION'
+}
 
 /**
  * API endpoint for SDK to log requests and interactions
@@ -7,6 +21,11 @@ import { logSdkRequest, logSdkInteraction, getIpAddress } from '@/lib/debug-logg
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    if (!isDebugLogRequest(body)) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
     const { type, data } = body
 
     const ipAddress = getIpAddress(request)
@@ -20,14 +39,12 @@ export async function POST(request: NextRequest) {
       })
       
       return NextResponse.json({ success: true, requestId })
-    } else if (type === 'SDK_INTERACTION') {
+    if (type === 'SDK_INTERACTION') {
       await logSdkInteraction({
         ...data,
       })
       
       return NextResponse.json({ success: true })
-    } else {
-      return NextResponse.json({ error: 'Invalid log type' }, { status: 400 })
     }
   } catch (error) {
     console.error('Error in debug log endpoint:', error)
@@ -36,7 +53,7 @@ export async function POST(request: NextRequest) {
 }
 
 // CORS headers
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
