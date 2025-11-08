@@ -11,6 +11,7 @@ export interface AdComponent {
     targetUrl: string;
     description: string;
     consumerId?: string;
+    isDummy?: boolean;
 }
 declare class SovAds {
     protected config: SovAdsConfig;

@@ -1,6 +1,6 @@
 {
   "name": "sovads-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "SovAds SDK for publisher integration - Modular ad network SDK with banner, popup, and sidebar components",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -12,7 +12,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "sovads",
