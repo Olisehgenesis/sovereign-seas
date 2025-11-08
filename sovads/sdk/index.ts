@@ -15,6 +15,7 @@ export interface AdComponent {
   targetUrl: string
   description: string
   consumerId?: string
+  isDummy?: boolean // Flag to indicate this is a dummy ad for unregistered sites
 }
 
 interface TrackingPayload {
@@ -348,6 +349,20 @@ class SovAds {
         duration,
       })
       
+      // Check if site is not registered (403 or 404)
+      if (response.status === 403 || response.status === 404) {
+        console.log('Site not registered')
+        // Return dummy ad for unregistered sites
+        return {
+          id: 'dummy_ad_unregistered',
+          campaignId: 'dummy_campaign',
+          bannerUrl: 'https://sovseas.xyz/logo.png', // Placeholder - can be replaced with actual sovseas image
+          targetUrl: 'https://ads.sovseas.xyz/publisher',
+          description: 'Register your site to get ads',
+          isDummy: true
+        }
+      }
+      
       if (!response.ok) {
         throw new Error(`Failed to load ad: ${response.statusText}`)
       }
@@ -664,6 +679,60 @@ export class Banner {
         return
       }
 
+      // Handle dummy ads for unregistered sites
+      if (this.currentAd.isDummy) {
+        const dummyElement = document.createElement('div')
+        dummyElement.className = 'sovads-banner-dummy'
+        dummyElement.setAttribute('data-ad-id', this.currentAd.id)
+        dummyElement.style.cssText = `
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          padding: 20px;
+          text-align: center;
+          background: #f9f9f9;
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        `
+
+        const img = document.createElement('img')
+        img.src = this.currentAd.bannerUrl
+        img.alt = 'SovSeas'
+        img.style.cssText = 'width: 120px; height: auto; margin: 0 auto 12px; display: block;'
+        img.onerror = () => {
+          // If image fails to load, create a simple placeholder
+          img.style.display = 'none'
+          const placeholder = document.createElement('div')
+          placeholder.style.cssText = 'width: 120px; height: 60px; margin: 0 auto 12px; background: #e0e0e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666;'
+          placeholder.textContent = 'SovSeas'
+          dummyElement.insertBefore(placeholder, dummyElement.firstChild)
+        }
+
+        const message = document.createElement('div')
+        message.textContent = 'Register your site to get ads'
+        message.style.cssText = 'color: #333; font-size: 14px; font-weight: 500; margin-top: 8px;'
+
+        dummyElement.appendChild(img)
+        dummyElement.appendChild(message)
+
+        dummyElement.addEventListener('click', () => {
+          window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
+        })
+
+        dummyElement.addEventListener('mouseenter', () => {
+          dummyElement.style.transform = 'scale(1.02)'
+          dummyElement.style.background = '#f0f0f0'
+        })
+
+        dummyElement.addEventListener('mouseleave', () => {
+          dummyElement.style.transform = 'scale(1)'
+          dummyElement.style.background = '#f9f9f9'
+        })
+
+        container.appendChild(dummyElement)
+        this.isRendering = false
+        return
+      }
+
       const adElement = document.createElement('div')
       adElement.className = 'sovads-banner'
     adElement.setAttribute('data-ad-id', this.currentAd.id)
@@ -797,22 +866,26 @@ export class Popup {
   private renderPopup() {
     if (!this.currentAd) return
 
-    // Track impression immediately when popup is rendered (not waiting for image load)
-    // This ensures impression is tracked even if user closes popup quickly
     const renderStartTime = Date.now()
-    this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, {
-      rendered: true,
-      viewportVisible: true,
-      renderTime: 0 // Will be updated when image loads
-    })
-    
-    // Log interaction
-    this.sovads.logInteraction('IMPRESSION', {
-      adId: this.currentAd.id,
-      campaignId: this.currentAd.campaignId,
-      elementType: 'POPUP',
-      metadata: { renderTime: 0 },
-    })
+
+    // Don't track impressions for dummy ads
+    if (!this.currentAd.isDummy) {
+      // Track impression immediately when popup is rendered (not waiting for image load)
+      // This ensures impression is tracked even if user closes popup quickly
+      this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, {
+        rendered: true,
+        viewportVisible: true,
+        renderTime: 0 // Will be updated when image loads
+      })
+      
+      // Log interaction
+      this.sovads.logInteraction('IMPRESSION', {
+        adId: this.currentAd.id,
+        campaignId: this.currentAd.campaignId,
+        elementType: 'POPUP',
+        metadata: { renderTime: 0 },
+      })
+    }
 
     // Create overlay
     const overlay = document.createElement('div')
@@ -858,6 +931,51 @@ export class Popup {
     closeBtn.addEventListener('click', () => {
       this.hide()
     })
+
+    // Handle dummy ads
+    if (this.currentAd.isDummy) {
+      const dummyContent = document.createElement('div')
+      dummyContent.style.cssText = 'text-align: center; padding: 20px;'
+
+      const img = document.createElement('img')
+      img.src = this.currentAd.bannerUrl
+      img.alt = 'SovSeas'
+      img.style.cssText = 'width: 150px; height: auto; margin: 0 auto 20px; display: block;'
+      img.onerror = () => {
+        // If image fails to load, create a simple placeholder
+        img.style.display = 'none'
+        const placeholder = document.createElement('div')
+        placeholder.style.cssText = 'width: 150px; height: 75px; margin: 0 auto 20px; background: #e0e0e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666;'
+        placeholder.textContent = 'SovSeas'
+        dummyContent.insertBefore(placeholder, dummyContent.firstChild)
+      }
+
+      const message = document.createElement('div')
+      message.textContent = 'Register your site to get ads'
+      message.style.cssText = 'color: #333; font-size: 16px; font-weight: 500; margin-bottom: 16px;'
+
+      const link = document.createElement('a')
+      link.href = this.currentAd.targetUrl
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      link.textContent = 'Register Now'
+      link.style.cssText = 'display: inline-block; padding: 10px 20px; background: #007bff; color: white; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;'
+
+      dummyContent.appendChild(img)
+      dummyContent.appendChild(message)
+      dummyContent.appendChild(link)
+
+      this.popupElement.appendChild(closeBtn)
+      this.popupElement.appendChild(dummyContent)
+      overlay.appendChild(this.popupElement)
+      document.body.appendChild(overlay)
+
+      // Auto close after 10 seconds
+      setTimeout(() => {
+        this.hide()
+      }, 10000)
+      return
+    }
 
     // Ad image
     const img = document.createElement('img')
@@ -962,6 +1080,61 @@ export class Sidebar {
       
       if (!this.currentAd) {
         container.innerHTML = '<div class="sovads-no-ad">No ads available</div>'
+        this.isRendering = false
+        return
+      }
+
+      // Handle dummy ads for unregistered sites
+      if (this.currentAd.isDummy) {
+        const dummyElement = document.createElement('div')
+        dummyElement.className = 'sovads-sidebar-dummy'
+        dummyElement.setAttribute('data-ad-id', this.currentAd.id)
+        dummyElement.style.cssText = `
+          background: #f9f9f9;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          padding: 20px;
+          margin-bottom: 15px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        `
+
+        const img = document.createElement('img')
+        img.src = this.currentAd.bannerUrl
+        img.alt = 'SovSeas'
+        img.style.cssText = 'width: 100px; height: auto; margin: 0 auto 12px; display: block;'
+        img.onerror = () => {
+          // If image fails to load, create a simple placeholder
+          img.style.display = 'none'
+          const placeholder = document.createElement('div')
+          placeholder.style.cssText = 'width: 100px; height: 50px; margin: 0 auto 12px; background: #e0e0e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #666;'
+          placeholder.textContent = 'SovSeas'
+          dummyElement.insertBefore(placeholder, dummyElement.firstChild)
+        }
+
+        const message = document.createElement('div')
+        message.textContent = 'Register your site to get ads'
+        message.style.cssText = 'color: #333; font-size: 13px; font-weight: 500; margin-top: 8px;'
+
+        dummyElement.appendChild(img)
+        dummyElement.appendChild(message)
+
+        dummyElement.addEventListener('click', () => {
+          window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
+        })
+
+        dummyElement.addEventListener('mouseenter', () => {
+          dummyElement.style.background = '#f0f0f0'
+          dummyElement.style.transform = 'translateY(-2px)'
+        })
+
+        dummyElement.addEventListener('mouseleave', () => {
+          dummyElement.style.background = '#f9f9f9'
+          dummyElement.style.transform = 'translateY(0)'
+        })
+
+        container.appendChild(dummyElement)
         this.isRendering = false
         return
       }
