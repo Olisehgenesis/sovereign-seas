@@ -1,5 +1,5 @@
 import 'server-only'
-import { prisma } from './db'
+import { collections } from './db'
 import { NextRequest } from 'next/server'
 
 const MAX_RESPONSE_LOG_LENGTH = 10_000
@@ -94,25 +94,26 @@ export function getIpAddress(request: NextRequest): string | undefined {
  */
 export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
   try {
-    const request = await prisma.sdkRequest.create({
-      data: {
-        type: data.type,
-        endpoint: data.endpoint,
-        method: data.method,
-        siteId: data.siteId,
-        domain: data.domain,
-        pageUrl: data.pageUrl,
-        userAgent: data.userAgent,
-        ipAddress: data.ipAddress,
-        fingerprint: data.fingerprint,
-        requestBody: safeStringify(data.requestBody),
-        responseStatus: data.responseStatus,
-        responseBody: safeStringify(data.responseBody),
-        error: data.error,
-        duration: data.duration,
-      },
+    const sdkRequests = await collections.sdkRequests()
+    const createdAt = new Date()
+    const insertResult = await sdkRequests.insertOne({
+      type: data.type,
+      endpoint: data.endpoint,
+      method: data.method,
+      siteId: data.siteId,
+      domain: data.domain,
+      pageUrl: data.pageUrl,
+      userAgent: data.userAgent,
+      ipAddress: data.ipAddress,
+      fingerprint: data.fingerprint,
+      requestBody: safeStringify(data.requestBody),
+      responseStatus: data.responseStatus,
+      responseBody: safeStringify(data.responseBody),
+      error: data.error,
+      duration: data.duration,
+      timestamp: createdAt,
     })
-    return request.id
+    return insertResult.insertedId ? String(insertResult.insertedId) : ''
   } catch (error) {
     console.error('Error logging SDK request:', error)
     return ''
@@ -124,17 +125,17 @@ export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
  */
 export async function logSdkInteraction(data: SdkInteractionLog): Promise<void> {
   try {
-    await prisma.sdkInteraction.create({
-      data: {
-        requestId: data.requestId,
-        type: data.type,
-        adId: data.adId,
-        campaignId: data.campaignId,
-        siteId: data.siteId,
-        pageUrl: data.pageUrl,
-        elementType: data.elementType,
-        metadata: safeStringify(data.metadata),
-      },
+    const interactions = await collections.sdkInteractions()
+    await interactions.insertOne({
+      requestId: data.requestId,
+      type: data.type,
+      adId: data.adId,
+      campaignId: data.campaignId,
+      siteId: data.siteId,
+      pageUrl: data.pageUrl,
+      elementType: data.elementType,
+      metadata: safeStringify(data.metadata),
+      timestamp: new Date(),
     })
   } catch (error) {
     console.error('Error logging SDK interaction:', error)
@@ -152,18 +153,18 @@ export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
         ? `${responseBodyString.substring(0, MAX_RESPONSE_LOG_LENGTH)}... [truncated]`
         : responseBodyString
 
-    await prisma.apiRouteCall.create({
-      data: {
-        route: data.route,
-        method: data.method,
-        statusCode: data.statusCode,
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
-        requestBody: safeStringify(data.requestBody),
-        responseBody: truncatedResponseBody,
-        error: data.error,
-        duration: data.duration,
-      },
+    const apiRouteCalls = await collections.apiRouteCalls()
+    await apiRouteCalls.insertOne({
+      route: data.route,
+      method: data.method,
+      statusCode: data.statusCode,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+      requestBody: safeStringify(data.requestBody),
+      responseBody: truncatedResponseBody,
+      error: data.error,
+      duration: data.duration,
+      timestamp: new Date(),
     })
   } catch (error) {
     console.error('Error logging API route call:', error)
@@ -175,17 +176,17 @@ export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
  */
 export async function logCallback(data: CallbackLogData): Promise<void> {
   try {
-    await prisma.callbackLog.create({
-      data: {
-        type: data.type,
-        endpoint: data.endpoint,
-        payload: safeStringify(data.payload) ?? '',
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
-        fingerprint: data.fingerprint,
-        statusCode: data.statusCode,
-        error: data.error,
-      },
+    const callbackLogs = await collections.callbackLogs()
+    await callbackLogs.insertOne({
+      type: data.type,
+      endpoint: data.endpoint,
+      payload: safeStringify(data.payload) ?? '',
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+      fingerprint: data.fingerprint,
+      statusCode: data.statusCode,
+      error: data.error,
+      timestamp: new Date(),
     })
   } catch (error) {
     console.error('Error logging callback:', error)

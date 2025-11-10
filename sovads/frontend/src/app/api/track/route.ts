@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { EventType } from '@prisma/client'
+import { randomUUID } from 'crypto'
+import { collections } from '@/lib/db'
+
+const EVENT_TYPES = ['IMPRESSION', 'CLICK'] as const
+
+const randomId = () => randomUUID()
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,25 +16,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate event type
-    if (!Object.values(EventType).includes(type)) {
+    if (!EVENT_TYPES.includes(type)) {
       return NextResponse.json({ error: 'Invalid event type' }, { status: 400 })
     }
 
     // Get publisher by siteId
-    const publisher = await prisma.publisher.findFirst({
-      where: {
-        id: siteId.replace('site_', '')
-      }
-    })
+    const publisherSitesCollection = await collections.publisherSites()
+    const publishersCollection = await collections.publishers()
+    const campaignsCollection = await collections.campaigns()
+    const eventsCollection = await collections.events()
+
+    const publisherSite = await publisherSitesCollection.findOne({ siteId })
+
+    const publisher =
+      (publisherSite && (await publishersCollection.findOne({ _id: publisherSite.publisherId }))) ||
+      (await publishersCollection.findOne({ _id: siteId.replace('site_', '') })) ||
+      (await publishersCollection.findOne({ domain: siteId }))
 
     if (!publisher) {
       return NextResponse.json({ error: 'Publisher not found' }, { status: 404 })
     }
 
     // Get campaign
-    const campaign = await prisma.campaign.findUnique({
-      where: { id: campaignId }
-    })
+    const campaign = await campaignsCollection.findOne({ _id: campaignId })
 
     if (!campaign || !campaign.active) {
       return NextResponse.json({ error: 'Campaign not found or inactive' }, { status: 404 })
@@ -38,17 +46,13 @@ export async function POST(request: NextRequest) {
 
     // Check for duplicate events (fraud prevention) - within last hour
     const oneHourAgo = new Date(Date.now() - 3600 * 1000)
-    const existingEvent = await prisma.event.findFirst({
-      where: {
-        type: type as EventType,
-        campaignId,
-        adId,
-        siteId,
-        fingerprint: fingerprint || null,
-        timestamp: {
-          gte: oneHourAgo
-        }
-      }
+    const existingEvent = await eventsCollection.findOne({
+      type,
+      campaignId,
+      adId,
+      siteId,
+      fingerprint: fingerprint ?? null,
+      timestamp: { $gte: oneHourAgo },
     })
     
     if (existingEvent) {
@@ -56,15 +60,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limiting per campaign - check events in last hour
-    const recentEvents = await prisma.event.count({
-      where: {
-        type: type as EventType,
-        campaignId,
-        siteId,
-        timestamp: {
-          gte: oneHourAgo
-        }
-      }
+    const recentEvents = await eventsCollection.countDocuments({
+      type,
+      campaignId,
+      siteId,
+      timestamp: { $gte: oneHourAgo },
     })
 
     if (recentEvents > 100) { // Max 100 events per hour per campaign per site
@@ -72,37 +72,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Create event
-    const event = await prisma.event.create({
-      data: {
-        type: type as EventType,
-        campaignId,
-        publisherId: publisher.id,
-        siteId,
-        adId,
-        ipAddress:
-          request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-          request.headers.get('x-real-ip') ||
-          request.headers.get('cf-connecting-ip') ||
-          request.headers.get('x-client-ip') ||
-          'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-        fingerprint: fingerprint || null
-      }
-    })
-
-    // Update campaign spent amount for clicks
-    if (type === EventType.CLICK) {
-      await prisma.campaign.update({
-        where: { id: campaignId },
-        data: {
-          spent: {
-            increment: campaign.cpc
-          }
-        }
-      })
+    const eventDoc = {
+      _id: randomId(),
+      type,
+      campaignId,
+      publisherId: publisher._id,
+      siteId,
+      adId,
+      ipAddress:
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        request.headers.get('cf-connecting-ip') ||
+        request.headers.get('x-client-ip') ||
+        'unknown',
+      userAgent: request.headers.get('user-agent') || 'unknown',
+      fingerprint: fingerprint ?? null,
+      publisherSiteId: publisherSite?._id ?? null,
+      timestamp: new Date(),
+      verified: type === 'CLICK',
     }
 
-    return NextResponse.json({ success: true, eventId: event.id })
+    await eventsCollection.insertOne(eventDoc)
+
+    // Update campaign spent amount for clicks
+    if (type === 'CLICK') {
+      await campaignsCollection.updateOne(
+        { _id: campaignId },
+        {
+          $inc: { spent: campaign.cpc },
+          $set: { updatedAt: new Date() },
+        }
+      )
+    }
+
+    return NextResponse.json({ success: true, eventId: eventDoc._id })
   } catch (error) {
     console.error('Error tracking event:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

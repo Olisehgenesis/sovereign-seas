@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { randomUUID } from 'crypto'
+import { uploadImageToCloudinary } from '@/lib/cloudinary'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,14 +10,23 @@ export async function POST(request: NextRequest) {
       if (!base64 || !type) {
         return NextResponse.json({ error: 'base64 and type required' }, { status: 400 })
       }
-      const asset = await prisma.asset.create({
-        data: {
-          dataBase64: base64,
-          contentType: type,
-          filename: filename || null,
-        }
+      const upload = await uploadImageToCloudinary(base64, type, {
+        filenameOverride: filename ?? undefined,
       })
-      return NextResponse.json({ url: `/api/uploads/${asset.id}` }, { status: 201 })
+
+      return NextResponse.json(
+        {
+          url: upload.secureUrl,
+          publicId: upload.publicId,
+          width: upload.width,
+          height: upload.height,
+          format: upload.format,
+          mediaType: upload.resourceType === 'video' ? 'video' : 'image',
+          bytes: upload.bytes,
+          duration: upload.duration,
+        },
+        { status: 201 }
+      )
     }
 
     // Fallback: multipart/form-data
@@ -27,15 +37,23 @@ export async function POST(request: NextRequest) {
     }
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    const base64 = buffer.toString('base64')
-    const asset = await prisma.asset.create({
-      data: {
-        dataBase64: base64,
-        contentType: file.type || 'application/octet-stream',
-        filename: file.name,
-      }
+    const upload = await uploadImageToCloudinary(buffer, file.type || undefined, {
+      filenameOverride: file.name ? `${file.name}-${randomUUID()}` : undefined,
     })
-    return NextResponse.json({ url: `/api/uploads/${asset.id}` }, { status: 201 })
+
+    return NextResponse.json(
+      {
+        url: upload.secureUrl,
+        publicId: upload.publicId,
+        width: upload.width,
+        height: upload.height,
+        format: upload.format,
+        mediaType: upload.resourceType === 'video' ? 'video' : 'image',
+        bytes: upload.bytes,
+        duration: upload.duration,
+      },
+      { status: 201 }
+    )
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })

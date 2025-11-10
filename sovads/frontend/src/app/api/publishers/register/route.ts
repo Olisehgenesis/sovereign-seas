@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { randomUUID } from 'crypto'
+import { collections } from '@/lib/db'
 
 /**
  * Publisher registration API
@@ -16,15 +17,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet and domain are required' }, { status: 400 })
     }
 
-    const existingPublisher = await prisma.publisher.findUnique({
-      where: { wallet }
-    })
+    const publishersCollection = await collections.publishers()
+    const existingPublisher = await publishersCollection.findOne({ wallet })
 
     if (existingPublisher) {
       return NextResponse.json({ 
         success: true, 
-        id: existingPublisher.id,
-        siteId: `site_${existingPublisher.id}`,
+        id: existingPublisher._id,
+        siteId: `site_${existingPublisher._id}`,
         domain: existingPublisher.domain,
         verified: existingPublisher.verified 
       })
@@ -32,19 +32,22 @@ export async function POST(request: NextRequest) {
 
     // Create new publisher in database
     // NOTE: To register on-chain, call subscribePublisher from useAds hook
-    const publisher = await prisma.publisher.create({
-      data: {
-        wallet,
-        domain,
-        verified: false,
-        totalEarned: 0,
-      }
-    })
+    const now = new Date()
+    const publisher = {
+      _id: randomUUID(),
+      wallet,
+      domain,
+      verified: false,
+      totalEarned: 0,
+      createdAt: now,
+      updatedAt: now,
+    }
+    await publishersCollection.insertOne(publisher)
 
     return NextResponse.json({ 
       success: true,
-      id: publisher.id,
-      siteId: `site_${publisher.id}`,
+      id: publisher._id,
+      siteId: `site_${publisher._id}`,
       domain: publisher.domain,
       verified: false,
       note: 'Register on-chain using subscribePublisher from useAds hook'
@@ -64,20 +67,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
     }
 
-    const publisher = await prisma.publisher.findUnique({
-      where: { wallet }
-    })
+    const publishersCollection = await collections.publishers()
+    const publisher = await publishersCollection.findOne({ wallet })
 
     if (!publisher) {
       return NextResponse.json({ error: 'Publisher not found' }, { status: 404 })
     }
 
     return NextResponse.json({
-      id: publisher.id,
+      id: publisher._id,
       wallet: publisher.wallet,
       domain: publisher.domain,
       verified: publisher.verified,
-      totalEarned: Number(publisher.totalEarned),
+      totalEarned: publisher.totalEarned,
       createdAt: publisher.createdAt,
       updatedAt: publisher.updatedAt,
     })

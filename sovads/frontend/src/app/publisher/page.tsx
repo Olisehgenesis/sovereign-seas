@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
-import { getTokenSymbol } from '@/lib/tokens'
 import { BannerAd, SidebarAd } from '@/components/ads/AdSlots'
 import { useAds } from '@/hooks/useAds'
 
@@ -362,6 +361,14 @@ export default function PublisherDashboard() {
     navigator.clipboard.writeText(text)
   }
 
+  const copyAllSiteIds = () => {
+    if (sites.length === 0) return
+    const payload = sites.map((site) => `${site.domain} → ${site.siteId}`).join('\n')
+    copyToClipboard(payload)
+    setRegistrationSuccess('All site IDs copied to clipboard')
+    setTimeout(() => setRegistrationSuccess(null), 3000)
+  }
+
   return (
     <div className="min-h-screen bg-transparent text-foreground">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -499,6 +506,18 @@ export default function PublisherDashboard() {
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Registered Websites ({sites.length})
                     </label>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-muted-foreground">
+                        Click any site to view or copy its unique identifiers.
+                      </span>
+                      <button
+                        onClick={copyAllSiteIds}
+                        className="text-xs px-3 py-1 border border-border rounded-md hover:bg-muted/50"
+                        disabled={sites.length === 0}
+                      >
+                        Copy All Site IDs
+                      </button>
+                    </div>
                     <div className="space-y-2">
                       {sites.map((site) => (
                         <div key={site.id} className="bg-muted/50 border border-border rounded-md p-4">

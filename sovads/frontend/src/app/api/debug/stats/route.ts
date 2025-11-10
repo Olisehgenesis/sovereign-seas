@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import type { Prisma } from '@prisma/client'
+import { collections } from '@/lib/db'
 
 /**
  * Get debug statistics and data
@@ -12,42 +11,72 @@ export async function GET(request: NextRequest) {
     const effectiveHours = Number.isNaN(hours) ? 24 : Math.max(hours, 1)
     const since = new Date(Date.now() - effectiveHours * 60 * 60 * 1000)
 
+    const [
+      sdkRequestsCollection,
+      sdkInteractionsCollection,
+      apiRouteCallsCollection,
+      callbackLogsCollection,
+    ] = await Promise.all([
+      collections.sdkRequests(),
+      collections.sdkInteractions(),
+      collections.apiRouteCalls(),
+      collections.callbackLogs(),
+    ])
+
     // Get counts
     const [sdkRequests, sdkInteractions, apiCalls, callbacks] = await Promise.all([
-      prisma.sdkRequest.count({ where: { timestamp: { gte: since } } }),
-      prisma.sdkInteraction.count({ where: { timestamp: { gte: since } } }),
-      prisma.apiRouteCall.count({ where: { timestamp: { gte: since } } }),
-      prisma.callbackLog.count({ where: { timestamp: { gte: since } } }),
+      sdkRequestsCollection.countDocuments({ timestamp: { $gte: since } }),
+      sdkInteractionsCollection.countDocuments({ timestamp: { $gte: since } }),
+      apiRouteCallsCollection.countDocuments({ timestamp: { $gte: since } }),
+      callbackLogsCollection.countDocuments({ timestamp: { $gte: since } }),
     ])
 
     // Get SDK request types breakdown
-    const sdkRequestTypes = await prisma.sdkRequest.groupBy({
-      by: ['type'],
-      where: { timestamp: { gte: since } },
-      _count: { type: true },
-    })
+    const sdkRequestTypesCursor = sdkRequestsCollection.aggregate<{
+      _id: string | null
+      count: number
+    }>([
+      { $match: { timestamp: { $gte: since } } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+    ])
+    const sdkRequestTypes = await sdkRequestTypesCursor.toArray()
 
     // Get SDK interaction types breakdown
-    const interactionTypes = await prisma.sdkInteraction.groupBy({
-      by: ['type'],
-      where: { timestamp: { gte: since } },
-      _count: { type: true },
-    })
+    const interactionTypesCursor = sdkInteractionsCollection.aggregate<{
+      _id: string | null
+      count: number
+    }>([
+      { $match: { timestamp: { $gte: since } } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+    ])
+    const interactionTypes = await interactionTypesCursor.toArray()
 
     // Get API route breakdown
-    const apiRoutes = await prisma.apiRouteCall.groupBy({
-      by: ['route'],
-      where: { timestamp: { gte: since } },
-      _count: { route: true },
-      _avg: { duration: true },
-    })
+    const apiRoutesCursor = apiRouteCallsCollection.aggregate<{
+      _id: string | null
+      count: number
+      avgDuration: number | null
+    }>([
+      { $match: { timestamp: { $gte: since } } },
+      {
+        $group: {
+          _id: '$route',
+          count: { $sum: 1 },
+          avgDuration: { $avg: '$duration' },
+        },
+      },
+    ])
+    const apiRoutes = await apiRoutesCursor.toArray()
 
     // Get callback types
-    const callbackTypes = await prisma.callbackLog.groupBy({
-      by: ['type'],
-      where: { timestamp: { gte: since } },
-      _count: { type: true },
-    })
+    const callbackTypesCursor = callbackLogsCollection.aggregate<{
+      _id: string | null
+      count: number
+    }>([
+      { $match: { timestamp: { $gte: since } } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+    ])
+    const callbackTypes = await callbackTypesCursor.toArray()
 
     // Get hourly breakdown for charts
     const hourlyData: Array<{
@@ -62,17 +91,17 @@ export async function GET(request: NextRequest) {
       const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
       
       const [requestCount, interactionCount, apiCount, callbackCount] = await Promise.all([
-        prisma.sdkRequest.count({
-          where: { timestamp: { gte: hourStart, lt: hourEnd } },
+        sdkRequestsCollection.countDocuments({
+          timestamp: { $gte: hourStart, $lt: hourEnd },
         }),
-        prisma.sdkInteraction.count({
-          where: { timestamp: { gte: hourStart, lt: hourEnd } },
+        sdkInteractionsCollection.countDocuments({
+          timestamp: { $gte: hourStart, $lt: hourEnd },
         }),
-        prisma.apiRouteCall.count({
-          where: { timestamp: { gte: hourStart, lt: hourEnd } },
+        apiRouteCallsCollection.countDocuments({
+          timestamp: { $gte: hourStart, $lt: hourEnd },
         }),
-        prisma.callbackLog.count({
-          where: { timestamp: { gte: hourStart, lt: hourEnd } },
+        callbackLogsCollection.countDocuments({
+          timestamp: { $gte: hourStart, $lt: hourEnd },
         }),
       ])
 
@@ -87,31 +116,55 @@ export async function GET(request: NextRequest) {
 
     // Get error rates
     const errorCounts = await Promise.all([
-      prisma.sdkRequest.count({
-        where: { timestamp: { gte: since }, error: { not: null } },
+      sdkRequestsCollection.countDocuments({
+        timestamp: { $gte: since },
+        error: { $ne: null },
       }),
-      prisma.apiRouteCall.count({
-        where: { timestamp: { gte: since }, statusCode: { gte: 400 } },
+      apiRouteCallsCollection.countDocuments({
+        timestamp: { $gte: since },
+        statusCode: { $gte: 400 },
       }),
-      prisma.callbackLog.count({
-        where: { timestamp: { gte: since }, error: { not: null } },
+      callbackLogsCollection.countDocuments({
+        timestamp: { $gte: since },
+        error: { $ne: null },
       }),
     ])
 
     // Get top domains
-    const topDomains = await prisma.sdkRequest.groupBy({
-      by: ['domain'],
-      where: { timestamp: { gte: since }, domain: { not: null } },
-      _count: { domain: true },
-      orderBy: { _count: { domain: 'desc' } },
-      take: 10,
-    })
+    const topDomainsCursor = sdkRequestsCollection.aggregate<{
+      _id: string
+      count: number
+    }>([
+      {
+        $match: {
+          timestamp: { $gte: since },
+          domain: { $ne: null },
+        },
+      },
+      { $group: { _id: '$domain', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ])
+    const topDomains = await topDomainsCursor.toArray()
 
     // Get average response times
-    const avgResponseTime = await prisma.sdkRequest.aggregate({
-      where: { timestamp: { gte: since }, duration: { not: null } },
-      _avg: { duration: true },
-    })
+    const avgResponseTimeCursor = await sdkRequestsCollection
+      .aggregate<{ avgDuration: number | null }>([
+        {
+          $match: {
+            timestamp: { $gte: since },
+            duration: { $ne: null },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            avgDuration: { $avg: '$duration' },
+          },
+        },
+      ])
+      .toArray()
+    const avgResponseTime = avgResponseTimeCursor[0]?.avgDuration ?? 0
 
     return NextResponse.json({
       summary: {
@@ -124,31 +177,31 @@ export async function GET(request: NextRequest) {
           apiCalls: errorCounts[1],
           callbacks: errorCounts[2],
         },
-        avgResponseTime: avgResponseTime._avg.duration ?? 0,
+        avgResponseTime,
       },
       breakdowns: {
         sdkRequestTypes: sdkRequestTypes.map((group) => ({
-          type: group.type,
-          count: group._count?.type ?? 0,
+          type: group._id ?? 'unknown',
+          count: group.count ?? 0,
         })),
         interactionTypes: interactionTypes.map((group) => ({
-          type: group.type,
-          count: group._count?.type ?? 0,
+          type: group._id ?? 'unknown',
+          count: group.count ?? 0,
         })),
         apiRoutes: apiRoutes.map((routeGroup) => ({
-          route: routeGroup.route,
-          count: routeGroup._count.route ?? 0,
-          avgDuration: routeGroup._avg.duration ?? 0,
+          route: routeGroup._id ?? 'unknown',
+          count: routeGroup.count ?? 0,
+          avgDuration: routeGroup.avgDuration ?? 0,
         })),
         callbackTypes: callbackTypes.map((callbackGroup) => ({
-          type: callbackGroup.type,
-          count: callbackGroup._count.type ?? 0,
+          type: callbackGroup._id ?? 'unknown',
+          count: callbackGroup.count ?? 0,
         })),
       },
       hourlyData,
       topDomains: topDomains.map((domainGroup) => ({
-        domain: domainGroup.domain,
-        count: domainGroup._count.domain ?? 0,
+        domain: domainGroup._id,
+        count: domainGroup.count ?? 0,
       })),
     })
   } catch (error) {

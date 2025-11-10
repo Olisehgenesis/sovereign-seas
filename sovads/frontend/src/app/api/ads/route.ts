@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { collections } from '@/lib/db'
 
 // CORS headers helper
 const corsHeaders = {
@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-export async function OPTIONS(_request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: corsHeaders,
@@ -19,30 +19,29 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const siteId = searchParams.get('siteId')
+    const location = searchParams.get('location')?.toLowerCase()
 
     if (!siteId) {
       return NextResponse.json({ error: 'Site ID is required' }, { status: 400 })
     }
 
     // Check PublisherSite first (new structure)
-    const publisherSite = await prisma.publisherSite.findUnique({
-      where: { siteId },
-      include: { publisher: true }
-    })
+    const publisherSitesCollection = await collections.publisherSites()
+    const publishersCollection = await collections.publishers()
+    const campaignsCollection = await collections.campaigns()
 
-    let publisher = publisherSite?.publisher ?? null
+    const publisherSite = await publisherSitesCollection.findOne({ siteId })
+
+    let publisher = null
+    if (publisherSite) {
+      publisher = await publishersCollection.findOne({ _id: publisherSite.publisherId })
+    }
 
     // If not found in PublisherSite, check Publisher (legacy or direct ID)
     if (!publisher) {
       // Try as direct publisher ID
-      publisher = await prisma.publisher.findFirst({
-        where: {
-          OR: [
-            { id: siteId },
-            { id: siteId.replace('site_', '') },
-            { domain: siteId }
-          ]
-        }
+      publisher = await publishersCollection.findOne({
+        $or: [{ _id: siteId }, { _id: siteId.replace('site_', '') }, { domain: siteId }],
       })
     }
 
@@ -64,20 +63,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Get active campaigns with budget remaining
-    // Using raw query to compare budget > spent (Prisma doesn't support field comparisons directly)
-    const allCampaigns = await prisma.campaign.findMany({
-      where: {
-        active: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50 // Get more to filter by budget
-    })
+    const candidatesCursor = campaignsCollection
+      .find({ active: true })
+      .sort({ createdAt: -1 })
+      .limit(50)
 
-    // Filter campaigns where budget > spent
-    const campaigns = allCampaigns
-      .filter((campaign) => Number(campaign.budget) > Number(campaign.spent))
+    const candidateCampaigns = await candidatesCursor.toArray()
+    const campaigns = candidateCampaigns
+      .filter((campaign) => campaign.budget > campaign.spent)
+      .filter((campaign) => {
+        if (!location) return true
+        if (!campaign.targetLocations || campaign.targetLocations.length === 0) return true
+        return campaign.targetLocations.some(
+          (loc) => typeof loc === 'string' && loc.toLowerCase() === location
+        )
+      })
       .slice(0, 10)
 
     if (campaigns.length === 0) {
@@ -89,12 +89,19 @@ export async function GET(request: NextRequest) {
 
     // Create ad response
     const ad = {
-      id: `ad_${randomCampaign.id}`,
-      campaignId: randomCampaign.id,
+      id: `ad_${randomCampaign._id}`,
+      campaignId: randomCampaign._id,
       name: randomCampaign.name,
+      description: randomCampaign.description ?? '',
       bannerUrl: randomCampaign.bannerUrl,
       targetUrl: randomCampaign.targetUrl,
-      cpc: randomCampaign.cpc.toString()
+      cpc: randomCampaign.cpc.toString(),
+      tags: randomCampaign.tags ?? [],
+      targetLocations: randomCampaign.targetLocations ?? [],
+      metadata: randomCampaign.metadata ?? null,
+      startDate: randomCampaign.startDate ?? null,
+      endDate: randomCampaign.endDate ?? null,
+      mediaType: randomCampaign.mediaType ?? 'image',
     }
 
     return NextResponse.json(ad, { headers: corsHeaders })

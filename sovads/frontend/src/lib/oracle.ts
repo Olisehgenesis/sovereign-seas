@@ -1,7 +1,7 @@
 import { createPublicClient, createWalletClient, http, formatUnits } from 'viem'
 import { celoSepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
-import { prisma } from '@/lib/db'
+import { collections } from '@/lib/db'
 
 // SovAds Manager contract address on Celo Sepolia
 const SOVADS_MANAGER_ADDRESS = '0x3eCE3a48818efF703204eC9B60f00d476923f5B5'
@@ -116,10 +116,11 @@ class SovAdsOracle {
   private async processPendingPayouts() {
     try {
       // Get pending payouts from database
-      const pendingPayouts = await prisma.payout.findMany({
-        where: { status: 'pending' },
-        include: { publisher: true }
-      })
+      const payoutsCollection = await collections.payouts()
+      const publishersCollection = await collections.publishers()
+      const pendingPayouts = await payoutsCollection
+        .find({ status: 'pending' })
+        .toArray()
       
       if (pendingPayouts.length === 0) {
         return // No payouts to process
@@ -141,36 +142,39 @@ class SovAdsOracle {
           console.log(`Payout completed for ${payout.publisherWallet}: ${txHash}`)
           
           // Update payout record in database
-          await prisma.payout.update({
-            where: { id: payoutDoc.id },
-            data: {
-              txHash,
-              status: 'completed',
-              updatedAt: new Date()
-            }
-          })
-
-          // Update publisher's total earnings
-          await prisma.publisher.update({
-            where: { id: payout.publisherId },
-            data: {
-              totalEarned: {
-                increment: payoutDoc.amount
+          await payoutsCollection.updateOne(
+            { _id: payoutDoc._id },
+            {
+              $set: {
+                txHash,
+                status: 'completed',
+                updatedAt: new Date()
               }
             }
-          })
+          )
+
+          // Update publisher's total earnings
+          await publishersCollection.updateOne(
+            { _id: payout.publisherId },
+            {
+              $inc: { totalEarned: payoutDoc.amount },
+              $set: { updatedAt: new Date() }
+            }
+          )
         } catch (error) {
           console.error(`Failed to process payout for ${payout.publisherWallet}:`, error)
           
           // Mark as failed in database
-          await prisma.payout.update({
-            where: { id: payoutDoc.id },
-            data: {
-              status: 'failed',
-              error: error instanceof Error ? error.message : 'Unknown error',
-              updatedAt: new Date()
+          await payoutsCollection.updateOne(
+            { _id: payoutDoc._id },
+            {
+              $set: {
+                status: 'failed',
+                error: error instanceof Error ? error.message : 'Unknown error',
+                updatedAt: new Date()
+              }
             }
-          })
+          )
         }
       }
     } catch (error) {
@@ -232,8 +236,9 @@ class SovAdsOracle {
 
       // Get analytics hash from database using Prisma
       const dateString = yesterday.toISOString().split('T')[0]
-      const analyticsHash = await prisma.analyticsHash.findUnique({
-        where: { date: new Date(dateString) }
+      const analyticsCollection = await collections.analyticsHashes()
+      const analyticsHash = await analyticsCollection.findOne({
+        date: new Date(dateString)
       })
 
       if (!analyticsHash) {
@@ -264,28 +269,30 @@ class SovAdsOracle {
   // Public methods for manual operations
   async queuePayout(publisherId: string, amount: number, proof: string) {
     try {
-      const publisher = await prisma.publisher.findUnique({
-        where: { id: publisherId }
-      })
+      const publishersCollection = await collections.publishers()
+      const publisher = await publishersCollection.findOne({ _id: publisherId })
 
       if (!publisher) {
         throw new Error(`Publisher ${publisherId} not found`)
       }
 
       // Store payout in database
-      const payout = await prisma.payout.create({
-        data: {
-          publisherId,
-          publisherWallet: publisher.wallet,
-          amount,
-          date: new Date().toISOString().split('T')[0],
-          proof,
-          status: 'pending'
-        }
+      const payoutsCollection = await collections.payouts()
+      const now = new Date()
+      const result = await payoutsCollection.insertOne({
+        publisherId,
+        publisherWallet: publisher.wallet,
+        amount,
+        date: new Date().toISOString().split('T')[0],
+        proof,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now
       })
 
-      console.log(`Payout queued for ${publisher.wallet}: ${amount} USDC (ID: ${payout.id})`)
-      return payout.id
+      const payoutId = result.insertedId.toString()
+      console.log(`Payout queued for ${publisher.wallet}: ${amount} USDC (ID: ${payoutId})`)
+      return payoutId
     } catch (error) {
       console.error('Error queuing payout:', error)
       throw error

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { collections } from '@/lib/db'
 
 // CORS headers helper
 const corsHeaders = {
@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-export async function OPTIONS(_request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: corsHeaders,
@@ -26,46 +26,43 @@ export async function POST(request: NextRequest) {
     }
 
     // Check PublisherSite first (new structure)
-    const publisherSite = await prisma.publisherSite.findFirst({
-      where: { domain },
-      include: { publisher: true }
-    })
+    const publisherSitesCollection = await collections.publisherSites()
+    const publishersCollection = await collections.publishers()
+
+    const publisherSite = await publisherSitesCollection.findOne({ domain })
 
     if (publisherSite) {
+      const publisher = await publishersCollection.findOne({ _id: publisherSite.publisherId })
       return NextResponse.json({ 
         siteId: publisherSite.siteId,
         domain: publisherSite.domain,
-        verified: publisherSite.publisher?.verified || false
+        verified: publisher?.verified || false
       }, { headers: corsHeaders })
     }
 
     // Check if site already exists in Publisher (legacy)
-    const site = await prisma.publisher.findFirst({
-      where: { 
-        domain,
-        verified: true 
-      }
+    const site = await publishersCollection.findOne({ 
+      domain,
+      verified: true 
     })
 
     if (site) {
       return NextResponse.json({ 
-        siteId: site.id,
+        siteId: site._id,
         domain: site.domain,
         verified: site.verified
       }, { headers: corsHeaders })
     }
 
     // Check for unverified site
-    const unverifiedSite = await prisma.publisher.findFirst({
-      where: { 
-        domain,
-        verified: false 
-      }
+    const unverifiedSite = await publishersCollection.findOne({ 
+      domain,
+      verified: false 
     })
 
     if (unverifiedSite) {
       return NextResponse.json({ 
-        siteId: unverifiedSite.id,
+        siteId: unverifiedSite._id,
         domain: unverifiedSite.domain,
         verified: unverifiedSite.verified,
         message: 'Site exists but not verified'
@@ -73,7 +70,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a temporary site ID for new domains
-    const tempSiteId = `temp_${btoa(domain).substring(0, 8)}_${Date.now()}`
+    const encodedDomain = Buffer.from(domain).toString('base64')
+    const tempSiteId = `temp_${encodedDomain.substring(0, 8)}_${Date.now()}`
     
     return NextResponse.json({ 
       siteId: tempSiteId,
@@ -101,16 +99,19 @@ export async function GET(request: NextRequest) {
       }, { status: 400, headers: corsHeaders })
     }
 
-    const site = await prisma.publisher.findFirst({
-      where: { domain },
-      select: {
-        id: true,
-        domain: true,
-        verified: true,
-        totalEarned: true,
-        createdAt: true
+    const publishersCollection = await collections.publishers()
+    const site = await publishersCollection.findOne(
+      { domain },
+      {
+        projection: {
+          _id: 1,
+          domain: 1,
+          verified: 1,
+          totalEarned: 1,
+          createdAt: 1,
+        },
       }
-    })
+    )
 
     if (!site) {
       return NextResponse.json({ 
@@ -118,7 +119,15 @@ export async function GET(request: NextRequest) {
       }, { status: 404, headers: corsHeaders })
     }
 
-    return NextResponse.json({ site }, { headers: corsHeaders })
+    return NextResponse.json({ 
+      site: {
+        id: site._id,
+        domain: site.domain,
+        verified: site.verified,
+        totalEarned: site.totalEarned,
+        createdAt: site.createdAt,
+      }
+    }, { headers: corsHeaders })
   } catch (error) {
     console.error('Error fetching site:', error)
     return NextResponse.json({ 

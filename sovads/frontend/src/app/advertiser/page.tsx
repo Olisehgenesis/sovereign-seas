@@ -18,6 +18,12 @@ interface Campaign {
   cpc: number
   active: boolean
   tokenAddress?: string
+  mediaType?: 'image' | 'video'
+  tags?: string[]
+  targetLocations?: string[]
+  metadata?: Record<string, unknown>
+  startDate?: string | null
+  endDate?: string | null
 }
 
 interface CampaignStats {
@@ -125,7 +131,7 @@ export default function AdvertiserDashboard() {
                         <p className="text-foreground/70">{campaign.description}</p>
                         <div className="flex space-x-4 mt-2 text-sm text-foreground/60">
                           {(() => {
-                            const tokenSymbol = getTokenSymbol(campaign.tokenAddress);
+                            const tokenSymbol = getTokenSymbol(campaign.tokenAddress)
                             return (
                               <>
                                 <span>Budget: {campaign.budget} {tokenSymbol}</span>
@@ -135,13 +141,39 @@ export default function AdvertiserDashboard() {
                                   {campaign.active ? 'Active' : 'Inactive'}
                                 </span>
                               </>
-                            );
+                            )
                           })()}
                         </div>
+                        <div className="mt-2 text-xs text-foreground/60">
+                          Media: {campaign.mediaType === 'video' ? 'Video' : 'Image / GIF'}
+                        </div>
+                        {(campaign.tags?.length || campaign.targetLocations?.length) && (
+                          <div className="mt-3 space-y-2">
+                            {campaign.tags && campaign.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                {campaign.tags.map((tag) => (
+                                  <span key={tag} className="px-2 py-1 bg-secondary/60 border border-border rounded-full">
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {campaign.targetLocations && campaign.targetLocations.length > 0 && (
+                              <div className="flex flex-wrap gap-2 text-xs text-foreground/70">
+                                <span className="font-medium text-foreground/80">Target:</span>
+                                {campaign.targetLocations.map((loc) => (
+                                  <span key={loc} className="px-2 py-1 bg-muted border border-border rounded-full">
+                                    {loc}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-semibold">
-                          {((campaign.spent / campaign.budget) * 100).toFixed(1)}%
+                          {campaign.budget > 0 ? ((campaign.spent / campaign.budget) * 100).toFixed(1) : '0.0'}%
                         </div>
                         <div className="text-sm text-foreground/60">Budget Used</div>
                       </div>
@@ -157,6 +189,23 @@ export default function AdvertiserDashboard() {
                 <h2 className="text-xl font-semibold mb-4">
                   Campaign Stats: {selectedCampaign.name}
                 </h2>
+                <div className="mb-6">
+                  {selectedCampaign.mediaType === 'video' ? (
+                    <video
+                      src={selectedCampaign.bannerUrl}
+                      className="w-full rounded-lg border border-border"
+                      controls
+                      playsInline
+                      muted
+                    />
+                  ) : (
+                    <img
+                      src={selectedCampaign.bannerUrl}
+                      alt={selectedCampaign.description}
+                      className="w-full max-h-64 object-contain rounded-lg border border-border"
+                    />
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-secondary border border-border rounded-lg p-4">
                     <div className="text-2xl font-bold">{campaignStats.impressions.toLocaleString()}</div>

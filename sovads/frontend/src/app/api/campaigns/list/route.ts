@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { collections } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,43 +10,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing wallet parameter' }, { status: 400 })
     }
 
-    const advertiser = await prisma.advertiser.findUnique({
-      where: { wallet },
-      include: {
-        campaigns: {
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            bannerUrl: true,
-            targetUrl: true,
-            budget: true,
-            spent: true,
-            cpc: true,
-            active: true,
-            tokenAddress: true,
-          }
-        }
-      }
-    })
+    const advertisersCollection = await collections.advertisers()
+    const campaignsCollection = await collections.campaigns()
+
+    const advertiser = await advertisersCollection.findOne({ wallet })
 
     if (!advertiser) {
       return NextResponse.json({ campaigns: [] }, { status: 200 })
     }
 
-    const campaigns = advertiser.campaigns.map(c => ({
-      id: c.id,
-      name: c.name,
-      description: c.description,
-      bannerUrl: c.bannerUrl,
-      targetUrl: c.targetUrl,
-      budget: Number(c.budget),
-      spent: Number(c.spent),
-      cpc: Number(c.cpc),
-      active: c.active,
-      tokenAddress: c.tokenAddress || undefined,
-    }))
+    const campaignsCursor = campaignsCollection
+      .find({ advertiserId: advertiser._id })
+      .sort({ createdAt: -1 })
+
+    const campaigns = await campaignsCursor
+      .map((campaign) => ({
+        id: campaign._id,
+        name: campaign.name,
+        description: campaign.description ?? undefined,
+        bannerUrl: campaign.bannerUrl,
+        targetUrl: campaign.targetUrl,
+        budget: campaign.budget,
+        spent: campaign.spent,
+        cpc: campaign.cpc,
+        active: campaign.active,
+        tokenAddress: campaign.tokenAddress ?? undefined,
+        tags: campaign.tags ?? [],
+        targetLocations: campaign.targetLocations ?? [],
+        metadata: campaign.metadata ?? undefined,
+        startDate: campaign.startDate ?? null,
+        endDate: campaign.endDate ?? null,
+        mediaType: campaign.mediaType ?? 'image',
+      }))
+      .toArray()
 
     return NextResponse.json({ campaigns }, { status: 200 })
   } catch (error) {

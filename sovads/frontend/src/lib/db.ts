@@ -1,45 +1,35 @@
-import 'server-only'
-import { PrismaClient } from '@prisma/client'
+import { Collection } from 'mongodb'
+import { getCollection } from './mongo'
+import type {
+  Advertiser,
+  Publisher,
+  PublisherSite,
+  Campaign,
+  Event,
+  AnalyticsHash,
+  Asset,
+  Payout,
+  SdkRequest,
+  SdkInteraction,
+  ApiRouteCall,
+  CallbackLog,
+} from './models'
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+export const collections = {
+  advertisers: () => getCollection<Advertiser>('advertisers'),
+  publishers: () => getCollection<Publisher>('publishers'),
+  publisherSites: () => getCollection<PublisherSite>('publisher_sites'),
+  campaigns: () => getCollection<Campaign>('campaigns'),
+  events: () => getCollection<Event>('events'),
+  analyticsHashes: () => getCollection<AnalyticsHash>('analytics_hashes'),
+  assets: () => getCollection<Asset>('assets'),
+  payouts: () => getCollection<Payout>('payouts'),
+  sdkRequests: () => getCollection<SdkRequest>('sdk_requests'),
+  sdkInteractions: () => getCollection<SdkInteraction>('sdk_interactions'),
+  apiRouteCalls: () => getCollection<ApiRouteCall>('api_route_calls'),
+  callbackLogs: () => getCollection<CallbackLog>('callback_logs'),
 }
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
+export type Collections = typeof collections
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-export interface CampaignFormData {
-  name: string;
-  description: string;
-  bannerUrl: string;
-  targetUrl: string;
-  budget: string;
-  cpc: string;
-  duration: string;
-  tokenAddress: string;
-}
-
-export async function saveCampaign(params: {
-  wallet: `0x${string}`;
-  campaignData: CampaignFormData;
-  transactionHash: `0x${string}`;
-  contractCampaignId: string;
-}) {
-  const response = await fetch('/api/campaigns/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  });
-
-  if (!response.ok) {
-    let message = 'Failed to save campaign to database';
-    try {
-      const data = await response.json();
-      message = data?.error || message;
-    } catch {}
-    throw new Error(message);
-  }
-
-  return response.json();
-}
+export type { Advertiser, Publisher, PublisherSite, Campaign, Event, AnalyticsHash, Asset, Payout, SdkRequest, SdkInteraction, ApiRouteCall, CallbackLog }

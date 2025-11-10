@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { EventType, type Prisma } from '@prisma/client'
-
-// Analytics route - uses Prisma/SQLite (Redis removed)
+import { collections } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,38 +15,67 @@ export async function GET(request: NextRequest) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
-    const whereClause: Prisma.EventWhereInput = {
-      timestamp: {
-        gte: startDate
-      }
+    const eventsCollection = await collections.events()
+    const campaignsCollection = await collections.campaigns()
+    const publishersCollection = await collections.publishers()
+
+    const query: Record<string, unknown> = {
+      timestamp: { $gte: startDate },
     }
 
     if (campaignId) {
-      whereClause.campaignId = campaignId
+      query.campaignId = campaignId
     }
 
     if (publisherId) {
-      whereClause.publisherId = publisherId
+      query.publisherId = publisherId
     }
 
-    // Get events from database
-    const events = await prisma.event.findMany({
-      where: whereClause,
-      include: {
-        campaign: true,
-        publisher: true
-      }
+    const events = await eventsCollection
+      .find(query)
+      .sort({ timestamp: -1 })
+      .toArray()
+
+    const campaignIds = Array.from(new Set(events.map((event) => event.campaignId)))
+    const publisherIds = Array.from(new Set(events.map((event) => event.publisherId)))
+
+    const [campaignDocs, publisherDocs] = await Promise.all([
+      campaignIds.length
+        ? campaignsCollection
+            .find({ _id: { $in: campaignIds } })
+            .project({ _id: 1, name: 1, cpc: 1 })
+            .toArray()
+        : [],
+      publisherIds.length
+        ? publishersCollection
+            .find({ _id: { $in: publisherIds } })
+            .project({ _id: 1, domain: 1 })
+            .toArray()
+        : [],
+    ])
+
+    const campaignMap = new Map<string, { name?: string; cpc?: number }>()
+    campaignDocs.forEach((doc) => {
+      campaignMap.set(doc._id, { name: doc.name, cpc: doc.cpc })
+    })
+
+    const publisherMap = new Map<string, { domain?: string }>()
+    publisherDocs.forEach((doc) => {
+      publisherMap.set(doc._id, { domain: doc.domain })
     })
 
     // Calculate metrics
-    const impressions = events.filter(e => e.type === EventType.IMPRESSION).length
-    const clicks = events.filter(e => e.type === EventType.CLICK).length
+    const impressions = events.filter((e) => e.type === 'IMPRESSION').length
+    const clicks = events.filter((e) => e.type === 'CLICK').length
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
 
     // Calculate revenue (for publishers)
     const totalRevenue = events
-      .filter(e => e.type === EventType.CLICK)
-      .reduce((sum, event) => sum + parseFloat(event.campaign.cpc.toString()), 0)
+      .filter((e) => e.type === 'CLICK')
+      .reduce((sum, event) => {
+        const campaign = campaignMap.get(event.campaignId)
+        return sum + (campaign?.cpc ?? 0)
+      }, 0)
 
     const analytics = {
       period: `${days} days`,
@@ -57,13 +83,13 @@ export async function GET(request: NextRequest) {
       clicks,
       ctr: parseFloat(ctr.toFixed(2)),
       totalRevenue: parseFloat(totalRevenue.toFixed(6)),
-      events: events.map(event => ({
-        id: event.id,
+      events: events.map((event) => ({
+        id: event._id,
         type: event.type,
         timestamp: event.timestamp,
-        campaignName: event.campaign.name,
-        publisherDomain: event.publisher.domain
-      }))
+        campaignName: campaignMap.get(event.campaignId)?.name ?? 'Unknown Campaign',
+        publisherDomain: publisherMap.get(event.publisherId)?.domain ?? 'Unknown Publisher',
+      })),
     }
 
     return NextResponse.json(analytics)
@@ -86,24 +112,36 @@ export async function POST(request: NextRequest) {
     nextDay.setDate(nextDay.getDate() + 1)
 
     // Get all events for the day
-    const events = await prisma.event.findMany({
-      where: {
+    const eventsCollection = await collections.events()
+    const campaignsCollection = await collections.campaigns()
+
+    const events = await eventsCollection
+      .find({
         timestamp: {
-          gte: targetDate,
-          lt: nextDay
-        }
-      },
-      include: {
-        campaign: true,
-        publisher: true
-      }
+          $gte: targetDate,
+          $lt: nextDay,
+        },
+      })
+      .toArray()
+
+    const campaignIds = Array.from(new Set(events.map((event) => event.campaignId)))
+    const campaignDocs = campaignIds.length
+      ? await campaignsCollection
+          .find({ _id: { $in: campaignIds } })
+          .project({ _id: 1, cpc: 1 })
+          .toArray()
+      : []
+
+    const campaignMap = new Map<string, { cpc?: number }>()
+    campaignDocs.forEach((doc) => {
+      campaignMap.set(doc._id, { cpc: doc.cpc })
     })
 
     // Aggregate by campaign and publisher
     const campaignStats = new Map()
     const publisherStats = new Map()
 
-    events.forEach(event => {
+    events.forEach((event) => {
       const campaignId = event.campaignId
       const publisherId = event.publisherId
 
@@ -118,11 +156,11 @@ export async function POST(request: NextRequest) {
       }
 
       const campaignStat = campaignStats.get(campaignId)
-      if (event.type === EventType.IMPRESSION) {
+      if (event.type === 'IMPRESSION') {
         campaignStat.impressions++
-      } else if (event.type === EventType.CLICK) {
+      } else if (event.type === 'CLICK') {
         campaignStat.clicks++
-        campaignStat.revenue += parseFloat(event.campaign.cpc.toString())
+        campaignStat.revenue += campaignMap.get(event.campaignId)?.cpc ?? 0
       }
 
       // Publisher stats
@@ -136,11 +174,11 @@ export async function POST(request: NextRequest) {
       }
 
       const publisherStat = publisherStats.get(publisherId)
-      if (event.type === EventType.IMPRESSION) {
+      if (event.type === 'IMPRESSION') {
         publisherStat.impressions++
-      } else if (event.type === EventType.CLICK) {
+      } else if (event.type === 'CLICK') {
         publisherStat.clicks++
-        publisherStat.revenue += parseFloat(event.campaign.cpc.toString())
+        publisherStat.revenue += campaignMap.get(event.campaignId)?.cpc ?? 0
       }
     })
 

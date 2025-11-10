@@ -14,6 +14,10 @@ interface CampaignFormData {
   cpc: string;
   duration: string; // in days
   tokenAddress: string;
+  tags: string;
+  targetLocations: string;
+  metadata: string;
+  mediaType: 'image' | 'video';
 }
 
 export default function CreateCampaign() {
@@ -28,7 +32,11 @@ export default function CreateCampaign() {
     budget: '',
     cpc: '0.002',
     duration: '',
-    tokenAddress: ''
+    tokenAddress: '',
+    tags: '',
+    targetLocations: '',
+  metadata: '',
+  mediaType: 'image'
   });
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -84,7 +92,7 @@ export default function CreateCampaign() {
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return 'Campaign name is required';
     if (!formData.description.trim()) return 'Description is required';
-    if (!formData.bannerUrl.trim()) return 'Banner URL is required';
+    if (!formData.bannerUrl.trim()) return 'Creative media URL is required';
     if (!formData.targetUrl.trim()) return 'Target URL is required';
     if (!formData.budget || parseFloat(formData.budget) < 0.0001) return 'Budget must be at least 0.0001';
     if (!formData.tokenAddress) return 'Token address is required';
@@ -149,14 +157,43 @@ export default function CreateCampaign() {
       // Step 2: Save to database after successful contract interaction
       console.log('Saving campaign to database...');
       
+      const parsedTags = formData.tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0)
+
+      const parsedLocations = formData.targetLocations
+        .split(',')
+        .map((loc) => loc.trim())
+        .filter((loc) => loc.length > 0)
+
+      let metadataObject: Record<string, unknown> | undefined
+      if (formData.metadata.trim().length > 0) {
+        try {
+          metadataObject = JSON.parse(formData.metadata)
+        } catch (err) {
+          console.error('Invalid metadata JSON:', err)
+          setSubmitError('Metadata must be valid JSON')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       const resp = await fetch('/api/campaigns/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: address as `0x${string}`,
-          campaignData: formData,
+          campaignData: {
+            ...formData,
+            tags: parsedTags,
+            targetLocations: parsedLocations,
+            metadata: metadataObject,
+          },
           transactionHash: txHash,
           contractCampaignId: campaignId,
+          startDate,
+          endDate,
         }),
       })
       if (!resp.ok) {
@@ -179,10 +216,15 @@ export default function CreateCampaign() {
         budget: '',
         cpc: '0.002',
         duration: '',
-        tokenAddress: supportedTokens[0] || ''
+        tokenAddress: supportedTokens[0] || '',
+        tags: '',
+        targetLocations: '',
+        metadata: '',
+        mediaType: 'image'
       });
       setStartDate('');
       setEndDate('');
+      setBannerPreview('');
 
     } catch (err) {
       console.error('Error creating campaign:', err);
@@ -287,13 +329,15 @@ export default function CreateCampaign() {
               />
             </div>
 
-            {/* Banner Image Upload */}
+            {/* Creative Media Upload */}
             <div>
-              <label className="block text-sm font-medium text-foreground/80 mb-2">Banner Image *</label>
+              <label className="block text-sm font-medium text-foreground/80 mb-2">
+                Creative (image, GIF, or short video) *
+              </label>
               <div className="flex items-center gap-3">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/*"
                   onChange={async (e) => {
                     const file = e.target.files?.[0]
                     if (!file) return
@@ -304,11 +348,15 @@ export default function CreateCampaign() {
                       const res = await fetch('/api/uploads/image', { method: 'POST', body: form })
                       if (!res.ok) throw new Error('Upload failed')
                       const data = await res.json()
-                      setFormData(prev => ({ ...prev, bannerUrl: data.url }))
+                      setFormData(prev => ({
+                        ...prev,
+                        bannerUrl: data.url,
+                        mediaType: data.mediaType === 'video' ? 'video' : 'image'
+                      }))
                       setBannerPreview(data.url)
                     } catch (err) {
                       console.error('Upload error', err)
-                      setSubmitError('Failed to upload image')
+                      setSubmitError('Failed to upload media')
                     } finally {
                       setUploading(false)
                     }
@@ -318,9 +366,20 @@ export default function CreateCampaign() {
                 />
               </div>
               {uploading && <p className="text-sm text-foreground/60 mt-2">Uploading...</p>}
-              {bannerPreview && (
+              {bannerPreview && formData.mediaType === 'image' && (
                 <div className="mt-3">
                   <img src={bannerPreview} alt="Banner preview" className="max-h-32 rounded-md border border-border" />
+                </div>
+              )}
+              {bannerPreview && formData.mediaType === 'video' && (
+                <div className="mt-3">
+                  <video
+                    src={bannerPreview}
+                    className="max-h-48 rounded-md border border-border"
+                    controls
+                    playsInline
+                    muted
+                  />
                 </div>
               )}
             </div>
@@ -340,6 +399,63 @@ export default function CreateCampaign() {
                 placeholder="https://example.com/landing-page"
                 required
               />
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label htmlFor="tags" className="block text-sm font-medium text-foreground/80 mb-2">
+                Tags (comma separated)
+              </label>
+              <input
+                type="text"
+                id="tags"
+                name="tags"
+                value={formData.tags}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="DeFi, NFTs, web3 gaming"
+              />
+              <p className="mt-1 text-xs text-foreground/60">
+                Add keywords that describe your campaign. Publishers can use these to understand the ad context.
+              </p>
+            </div>
+
+            {/* Target Locations */}
+            <div>
+              <label htmlFor="targetLocations" className="block text-sm font-medium text-foreground/80 mb-2">
+                Target Locations (comma separated)
+              </label>
+              <input
+                type="text"
+                id="targetLocations"
+                name="targetLocations"
+                value={formData.targetLocations}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="United States, Canada, Nigeria"
+              />
+              <p className="mt-1 text-xs text-foreground/60">
+                Specify the primary countries or regions you want to reach.
+              </p>
+            </div>
+
+            {/* Metadata */}
+            <div>
+              <label htmlFor="metadata" className="block text-sm font-medium text-foreground/80 mb-2">
+                Additional Metadata (JSON)
+              </label>
+              <textarea
+                id="metadata"
+                name="metadata"
+                value={formData.metadata}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                placeholder='{"audience": "builders", "cta": "Join the beta"}'
+              />
+              <p className="mt-1 text-xs text-foreground/60">
+                Optional. Provide structured metadata to help publishers understand the campaign context.
+              </p>
             </div>
           </>
         )}
