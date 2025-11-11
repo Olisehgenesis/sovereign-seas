@@ -12,6 +12,12 @@ export interface AdComponent {
     description: string;
     consumerId?: string;
     isDummy?: boolean;
+    tags?: string[];
+    targetLocations?: string[];
+    metadata?: Record<string, unknown>;
+    startDate?: string | null;
+    endDate?: string | null;
+    mediaType?: 'image' | 'video';
 }
 declare class SovAds {
     protected config: SovAdsConfig;
@@ -33,6 +39,10 @@ declare class SovAds {
      * Get client metadata for tracking
      */
     private getClientMetadata;
+    /**
+     * Normalize URL - add protocol if missing for localhost
+     */
+    normalizeUrl(url: string): string;
     /**
      * Validate URL format
      */

@@ -337,16 +337,20 @@ export default function CreateCampaign() {
               <div className="flex items-center gap-3">
                 <input
                   type="file"
-                  accept="image/*,video/*"
+                  accept="image/*,video/*,.gif"
                   onChange={async (e) => {
                     const file = e.target.files?.[0]
                     if (!file) return
                     setUploading(true)
+                    setSubmitError(null)
                     try {
                       const form = new FormData()
                       form.append('image', file)
                       const res = await fetch('/api/uploads/image', { method: 'POST', body: form })
-                      if (!res.ok) throw new Error('Upload failed')
+                      if (!res.ok) {
+                        const errorData = await res.json().catch(() => ({}))
+                        throw new Error(errorData.error || 'Upload failed')
+                      }
                       const data = await res.json()
                       setFormData(prev => ({
                         ...prev,
@@ -356,30 +360,47 @@ export default function CreateCampaign() {
                       setBannerPreview(data.url)
                     } catch (err) {
                       console.error('Upload error', err)
-                      setSubmitError('Failed to upload media')
+                      setSubmitError(err instanceof Error ? err.message : 'Failed to upload media')
                     } finally {
                       setUploading(false)
                     }
                   }}
                   className="block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-primary-foreground hover:file:bg-primary/90"
+                  disabled={uploading}
                   required
                 />
               </div>
-              {uploading && <p className="text-sm text-foreground/60 mt-2">Uploading...</p>}
-              {bannerPreview && formData.mediaType === 'image' && (
-                <div className="mt-3">
-                  <img src={bannerPreview} alt="Banner preview" className="max-h-32 rounded-md border border-border" />
+              {uploading && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-sm text-foreground/60">Uploading media...</p>
                 </div>
               )}
-              {bannerPreview && formData.mediaType === 'video' && (
+              {bannerPreview && !uploading && (
                 <div className="mt-3">
-                  <video
-                    src={bannerPreview}
-                    className="max-h-48 rounded-md border border-border"
-                    controls
-                    playsInline
-                    muted
-                  />
+                  {formData.mediaType === 'video' ? (
+                    <div className="relative">
+                      <video
+                        src={bannerPreview}
+                        className="max-h-64 w-full rounded-md border border-border object-contain"
+                        controls
+                        playsInline
+                        muted
+                      />
+                      <p className="text-xs text-foreground/60 mt-1">Video preview</p>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img 
+                        src={bannerPreview} 
+                        alt="Media preview" 
+                        className="max-h-64 w-full rounded-md border border-border object-contain" 
+                      />
+                      <p className="text-xs text-foreground/60 mt-1">
+                        {bannerPreview.toLowerCase().includes('.gif') ? 'GIF preview' : 'Image preview'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

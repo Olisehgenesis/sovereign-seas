@@ -1,6 +1,6 @@
 {
   "name": "sovads-sdk",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "SovAds SDK for publisher integration - Modular ad network SDK with banner, popup, and sidebar components",
   "main": "dist/index.js",
   "module": "dist/index.js",

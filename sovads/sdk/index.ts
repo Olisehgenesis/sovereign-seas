@@ -283,11 +283,25 @@ class SovAds {
   }
 
   /**
+   * Normalize URL - add protocol if missing for localhost
+   */
+  public normalizeUrl(url: string): string {
+    if (!url.includes('://')) {
+      // Allow localhost URLs without protocol for debugging
+      if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
+        return `http://${url}`
+      }
+    }
+    return url
+  }
+
+  /**
    * Validate URL format
    */
   private isValidUrl(url: string): boolean {
     try {
-      const parsed = new URL(url)
+      const normalized = this.normalizeUrl(url)
+      const parsed = new URL(normalized)
       return parsed.protocol === 'http:' || parsed.protocol === 'https:'
     } catch {
       return false
@@ -406,6 +420,8 @@ class SovAds {
 
       const normalizedAd: AdComponent = {
         ...rawAd,
+        bannerUrl: this.normalizeUrl(rawAd.bannerUrl),
+        targetUrl: this.normalizeUrl(rawAd.targetUrl),
         mediaType: rawAd.mediaType === 'video' ? 'video' : 'image',
       }
       
@@ -732,7 +748,7 @@ export class Banner {
         dummyElement.appendChild(message)
 
         dummyElement.addEventListener('click', () => {
-          window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
+          window.open(this.sovads.normalizeUrl(this.currentAd!.targetUrl), '_blank', 'noopener,noreferrer')
         })
 
         dummyElement.addEventListener('mouseenter', () => {
@@ -836,7 +852,7 @@ export class Banner {
           metadata: { renderTime: Date.now() - this.renderStartTime },
         })
         
-        window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
+        window.open(this.sovads.normalizeUrl(this.currentAd!.targetUrl), '_blank', 'noopener,noreferrer')
       })
 
       // Add hover effect
@@ -984,7 +1000,7 @@ export class Popup {
       message.style.cssText = 'color: #333; font-size: 16px; font-weight: 500; margin-bottom: 16px;'
 
       const link = document.createElement('a')
-      link.href = this.currentAd.targetUrl
+      link.href = this.sovads.normalizeUrl(this.currentAd.targetUrl)
       link.target = '_blank'
       link.rel = 'noopener noreferrer'
       link.textContent = 'Register Now'
@@ -1088,8 +1104,15 @@ export class Popup {
 
   hide() {
     const overlay = document.querySelector('.sovads-popup-overlay')
-    if (overlay) {
-      overlay.remove()
+    if (overlay && overlay.isConnected) {
+      try {
+        overlay.remove()
+      } catch (error) {
+        // Element may have already been removed by React or another process
+        if (this.sovads.getConfig().debug) {
+          console.warn('Could not remove popup overlay:', error)
+        }
+      }
     }
   }
 }
@@ -1172,7 +1195,7 @@ export class Sidebar {
         dummyElement.appendChild(message)
 
         dummyElement.addEventListener('click', () => {
-          window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
+          window.open(this.sovads.normalizeUrl(this.currentAd!.targetUrl), '_blank', 'noopener,noreferrer')
         })
 
         dummyElement.addEventListener('mouseenter', () => {
@@ -1277,7 +1300,7 @@ export class Sidebar {
           metadata: { renderTime: Date.now() - this.renderStartTime },
         })
         
-        window.open(this.currentAd!.targetUrl, '_blank', 'noopener,noreferrer')
+        window.open(this.sovads.normalizeUrl(this.currentAd!.targetUrl), '_blank', 'noopener,noreferrer')
       })
 
       // Add hover effect

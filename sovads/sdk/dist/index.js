@@ -213,11 +213,24 @@ class SovAds {
         };
     }
     /**
+     * Normalize URL - add protocol if missing for localhost
+     */
+    normalizeUrl(url) {
+        if (!url.includes('://')) {
+            // Allow localhost URLs without protocol for debugging
+            if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
+                return `http://${url}`;
+            }
+        }
+        return url;
+    }
+    /**
      * Validate URL format
      */
     isValidUrl(url) {
         try {
-            const parsed = new URL(url);
+            const normalized = this.normalizeUrl(url);
+            const parsed = new URL(normalized);
             return parsed.protocol === 'http:' || parsed.protocol === 'https:';
         }
         catch {
@@ -285,45 +298,57 @@ class SovAds {
                     bannerUrl: 'https://sovseas.xyz/logo.png', // Placeholder - can be replaced with actual sovseas image
                     targetUrl: 'https://ads.sovseas.xyz/publisher',
                     description: 'Register your site to get ads',
-                    isDummy: true
+                    isDummy: true,
+                    tags: ['register', 'sovads'],
+                    targetLocations: [],
+                    metadata: {
+                        message: 'Register your site to start serving ads.',
+                    },
+                    mediaType: 'image',
                 };
             }
             if (!response.ok) {
                 throw new Error(`Failed to load ad: ${response.statusText}`);
             }
-            const ad = await response.json();
+            const rawAd = await response.json();
             // Validate ad data
-            if (!ad || !ad.bannerUrl || !ad.targetUrl) {
+            if (!rawAd || !rawAd.bannerUrl || !rawAd.targetUrl) {
                 if (this.config.debug) {
-                    console.error('Invalid ad data received:', ad);
+                    console.error('Invalid ad data received:', rawAd);
                 }
                 return null;
             }
             // Validate URLs
-            if (!this.isValidUrl(ad.bannerUrl)) {
+            if (!this.isValidUrl(rawAd.bannerUrl)) {
                 if (this.config.debug) {
-                    console.error('Invalid bannerUrl:', ad.bannerUrl);
+                    console.error('Invalid bannerUrl:', rawAd.bannerUrl);
                 }
                 return null;
             }
-            if (!this.isValidUrl(ad.targetUrl)) {
+            if (!this.isValidUrl(rawAd.targetUrl)) {
                 if (this.config.debug) {
-                    console.error('Invalid targetUrl:', ad.targetUrl);
+                    console.error('Invalid targetUrl:', rawAd.targetUrl);
                 }
                 return null;
             }
+            const normalizedAd = {
+                ...rawAd,
+                bannerUrl: this.normalizeUrl(rawAd.bannerUrl),
+                targetUrl: this.normalizeUrl(rawAd.targetUrl),
+                mediaType: rawAd.mediaType === 'video' ? 'video' : 'image',
+            };
             if (this.config.debug) {
-                console.log('Ad loaded:', ad);
+                console.log('Ad loaded:', normalizedAd);
             }
             // Log interaction
             await this.logDebug('SDK_INTERACTION', {
                 type: 'AD_LOADED',
-                adId: ad.id,
-                campaignId: ad.campaignId,
+                adId: normalizedAd.id,
+                campaignId: normalizedAd.campaignId,
                 siteId,
                 pageUrl: window.location.href,
             });
-            return ad;
+            return normalizedAd;
         }
         catch (error) {
             const duration = Date.now() - startTime;
@@ -593,7 +618,7 @@ export class Banner {
                 dummyElement.appendChild(img);
                 dummyElement.appendChild(message);
                 dummyElement.addEventListener('click', () => {
-                    window.open(this.currentAd.targetUrl, '_blank', 'noopener,noreferrer');
+                    window.open(this.sovads.normalizeUrl(this.currentAd.targetUrl), '_blank', 'noopener,noreferrer');
                 });
                 dummyElement.addEventListener('mouseenter', () => {
                     dummyElement.style.transform = 'scale(1.02)';
@@ -617,48 +642,58 @@ export class Banner {
       cursor: pointer;
       transition: transform 0.2s ease;
     `;
-            const img = document.createElement('img');
-            img.src = this.currentAd.bannerUrl;
-            img.alt = this.currentAd.description;
-            img.style.cssText = 'width: 100%; height: auto; display: block;';
-            // Track when image loads (render verification)
-            img.onload = () => {
+            const mediaType = this.currentAd.mediaType === 'video' ? 'video' : 'image';
+            const handleVisibilityTracking = (renderInfo) => {
+                this.sovads.setupRenderObserver(adElement, this.currentAd.id, (isVisible) => {
+                    renderInfo.viewportVisible = isVisible;
+                    if (isVisible && !this.hasTrackedImpression) {
+                        this.hasTrackedImpression = true;
+                        this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, renderInfo);
+                    }
+                });
+            };
+            const handleRenderSuccess = () => {
                 const renderTime = Date.now() - this.renderStartTime;
-                const renderInfo = {
+                handleVisibilityTracking({
                     rendered: true,
                     viewportVisible: false,
-                    renderTime
-                };
-                // Setup IntersectionObserver to verify ad is visible
-                this.sovads.setupRenderObserver(adElement, this.currentAd.id, (isVisible) => {
-                    renderInfo.viewportVisible = isVisible;
-                    // Track impression only once when ad becomes visible
-                    if (isVisible && !this.hasTrackedImpression) {
-                        this.hasTrackedImpression = true;
-                        this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, renderInfo);
-                    }
+                    renderTime,
                 });
             };
-            // Handle image load errors - still track impression if element is visible
-            img.onerror = () => {
+            const handleRenderError = () => {
                 if (this.sovads.getConfig().debug) {
-                    console.warn(`Failed to load ad image: ${this.currentAd.bannerUrl}`);
+                    console.warn(`Failed to load ad media: ${this.currentAd.bannerUrl}`);
                 }
-                // Still set up observer in case element becomes visible (for broken image tracking)
-                const renderInfo = {
+                handleVisibilityTracking({
                     rendered: false,
                     viewportVisible: false,
-                    renderTime: Date.now() - this.renderStartTime
-                };
-                this.sovads.setupRenderObserver(adElement, this.currentAd.id, (isVisible) => {
-                    renderInfo.viewportVisible = isVisible;
-                    // Track impression even with broken image if visible
-                    if (isVisible && !this.hasTrackedImpression) {
-                        this.hasTrackedImpression = true;
-                        this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, renderInfo);
-                    }
+                    renderTime: Date.now() - this.renderStartTime,
                 });
             };
+            let mediaElement;
+            if (mediaType === 'video') {
+                const video = document.createElement('video');
+                video.src = this.currentAd.bannerUrl;
+                video.muted = true;
+                video.autoplay = true;
+                video.loop = true;
+                video.playsInline = true;
+                video.controls = true;
+                video.style.cssText = 'width: 100%; height: auto; display: block; border-radius: 4px;';
+                video.addEventListener('loadeddata', handleRenderSuccess, { once: true });
+                video.addEventListener('error', handleRenderError, { once: true });
+                mediaElement = video;
+            }
+            else {
+                const img = document.createElement('img');
+                img.src = this.currentAd.bannerUrl;
+                img.alt = this.currentAd.description;
+                img.style.cssText = 'width: 100%; height: auto; display: block;';
+                img.addEventListener('load', handleRenderSuccess, { once: true });
+                img.addEventListener('error', handleRenderError, { once: true });
+                mediaElement = img;
+            }
+            mediaElement.style.cursor = 'pointer';
             // Add click handler
             adElement.addEventListener('click', () => {
                 this.sovads._trackEvent('CLICK', this.currentAd.id, this.currentAd.campaignId, {
@@ -673,7 +708,7 @@ export class Banner {
                     elementType: 'BANNER',
                     metadata: { renderTime: Date.now() - this.renderStartTime },
                 });
-                window.open(this.currentAd.targetUrl, '_blank', 'noopener,noreferrer');
+                window.open(this.sovads.normalizeUrl(this.currentAd.targetUrl), '_blank', 'noopener,noreferrer');
             });
             // Add hover effect
             adElement.addEventListener('mouseenter', () => {
@@ -682,7 +717,7 @@ export class Banner {
             adElement.addEventListener('mouseleave', () => {
                 adElement.style.transform = 'scale(1)';
             });
-            adElement.appendChild(img);
+            adElement.appendChild(mediaElement);
             container.appendChild(adElement);
         }
         finally {
@@ -801,7 +836,7 @@ export class Popup {
             message.textContent = 'Register your site to get ads';
             message.style.cssText = 'color: #333; font-size: 16px; font-weight: 500; margin-bottom: 16px;';
             const link = document.createElement('a');
-            link.href = this.currentAd.targetUrl;
+            link.href = this.sovads.normalizeUrl(this.currentAd.targetUrl);
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             link.textContent = 'Register Now';
@@ -819,24 +854,11 @@ export class Popup {
             }, 10000);
             return;
         }
-        // Ad image
-        const img = document.createElement('img');
-        img.src = this.currentAd.bannerUrl;
-        img.alt = this.currentAd.description;
-        img.style.cssText = 'width: 100%; height: auto; border-radius: 8px; cursor: pointer;';
-        // Image load tracking (impression already tracked above)
-        img.onload = () => {
-            const renderTime = Date.now() - renderStartTime;
+        const mediaType = this.currentAd.mediaType === 'video' ? 'video' : 'image';
+        const handleMediaError = () => {
             if (this.sovads.getConfig().debug) {
-                console.log(`Popup ad image loaded in ${renderTime}ms`);
+                console.warn(`Failed to load popup ad media: ${this.currentAd.bannerUrl}`);
             }
-        };
-        // Handle image load errors - still track impression for popup
-        img.onerror = () => {
-            if (this.sovads.getConfig().debug) {
-                console.warn(`Failed to load popup ad image: ${this.currentAd.bannerUrl}`);
-            }
-            // Popup is visible even if image fails, so track impression
             const renderTime = Date.now() - renderStartTime;
             this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, {
                 rendered: false,
@@ -844,7 +866,41 @@ export class Popup {
                 renderTime
             });
         };
-        img.addEventListener('click', () => {
+        let mediaElement;
+        if (mediaType === 'video') {
+            const video = document.createElement('video');
+            video.src = this.currentAd.bannerUrl;
+            video.muted = true;
+            video.autoplay = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.controls = true;
+            video.style.cssText = 'width: 100%; height: auto; border-radius: 8px; cursor: pointer;';
+            video.addEventListener('loadeddata', () => {
+                const renderTime = Date.now() - renderStartTime;
+                if (this.sovads.getConfig().debug) {
+                    console.log(`Popup ad video loaded in ${renderTime}ms`);
+                }
+            }, { once: true });
+            video.addEventListener('error', handleMediaError, { once: true });
+            mediaElement = video;
+        }
+        else {
+            const img = document.createElement('img');
+            img.src = this.currentAd.bannerUrl;
+            img.alt = this.currentAd.description;
+            img.style.cssText = 'width: 100%; height: auto; border-radius: 8px; cursor: pointer;';
+            img.addEventListener('load', () => {
+                const renderTime = Date.now() - renderStartTime;
+                if (this.sovads.getConfig().debug) {
+                    console.log(`Popup ad image loaded in ${renderTime}ms`);
+                }
+            });
+            img.addEventListener('error', handleMediaError);
+            mediaElement = img;
+        }
+        mediaElement.style.cursor = 'pointer';
+        mediaElement.addEventListener('click', () => {
             this.sovads._trackEvent('CLICK', this.currentAd.id, this.currentAd.campaignId, {
                 rendered: true,
                 viewportVisible: true,
@@ -861,7 +917,7 @@ export class Popup {
             this.hide();
         });
         this.popupElement.appendChild(closeBtn);
-        this.popupElement.appendChild(img);
+        this.popupElement.appendChild(mediaElement);
         overlay.appendChild(this.popupElement);
         document.body.appendChild(overlay);
         // Auto close after 10 seconds
@@ -871,8 +927,16 @@ export class Popup {
     }
     hide() {
         const overlay = document.querySelector('.sovads-popup-overlay');
-        if (overlay) {
-            overlay.remove();
+        if (overlay && overlay.isConnected) {
+            try {
+                overlay.remove();
+            }
+            catch (error) {
+                // Element may have already been removed by React or another process
+                if (this.sovads.getConfig().debug) {
+                    console.warn('Could not remove popup overlay:', error);
+                }
+            }
         }
     }
 }
@@ -942,7 +1006,7 @@ export class Sidebar {
                 dummyElement.appendChild(img);
                 dummyElement.appendChild(message);
                 dummyElement.addEventListener('click', () => {
-                    window.open(this.currentAd.targetUrl, '_blank', 'noopener,noreferrer');
+                    window.open(this.sovads.normalizeUrl(this.currentAd.targetUrl), '_blank', 'noopener,noreferrer');
                 });
                 dummyElement.addEventListener('mouseenter', () => {
                     dummyElement.style.background = '#f0f0f0';
@@ -968,48 +1032,57 @@ export class Sidebar {
       cursor: pointer;
       transition: all 0.2s ease;
     `;
-            const img = document.createElement('img');
-            img.src = this.currentAd.bannerUrl;
-            img.alt = this.currentAd.description;
-            img.style.cssText = 'width: 100%; height: auto; display: block; border-radius: 4px;';
-            // Track when image loads (render verification)
-            img.onload = () => {
+            const mediaType = this.currentAd.mediaType === 'video' ? 'video' : 'image';
+            const handleVisibilityTracking = (renderInfo) => {
+                this.sovads.setupRenderObserver(adElement, this.currentAd.id, (isVisible) => {
+                    renderInfo.viewportVisible = isVisible;
+                    if (isVisible && !this.hasTrackedImpression) {
+                        this.hasTrackedImpression = true;
+                        this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, renderInfo);
+                    }
+                });
+            };
+            const handleRenderSuccess = () => {
                 const renderTime = Date.now() - this.renderStartTime;
-                const renderInfo = {
+                handleVisibilityTracking({
                     rendered: true,
                     viewportVisible: false,
-                    renderTime
-                };
-                // Setup IntersectionObserver to verify ad is visible
-                this.sovads.setupRenderObserver(adElement, this.currentAd.id, (isVisible) => {
-                    renderInfo.viewportVisible = isVisible;
-                    // Track impression only once when ad becomes visible
-                    if (isVisible && !this.hasTrackedImpression) {
-                        this.hasTrackedImpression = true;
-                        this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, renderInfo);
-                    }
+                    renderTime,
                 });
             };
-            // Handle image load errors - still track impression if element is visible
-            img.onerror = () => {
+            const handleRenderError = () => {
                 if (this.sovads.getConfig().debug) {
-                    console.warn(`Failed to load sidebar ad image: ${this.currentAd.bannerUrl}`);
+                    console.warn(`Failed to load sidebar ad media: ${this.currentAd.bannerUrl}`);
                 }
-                // Still set up observer in case element becomes visible (for broken image tracking)
-                const renderInfo = {
+                handleVisibilityTracking({
                     rendered: false,
                     viewportVisible: false,
-                    renderTime: Date.now() - this.renderStartTime
-                };
-                this.sovads.setupRenderObserver(adElement, this.currentAd.id, (isVisible) => {
-                    renderInfo.viewportVisible = isVisible;
-                    // Track impression even with broken image if visible
-                    if (isVisible && !this.hasTrackedImpression) {
-                        this.hasTrackedImpression = true;
-                        this.sovads._trackEvent('IMPRESSION', this.currentAd.id, this.currentAd.campaignId, renderInfo);
-                    }
+                    renderTime: Date.now() - this.renderStartTime,
                 });
             };
+            let mediaElement;
+            if (mediaType === 'video') {
+                const video = document.createElement('video');
+                video.src = this.currentAd.bannerUrl;
+                video.muted = true;
+                video.autoplay = true;
+                video.loop = true;
+                video.playsInline = true;
+                video.controls = true;
+                video.style.cssText = 'width: 100%; height: auto; display: block; border-radius: 4px;';
+                video.addEventListener('loadeddata', handleRenderSuccess, { once: true });
+                video.addEventListener('error', handleRenderError, { once: true });
+                mediaElement = video;
+            }
+            else {
+                const img = document.createElement('img');
+                img.src = this.currentAd.bannerUrl;
+                img.alt = this.currentAd.description;
+                img.style.cssText = 'width: 100%; height: auto; display: block; border-radius: 4px;';
+                img.addEventListener('load', handleRenderSuccess, { once: true });
+                img.addEventListener('error', handleRenderError, { once: true });
+                mediaElement = img;
+            }
             // Add click handler
             adElement.addEventListener('click', () => {
                 this.sovads._trackEvent('CLICK', this.currentAd.id, this.currentAd.campaignId, {
@@ -1024,7 +1097,7 @@ export class Sidebar {
                     elementType: 'SIDEBAR',
                     metadata: { renderTime: Date.now() - this.renderStartTime },
                 });
-                window.open(this.currentAd.targetUrl, '_blank', 'noopener,noreferrer');
+                window.open(this.sovads.normalizeUrl(this.currentAd.targetUrl), '_blank', 'noopener,noreferrer');
             });
             // Add hover effect
             adElement.addEventListener('mouseenter', () => {
@@ -1035,7 +1108,8 @@ export class Sidebar {
                 adElement.style.background = '#f8f9fa';
                 adElement.style.transform = 'translateY(0)';
             });
-            adElement.appendChild(img);
+            mediaElement.style.cursor = 'pointer';
+            adElement.appendChild(mediaElement);
             container.appendChild(adElement);
         }
         finally {
