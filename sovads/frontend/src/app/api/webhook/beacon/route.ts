@@ -118,26 +118,32 @@ export async function POST(request: NextRequest) {
       console.warn(`Unverified render for impression: adId=${adId}, siteId=${siteId}`)
     }
 
-    // 2. Check for duplicate events (within last hour)
-    const oneHourAgo = new Date(Date.now() - 3600 * 1000)
+    // 2. Check for duplicate events
+    // In development: skip duplicate check (allow testing)
+    // In production: For impressions: check within 1 minute, For clicks: check within 5 minutes
     const eventsCollection = await collections.events()
-    const existingEvent = await eventsCollection.findOne({
-      type,
-      campaignId,
-      adId,
-      siteId,
-      ...(fingerprint !== null && fingerprint !== undefined && { fingerprint }),
-      timestamp: { $gte: oneHourAgo },
-    })
-    
-    if (existingEvent) {
-      return NextResponse.json({ 
-        error: 'Duplicate event detected',
-        eventId: existingEvent._id
-      }, { status: 409 })
+    if (process.env.NODE_ENV !== 'development') {
+      const duplicateWindow = type === 'IMPRESSION' ? 60 * 1000 : 5 * 60 * 1000
+      const duplicateWindowStart = new Date(Date.now() - duplicateWindow)
+      const existingEvent = await eventsCollection.findOne({
+        type,
+        campaignId,
+        adId,
+        siteId,
+        ...(fingerprint !== null && fingerprint !== undefined && { fingerprint }),
+        timestamp: { $gte: duplicateWindowStart },
+      })
+      
+      if (existingEvent) {
+        return NextResponse.json({ 
+          error: 'Duplicate event detected',
+          eventId: existingEvent._id
+        }, { status: 409 })
+      }
     }
 
     // 3. Rate limiting per campaign per site (100 events/hour)
+    const oneHourAgo = new Date(Date.now() - 3600 * 1000)
     const recentEvents = await eventsCollection.countDocuments({
       type,
       campaignId,
@@ -257,5 +263,12 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   })
+}
+
+// Reject GET requests (method not allowed)
+export async function GET() {
+  return NextResponse.json({ 
+    error: 'Method not allowed. Use POST instead.' 
+  }, { status: 405 })
 }
 
