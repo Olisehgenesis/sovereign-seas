@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@amcharts/amcharts4": "^4.10.40",
+    "@amcharts/amcharts4-geodata": "^4.1.31",
     "@divvi/referral-sdk": "^2.3.0",
     "@goodsdks/citizen-sdk": "^1.2.0",
     "@goodsdks/engagement-sdk": "^1.0.1",

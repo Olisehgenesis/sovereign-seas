@@ -13,6 +13,7 @@ import { formatIpfsUrl } from '@/utils/imageUtils';
 import Stepper from '@/components/ui/stepper';
 import { getMainContractAddress } from '@/utils/contractConfig';
 import EngagementRewardsCard from '@/components/cards/EngagementRewardsCard';
+import GlobeCoverage from '@/components/GlobeCoverage';
 
 // Helper function to determine campaign status
 const getCampaignStatus = (campaign: any): 'upcoming' | 'active' | 'ended' | 'paused' => {
@@ -158,9 +159,7 @@ const HomePage = () => {
       }
     }
   ];
-
-  // Removed automatic card rotation - cards now only change on manual navigation
-
+  
   // Function to shuffle array and get random items
   const shuffleArray = (array: any[]) => {
     const shuffled = [...array];
@@ -415,6 +414,15 @@ const HomePage = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Coverage Map Section */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="mb-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Global Coverage</h2>
+          <p className="text-gray-600">See where our community spans across the globe</p>
+        </div>
+        <GlobeCoverage />
       </div>
 
       {/* How it Works Section */}
