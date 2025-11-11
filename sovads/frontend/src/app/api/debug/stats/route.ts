@@ -118,16 +118,16 @@ export async function GET(request: NextRequest) {
     const errorCounts = await Promise.all([
       sdkRequestsCollection.countDocuments({
         timestamp: { $gte: since },
-        error: { $ne: null },
-      }),
+        error: { $exists: true, $ne: null },
+      } as any),
       apiRouteCallsCollection.countDocuments({
         timestamp: { $gte: since },
         statusCode: { $gte: 400 },
       }),
       callbackLogsCollection.countDocuments({
         timestamp: { $gte: since },
-        error: { $ne: null },
-      }),
+        error: { $exists: true, $ne: null },
+      } as any),
     ])
 
     // Get top domains
@@ -138,8 +138,8 @@ export async function GET(request: NextRequest) {
       {
         $match: {
           timestamp: { $gte: since },
-          domain: { $ne: null },
-        },
+          domain: { $exists: true, $ne: null },
+        } as any,
       },
       { $group: { _id: '$domain', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
@@ -153,8 +153,8 @@ export async function GET(request: NextRequest) {
         {
           $match: {
             timestamp: { $gte: since },
-            duration: { $ne: null },
-          },
+            duration: { $exists: true, $ne: null },
+          } as any,
         },
         {
           $group: {

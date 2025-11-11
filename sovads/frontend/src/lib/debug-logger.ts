@@ -112,7 +112,7 @@ export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
       error: data.error,
       duration: data.duration,
       timestamp: createdAt,
-    })
+    } as any)
     return insertResult.insertedId ? String(insertResult.insertedId) : ''
   } catch (error) {
     console.error('Error logging SDK request:', error)
@@ -136,7 +136,7 @@ export async function logSdkInteraction(data: SdkInteractionLog): Promise<void> 
       elementType: data.elementType,
       metadata: safeStringify(data.metadata),
       timestamp: new Date(),
-    })
+    } as any)
   } catch (error) {
     console.error('Error logging SDK interaction:', error)
   }
@@ -165,7 +165,7 @@ export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
       error: data.error,
       duration: data.duration,
       timestamp: new Date(),
-    })
+    } as any)
   } catch (error) {
     console.error('Error logging API route call:', error)
   }
@@ -187,7 +187,7 @@ export async function logCallback(data: CallbackLogData): Promise<void> {
       statusCode: data.statusCode,
       error: data.error,
       timestamp: new Date(),
-    })
+    } as any)
   } catch (error) {
     console.error('Error logging callback:', error)
   }

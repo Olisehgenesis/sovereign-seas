@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       campaignId,
       adId,
       siteId: siteId,
-      fingerprint: fingerprint ?? null,
+      ...(fingerprint !== null && fingerprint !== undefined && { fingerprint }),
       timestamp: { $gte: oneHourAgo },
     })
     
@@ -171,11 +171,11 @@ export async function POST(request: NextRequest) {
         request.headers.get('x-client-ip') ||
         'unknown',
       userAgent: request.headers.get('user-agent') || 'unknown',
-      fingerprint: fingerprint ?? null,
+      ...(fingerprint !== null && fingerprint !== undefined && { fingerprint }),
       verified: true,
       publisherSiteId: site._id,
       timestamp: new Date(),
-    }
+    } as any
 
     await eventsCollection.insertOne(eventDoc)
 

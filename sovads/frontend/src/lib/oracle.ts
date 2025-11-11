@@ -288,7 +288,7 @@ class SovAdsOracle {
         status: 'pending',
         createdAt: now,
         updatedAt: now
-      })
+      } as any)
 
       const payoutId = result.insertedId.toString()
       console.log(`Payout queued for ${publisher.wallet}: ${amount} USDC (ID: ${payoutId})`)
