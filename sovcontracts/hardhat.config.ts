@@ -84,11 +84,11 @@ export default defineConfig({
       chainType: "l1",
       url: getRpcUrl(
         "CELO_SEPOLIA_RPC_URL",
-        "https://forno.celo-sepolia.celo-testnet.org",
+        "https://rpc.ankr.com/celo_sepolia", // Use Ankr as default (more reliable)
         [
-          "https://forno.celo-sepolia.celo-testnet.org",
+          "https://rpc.ankr.com/celo_sepolia", // Ankr public RPC (most reliable)
           "https://celo-sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // Public Infura endpoint
-          "https://rpc.ankr.com/celo_sepolia", // Ankr public RPC
+          "https://forno.celo-sepolia.celo-testnet.org", // Official Celo endpoint
         ]
       ),
       accounts: getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY") ? [getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY")!] : [],
