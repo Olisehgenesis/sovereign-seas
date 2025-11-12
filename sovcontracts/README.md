@@ -60,22 +60,41 @@ npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
 
 The MilestoneBasedFunding contract interacts with the deployed SovereignSeasV4 contract on Celo Mainnet at [0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a](https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#code).
 
-### Setting Up Private Keys
+### Setting Up Private Keys with dotenvx
 
-You can use the same private key for both Celo networks by setting `PRIVATE_KEY`, or set specific keys:
+This project uses [dotenvx](https://dotenvx.sh) to securely manage environment variables from `.env` files. All scripts automatically load variables from `.env` files.
+
+1. **Create a `.env` file** in the project root:
+
+```bash
+# .env file
+# You can use a single PRIVATE_KEY for all networks, or set specific keys for each network
+PRIVATE_KEY=your_private_key_here_without_0x_prefix
+
+# Or set specific keys for each network:
+# CELO_PRIVATE_KEY=your_celo_mainnet_private_key_here
+# CELO_SEPOLIA_PRIVATE_KEY=your_celo_sepolia_private_key_here
+# SEPOLIA_PRIVATE_KEY=your_sepolia_private_key_here
+
+# RPC URLs (optional - defaults are used if not set)
+# CELO_RPC_URL=https://forno.celo.org
+# CELO_SEPOLIA_RPC_URL=https://sepolia-forno.celo.org
+# SEPOLIA_RPC_URL=your_sepolia_rpc_url_here
+```
+
+2. **The `.env` file is automatically ignored by git** (already in `.gitignore`)
+
+3. **All npm scripts use dotenvx** to automatically load your `.env` file - no additional setup needed!
+
+**Alternative: Using Hardhat Keystore**
+
+You can also use Hardhat's keystore (scripts will fallback to it if `.env` is not set):
 
 ```shell
-# Using hardhat keystore (recommended)
 npx hardhat keystore set PRIVATE_KEY
 # or
 npx hardhat keystore set CELO_PRIVATE_KEY
 npx hardhat keystore set CELO_SEPOLIA_PRIVATE_KEY
-
-# Or using environment variables
-export PRIVATE_KEY=your_private_key_here
-# or
-export CELO_PRIVATE_KEY=your_private_key_here
-export CELO_SEPOLIA_PRIVATE_KEY=your_private_key_here
 ```
 
 ### Deployment Options
