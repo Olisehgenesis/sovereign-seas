@@ -132,8 +132,28 @@ pnpm run deploy:milestone:ignition:celo-sepolia
 
 ### Verification
 
-After deployment, verify the contract on CeloScan:
-- Celo Mainnet: `https://celoscan.io/address/<DEPLOYED_ADDRESS>#code`
-- Celo Sepolia: `https://sepolia.celoscan.io/address/<DEPLOYED_ADDRESS>#code`
+After deployment, verify the contract on both CeloScan and Sourcify:
 
-The deployment script will automatically verify the Seas4 contract address and display the deployed contract address with verification links.
+**Using the verification script:**
+
+Verify on Celo Mainnet:
+```shell
+pnpm run verify:milestone:celo <CONTRACT_ADDRESS>
+```
+
+Verify on Celo Sepolia:
+```shell
+pnpm run verify:milestone:celo-sepolia <CONTRACT_ADDRESS>
+```
+
+The verification script will:
+1. Verify the contract on CeloScan (requires `CELOSCAN_API_KEY` in `.env`)
+2. Verify the contract on Sourcify (automatic, no API key needed)
+
+**Manual verification links:**
+- CeloScan Mainnet: `https://celoscan.io/address/<DEPLOYED_ADDRESS>#code`
+- CeloScan Sepolia: `https://sepolia.celoscan.io/address/<DEPLOYED_ADDRESS>#code`
+- Sourcify Mainnet: `https://repo.sourcify.dev/contracts/full_match/42220/<DEPLOYED_ADDRESS>/`
+- Sourcify Sepolia: `https://repo.sourcify.dev/contracts/full_match/44787/<DEPLOYED_ADDRESS>/`
+
+**Note:** For CeloScan verification, you'll need a CeloScan API key. Get one at [celoscan.io](https://celoscan.io/myapikey) and add it to your `.env` file as `CELOSCAN_API_KEY`.

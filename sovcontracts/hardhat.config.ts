@@ -1,4 +1,5 @@
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import "@nomicfoundation/hardhat-verify";
 import { configVariable, defineConfig } from "hardhat/config";
 
 // Helper function to get private key from env or config variable
@@ -93,5 +94,34 @@ export default defineConfig({
       ),
       accounts: getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY") ? [getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY")!] : [],
     },
+  },
+  etherscan: {
+    apiKey: {
+      celo: process.env.CELOSCAN_API_KEY || "",
+      celoSepolia: process.env.CELOSCAN_API_KEY || "",
+    },
+    customChains: [
+      {
+        network: "celo",
+        chainId: 42220,
+        urls: {
+          apiURL: "https://api.celoscan.io/api",
+          browserURL: "https://celoscan.io",
+        },
+      },
+      {
+        network: "celoSepolia",
+        chainId: 44787,
+        urls: {
+          apiURL: "https://api-sepolia.celoscan.io/api",
+          browserURL: "https://sepolia.celoscan.io",
+        },
+      },
+    ],
+  },
+  sourcify: {
+    enabled: true,
+    apiUrl: "https://sourcify.dev/server",
+    browserUrl: "https://repo.sourcify.dev",
   },
 });
