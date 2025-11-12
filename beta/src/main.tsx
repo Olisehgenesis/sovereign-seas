@@ -13,6 +13,9 @@ import CampaignView from '@/pages/explorer/campaign/<id>/page'
 import ProjectsPage from '@/pages/explorer/projects/page'
 import LeaderboardPage from '@/pages/explorer/leaderboard/page'
 import CampaignsPage from '@/pages/explorer/campaigns/page'
+import GrantsPage from '@/pages/explorer/grants/page'
+import GrantView from '@/pages/explorer/grant/<id>/page'
+import CreateGrant from '@/pages/app/grant/create'
 import CreateProject from '@/pages/app/project/start'
 import ProjectEdit from '@/pages/app/project/<id>/edit'
 import CreateCampaign from '@/pages/app/campaign/start'
@@ -38,12 +41,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/explorer/campaign/:id" element={<Layout><CampaignView /></Layout>} />
           <Route path="/explorer/projects" element={<Layout><ProjectsPage /></Layout>} />
           <Route path="/explorer/campaigns" element={<Layout><CampaignsPage /></Layout>} />
+          <Route path="/explorer/grants" element={<Layout><GrantsPage /></Layout>} />
+          <Route path="/explorer/grant/:id" element={<Layout><GrantView /></Layout>} />
           <Route path="/explorer/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
 
           {/* App */}
           <Route path="/app/project/start" element={<Layout><CreateProject /></Layout>} />
           <Route path="/app/project/edit/:id" element={<Layout><ProjectEdit /></Layout>} />
           <Route path="/app/campaign/start" element={<Layout><CreateCampaign /></Layout>} />
+          <Route path="/app/grant/create" element={<Layout><CreateGrant /></Layout>} />
           <Route path="/app/campaign/manage/:id" element={<Layout><CampaignManage /></Layout>} />
           <Route path="/app/campaign/edit/:id" element={<Layout><CampaignEdit /></Layout>} />
 
