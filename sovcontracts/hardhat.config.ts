@@ -19,8 +19,8 @@ function getPrivateKey(key: string, fallback?: string): string | undefined {
   }
 }
 
-// Helper function to get RPC URL from env or config variable
-function getRpcUrl(key: string, defaultValue?: string): string {
+// Helper function to get RPC URL from env or config variable with fallbacks
+function getRpcUrl(key: string, defaultValue?: string, fallbacks?: string[]): string {
   // dotenvx will populate process.env, check that first
   if (process.env[key]) {
     return process.env[key];
@@ -34,7 +34,8 @@ function getRpcUrl(key: string, defaultValue?: string): string {
   } catch {
     // Ignore
   }
-  return defaultValue || "";
+  // Return default or first fallback
+  return defaultValue || fallbacks?.[0] || "";
 }
 
 export default defineConfig({
@@ -81,7 +82,15 @@ export default defineConfig({
     celoSepolia: {
       type: "http",
       chainType: "l1",
-      url: getRpcUrl("CELO_SEPOLIA_RPC_URL", "https://forno.celo-sepolia.org"),
+      url: getRpcUrl(
+        "CELO_SEPOLIA_RPC_URL",
+        "https://forno.celo-sepolia.celo-testnet.org",
+        [
+          "https://forno.celo-sepolia.celo-testnet.org",
+          "https://celo-sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // Public Infura endpoint
+          "https://rpc.ankr.com/celo_sepolia", // Ankr public RPC
+        ]
+      ),
       accounts: getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY") ? [getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY")!] : [],
     },
   },
