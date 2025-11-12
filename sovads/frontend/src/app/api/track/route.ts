@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { collections } from '@/lib/db'
+import type { Event } from '@/lib/models'
 
 const EVENT_TYPES = ['IMPRESSION', 'CLICK'] as const
 
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create event
-    const eventDoc = {
+    const eventDoc: Event = {
       _id: randomId(),
       type,
       campaignId,
@@ -86,8 +87,8 @@ export async function POST(request: NextRequest) {
         request.headers.get('x-client-ip') ||
         'unknown',
       userAgent: request.headers.get('user-agent') || 'unknown',
-      fingerprint: fingerprint ?? null,
-      publisherSiteId: publisherSite?._id ?? null,
+      ...(fingerprint && { fingerprint }),
+      ...(publisherSite?._id && { publisherSiteId: publisherSite._id }),
       timestamp: new Date(),
       verified: type === 'CLICK',
     }

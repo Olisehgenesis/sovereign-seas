@@ -11,6 +11,9 @@ if (!uri) {
   throw new Error('MONGODB_URI environment variable is not set')
 }
 
+// TypeScript type narrowing: after the check above, uri is guaranteed to be a string
+const mongoUri: string = uri
+
 const dbName = process.env.MONGODB_DB || 'sovads'
 
 async function initializeClient(): Promise<MongoClient> {
@@ -18,7 +21,7 @@ async function initializeClient(): Promise<MongoClient> {
     return global.__sovads_mongo_client
   }
 
-  const client = new MongoClient(uri)
+  const client = new MongoClient(mongoUri)
   await client.connect()
 
   if (process.env.NODE_ENV !== 'production') {

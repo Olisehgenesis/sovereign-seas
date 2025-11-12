@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Filter } from 'mongodb'
 import { collections } from '@/lib/db'
-import type { SdkRequest, ApiRouteCall, CallbackLog } from '@/lib/models'
+import type { SdkRequest, CallbackLog } from '@/lib/models'
 
 /**
  * Get debug statistics and data
