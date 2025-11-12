@@ -23,3 +23,15 @@
 .env
 .env.local
 .env.*.local
+.env.keys
+.env.keys.local
+.env.keys.*.local
+.env.keys.keys
+.env.keys.keys.local
+.env.keys.keys.*.local
+.env.keys.keys.keys
+.env.keys.keys.keys.local
+.env.keys.keys.keys.*.local
+.env.keys.keys.keys.keys
+.env.keys.keys.keys.keys.local
+.env.keys.keys.keys.keys.*.local

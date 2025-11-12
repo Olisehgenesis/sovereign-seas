@@ -72,12 +72,6 @@ export default defineConfig({
       type: "edr-simulated",
       chainType: "op",
     },
-    sepolia: {
-      type: "http",
-      chainType: "l1",
-      url: getRpcUrl("SEPOLIA_RPC_URL"),
-      accounts: getPrivateKey("SEPOLIA_PRIVATE_KEY") ? [getPrivateKey("SEPOLIA_PRIVATE_KEY")!] : [],
-    },
     celo: {
       type: "http",
       chainType: "l1",
@@ -87,7 +81,7 @@ export default defineConfig({
     celoSepolia: {
       type: "http",
       chainType: "l1",
-      url: getRpcUrl("CELO_SEPOLIA_RPC_URL", "https://sepolia-forno.celo.org"),
+      url: getRpcUrl("CELO_SEPOLIA_RPC_URL", "https://forno.celo-sepolia.org"),
       accounts: getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY") ? [getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY")!] : [],
     },
   },
