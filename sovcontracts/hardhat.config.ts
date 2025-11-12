@@ -42,5 +42,17 @@ export default defineConfig({
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
+    celo: {
+      type: "http",
+      chainType: "l1",
+      url: "https://forno.celo.org",
+      accounts: [configVariable("CELO_PRIVATE_KEY")],
+    },
+    celoSepolia: {
+      type: "http",
+      chainType: "l1",
+      url: "https://sepolia-forno.celo.org",
+      accounts: [configVariable("CELO_SEPOLIA_PRIVATE_KEY")],
+    },
   },
 });
