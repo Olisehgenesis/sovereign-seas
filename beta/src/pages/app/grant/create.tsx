@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -22,7 +22,7 @@ import { useActiveWallet } from '@/hooks/useActiveWallet';
 import { useChainSwitch } from '@/hooks/useChainSwitch';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
 import { getCeloTokenAddress, getMainContractAddress } from '@/utils/contractConfig';
-import { useSingleProject, useCampaignProjects } from '@/hooks/useProjectMethods';
+import { useAllProjects, formatProjectForDisplay } from '@/hooks/useProjectMethods';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -131,7 +131,8 @@ export default function CreateGrant() {
   const celoToken = getCeloTokenAddress();
 
   // Form state
-  const [entityType, setEntityType] = useState<EntityType>(EntityType.PROJECT);
+  const [entityType] = useState<EntityType>(EntityType.PROJECT); // Always PROJECT
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [linkedEntityId, setLinkedEntityId] = useState<string>('');
   const [grantee, setGrantee] = useState<string>('');
   const [siteFeePercentage, setSiteFeePercentage] = useState<string>('2');
@@ -158,60 +159,32 @@ export default function CreateGrant() {
 
   const { createGrant, isPending } = useCreateGrant(MILESTONE_CONTRACT_ADDRESS);
 
-  // Fetch project owner when entity type is PROJECT
-  const projectId = entityType === EntityType.PROJECT && linkedEntityId ? BigInt(linkedEntityId) : BigInt(0);
-  const { project, isLoading: projectLoading } = useSingleProject(
-    MAIN_CONTRACT_ADDRESS,
-    projectId
-  );
+  // Fetch all projects for selector
+  const { projects: allProjects, isLoading: projectsLoading } = useAllProjects(MAIN_CONTRACT_ADDRESS);
 
-  // Fetch campaign projects when entity type is CAMPAIGN
-  const campaignId = entityType === EntityType.CAMPAIGN && linkedEntityId ? BigInt(linkedEntityId) : undefined;
-  const { campaignProjects, isLoading: campaignProjectsLoading } = useCampaignProjects(
-    MAIN_CONTRACT_ADDRESS,
-    campaignId || BigInt(0)
-  );
+  // Format projects for display
+  const formattedProjects = useMemo(() => {
+    if (!allProjects) return [];
+    return allProjects
+      .map(formatProjectForDisplay)
+      .filter(Boolean)
+      .filter(p => p && p.active);
+  }, [allProjects]);
 
-  // Auto-fill grantee for project grants
+  // Auto-fill project ID and grantee when project is selected
   useEffect(() => {
-    if (entityType === EntityType.PROJECT && project?.owner) {
-      setGrantee(project.owner);
-      setGranteeValidationWarning('');
-    } else if (entityType === EntityType.PROJECT && !project && linkedEntityId && !projectLoading) {
-      setGranteeValidationWarning('Project not found. Please enter a valid project ID.');
-    } else if (entityType === EntityType.CAMPAIGN) {
-      // Clear grantee when switching to campaign
-      if (grantee && !campaignProjects.find(p => p?.owner?.toLowerCase() === grantee.toLowerCase())) {
-        setGrantee('');
-      }
-    }
-  }, [entityType, project, linkedEntityId, campaignProjects, projectLoading, grantee]);
-
-  // Validate grantee for campaign grants
-  useEffect(() => {
-    if (entityType === EntityType.CAMPAIGN && grantee && campaignProjects.length > 0) {
-      const isParticipatingProject = campaignProjects.some(
-        p => p?.owner?.toLowerCase() === grantee.toLowerCase()
-      );
-      if (!isParticipatingProject) {
-        setGranteeValidationWarning(
-          'Warning: The grantee address does not match any project owner participating in this campaign. Please select a participating project or verify the address.'
-        );
-      } else {
+    if (selectedProjectId) {
+      const selectedProject = formattedProjects.find(p => p?.id?.toString() === selectedProjectId);
+      if (selectedProject?.owner) {
+        setLinkedEntityId(selectedProject.id.toString());
+        setGrantee(selectedProject.owner);
         setGranteeValidationWarning('');
       }
-    } else if (entityType === EntityType.CAMPAIGN && campaignProjects.length === 0 && linkedEntityId && !campaignProjectsLoading) {
-      setGranteeValidationWarning('No projects are participating in this campaign yet.');
-    } else if (entityType === EntityType.PROJECT && grantee && project?.owner) {
-      if (grantee.toLowerCase() !== project.owner.toLowerCase()) {
-        setGranteeValidationWarning(
-          'Warning: The grantee address does not match the project owner. For project grants, the grantee should typically be the project owner.'
-        );
-      } else {
-        setGranteeValidationWarning('');
-      }
+    } else {
+      setLinkedEntityId('');
+      setGrantee('');
     }
-  }, [entityType, grantee, campaignProjects, project, linkedEntityId, campaignProjectsLoading]);
+  }, [selectedProjectId, formattedProjects]);
 
   // Load token balances
   useEffect(() => {
@@ -486,111 +459,54 @@ export default function CreateGrant() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Entity Type */}
+                  {/* Project Selector */}
                   <div>
-                    <Label htmlFor="entityType">Entity Type *</Label>
+                    <Label htmlFor="project">Select Project *</Label>
                     <Select
-                      value={entityType.toString()}
-                      onValueChange={(value) => setEntityType(Number(value) as EntityType)}
+                      value={selectedProjectId}
+                      onValueChange={(value) => setSelectedProjectId(value)}
+                      disabled={isSubmitting || projectsLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder={projectsLoading ? 'Loading projects...' : 'Select a project'}>
+                          {selectedProjectId && formattedProjects.find(p => p?.id?.toString() === selectedProjectId)?.name}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={EntityType.PROJECT.toString()}>Project</SelectItem>
-                        <SelectItem value={EntityType.CAMPAIGN.toString()}>Campaign</SelectItem>
+                        {formattedProjects.map((project) => {
+                          if (!project) return null;
+                          return (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{project.name}</span>
+                                <span className="text-xs text-gray-500">ID: {project.id.toString()}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Select the project that will receive the grant. The project owner will be auto-filled as the grantee.
+                    </p>
                   </div>
 
-                  {/* Linked Entity ID */}
+                  {/* Grantee Address (Auto-filled, read-only) */}
                   <div>
-                    <Label htmlFor="linkedEntityId">
-                      {entityType === EntityType.PROJECT ? 'Project' : 'Campaign'} ID *
-                    </Label>
+                    <Label htmlFor="grantee">Grantee Address (Project Owner) *</Label>
                     <Input
-                      id="linkedEntityId"
-                      type="number"
-                      value={linkedEntityId}
-                      onChange={(e) => setLinkedEntityId(e.target.value)}
-                      placeholder={`Enter ${entityType === EntityType.PROJECT ? 'project' : 'campaign'} ID`}
+                      id="grantee"
+                      type="text"
+                      value={grantee}
+                      readOnly
+                      disabled={isSubmitting || !selectedProjectId}
+                      placeholder="Select a project to auto-fill"
+                      className="bg-gray-50"
                       required
                     />
-                  </div>
-
-                  {/* Grantee Address */}
-                  <div>
-                    <Label htmlFor="grantee">Grantee Address *</Label>
-                    {entityType === EntityType.CAMPAIGN && campaignProjects.length > 0 ? (
-                      <div className="space-y-2">
-                        <Select
-                          value={grantee}
-                          onValueChange={(value) => {
-                            setGrantee(value);
-                            setGranteeValidationWarning('');
-                          }}
-                          disabled={isSubmitting || campaignProjectsLoading}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a participating project">
-                              {grantee ? (
-                                campaignProjects.find(p => p?.owner?.toLowerCase() === grantee.toLowerCase())?.name || grantee
-                              ) : (
-                                'Select a participating project'
-                              )}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {campaignProjects.map((project) => {
-                              if (!project) return null;
-                              return (
-                                <SelectItem key={project.id} value={project.owner || ''}>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{project.name}</span>
-                                    <span className="text-xs text-gray-500">{project.owner}</span>
-                                  </div>
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-gray-500">
-                          Select a project participating in this campaign, or enter a custom address below
-                        </p>
-                        <Input
-                          id="grantee"
-                          type="text"
-                          value={grantee}
-                          onChange={(e) => setGrantee(e.target.value)}
-                          placeholder="0x... (or select from above)"
-                          disabled={isSubmitting}
-                          required
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <Input
-                          id="grantee"
-                          type="text"
-                          value={grantee}
-                          onChange={(e) => setGrantee(e.target.value)}
-                          placeholder={
-                            entityType === EntityType.PROJECT
-                              ? projectLoading
-                                ? 'Loading project owner...'
-                                : '0x... (auto-filled from project)'
-                              : '0x...'
-                          }
-                          disabled={isSubmitting || (entityType === EntityType.PROJECT && projectLoading)}
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          {entityType === EntityType.PROJECT
-                            ? 'The project owner address (auto-filled)'
-                            : 'The address that will receive the grant funds'}
-                        </p>
-                      </>
-                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      This is automatically set to the project owner's address when you select a project.
+                    </p>
                     {granteeValidationWarning && (
                       <div className="mt-2 border border-yellow-200 bg-yellow-50 rounded-lg p-3 flex items-start gap-3">
                         <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />

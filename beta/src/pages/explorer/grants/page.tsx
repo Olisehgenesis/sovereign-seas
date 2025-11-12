@@ -11,7 +11,6 @@ import {
 import { useGrantCount, useMultipleMilestones, useSingleGrant, useGrantMilestones } from '@/hooks/useMilestoneFunding';
 import { type Address } from 'viem';
 import DynamicHelmet from '@/components/DynamicHelmet';
-import { formatEther } from 'viem';
 
 // Get contract address from environment - you'll need to add VITE_MILESTONE_CONTRACT to your .env
 const MILESTONE_CONTRACT_ADDRESS = (import.meta.env.VITE_MILESTONE_CONTRACT || import.meta.env.VITE_CONTRACT_V4) as Address;
