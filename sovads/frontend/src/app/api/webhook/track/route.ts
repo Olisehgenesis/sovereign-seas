@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { collections } from '@/lib/db'
 import { decryptPayloadServer, verifySignatureServer } from '@/lib/crypto-server'
+import type { Event } from '@/lib/models'
 
 const EVENT_TYPES = ['IMPRESSION', 'CLICK'] as const
 type EventType = (typeof EVENT_TYPES)[number]
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
     // Create event
     const publisher = await publishersCollection.findOne({ _id: site.publisherId })
 
-    const eventDoc = {
+    const eventDoc: Event = {
       _id: randomId(),
       type,
       campaignId,
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
       verified: true,
       publisherSiteId: site._id,
       timestamp: new Date(),
-    } as any
+    }
 
     await eventsCollection.insertOne(eventDoc)
 

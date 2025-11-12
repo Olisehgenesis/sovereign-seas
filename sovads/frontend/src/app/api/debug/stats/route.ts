@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Filter } from 'mongodb'
 import { collections } from '@/lib/db'
+import type { SdkRequest, ApiRouteCall, CallbackLog } from '@/lib/models'
 
 /**
  * Get debug statistics and data
@@ -119,7 +121,7 @@ export async function GET(request: NextRequest) {
       sdkRequestsCollection.countDocuments({
         timestamp: { $gte: since },
         error: { $exists: true, $ne: null },
-      } as any),
+      } as unknown as Filter<SdkRequest>),
       apiRouteCallsCollection.countDocuments({
         timestamp: { $gte: since },
         statusCode: { $gte: 400 },
@@ -127,7 +129,7 @@ export async function GET(request: NextRequest) {
       callbackLogsCollection.countDocuments({
         timestamp: { $gte: since },
         error: { $exists: true, $ne: null },
-      } as any),
+      } as unknown as Filter<CallbackLog>),
     ])
 
     // Get top domains
@@ -139,7 +141,7 @@ export async function GET(request: NextRequest) {
         $match: {
           timestamp: { $gte: since },
           domain: { $exists: true, $ne: null },
-        } as any,
+        } as unknown as Filter<SdkRequest>,
       },
       { $group: { _id: '$domain', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
@@ -154,7 +156,7 @@ export async function GET(request: NextRequest) {
           $match: {
             timestamp: { $gte: since },
             duration: { $exists: true, $ne: null },
-          } as any,
+          } as unknown as Filter<SdkRequest>,
         },
         {
           $group: {

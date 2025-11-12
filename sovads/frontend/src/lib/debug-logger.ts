@@ -1,6 +1,7 @@
 import 'server-only'
 import { collections } from './db'
 import { NextRequest } from 'next/server'
+import type { SdkRequest, SdkInteraction, ApiRouteCall, CallbackLog } from './models'
 
 const MAX_RESPONSE_LOG_LENGTH = 10_000
 
@@ -96,7 +97,7 @@ export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
   try {
     const sdkRequests = await collections.sdkRequests()
     const createdAt = new Date()
-    const insertResult = await sdkRequests.insertOne({
+    const doc: Omit<SdkRequest, '_id'> = {
       type: data.type,
       endpoint: data.endpoint,
       method: data.method,
@@ -112,7 +113,9 @@ export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
       error: data.error,
       duration: data.duration,
       timestamp: createdAt,
-    } as any)
+    }
+    // MongoDB will auto-generate _id if not provided
+    const insertResult = await sdkRequests.insertOne(doc as SdkRequest)
     return insertResult.insertedId ? String(insertResult.insertedId) : ''
   } catch (error) {
     console.error('Error logging SDK request:', error)
@@ -126,7 +129,7 @@ export async function logSdkRequest(data: SdkRequestLog): Promise<string> {
 export async function logSdkInteraction(data: SdkInteractionLog): Promise<void> {
   try {
     const interactions = await collections.sdkInteractions()
-    await interactions.insertOne({
+    const doc: Omit<SdkInteraction, '_id'> = {
       requestId: data.requestId,
       type: data.type,
       adId: data.adId,
@@ -134,9 +137,11 @@ export async function logSdkInteraction(data: SdkInteractionLog): Promise<void> 
       siteId: data.siteId,
       pageUrl: data.pageUrl,
       elementType: data.elementType,
-      metadata: safeStringify(data.metadata),
+      metadata: data.metadata ?? null,
       timestamp: new Date(),
-    } as any)
+    }
+    // MongoDB will auto-generate _id if not provided
+    await interactions.insertOne(doc as SdkInteraction)
   } catch (error) {
     console.error('Error logging SDK interaction:', error)
   }
@@ -154,7 +159,7 @@ export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
         : responseBodyString
 
     const apiRouteCalls = await collections.apiRouteCalls()
-    await apiRouteCalls.insertOne({
+    const doc: Omit<ApiRouteCall, '_id'> = {
       route: data.route,
       method: data.method,
       statusCode: data.statusCode,
@@ -165,7 +170,9 @@ export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
       error: data.error,
       duration: data.duration,
       timestamp: new Date(),
-    } as any)
+    }
+    // MongoDB will auto-generate _id if not provided
+    await apiRouteCalls.insertOne(doc as ApiRouteCall)
   } catch (error) {
     console.error('Error logging API route call:', error)
   }
@@ -177,7 +184,7 @@ export async function logApiRouteCall(data: ApiRouteCallLog): Promise<void> {
 export async function logCallback(data: CallbackLogData): Promise<void> {
   try {
     const callbackLogs = await collections.callbackLogs()
-    await callbackLogs.insertOne({
+    const doc: Omit<CallbackLog, '_id'> = {
       type: data.type,
       endpoint: data.endpoint,
       payload: safeStringify(data.payload) ?? '',
@@ -187,7 +194,9 @@ export async function logCallback(data: CallbackLogData): Promise<void> {
       statusCode: data.statusCode,
       error: data.error,
       timestamp: new Date(),
-    } as any)
+    }
+    // MongoDB will auto-generate _id if not provided
+    await callbackLogs.insertOne(doc as CallbackLog)
   } catch (error) {
     console.error('Error logging callback:', error)
   }

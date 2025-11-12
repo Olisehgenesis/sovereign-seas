@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
 
     // Create event with enhanced metadata
     const now = new Date()
-    const insertResult = await eventsCollection.insertOne({
+    const eventDoc: Omit<Event, '_id'> = {
       type,
       campaignId,
       publisherId: publisherId ?? 'temp',
@@ -180,7 +180,9 @@ export async function POST(request: NextRequest) {
       verified: renderVerified && viewportVisible !== false,
       ...(publisherSite?._id && { publisherSiteId: publisherSite._id }),
       timestamp: now,
-    } as any)
+    }
+    // MongoDB will auto-generate _id if not provided
+    const insertResult = await eventsCollection.insertOne(eventDoc as Event)
     const eventId = String(insertResult.insertedId)
 
     // Update campaign spent amount for clicks

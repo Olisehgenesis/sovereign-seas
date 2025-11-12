@@ -2,6 +2,7 @@ import { createPublicClient, createWalletClient, http, formatUnits } from 'viem'
 import { celoSepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { collections } from '@/lib/db'
+import type { Payout } from '@/lib/models'
 
 // SovAds Manager contract address on Celo Sepolia
 const SOVADS_MANAGER_ADDRESS = '0x3eCE3a48818efF703204eC9B60f00d476923f5B5'
@@ -279,7 +280,7 @@ class SovAdsOracle {
       // Store payout in database
       const payoutsCollection = await collections.payouts()
       const now = new Date()
-      const result = await payoutsCollection.insertOne({
+      const payoutDoc: Omit<Payout, '_id'> = {
         publisherId,
         publisherWallet: publisher.wallet,
         amount,
@@ -288,7 +289,9 @@ class SovAdsOracle {
         status: 'pending',
         createdAt: now,
         updatedAt: now
-      } as any)
+      }
+      // MongoDB will auto-generate _id if not provided
+      const result = await payoutsCollection.insertOne(payoutDoc as Payout)
 
       const payoutId = result.insertedId.toString()
       console.log(`Payout queued for ${publisher.wallet}: ${amount} USDC (ID: ${payoutId})`)
