@@ -58,7 +58,9 @@ npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
 
 ## Deploying MilestoneBasedFunding Contract
 
-The MilestoneBasedFunding contract interacts with the deployed SovereignSeasV4 contract on Celo Mainnet at [0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a](https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#code).
+The MilestoneBasedFunding contract interacts with the deployed SovereignSeasV4 contract:
+- **Celo Mainnet**: [0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a](https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#code) (hardcoded)
+- **Celo Sepolia**: Set `SEAS4_SEPOLIA_ADDRESS` in your `.env` file if Seas4 is deployed on Sepolia
 
 ### Setting Up Private Keys with dotenvx
 
@@ -78,8 +80,10 @@ PRIVATE_KEY=your_private_key_here_without_0x_prefix
 
 # RPC URLs (optional - defaults are used if not set)
 # CELO_RPC_URL=https://forno.celo.org
-# CELO_SEPOLIA_RPC_URL=https://sepolia-forno.celo.org
-# SEPOLIA_RPC_URL=your_sepolia_rpc_url_here
+# CELO_SEPOLIA_RPC_URL=https://forno.celo-sepolia.org
+
+# Seas4 Contract Addresses (optional - mainnet address is hardcoded)
+# SEAS4_SEPOLIA_ADDRESS=0x... (set if Seas4 is deployed on Celo Sepolia)
 ```
 
 2. **The `.env` file is automatically ignored by git** (already in `.gitignore`)
