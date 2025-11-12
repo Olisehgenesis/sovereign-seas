@@ -38,7 +38,3 @@
 
 # Allow .env.example (template file)
 !.env.example
-
-
-CELO_RPC_URL=https://celo.drpc.org
-ETHERSCAN_API_KEY=P8SVBGJWWEFTEE8AM3GVGCMBETP2N8E53V
