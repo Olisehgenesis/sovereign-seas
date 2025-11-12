@@ -3,9 +3,12 @@ import { getAddress } from "viem";
 
 // Deployed Seas4 contract addresses
 // Celo Mainnet: https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#code
+const SEAS4_MAINNET_ADDRESS = "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a";
+
 const SEAS4_CONTRACT_ADDRESSES: Record<string, string> = {
-  celo: "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a",
-  celoSepolia: process.env.SEAS4_SEPOLIA_ADDRESS || "", // Optional: set if Seas4 is deployed on Sepolia
+  celo: SEAS4_MAINNET_ADDRESS,
+  // For testnet, use mainnet address by default (or override with SEAS4_SEPOLIA_ADDRESS)
+  celoSepolia: process.env.SEAS4_SEPOLIA_ADDRESS || SEAS4_MAINNET_ADDRESS,
 };
 
 async function main() {
@@ -20,45 +23,47 @@ async function main() {
   const deployer = walletClients[0];
 
   // Get Seas4 contract address for the current network
-  const seas4Address = SEAS4_CONTRACT_ADDRESSES[networkName];
+  const seas4Address = SEAS4_CONTRACT_ADDRESSES[networkName] || SEAS4_MAINNET_ADDRESS;
   
-  if (!seas4Address) {
-    console.warn(`⚠ Warning: No Seas4 contract address configured for network "${networkName}"`);
-    console.warn("  The milestone contract will be deployed but may not work correctly without a valid Seas4 address.");
-    console.warn("  Set SEAS4_SEPOLIA_ADDRESS in .env if Seas4 is deployed on this network.");
+  const isUsingMainnetAddress = networkName === "celoSepolia" && seas4Address === SEAS4_MAINNET_ADDRESS;
+  if (isUsingMainnetAddress) {
+    console.log("ℹ Using mainnet Seas4 address on testnet (for testing purposes)");
   }
 
   console.log("Deploying MilestoneBasedFunding contract...");
   console.log("Network:", networkName);
   console.log("Deployer:", deployer.account.address);
-  if (seas4Address) {
-    console.log("Seas4 Contract:", seas4Address);
+  console.log("Seas4 Contract:", seas4Address);
+  if (isUsingMainnetAddress) {
+    console.log("  (Note: This is the mainnet address - cross-chain calls may not work)");
   }
 
-  // Verify Seas4 contract exists and is accessible (only if address is configured)
-  if (seas4Address) {
-    try {
-      const code = await publicClient.getBytecode({
-        address: getAddress(seas4Address),
-      });
-      if (!code || code === "0x") {
+  // Verify Seas4 contract exists and is accessible
+  // Note: If using mainnet address on testnet, this check will fail but we'll continue anyway
+  try {
+    const code = await publicClient.getBytecode({
+      address: getAddress(seas4Address),
+    });
+    if (!code || code === "0x") {
+      if (isUsingMainnetAddress) {
+        console.warn(`⚠ Warning: Mainnet Seas4 contract not found on ${networkName} network`);
+        console.warn("  This is expected if using mainnet address on testnet.");
+        console.warn("  Deployment will continue, but cross-chain calls won't work.");
+      } else {
         console.warn(`⚠ Warning: No contract found at address ${seas4Address}`);
         console.warn("  Deployment will continue, but verify the address is correct.");
-      } else {
-        console.log("✓ Seas4 contract verified at address");
       }
-    } catch (error: any) {
+    } else {
+      console.log("✓ Seas4 contract verified at address");
+    }
+  } catch (error: any) {
+    if (isUsingMainnetAddress) {
+      console.warn("⚠ Warning: Could not verify mainnet Seas4 contract on testnet network");
+      console.warn("  This is expected - deployment will continue.");
+    } else {
       console.warn("⚠ Warning: Could not verify Seas4 contract:", error.message || error);
       console.warn("  Deployment will continue, but verify the RPC connection and address.");
     }
-  }
-
-  // Deploy MilestoneBasedFunding
-  if (!seas4Address) {
-    throw new Error(
-      `Cannot deploy: No Seas4 contract address configured for network "${networkName}". ` +
-      `Please set SEAS4_SEPOLIA_ADDRESS in .env or deploy Seas4 to this network first.`
-    );
   }
 
   const milestone = await viem.deployContract("MilestoneBasedFunding", [
