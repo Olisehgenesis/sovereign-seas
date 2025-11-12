@@ -80,7 +80,10 @@ PRIVATE_KEY=your_private_key_here_without_0x_prefix
 
 # RPC URLs (optional - defaults are used if not set)
 # CELO_RPC_URL=https://forno.celo.org
-# CELO_SEPOLIA_RPC_URL=https://forno.celo-sepolia.org
+# CELO_SEPOLIA_RPC_URL=https://forno.celo-sepolia.celo-testnet.org
+# Alternative Celo Sepolia RPCs if default doesn't work:
+# CELO_SEPOLIA_RPC_URL=https://celo-sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161
+# CELO_SEPOLIA_RPC_URL=https://rpc.ankr.com/celo_sepolia
 
 # Seas4 Contract Addresses (optional - mainnet address is hardcoded)
 # SEAS4_SEPOLIA_ADDRESS=0x... (set if Seas4 is deployed on Celo Sepolia)
