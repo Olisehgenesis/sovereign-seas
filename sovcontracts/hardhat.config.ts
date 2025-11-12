@@ -46,13 +46,13 @@ export default defineConfig({
       type: "http",
       chainType: "l1",
       url: "https://forno.celo.org",
-      accounts: [configVariable("CELO_PRIVATE_KEY")],
+      accounts: [configVariable("CELO_PRIVATE_KEY") || configVariable("PRIVATE_KEY")],
     },
     celoSepolia: {
       type: "http",
       chainType: "l1",
       url: "https://sepolia-forno.celo.org",
-      accounts: [configVariable("CELO_SEPOLIA_PRIVATE_KEY")],
+      accounts: [configVariable("CELO_SEPOLIA_PRIVATE_KEY") || configVariable("PRIVATE_KEY")],
     },
   },
 });

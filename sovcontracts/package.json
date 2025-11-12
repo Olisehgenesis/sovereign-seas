@@ -5,7 +5,11 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "test:milestone": "hardhat test test/Milestone.ts"
+    "test:milestone": "hardhat test test/Milestone.ts",
+    "deploy:milestone:celo": "hardhat run scripts/deploy-milestone.ts --network celo",
+    "deploy:milestone:celo-sepolia": "hardhat run scripts/deploy-milestone.ts --network celoSepolia",
+    "deploy:milestone:ignition:celo": "hardhat ignition deploy ignition/modules/Milestone.ts --network celo",
+    "deploy:milestone:ignition:celo-sepolia": "hardhat ignition deploy ignition/modules/Milestone.ts --network celoSepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.5",
@@ -17,6 +21,7 @@
     "viem": "^2.39.0"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "^1.51.1",
     "@openzeppelin/contracts": "^5.4.0"
   }
 }
