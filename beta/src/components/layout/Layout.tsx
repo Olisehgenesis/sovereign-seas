@@ -1,12 +1,15 @@
 import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import WhatsNewModal, { useWhatsNewModal } from '@/components/modals/WhatsNewModal';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { isOpen, onClose } = useWhatsNewModal();
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 relative">
       {/* Dots Pattern Background */}
@@ -23,6 +26,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {children}
       </main>
       <Footer />
+      
+      <WhatsNewModal isOpen={isOpen} onClose={onClose} />
     </div>
   );
 };
