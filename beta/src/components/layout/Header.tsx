@@ -5,7 +5,6 @@ import { usePrivy, useConnectOrCreateWallet } from '@privy-io/react-auth';
 import { useActiveWallet } from '@/hooks/useActiveWallet';
 import WalletModal from '@/components/modals/walletModal';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useOpenMilestones } from '@/hooks/useProjectMilestones';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,10 +56,6 @@ export default function Header() {
   
   // Use Privy hooks for authentication
   const { authenticated, logout, ready } = usePrivy();
-  
-  // Check for open milestones
-  const { openMilestones, isLoading: isLoadingTasks } = useOpenMilestones(true);
-  const hasTasks = openMilestones && openMilestones.length > 0;
   const { connectOrCreateWallet } = useConnectOrCreateWallet({
     onSuccess: async ({ wallet }) => {
       console.log('[Header] connectOrCreateWallet success. Wallet:', wallet?.address);
@@ -204,20 +199,13 @@ export default function Header() {
               </DropdownMenu>
 
               {/* Tasks direct tab */}
-              {hasTasks ? (
-                <Link 
-                  to="/app/tasks" 
-                  className="text-gray-600 hover:text-black font-medium flex items-center"
-                >
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  Tasks
-                </Link>
-              ) : (
-                <span className="text-gray-400 font-medium flex items-center cursor-default">
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  {isLoadingTasks ? 'Loading...' : 'Tasks coming soon'}
-                </span>
-              )}
+              <Link 
+                to="/app/tasks" 
+                className="text-gray-600 hover:text-black font-medium flex items-center"
+              >
+                <Briefcase className="w-4 h-4 mr-2" />
+                Tasks
+              </Link>
 
               {/* Create Dropdown */}
               <DropdownMenu>

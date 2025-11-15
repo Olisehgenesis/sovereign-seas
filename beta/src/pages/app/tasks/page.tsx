@@ -19,7 +19,7 @@ import {
   AlertCircle,
   ArrowUpDown
 } from 'lucide-react';
-import { useOpenMilestones, useUserClaimedMilestones, useClaimOpenMilestone, ProjectMilestoneType, ProjectMilestoneStatus } from '@/hooks/useProjectMilestones';
+import { useOpenMilestones, useUserClaimedMilestones, useUserAssignedMilestones, useClaimOpenMilestone, ProjectMilestoneType, ProjectMilestoneStatus } from '@/hooks/useProjectMilestones';
 import { formatEther } from 'viem';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ export default function TasksPage() {
   const { address, isConnected } = useAccount();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'available' | 'my-claims' | 'my-submissions'>('available');
+  const [activeTab, setActiveTab] = useState<'open' | 'my-tasks' | 'pending' | 'completed'>('open');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [statusFilter, setStatusFilter] = useState<FilterOption>('all');
 
@@ -51,16 +51,36 @@ export default function TasksPage() {
     isConnected && !!address
   );
 
-  // Filter milestones based on status for "my submissions"
-  const mySubmissions = useMemo(() => {
-    if (!claimedMilestones) return [];
-    return claimedMilestones.filter(m => 
-      m.status === ProjectMilestoneStatus.SUBMITTED ||
+  // Fetch all milestones assigned to user
+  const { milestones: assignedMilestones, isLoading: isLoadingAssigned } = useUserAssignedMilestones(
+    address as Address | undefined,
+    isConnected && !!address
+  );
+
+  // Combine claimed and assigned milestones for "My Tasks"
+  const myTasks = useMemo(() => {
+    const all = [...(assignedMilestones || []), ...(claimedMilestones || [])];
+    // Remove duplicates by ID
+    const unique = new Map();
+    all.forEach(m => unique.set(m.id.toString(), m));
+    return Array.from(unique.values());
+  }, [assignedMilestones, claimedMilestones]);
+
+  // Pending tasks (assigned/claimed but not submitted)
+  const pendingTasks = useMemo(() => {
+    return myTasks.filter(m => 
+      m.status === ProjectMilestoneStatus.ACTIVE ||
+      m.status === ProjectMilestoneStatus.CLAIMED
+    );
+  }, [myTasks]);
+
+  // Completed tasks (approved or paid)
+  const completedTasks = useMemo(() => {
+    return myTasks.filter(m => 
       m.status === ProjectMilestoneStatus.APPROVED ||
-      m.status === ProjectMilestoneStatus.REJECTED ||
       m.status === ProjectMilestoneStatus.PAID
     );
-  }, [claimedMilestones]);
+  }, [myTasks]);
 
   // Filter and sort available milestones
   const filteredOpenMilestones = useMemo(() => {
@@ -157,10 +177,10 @@ export default function TasksPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="mb-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-2">
-            <TabsTrigger value="available" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-2">
+            <TabsTrigger value="open" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">Available</span>
+              <span className="hidden sm:inline">Open Tasks</span>
               <span className="sm:hidden">Open</span>
               {filteredOpenMilestones.length > 0 && (
                 <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-semibold">
@@ -168,30 +188,40 @@ export default function TasksPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="my-claims" className="flex items-center gap-2">
+            <TabsTrigger value="my-tasks" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">My Claims</span>
-              <span className="sm:hidden">Claims</span>
-              {claimedMilestones.length > 0 && (
+              <span className="hidden sm:inline">My Tasks</span>
+              <span className="sm:hidden">Mine</span>
+              {myTasks.length > 0 && (
                 <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold">
-                  {claimedMilestones.length}
+                  {myTasks.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="my-submissions" className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">My Submissions</span>
-              <span className="sm:hidden">Submissions</span>
-              {mySubmissions.length > 0 && (
+            <TabsTrigger value="pending" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Pending</span>
+              <span className="sm:hidden">Pending</span>
+              {pendingTasks.length > 0 && (
                 <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">
-                  {mySubmissions.length}
+                  {pendingTasks.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Completed</span>
+              <span className="sm:hidden">Done</span>
+              {completedTasks.length > 0 && (
+                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">
+                  {completedTasks.length}
                 </span>
               )}
             </TabsTrigger>
           </TabsList>
 
-          {/* Available Milestones Tab */}
-          <TabsContent value="available" className="space-y-4">
+          {/* Open Tasks Tab */}
+          <TabsContent value="open" className="space-y-4">
             {/* Search and Filters */}
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-4 space-y-4">
               <div className="relative">
@@ -260,24 +290,24 @@ export default function TasksPage() {
             ) : (
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
                 <Globe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Open Milestones</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Open Tasks</h3>
                 <p className="text-gray-600">
-                  {searchQuery ? 'No milestones match your search.' : "There are no open milestones available at the moment. Check back later!"}
+                  {searchQuery ? 'No tasks match your search.' : "More tasks coming soon! Check back later or create a project to add milestones."}
                 </p>
               </div>
             )}
           </TabsContent>
 
-          {/* My Claims Tab */}
-          <TabsContent value="my-claims" className="space-y-4">
-            {isLoadingClaimed ? (
+          {/* My Tasks Tab */}
+          <TabsContent value="my-tasks" className="space-y-4">
+            {isLoadingAssigned || isLoadingClaimed ? (
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Loading your claimed milestones...</p>
+                <p className="text-gray-600">Loading your tasks...</p>
               </div>
-            ) : claimedMilestones.length > 0 ? (
+            ) : myTasks.length > 0 ? (
               <div className="space-y-4">
-                {claimedMilestones.map((milestone) => (
+                {myTasks.map((milestone) => (
                   <MilestoneCard
                     key={milestone.id.toString()}
                     milestone={milestone}
@@ -290,19 +320,54 @@ export default function TasksPage() {
             ) : (
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
                 <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Claimed Milestones</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Tasks Assigned</h3>
                 <p className="text-gray-600">
-                  You haven't claimed any milestones yet. Browse available tasks to get started!
+                  You don't have any tasks assigned yet. Browse open tasks to claim one!
                 </p>
               </div>
             )}
           </TabsContent>
 
-          {/* My Submissions Tab */}
-          <TabsContent value="my-submissions" className="space-y-4">
-            {mySubmissions.length > 0 ? (
+          {/* Pending Tasks Tab */}
+          <TabsContent value="pending" className="space-y-4">
+            {isLoadingAssigned || isLoadingClaimed ? (
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Loading pending tasks...</p>
+              </div>
+            ) : pendingTasks.length > 0 ? (
               <div className="space-y-4">
-                {mySubmissions.map((milestone) => (
+                {pendingTasks.map((milestone) => (
+                  <MilestoneCard
+                    key={milestone.id.toString()}
+                    milestone={milestone}
+                    onClaim={() => {}}
+                    onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
+                    showActions={true}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
+                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Pending Tasks</h3>
+                <p className="text-gray-600">
+                  You don't have any pending tasks. All your tasks are either completed or submitted!
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Completed Tasks Tab */}
+          <TabsContent value="completed" className="space-y-4">
+            {isLoadingAssigned || isLoadingClaimed ? (
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Loading completed tasks...</p>
+              </div>
+            ) : completedTasks.length > 0 ? (
+              <div className="space-y-4">
+                {completedTasks.map((milestone) => (
                   <MilestoneCard
                     key={milestone.id.toString()}
                     milestone={milestone}
@@ -315,9 +380,9 @@ export default function TasksPage() {
             ) : (
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
                 <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Submissions</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Completed Tasks</h3>
                 <p className="text-gray-600">
-                  You haven't submitted any milestones yet. Claim a milestone and submit your work to get started!
+                  Complete your pending tasks to see them here!
                 </p>
               </div>
             )}

@@ -794,6 +794,96 @@ export function useOpenMilestones(enabled: boolean = true) {
 }
 
 /**
+ * Hook to get all milestones assigned to a user (ASSIGNED type or INTERNAL where user is project owner)
+ */
+export function useUserAssignedMilestones(userAddress: Address | undefined, enabled: boolean = true) {
+  const contractAddress = getMilestoneContractAddress()
+
+  // Get total milestone count
+  const { data: totalCount, isLoading: isLoadingCount } = useReadContract({
+    address: contractAddress,
+    abi: abi,
+    functionName: 'getProjectMilestoneCount',
+    query: { enabled: enabled && !!userAddress }
+  })
+
+  const count = useMemo(() => {
+    if (!totalCount) return 0
+    return Number(totalCount)
+  }, [totalCount])
+
+  // Fetch all milestones
+  const contracts = useMemo(() => {
+    if (count === 0 || !userAddress) return []
+    return Array.from({ length: count }, (_, i) => ({
+      address: contractAddress as `0x${string}`,
+      abi: abi as any,
+      functionName: 'getProjectMilestone' as const,
+      args: [BigInt(i)] as readonly [bigint]
+    }))
+  }, [count, contractAddress, userAddress])
+
+  const { data: milestonesData, isLoading: isLoadingMilestones } = useReadContracts({
+    contracts: contracts,
+    query: { enabled: enabled && contracts.length > 0 && !!userAddress }
+  })
+
+  const assignedMilestones: ProjectMilestone[] = useMemo(() => {
+    if (!milestonesData || !userAddress) return []
+    return milestonesData
+      .map((data: any) => {
+        if (!data || !data.result) return null
+        const result = data.result
+        const [
+          id, projectId, milestoneType, status, assignedTo, claimedBy,
+          title, description, requirements, evidenceHash, requiredApprovals,
+          allowSiteAdminApproval, createdAt, deadline, claimedAt, submittedAt,
+          approvedAt, paidAt, supportedTokens
+        ] = result
+
+        const milestone = {
+          id: BigInt(id),
+          projectId: BigInt(projectId),
+          milestoneType: Number(milestoneType) as ProjectMilestoneType,
+          status: Number(status) as ProjectMilestoneStatus,
+          assignedTo: assignedTo as Address,
+          claimedBy: claimedBy as Address,
+          title,
+          description,
+          requirements,
+          evidenceHash,
+          requiredApprovals: BigInt(requiredApprovals),
+          allowSiteAdminApproval,
+          createdAt: BigInt(createdAt),
+          deadline: BigInt(deadline),
+          claimedAt: BigInt(claimedAt),
+          submittedAt: BigInt(submittedAt),
+          approvedAt: BigInt(approvedAt),
+          paidAt: BigInt(paidAt),
+          supportedTokens: supportedTokens as Address[]
+        }
+
+        // Filter for milestones assigned to this user
+        const isAssigned = milestone.assignedTo?.toLowerCase() === userAddress.toLowerCase()
+        const isClaimedByUser = milestone.claimedBy?.toLowerCase() === userAddress.toLowerCase()
+        
+        if (isAssigned || isClaimedByUser) {
+          return milestone
+        }
+        return null
+      })
+      .filter((m: any) => m !== null) as ProjectMilestone[]
+  }, [milestonesData, userAddress])
+
+  return {
+    milestones: assignedMilestones,
+    isLoading: isLoadingCount || isLoadingMilestones,
+    error: null,
+    refetch: () => {}
+  }
+}
+
+/**
  * Hook to get user's claimed milestones
  */
 export function useUserClaimedMilestones(userAddress: Address | undefined, enabled: boolean = true) {
