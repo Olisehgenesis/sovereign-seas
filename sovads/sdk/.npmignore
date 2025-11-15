@@ -1,9 +1,0 @@
-node_modules
-*.ts
-!dist/**/*.d.ts
-tsconfig.json
-*.log
-.DS_Store
-.env
-.env.local
-
