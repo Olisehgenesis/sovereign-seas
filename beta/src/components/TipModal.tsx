@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2, Wallet, Check, Gift, TrendingUp, ChevronDown, AlertCircle } from 'lucide-react';
-import { useAccount, usePublicClient } from 'wagmi';
-import { formatEther } from 'viem';
+import { useAccount, usePublicClient, useWaitForTransactionReceipt } from 'wagmi';
+import { formatEther, parseEther, type Address } from 'viem';
 
 import { 
   MobileDialog as Dialog,
@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
+import { useTipProject, useTipProjectWithCelo, useApproveToken } from '@/hooks/useProjectTipping';
+import { getTippingContractAddress, getCeloTokenAddress } from '@/utils/contractConfig';
+import { erc20ABI } from '@/abi/erc20ABI';
 
 interface TipModalProps {
   isOpen: boolean;
@@ -139,11 +142,14 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
 );
 };
 
-const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
+const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSuccess }) => {
   const { address: userAddress } = useAccount();
   const publicClient = usePublicClient();
-
-
+  
+  // Contract addresses
+  const tippingContractAddress = getTippingContractAddress();
+  const celoTokenAddress = getCeloTokenAddress();
+  
   // State
   const [currentView, setCurrentView] = useState<'tip' | 'success'>('tip');
   const [tipAmount, setTipAmount] = useState('');
@@ -152,6 +158,27 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [tipStep, setTipStep] = useState<'idle' | 'approving' | 'tipping' | 'done'>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  
+  // Tipping hooks
+  const { tipProject, isPending: isTipPending, error: tipError } = useTipProject(tippingContractAddress);
+  const { tipProjectWithCelo, isPending: isCeloTipPending, error: celoTipError } = useTipProjectWithCelo(tippingContractAddress);
+  const { approveToken, isPending: isApprovePending, data: approveTxHash } = useApproveToken();
+  
+  // Wait for transaction receipts
+  const { isLoading: isTipConfirming, isSuccess: isTipConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash as `0x${string}` | undefined,
+    query: {
+      enabled: !!txHash
+    }
+  });
+  
+  const { isLoading: isApproveConfirming, isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({
+    hash: approveTxHash,
+    query: {
+      enabled: !!approveTxHash
+    }
+  });
 
   // Token balances - using same structure as wallet modal
   const [tokenBalances, setTokenBalances] = useState<Array<{
@@ -264,8 +291,19 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
     return tokenBalance ? tokenBalance.symbol : '';
   };
 
-  // Handle tip submission - simplified for demo
+  // Check if token is CELO
+  const isCeloToken = useCallback(() => {
+    if (!selectedToken) return false;
+    return selectedToken.address.toLowerCase() === celoTokenAddress.toLowerCase() || selectedToken.symbol === 'CELO';
+  }, [selectedToken, celoTokenAddress]);
+
+  // Handle tip submission with actual contract calls
   const handleTip = async () => {
+    if (!userAddress) {
+      setError('Please connect your wallet');
+      return;
+    }
+
     if (!selectedToken || !tipAmount) {
       setError('Please select a token and enter an amount');
       return;
@@ -285,17 +323,74 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
     try {
       setError('');
       setIsProcessing(true);
-        setTipStep('tipping');
       
-      // Simulate tip processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const amount = parseEther(tipAmount);
+      const isCelo = isCeloToken();
       
-      setTipStep('done');
-      setCurrentView('success');
+      // For ERC20 tokens, check and handle approval first
+      if (!isCelo) {
+        if (!publicClient) {
+          setError('Unable to connect to blockchain. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
+        
+        setTipStep('approving');
+        
+        // Check current allowance
+        const currentAllowance = await publicClient.readContract({
+          address: selectedToken.address as Address,
+          abi: erc20ABI,
+          functionName: 'allowance',
+          args: [userAddress as Address, tippingContractAddress]
+        }) as bigint;
+
+        // If allowance is insufficient, approve
+        if (currentAllowance < amount) {
+          approveToken({
+            tokenAddress: selectedToken.address as Address,
+            spender: tippingContractAddress,
+            amount: amount,
+            account: userAddress as Address
+          });
+          
+          // Wait for approval to be confirmed before proceeding
+          // This will be handled by the useEffect that watches isApproveConfirmed
+          return;
+        }
+      }
       
-      setTimeout(() => {
-        handleClose();
-      }, 3000);
+      setTipStep('tipping');
+      
+      let resultTxHash: string | null = null;
+      
+      if (isCelo) {
+        // For CELO, use tipProjectWithCelo
+        // This will trigger the wallet prompt and return transaction hash
+        const result = await tipProjectWithCelo({
+          projectId: project.id,
+          amount: amount,
+          message: message || '',
+          userAddress: userAddress as Address
+        });
+        resultTxHash = result.hash || null;
+      } else {
+        // For ERC20 tokens, use tipProject
+        // Note: celoEquivalent is the same as amount for simplicity
+        // In production, you might want to calculate actual CELO equivalent
+        const result = await tipProject({
+          projectId: project.id,
+          token: selectedToken.address as Address,
+          amount: amount,
+          celoEquivalent: amount, // Using same value for simplicity
+          message: message || ''
+        });
+        resultTxHash = result.hash || null;
+      }
+      
+      if (resultTxHash) {
+        setTxHash(resultTxHash);
+      }
       
     } catch (error: any) {
       setIsProcessing(false);
@@ -304,9 +399,9 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
       let errorMessage = 'Tipping failed! Please try again.';
       
       if (error?.message) {
-        if (error.message.includes('user rejected')) {
+        if (error.message.includes('user rejected') || error.message.includes('User rejected')) {
           errorMessage = 'Transaction was rejected. No funds were spent.';
-        } else if (error.message.includes('insufficient funds')) {
+        } else if (error.message.includes('insufficient funds') || error.message.includes('insufficient balance')) {
           errorMessage = 'Insufficient balance to complete this transaction.';
         } else {
           errorMessage = error.message;
@@ -316,6 +411,92 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
       setError(errorMessage);
     }
   };
+
+  // Handle approval confirmation and proceed with tip
+  useEffect(() => {
+    const proceedWithTip = async () => {
+      if (isApproveConfirmed && tipStep === 'approving' && !isCeloToken() && selectedToken && tipAmount) {
+        // Approval confirmed, now proceed with tip
+        const amount = parseEther(tipAmount);
+        setTipStep('tipping');
+        
+        try {
+          const result = await tipProject({
+            projectId: project.id,
+            token: selectedToken.address as Address,
+            amount: amount,
+            celoEquivalent: amount,
+            message: message || ''
+          });
+          
+          if (result.hash) {
+            setTxHash(result.hash);
+          }
+        } catch (error) {
+          console.error('Error sending tip after approval:', error);
+          setIsProcessing(false);
+          setTipStep('idle');
+        }
+      }
+    };
+    
+    proceedWithTip();
+  }, [isApproveConfirmed, tipStep, tipAmount, selectedToken, project.id, message, isCeloToken, tipProject]);
+
+  // Note: Divvi referral is now handled in the hooks themselves
+  // The referral tag is appended to transaction data and submitted automatically
+
+  // Handle transaction success
+  useEffect(() => {
+    if (isTipConfirmed && txHash) {
+      setTipStep('done');
+      setCurrentView('success');
+      setIsProcessing(false);
+      
+      // Call success callback
+      if (onTipSuccess) {
+        onTipSuccess();
+      }
+      
+      // Auto-close after 3 seconds
+      setTimeout(() => {
+        handleClose();
+      }, 3000);
+    }
+  }, [isTipConfirmed, txHash, onTipSuccess]);
+
+  // Handle errors from hooks
+  useEffect(() => {
+    if (tipError || celoTipError) {
+      const error = tipError || celoTipError;
+      setIsProcessing(false);
+      setTipStep('idle');
+      
+      let errorMessage = 'Tipping failed! Please try again.';
+      if (error?.message) {
+        if (error.message.includes('user rejected') || error.message.includes('User rejected')) {
+          errorMessage = 'Transaction was rejected. No funds were spent.';
+        } else if (error.message.includes('insufficient funds') || error.message.includes('insufficient balance')) {
+          errorMessage = 'Insufficient balance to complete this transaction.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      setError(errorMessage);
+    }
+  }, [tipError, celoTipError]);
+
+  // Update processing state based on transaction states
+  useEffect(() => {
+    const isAnyPending = isTipPending || isCeloTipPending || isApprovePending || isTipConfirming || isApproveConfirming;
+    setIsProcessing(isAnyPending);
+    
+    if (isApprovePending || isApproveConfirming) {
+      setTipStep('approving');
+    } else if (isTipPending || isCeloTipPending || isTipConfirming) {
+      setTipStep('tipping');
+    }
+  }, [isTipPending, isCeloTipPending, isApprovePending, isTipConfirming, isApproveConfirming]);
 
   // Reset on modal close
   useEffect(() => {
@@ -409,8 +590,17 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
                   <CardContent className="p-4">
                     <div className="flex items-center mb-3">
                       <Loader2 className="h-5 w-5 text-amber-600 mr-3 animate-spin" />
-                      <p className="text-sm font-medium text-amber-800">Processing transaction...</p>
+                      <p className="text-sm font-medium text-amber-800">
+                        {tipStep === 'approving' ? 'Approving token...' : 
+                         tipStep === 'tipping' ? 'Sending tip...' : 
+                         'Processing transaction...'}
+                      </p>
                     </div>
+                    {txHash && (
+                      <p className="text-xs text-amber-700 mt-2">
+                        Transaction: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -508,13 +698,17 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project }) => {
                  isProcessing ||
                  !tipAmount ||
                  !selectedToken ||
+                 !userAddress ||
               parseFloat(tipAmount) > parseFloat(getSelectedBalance()) || 
               parseFloat(tipAmount) <= 0
             }
             className="w-32 bg-gradient-to-r from-blue-600 to-indigo-700 hover:shadow-lg hover:-translate-y-0.5 text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none h-12 text-base"
           >
             {isProcessing ? (
-              <span>Processing...</span>
+              <span className="flex items-center">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {tipStep === 'approving' ? 'Approving...' : 'Sending...'}
+              </span>
             ) : (
               <span>Send Tip</span>
             )}

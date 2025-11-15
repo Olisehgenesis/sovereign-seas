@@ -1,11 +1,14 @@
 // hooks/useProjectTipping.ts
 
-import { useWriteContract, useReadContract } from 'wagmi'
+import { useWriteContract, useReadContract, useSendTransaction, useAccount } from 'wagmi'
 import type { Address } from 'viem'
 import { formatEther } from 'viem'
 import { tipsABI as abi } from '@/abi/tipsABI' 
 import { useState, useEffect, useCallback } from 'react'
-import { erc20ABI } from '@/abi/erc20ABI';
+import { erc20ABI } from '@/abi/erc20ABI'
+import { Interface } from 'ethers'
+import { getReferralTag, submitReferral } from '@divvi/referral-sdk'
+import { DIVVI_CONSUMER_ADDRESS } from '@/utils/divvi'
 
 // Types for better TypeScript support
 export interface TipInfo {
@@ -69,9 +72,10 @@ const logDebug = (section: string, data: any, type: 'info' | 'error' | 'warn' = 
   }
 }
 
-// Hook for tipping with ERC20 tokens (updated to include celoEquivalent)
+// Hook for tipping with ERC20 tokens (updated to include celoEquivalent and Divvi integration)
 export function useTipProject(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+  const { address: user } = useAccount()
+  const { sendTransactionAsync, isPending, isError, error, isSuccess, data } = useSendTransaction()
 
   const tipProject = async ({
     projectId,
@@ -87,15 +91,56 @@ export function useTipProject(contractAddress: Address) {
     message?: string
   }) => {
     try {
-      writeContract({
-        address: contractAddress,
-        abi,
-        functionName: 'tipProject',
-        args: [projectId, token, amount, celoEquivalent, message]
+      if (!user) {
+        throw new Error('User wallet not connected')
+      }
+
+      // Encode function data
+      const tipInterface = new Interface(abi)
+      const tipData = tipInterface.encodeFunctionData('tipProject', [
+        projectId,
+        token,
+        amount,
+        celoEquivalent,
+        message
+      ])
+
+      // Generate Divvi referral tag
+      const referralTag = getReferralTag({
+        user: user as Address,
+        consumer: DIVVI_CONSUMER_ADDRESS as Address,
       })
 
-      // Return success - the component will handle the transaction hash from the hook's data property
-      return { success: true, hash: '', receipt: null };
+      // Append referral tag to transaction data
+      const dataWithSuffix = tipData + referralTag
+
+      // Get chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet'
+      const chainId = isTestnet ? 44787 : 42220 // Alfajores testnet : Celo mainnet
+
+      // Send transaction with Divvi referral tag
+      const txHash = await sendTransactionAsync({
+        to: contractAddress,
+        data: dataWithSuffix as `0x${string}`,
+      })
+
+      if (!txHash) {
+        throw new Error('Transaction failed to send')
+      }
+
+      // Submit referral to Divvi
+      try {
+        await submitReferral({
+          txHash: txHash as `0x${string}`,
+          chainId: chainId
+        })
+        logDebug('Divvi referral submitted', { txHash, chainId }, 'info')
+      } catch (referralError) {
+        console.warn('Divvi referral submission error:', referralError)
+        // Don't fail the transaction if Divvi submission fails
+      }
+
+      return { success: true, hash: txHash, receipt: null }
     } catch (err) {
       logDebug('Tip Project Error', {
         error: err,
@@ -115,9 +160,10 @@ export function useTipProject(contractAddress: Address) {
   }
 }
 
-// Hook for tipping with CELO (unchanged)
+// Hook for tipping with CELO (updated with Divvi integration)
 export function useTipProjectWithCelo(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess, data } = useWriteContract()
+  const { address: user } = useAccount()
+  const { sendTransactionAsync, isPending, isError, error, isSuccess, data } = useSendTransaction()
 
   const tipProjectWithCelo = async ({
     projectId,
@@ -131,17 +177,54 @@ export function useTipProjectWithCelo(contractAddress: Address) {
     userAddress: Address
   }) => {
     try {
-      writeContract({
-        account: userAddress,
-        address: contractAddress,
-        abi,
-        functionName: 'tipProjectWithCelo',
-        args: [projectId, message],
+      if (!user || !userAddress) {
+        throw new Error('User wallet not connected')
+      }
+
+      // Encode function data
+      const tipInterface = new Interface(abi)
+      const tipData = tipInterface.encodeFunctionData('tipProjectWithCelo', [
+        projectId,
+        message
+      ])
+
+      // Generate Divvi referral tag
+      const referralTag = getReferralTag({
+        user: userAddress as Address,
+        consumer: DIVVI_CONSUMER_ADDRESS as Address,
+      })
+
+      // Append referral tag to transaction data
+      const dataWithSuffix = tipData + referralTag
+
+      // Get chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet'
+      const chainId = isTestnet ? 44787 : 42220 // Alfajores testnet : Celo mainnet
+
+      // Send transaction with Divvi referral tag and value for CELO
+      const txHash = await sendTransactionAsync({
+        to: contractAddress,
+        data: dataWithSuffix as `0x${string}`,
         value: amount
       })
 
-      // Return success - the component will handle the transaction hash from the hook's data property
-      return { success: true, hash: '', receipt: null };
+      if (!txHash) {
+        throw new Error('Transaction failed to send')
+      }
+
+      // Submit referral to Divvi
+      try {
+        await submitReferral({
+          txHash: txHash as `0x${string}`,
+          chainId: chainId
+        })
+        logDebug('Divvi referral submitted', { txHash, chainId }, 'info')
+      } catch (referralError) {
+        console.warn('Divvi referral submission error:', referralError)
+        // Don't fail the transaction if Divvi submission fails
+      }
+
+      return { success: true, hash: txHash, receipt: null }
     } catch (err) {
       logDebug('Tip Project with CELO Error', {
         error: err,

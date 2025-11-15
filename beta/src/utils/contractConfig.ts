@@ -100,6 +100,16 @@ export function getGoodDollarTokenAddress(): `0x${string}` {
 }
 
 /**
+ * Get the milestone contract address with testnet support
+ */
+export function getMilestoneContractAddress(): `0x${string}` {
+  const mainnetContract = import.meta.env.VITE_MILESTONE_CONTRACT_ADDRESS as string;
+  const testnetContract = import.meta.env.VITE_MILESTONE_CONTRACT_ADDRESS_TESTNET as string;
+  
+  return getContractAddress(mainnetContract, testnetContract);
+}
+
+/**
  * Get the current chain ID based on environment
  */
 export function getCurrentChainId(): number {

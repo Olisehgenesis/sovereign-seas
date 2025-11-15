@@ -63,12 +63,16 @@ contract MilestoneBasedFunding is Ownable, ReentrancyGuard {
     enum EntityType { PROJECT, CAMPAIGN }
     enum GrantStatus { ACTIVE, COMPLETED, CANCELLED }
     enum MilestoneStatus { PENDING, SUBMITTED, APPROVED, REJECTED, PAID, LOCKED }
+    enum ProjectMilestoneType { INTERNAL, ASSIGNED, OPEN }
+    enum ProjectMilestoneStatus { DRAFT, ACTIVE, CLAIMED, SUBMITTED, APPROVED, REJECTED, PAID, CANCELLED }
 
     // State Variables
     uint256 public nextGrantId;
     uint256 public nextMilestoneId;
+    uint256 public nextProjectMilestoneId;
     uint256 public constant MIN_SITE_FEE = 1;
     uint256 public constant MAX_SITE_FEE = 5;
+    uint256 public projectMilestonePlatformFee = 2; // 2% platform fee for project milestones (0-100)
 
     // Mappings
     mapping(uint256 => Grant) public grants;
@@ -77,6 +81,15 @@ contract MilestoneBasedFunding is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(uint256 => bool)) public grantHasMilestone; // grantId => milestoneId => exists
     mapping(uint256 => address[]) public grantAdmins; // grantId => admins[]
     mapping(uint256 => mapping(address => bool)) public isGrantAdmin; // grantId => admin => isAdmin
+    
+    // Project Milestone Mappings
+    mapping(uint256 => ProjectMilestone) public projectMilestones;
+    mapping(uint256 => uint256[]) public projectMilestoneIds; // projectId => milestoneIds[]
+    mapping(uint256 => mapping(uint256 => bool)) public projectHasMilestone; // projectId => milestoneId => exists
+    mapping(uint256 => address[]) public milestoneStewards; // milestoneId => stewards[]
+    mapping(uint256 => mapping(address => bool)) public isMilestoneSteward; // milestoneId => steward => isSteward
+    mapping(address => uint256[]) public userClaimedMilestones; // user => milestoneIds[]
+    mapping(address => mapping(uint256 => bool)) public hasUserClaimedMilestone; // user => milestoneId => hasClaimed
 
     // Structs
     struct Grant {
@@ -118,6 +131,50 @@ contract MilestoneBasedFunding is Ownable, ReentrancyGuard {
         uint256 deadline; // Deadline for this milestone submission
         uint256 penaltyPercentage; // Penalty applied (0-100)
         bool isLocked; // True if milestone is locked out
+    }
+
+    struct ProjectMilestone {
+        uint256 id;
+        uint256 projectId;
+        ProjectMilestoneType milestoneType;
+        ProjectMilestoneStatus status;
+        
+        // Assignment
+        address assignedTo;              // For ASSIGNED type
+        address claimedBy;               // For OPEN type (who claimed it)
+        
+        // Content
+        string title;
+        string description;
+        string requirements;             // What needs to be done
+        string evidenceHash;             // IPFS hash of submitted evidence
+        
+        // Funding
+        address[] supportedTokens;
+        mapping(address => uint256) rewardAmounts;  // Reward per token
+        mapping(address => uint256) escrowedAmounts;
+        
+        // Approval
+        address[] approvers;             // Project owner + stewards
+        mapping(address => bool) isApprover;
+        mapping(address => bool) hasApproved;
+        uint256 requiredApprovals;       // How many approvals needed (default: 1)
+        bool allowSiteAdminApproval;     // Can site admin approve?
+        
+        // Timestamps
+        uint256 createdAt;
+        uint256 deadline;                // 0 = no deadline
+        uint256 claimedAt;
+        uint256 submittedAt;
+        uint256 approvedAt;
+        uint256 paidAt;
+        
+        // Metadata
+        string approvalMessage;
+        string rejectionMessage;
+        address approvedBy;
+        address rejectedBy;
+        uint256 rejectedAt;
     }
 
     // Events
@@ -230,6 +287,69 @@ contract MilestoneBasedFunding is Ownable, ReentrancyGuard {
         string feeType
     );
 
+    // Project Milestone Events
+    event ProjectMilestoneCreated(
+        uint256 indexed projectId,
+        uint256 indexed milestoneId,
+        ProjectMilestoneType milestoneType,
+        address indexed assignedTo,
+        string title
+    );
+
+    event ProjectMilestoneFunded(
+        uint256 indexed milestoneId,
+        address indexed token,
+        uint256 amount,
+        address indexed funder
+    );
+
+    event OpenMilestoneClaimed(
+        uint256 indexed milestoneId,
+        address indexed claimedBy
+    );
+
+    event ProjectMilestoneEvidenceSubmitted(
+        uint256 indexed milestoneId,
+        address indexed submitter,
+        string evidenceHash
+    );
+
+    event ProjectMilestoneApproved(
+        uint256 indexed milestoneId,
+        address indexed approver,
+        string message
+    );
+
+    event ProjectMilestoneRejected(
+        uint256 indexed milestoneId,
+        address indexed rejector,
+        string message
+    );
+
+    event ProjectMilestoneRewardsClaimed(
+        uint256 indexed milestoneId,
+        address indexed recipient,
+        address indexed token,
+        uint256 amount
+    );
+
+    event ProjectMilestoneCancelled(
+        uint256 indexed milestoneId,
+        address indexed cancelledBy
+    );
+
+    event MilestoneStewardAdded(
+        uint256 indexed milestoneId,
+        address indexed steward,
+        address indexed addedBy
+    );
+
+    event MilestoneStewardRemoved(
+        uint256 indexed milestoneId,
+        address indexed steward,
+        address indexed removedBy
+    );
+
     // Modifiers
     modifier onlyGrantAdmin(uint256 _grantId) {
         require(
@@ -259,6 +379,27 @@ contract MilestoneBasedFunding is Ownable, ReentrancyGuard {
 
     modifier validSiteFee(uint256 _fee) {
         require(_fee >= MIN_SITE_FEE && _fee <= MAX_SITE_FEE, "Site fee must be between 1-5%");
+        _;
+    }
+
+    modifier onlyProjectOwner(uint256 _projectId) {
+        (, address projectOwner,,,,,,) = seas4Contract.getProject(_projectId);
+        require(projectOwner == msg.sender, "Only project owner can call this function");
+        _;
+    }
+
+    modifier validProjectMilestone(uint256 _milestoneId) {
+        require(_milestoneId < nextProjectMilestoneId, "Project milestone does not exist");
+        _;
+    }
+
+    modifier onlyProjectMilestoneApprover(uint256 _milestoneId) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        require(
+            pm.isApprover[msg.sender] || 
+            (pm.allowSiteAdminApproval && seas4Contract.superAdmins(msg.sender)),
+            "Not authorized to approve this milestone"
+        );
         _;
     }
 
@@ -1034,6 +1175,652 @@ contract MilestoneBasedFunding is Ownable, ReentrancyGuard {
             milestone.status == MilestoneStatus.SUBMITTED &&
             block.timestamp >= milestone.reviewDeadline
         );
+    }
+
+    // ============ PROJECT MILESTONE FUNCTIONS ============
+
+    /**
+     * @dev Create a new project milestone
+     * @param _projectId Project ID (must exist in SovSeas)
+     * @param _milestoneType INTERNAL, ASSIGNED, or OPEN
+     * @param _assignedTo Address for ASSIGNED type (ignored for INTERNAL/OPEN)
+     * @param _title Milestone title
+     * @param _description Milestone description
+     * @param _requirements What needs to be done
+     * @param _deadline Deadline timestamp (0 = no deadline)
+     * @param _requiredApprovals Number of approvals needed (default: 1)
+     * @param _allowSiteAdminApproval Can site admin approve?
+     * @param _stewards Array of steward addresses (optional)
+     */
+    function createProjectMilestone(
+        uint256 _projectId,
+        ProjectMilestoneType _milestoneType,
+        address _assignedTo,
+        string memory _title,
+        string memory _description,
+        string memory _requirements,
+        uint256 _deadline,
+        uint256 _requiredApprovals,
+        bool _allowSiteAdminApproval,
+        address[] memory _stewards
+    ) external onlyProjectOwner(_projectId) {
+        require(_projectId < seas4Contract.nextProjectId(), "Project does not exist");
+        (,,,,, bool active,,) = seas4Contract.getProject(_projectId);
+        require(active, "Project is not active");
+        require(bytes(_title).length > 0, "Title required");
+        require(_requiredApprovals > 0, "Required approvals must be > 0");
+
+        uint256 milestoneId = nextProjectMilestoneId++;
+        ProjectMilestone storage pm = projectMilestones[milestoneId];
+        pm.id = milestoneId;
+        pm.projectId = _projectId;
+        pm.milestoneType = _milestoneType;
+        pm.status = ProjectMilestoneStatus.DRAFT;
+        pm.title = _title;
+        pm.description = _description;
+        pm.requirements = _requirements;
+        pm.deadline = _deadline;
+        pm.requiredApprovals = _requiredApprovals;
+        pm.allowSiteAdminApproval = _allowSiteAdminApproval;
+        pm.createdAt = block.timestamp;
+
+        // Set assignment based on type
+        (, address projectOwner,,,,,,) = seas4Contract.getProject(_projectId);
+        if (_milestoneType == ProjectMilestoneType.INTERNAL) {
+            pm.assignedTo = projectOwner;
+        } else if (_milestoneType == ProjectMilestoneType.ASSIGNED) {
+            require(_assignedTo != address(0), "Assigned address required");
+            pm.assignedTo = _assignedTo;
+        }
+        // OPEN type: assignedTo remains address(0) until claimed
+
+        // Add project owner as approver
+        pm.approvers.push(projectOwner);
+        pm.isApprover[projectOwner] = true;
+
+        // Add stewards as approvers
+        for (uint256 i = 0; i < _stewards.length; i++) {
+            if (_stewards[i] != address(0) && !pm.isApprover[_stewards[i]]) {
+                pm.approvers.push(_stewards[i]);
+                pm.isApprover[_stewards[i]] = true;
+                milestoneStewards[milestoneId].push(_stewards[i]);
+                isMilestoneSteward[milestoneId][_stewards[i]] = true;
+            }
+        }
+
+        projectMilestoneIds[_projectId].push(milestoneId);
+        projectHasMilestone[_projectId][milestoneId] = true;
+
+        emit ProjectMilestoneCreated(_projectId, milestoneId, _milestoneType, pm.assignedTo, _title);
+    }
+
+    /**
+     * @dev Fund a project milestone with tokens
+     * @param _milestoneId Milestone ID
+     * @param _tokens Array of token addresses
+     * @param _amounts Array of amounts per token
+     */
+    function fundProjectMilestone(
+        uint256 _milestoneId,
+        address[] memory _tokens,
+        uint256[] memory _amounts
+    ) external payable validProjectMilestone(_milestoneId) nonReentrant {
+        require(_tokens.length == _amounts.length && _tokens.length > 0, "Invalid tokens/amounts");
+        
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        require(
+            pm.status == ProjectMilestoneStatus.DRAFT || pm.status == ProjectMilestoneStatus.ACTIVE,
+            "Milestone not in fundable state"
+        );
+
+        // Calculate total CELO needed
+        uint256 totalCeloNeeded = 0;
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            if (_tokens[i] == address(celoToken)) {
+                totalCeloNeeded += _amounts[i];
+            }
+        }
+
+        // Validate CELO sent if needed
+        if (totalCeloNeeded > 0) {
+            require(msg.value >= totalCeloNeeded, "Insufficient CELO sent");
+        }
+
+        uint256 celoTransferred = 0;
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            address token = _tokens[i];
+            uint256 amount = _amounts[i];
+            
+            require(seas4Contract.supportedTokens(token), "Token not supported");
+            require(amount > 0, "Amount must be greater than 0");
+
+            // Check if token already exists
+            bool tokenExists = false;
+            for (uint256 j = 0; j < pm.supportedTokens.length; j++) {
+                if (pm.supportedTokens[j] == token) {
+                    tokenExists = true;
+                    break;
+                }
+            }
+            
+            if (!tokenExists) {
+                pm.supportedTokens.push(token);
+            }
+
+            // Add to rewards and escrow
+            pm.rewardAmounts[token] += amount;
+            pm.escrowedAmounts[token] += amount;
+
+            // Escrow funds
+            if (token == address(celoToken)) {
+                celoTransferred += amount;
+            } else {
+                IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            }
+
+            emit ProjectMilestoneFunded(_milestoneId, token, amount, msg.sender);
+        }
+
+        // Refund excess CELO
+        if (msg.value > celoTransferred) {
+            payable(msg.sender).transfer(msg.value - celoTransferred);
+        }
+
+        // Activate milestone if it was in DRAFT
+        if (pm.status == ProjectMilestoneStatus.DRAFT) {
+            pm.status = ProjectMilestoneStatus.ACTIVE;
+        }
+    }
+
+    /**
+     * @dev Claim an open milestone
+     * @param _milestoneId Milestone ID
+     */
+    function claimOpenMilestone(uint256 _milestoneId) external validProjectMilestone(_milestoneId) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        require(pm.milestoneType == ProjectMilestoneType.OPEN, "Not an open milestone");
+        require(pm.status == ProjectMilestoneStatus.ACTIVE, "Milestone not active");
+        require(pm.claimedBy == address(0), "Milestone already claimed");
+
+        pm.claimedBy = msg.sender;
+        pm.assignedTo = msg.sender;
+        pm.status = ProjectMilestoneStatus.CLAIMED;
+        pm.claimedAt = block.timestamp;
+
+        if (!hasUserClaimedMilestone[msg.sender][_milestoneId]) {
+            userClaimedMilestones[msg.sender].push(_milestoneId);
+            hasUserClaimedMilestone[msg.sender][_milestoneId] = true;
+        }
+
+        emit OpenMilestoneClaimed(_milestoneId, msg.sender);
+    }
+
+    /**
+     * @dev Submit evidence for milestone completion
+     * @param _milestoneId Milestone ID
+     * @param _evidenceHash IPFS hash of evidence
+     */
+    function submitMilestoneEvidence(
+        uint256 _milestoneId,
+        string memory _evidenceHash
+    ) external validProjectMilestone(_milestoneId) {
+        require(bytes(_evidenceHash).length > 0, "Evidence hash required");
+        
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        
+        // Check if user is authorized to submit
+        if (pm.milestoneType == ProjectMilestoneType.OPEN) {
+            require(pm.claimedBy == msg.sender, "Only claimer can submit");
+            require(pm.status == ProjectMilestoneStatus.CLAIMED, "Milestone not claimed");
+        } else {
+            require(pm.assignedTo == msg.sender, "Only assigned user can submit");
+            require(
+                pm.status == ProjectMilestoneStatus.ACTIVE || pm.status == ProjectMilestoneStatus.REJECTED,
+                "Invalid status for submission"
+            );
+        }
+
+        pm.evidenceHash = _evidenceHash;
+        pm.status = ProjectMilestoneStatus.SUBMITTED;
+        pm.submittedAt = block.timestamp;
+
+        // Reset approvals
+        for (uint256 i = 0; i < pm.approvers.length; i++) {
+            pm.hasApproved[pm.approvers[i]] = false;
+        }
+
+        emit ProjectMilestoneEvidenceSubmitted(_milestoneId, msg.sender, _evidenceHash);
+    }
+
+    /**
+     * @dev Approve a project milestone
+     * @param _milestoneId Milestone ID
+     * @param _message Approval message
+     */
+    function approveProjectMilestone(
+        uint256 _milestoneId,
+        string memory _message
+    ) external onlyProjectMilestoneApprover(_milestoneId) validProjectMilestone(_milestoneId) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        require(pm.status == ProjectMilestoneStatus.SUBMITTED, "Milestone not submitted");
+        require(!pm.hasApproved[msg.sender], "Already approved");
+
+        // Mark as approved (only if not site admin, site admin approval is separate)
+        if (pm.isApprover[msg.sender]) {
+            pm.hasApproved[msg.sender] = true;
+        }
+
+        // Count approvals
+        uint256 approvalCount = 0;
+        for (uint256 i = 0; i < pm.approvers.length; i++) {
+            if (pm.hasApproved[pm.approvers[i]]) {
+                approvalCount++;
+            }
+        }
+
+        // Site admin approval counts as 1 if enabled
+        if (pm.allowSiteAdminApproval && seas4Contract.superAdmins(msg.sender)) {
+            approvalCount++;
+        }
+
+        if (approvalCount >= pm.requiredApprovals) {
+            pm.status = ProjectMilestoneStatus.APPROVED;
+            pm.approvedAt = block.timestamp;
+            pm.approvedBy = msg.sender;
+            pm.approvalMessage = _message;
+            
+            // Release funds
+            _releaseProjectMilestoneFunds(_milestoneId);
+        }
+
+        emit ProjectMilestoneApproved(_milestoneId, msg.sender, _message);
+    }
+
+    /**
+     * @dev Reject a project milestone
+     * @param _milestoneId Milestone ID
+     * @param _message Rejection message
+     */
+    function rejectProjectMilestone(
+        uint256 _milestoneId,
+        string memory _message
+    ) external onlyProjectMilestoneApprover(_milestoneId) validProjectMilestone(_milestoneId) {
+        require(bytes(_message).length > 0, "Rejection message required");
+        
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        require(pm.status == ProjectMilestoneStatus.SUBMITTED, "Milestone not submitted");
+
+        pm.status = ProjectMilestoneStatus.REJECTED;
+        pm.rejectedBy = msg.sender;
+        pm.rejectedAt = block.timestamp;
+        pm.rejectionMessage = _message;
+
+        // Reset approvals
+        for (uint256 i = 0; i < pm.approvers.length; i++) {
+            pm.hasApproved[pm.approvers[i]] = false;
+        }
+
+        emit ProjectMilestoneRejected(_milestoneId, msg.sender, _message);
+    }
+
+    /**
+     * @dev Claim completion rewards for an approved milestone
+     * @param _milestoneId Milestone ID
+     */
+    function claimCompletionRewards(uint256 _milestoneId) external validProjectMilestone(_milestoneId) nonReentrant {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        require(pm.status == ProjectMilestoneStatus.APPROVED, "Milestone not approved");
+        
+        address recipient = pm.milestoneType == ProjectMilestoneType.OPEN ? pm.claimedBy : pm.assignedTo;
+        require(recipient == msg.sender, "Only milestone assignee can claim rewards");
+
+        _releaseProjectMilestoneFunds(_milestoneId);
+    }
+
+    /**
+     * @dev Internal function to release project milestone funds
+     */
+    function _releaseProjectMilestoneFunds(uint256 _milestoneId) internal {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        
+        if (pm.status != ProjectMilestoneStatus.APPROVED) {
+            return;
+        }
+
+        address recipient = pm.milestoneType == ProjectMilestoneType.OPEN ? pm.claimedBy : pm.assignedTo;
+        require(recipient != address(0), "No recipient for milestone");
+
+        bool fundsReleased = false;
+        for (uint256 i = 0; i < pm.supportedTokens.length; i++) {
+            address token = pm.supportedTokens[i];
+            uint256 reward = pm.rewardAmounts[token];
+            
+            if (reward > 0 && pm.escrowedAmounts[token] >= reward) {
+                fundsReleased = true;
+                
+                // Calculate platform fee
+                uint256 platformFee = (reward * projectMilestonePlatformFee) / 100;
+                uint256 recipientAmount = reward - platformFee;
+
+                // Update escrowed amounts
+                pm.escrowedAmounts[token] -= reward;
+
+                // Transfer to recipient
+                if (token == address(celoToken)) {
+                    payable(recipient).transfer(recipientAmount);
+                } else {
+                    IERC20(token).safeTransfer(recipient, recipientAmount);
+                }
+
+                // Collect platform fee
+                if (platformFee > 0) {
+                    address platformOwner = seas4Contract.owner();
+                    if (token == address(celoToken)) {
+                        payable(platformOwner).transfer(platformFee);
+                    } else {
+                        IERC20(token).safeTransfer(platformOwner, platformFee);
+                    }
+                    collectedFees[token] += platformFee;
+                    emit FeeCollected(token, platformFee, "projectMilestoneFee");
+                }
+
+                emit ProjectMilestoneRewardsClaimed(_milestoneId, recipient, token, recipientAmount);
+            }
+        }
+
+        // Mark as paid if funds were released
+        if (fundsReleased) {
+            pm.status = ProjectMilestoneStatus.PAID;
+            pm.paidAt = block.timestamp;
+        }
+    }
+
+    /**
+     * @dev Add a steward to a milestone
+     * @param _milestoneId Milestone ID
+     * @param _steward Steward address
+     */
+    function addMilestoneSteward(
+        uint256 _milestoneId,
+        address _steward
+    ) external validProjectMilestone(_milestoneId) validAddress(_steward) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        (, address projectOwner,,,,,,) = seas4Contract.getProject(pm.projectId);
+        require(projectOwner == msg.sender, "Only project owner can add stewards");
+        require(!pm.isApprover[_steward], "Already an approver");
+
+        pm.approvers.push(_steward);
+        pm.isApprover[_steward] = true;
+        milestoneStewards[_milestoneId].push(_steward);
+        isMilestoneSteward[_milestoneId][_steward] = true;
+
+        emit MilestoneStewardAdded(_milestoneId, _steward, msg.sender);
+    }
+
+    /**
+     * @dev Remove a steward from a milestone
+     * @param _milestoneId Milestone ID
+     * @param _steward Steward address
+     */
+    function removeMilestoneSteward(
+        uint256 _milestoneId,
+        address _steward
+    ) external validProjectMilestone(_milestoneId) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        (, address projectOwner,,,,,,) = seas4Contract.getProject(pm.projectId);
+        require(projectOwner == msg.sender, "Only project owner can remove stewards");
+        require(isMilestoneSteward[_milestoneId][_steward], "Not a steward");
+
+        pm.isApprover[_steward] = false;
+        isMilestoneSteward[_milestoneId][_steward] = false;
+
+        emit MilestoneStewardRemoved(_milestoneId, _steward, msg.sender);
+    }
+
+    /**
+     * @dev Cancel a project milestone and refund funds
+     * @param _milestoneId Milestone ID
+     */
+    function cancelProjectMilestone(uint256 _milestoneId) external validProjectMilestone(_milestoneId) nonReentrant {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        (, address projectOwner,,,,,,) = seas4Contract.getProject(pm.projectId);
+        require(projectOwner == msg.sender, "Only project owner can cancel");
+        require(
+            pm.status == ProjectMilestoneStatus.DRAFT || 
+            pm.status == ProjectMilestoneStatus.ACTIVE ||
+            pm.status == ProjectMilestoneStatus.REJECTED,
+            "Cannot cancel milestone in current state"
+        );
+
+        pm.status = ProjectMilestoneStatus.CANCELLED;
+
+        // Refund all escrowed funds to project owner
+        for (uint256 i = 0; i < pm.supportedTokens.length; i++) {
+            address token = pm.supportedTokens[i];
+            uint256 refundAmount = pm.escrowedAmounts[token];
+            
+            if (refundAmount > 0) {
+                pm.escrowedAmounts[token] = 0;
+
+                if (token == address(celoToken)) {
+                    payable(projectOwner).transfer(refundAmount);
+                } else {
+                    IERC20(token).safeTransfer(projectOwner, refundAmount);
+                }
+            }
+        }
+
+        emit ProjectMilestoneCancelled(_milestoneId, msg.sender);
+    }
+
+    /**
+     * @dev Update platform fee for project milestones (only owner)
+     */
+    function setProjectMilestonePlatformFee(uint256 _fee) external onlyOwner {
+        require(_fee <= 10, "Fee cannot exceed 10%");
+        projectMilestonePlatformFee = _fee;
+    }
+
+    // ============ PROJECT MILESTONE VIEW FUNCTIONS ============
+
+    /**
+     * @dev Get project milestone details
+     */
+    function getProjectMilestone(uint256 _milestoneId) external view returns (
+        uint256 id,
+        uint256 projectId,
+        ProjectMilestoneType milestoneType,
+        ProjectMilestoneStatus status,
+        address assignedTo,
+        address claimedBy,
+        string memory title,
+        string memory description,
+        string memory requirements,
+        string memory evidenceHash,
+        uint256 requiredApprovals,
+        bool allowSiteAdminApproval,
+        uint256 createdAt,
+        uint256 deadline,
+        uint256 claimedAt,
+        uint256 submittedAt,
+        uint256 approvedAt,
+        uint256 paidAt,
+        address[] memory supportedTokens
+    ) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        return (
+            pm.id,
+            pm.projectId,
+            pm.milestoneType,
+            pm.status,
+            pm.assignedTo,
+            pm.claimedBy,
+            pm.title,
+            pm.description,
+            pm.requirements,
+            pm.evidenceHash,
+            pm.requiredApprovals,
+            pm.allowSiteAdminApproval,
+            pm.createdAt,
+            pm.deadline,
+            pm.claimedAt,
+            pm.submittedAt,
+            pm.approvedAt,
+            pm.paidAt,
+            pm.supportedTokens
+        );
+    }
+
+    /**
+     * @dev Get project milestone reward amount for a token
+     */
+    function getProjectMilestoneReward(uint256 _milestoneId, address _token) external view returns (uint256) {
+        return projectMilestones[_milestoneId].rewardAmounts[_token];
+    }
+
+    /**
+     * @dev Get project milestone escrowed amount for a token
+     */
+    function getProjectMilestoneEscrowed(uint256 _milestoneId, address _token) external view returns (uint256) {
+        return projectMilestones[_milestoneId].escrowedAmounts[_token];
+    }
+
+    /**
+     * @dev Get all milestone IDs for a project
+     */
+    function getProjectMilestones(uint256 _projectId) external view returns (uint256[] memory) {
+        return projectMilestoneIds[_projectId];
+    }
+
+    /**
+     * @dev Get milestone approvers
+     */
+    function getMilestoneApprovers(uint256 _milestoneId) external view returns (address[] memory) {
+        return projectMilestones[_milestoneId].approvers;
+    }
+
+    /**
+     * @dev Check if address has approved milestone
+     */
+    function hasApprovedMilestone(uint256 _milestoneId, address _approver) external view returns (bool) {
+        return projectMilestones[_milestoneId].hasApproved[_approver];
+    }
+
+    /**
+     * @dev Get approval count for milestone
+     */
+    function getMilestoneApprovalCount(uint256 _milestoneId) external view returns (uint256) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        uint256 count = 0;
+        for (uint256 i = 0; i < pm.approvers.length; i++) {
+            if (pm.hasApproved[pm.approvers[i]]) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * @dev Get milestone stewards
+     */
+    function getMilestoneStewards(uint256 _milestoneId) external view returns (address[] memory) {
+        return milestoneStewards[_milestoneId];
+    }
+
+    /**
+     * @dev Get milestones claimed by a user
+     */
+    function getUserClaimedMilestones(address _user) external view returns (uint256[] memory) {
+        return userClaimedMilestones[_user];
+    }
+
+    /**
+     * @dev Get project milestone count
+     */
+    function getProjectMilestoneCount() external view returns (uint256) {
+        return nextProjectMilestoneId;
+    }
+
+    /**
+     * @dev Check if user can submit milestone
+     */
+    function canSubmitMilestone(uint256 _milestoneId, address _user) external view returns (bool) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        
+        if (pm.milestoneType == ProjectMilestoneType.OPEN) {
+            return pm.claimedBy == _user && pm.status == ProjectMilestoneStatus.CLAIMED;
+        } else {
+            return pm.assignedTo == _user && 
+                   (pm.status == ProjectMilestoneStatus.ACTIVE || pm.status == ProjectMilestoneStatus.REJECTED);
+        }
+    }
+
+    /**
+     * @dev Check if user can approve milestone
+     */
+    function canApproveMilestone(uint256 _milestoneId, address _user) external view returns (bool) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        return (pm.isApprover[_user] || (pm.allowSiteAdminApproval && seas4Contract.superAdmins(_user))) &&
+               pm.status == ProjectMilestoneStatus.SUBMITTED &&
+               !pm.hasApproved[_user];
+    }
+
+    /**
+     * @dev Check if milestone can be claimed (for open milestones)
+     */
+    function canClaimMilestone(uint256 _milestoneId) external view returns (bool) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        return pm.milestoneType == ProjectMilestoneType.OPEN &&
+               pm.status == ProjectMilestoneStatus.ACTIVE &&
+               pm.claimedBy == address(0);
+    }
+
+    /**
+     * @dev Get project milestone approval details
+     */
+    function getProjectMilestoneApproval(uint256 _milestoneId) external view returns (
+        string memory approvalMessage,
+        address approvedBy,
+        uint256 approvedAt
+    ) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        return (pm.approvalMessage, pm.approvedBy, pm.approvedAt);
+    }
+
+    /**
+     * @dev Get project milestone rejection details
+     */
+    function getProjectMilestoneRejection(uint256 _milestoneId) external view returns (
+        string memory rejectionMessage,
+        address rejectedBy,
+        uint256 rejectedAt
+    ) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        return (pm.rejectionMessage, pm.rejectedBy, pm.rejectedAt);
+    }
+
+    /**
+     * @dev Get all supported tokens for a milestone with their amounts
+     */
+    function getProjectMilestoneTokenDetails(uint256 _milestoneId) external view returns (
+        address[] memory tokens,
+        uint256[] memory rewardAmounts,
+        uint256[] memory escrowedAmounts
+    ) {
+        ProjectMilestone storage pm = projectMilestones[_milestoneId];
+        uint256 length = pm.supportedTokens.length;
+        tokens = new address[](length);
+        rewardAmounts = new uint256[](length);
+        escrowedAmounts = new uint256[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            address token = pm.supportedTokens[i];
+            tokens[i] = token;
+            rewardAmounts[i] = pm.rewardAmounts[token];
+            escrowedAmounts[i] = pm.escrowedAmounts[token];
+        }
+
+        return (tokens, rewardAmounts, escrowedAmounts);
     }
 }
 

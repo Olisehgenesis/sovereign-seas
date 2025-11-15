@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useConnect, injected } from 'wagmi';
-import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User, Anchor, Award } from 'lucide-react';
+import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User, Briefcase, Award, ListChecks } from 'lucide-react';
 import { usePrivy, useConnectOrCreateWallet } from '@privy-io/react-auth';
 import { useActiveWallet } from '@/hooks/useActiveWallet';
 import WalletModal from '@/components/modals/walletModal';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useOpenMilestones } from '@/hooks/useProjectMilestones';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,10 @@ export default function Header() {
   
   // Use Privy hooks for authentication
   const { authenticated, logout, ready } = usePrivy();
+  
+  // Check for open milestones
+  const { openMilestones, isLoading: isLoadingTasks } = useOpenMilestones(true);
+  const hasTasks = openMilestones && openMilestones.length > 0;
   const { connectOrCreateWallet } = useConnectOrCreateWallet({
     onSuccess: async ({ wallet }) => {
       console.log('[Header] connectOrCreateWallet success. Wallet:', wallet?.address);
@@ -198,14 +203,21 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Anchor Points direct tab */}
-              <Link 
-                to="/explorer/leaderboard" 
-                className="text-gray-600 hover:text-black font-medium flex items-center"
-              >
-                <Anchor className="w-4 h-4 mr-2" />
-                Anchor Points
-              </Link>
+              {/* Tasks direct tab */}
+              {hasTasks ? (
+                <Link 
+                  to="/app/tasks" 
+                  className="text-gray-600 hover:text-black font-medium flex items-center"
+                >
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Tasks
+                </Link>
+              ) : (
+                <span className="text-gray-400 font-medium flex items-center cursor-default">
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  {isLoadingTasks ? 'Loading...' : 'Tasks coming soon'}
+                </span>
+              )}
 
               {/* Create Dropdown */}
               <DropdownMenu>
@@ -267,6 +279,18 @@ export default function Header() {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
               
+              {/* Tasks Button */}
+              {authenticated && address && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/app/tasks')}
+                  className="hidden sm:flex border-gray-300 text-black hover:border-gray-400 rounded-full"
+                >
+                  <ListChecks className="w-4 h-4 mr-2" />
+                  <span>Tasks</span>
+                </Button>
+              )}
+
               {/* Wallet Button */}
               {authenticated && address ? (
                 <Button
@@ -387,6 +411,15 @@ export default function Header() {
                           >
                             <User className="w-5 h-5 mr-3" />
                             Profile
+                          </Link>
+                          
+                          <Link
+                            to="/app/tasks"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center px-3 py-2 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                          >
+                            <ListChecks className="w-5 h-5 mr-3" />
+                            Tasks
                           </Link>
                           
                           <button

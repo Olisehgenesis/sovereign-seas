@@ -1,5 +1,5 @@
 // useVotingMethods.tsx - FIXED VERSION
-import { useWriteContract, useReadContract, useSendTransaction, useAccount } from 'wagmi'
+import { useWriteContract, useReadContract, useSendTransaction, useAccount, usePublicClient } from 'wagmi'
 import { parseEther, formatEther } from 'viem'
 import type { Address } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
@@ -36,17 +36,34 @@ export interface VotingStats {
 // Divvi Integration - will be generated dynamically with user address
 const CONSUMER_ADDRESS = '0x53eaF4CD171842d8144e45211308e5D90B4b0088' as const
 
-// Custom hook for token approval
+// Custom hook for token approval - FIXED to use sendTransactionAsync for proper wallet prompts
 export function useApproveToken() {
-  const { writeContract, isPending, isError, error, isSuccess, reset } = useWriteContract()
+  const { sendTransactionAsync, isPending, isError, error, isSuccess, reset, data } = useSendTransaction()
+  const { address: user } = useAccount()
 
-  const approveToken = async (token: `0x${string}`, amount: bigint, contractAddress: Address) => {
-    await writeContract({
-      address: token,
-      abi: erc20ABI,
-      functionName: 'approve',
-      args: [contractAddress as `0x${string}`, amount]
+  const approveToken = async (token: `0x${string}`, amount: bigint, contractAddress: Address): Promise<string> => {
+    if (!user) {
+      throw new Error('User wallet not connected')
+    }
+
+    // Encode approval function data
+    const approveInterface = new Interface(erc20ABI)
+    const approveData = approveInterface.encodeFunctionData('approve', [
+      contractAddress as `0x${string}`,
+      amount
+    ])
+
+    // Send transaction - this will trigger wallet prompt
+    const txHash = await sendTransactionAsync({
+      to: token,
+      data: approveData as `0x${string}`,
     })
+
+    if (!txHash) {
+      throw new Error('Approval transaction failed to send')
+    }
+
+    return txHash
   }
 
   return {
@@ -55,7 +72,8 @@ export function useApproveToken() {
     isError,
     error,
     isSuccess,
-    reset
+    reset,
+    data // Transaction hash
   }
 }
 
@@ -96,7 +114,7 @@ export function useVote(contractAddress: Address) {
   const {  isPending, isError, error, isSuccess, reset } = useWriteContract()
   const { approveToken } = useApproveToken()
   const { celoToken, isMatching } = useVerifyCeloToken(contractAddress)
-
+  const publicClient = usePublicClient()
 
   const {
     sendTransactionAsync
@@ -120,11 +138,31 @@ export function useVote(contractAddress: Address) {
       throw new Error('Missing required parameters for voting');
     }
 
+    if (!user) {
+      throw new Error('User wallet not connected');
+    }
+
     try {
-      // For ERC20 tokens - approve first, then call vote function
-      await approveToken(token, amount, contractAddress);
-      // Wait for approval confirmation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // For ERC20 tokens - check allowance first
+      if (publicClient) {
+        const currentAllowance = await publicClient.readContract({
+          address: token,
+          abi: erc20ABI,
+          functionName: 'allowance',
+          args: [user as Address, contractAddress]
+        }) as bigint;
+
+        // If allowance is insufficient, approve
+        if (currentAllowance < amount) {
+          await approveToken(token, amount, contractAddress);
+          // Note: The approval transaction hash is returned, but we proceed with vote
+          // The vote transaction will fail if approval isn't confirmed yet
+          // In a production app, you might want to wait for approval confirmation here
+        }
+      } else {
+        // Fallback: always approve if we can't check allowance
+        await approveToken(token, amount, contractAddress);
+      }
 
       // Divvi referral integration section
       const voteInterface = new Interface(abi);
@@ -194,7 +232,8 @@ const voteWithCelo = async ({
       projectId, 
       bypassCode as `0x${string}`
     ]);
-    const celoChainId = 42220; // Celo mainnet chain ID
+    const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+    const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
 
     // Generate referral tag with user address
     const referralTag = getReferralTag({

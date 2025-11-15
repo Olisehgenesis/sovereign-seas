@@ -22,6 +22,7 @@ import CreateCampaign from '@/pages/app/campaign/start'
 import CampaignManage from '@/pages/app/campaign/<id>/manage'
 import CampaignEdit from '@/pages/app/campaign/<id>/edit'
 import ProfilePage from '@/pages/app/profile/page'
+import TasksPage from '@/pages/app/tasks/page'
 import BackofficePage from '@/pages/app/backoffice/page'
 import NotFound from '@/pages/404/page'
 
@@ -55,6 +56,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
           <Route path="/app/profile" element={<Layout><ProfilePage /></Layout>} />
           <Route path="/app/me" element={<Navigate to="/app/profile" replace />} />
+          <Route path="/app/tasks" element={<Layout><TasksPage /></Layout>} />
           <Route path="/app/backoffice" element={<Layout><BackofficePage /></Layout>} />
 
           {/* 404 Route */}

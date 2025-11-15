@@ -45,6 +45,8 @@ import {
   Camera,
   Lock,
   ChevronRight,
+  ListChecks,
+  Plus,
 } from 'lucide-react';
 import { Github, Award } from 'lucide-react';
 
@@ -53,9 +55,12 @@ import TipModal from '@/components/TipModal';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import ProjectCampaignsModal from '@/components/modals/ProjectCampaignsModal';
+import CreateProjectMilestoneModal from '@/components/modals/CreateProjectMilestoneModal';
 import PhoneFrame from '@/components/PhoneFrame';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TruncatedText from '@/components/TruncatedText';
+import { useProjectMilestones, ProjectMilestoneStatus, ProjectMilestoneType } from '@/hooks/useProjectMilestones';
+import MilestoneActions from '@/components/MilestoneActions';
 
 // ==================== TYPES ====================
 
@@ -159,7 +164,7 @@ interface CampaignStatus {
   label: string;
 }
 
-type TabId = 'overview' | 'campaigns' | 'technical' | 'team' | 'analytics' | 'admin';
+type TabId = 'overview' | 'campaigns' | 'milestones' | 'technical' | 'team' | 'analytics' | 'admin';
 
 interface Tab {
   id: TabId;
@@ -391,12 +396,14 @@ export default function ProjectView() {
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
+  const [showCreateMilestoneModal, setShowCreateMilestoneModal] = useState(false);
   
   // Data
   const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
   const parsedId = parseIdParam(id);
   const projectId = parsedId ? BigInt(parsedId) : BigInt(0);
   const { project, projectCampaigns, isLoading, error, refetch } = useProjectData(projectId, contractAddress);
+  const { milestones, isLoading: isLoadingMilestones } = useProjectMilestones(projectId, !!projectId);
   // Raw project details for direct access to metadata strings to avoid data loss on update
   const { projectDetails: rawDetails } = useProjectDetails(contractAddress, projectId);
   const { updateProjectMetadata, isPending: isUpdatingGithub } = useUpdateProjectMetadata(contractAddress);
@@ -412,6 +419,7 @@ export default function ProjectView() {
   const tabs: Tab[] = [
     { id: 'overview', label: 'Overview', icon: Eye },
     { id: 'campaigns', label: 'Campaigns', icon: Trophy, badge: project?.campaignIds?.length || 0 },
+    { id: 'milestones', label: 'Milestones', icon: ListChecks, badge: milestones?.length || 0 },
     { id: 'technical', label: 'Technical', icon: Code },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     ...(isOwner ? [{ id: 'admin' as TabId, label: 'Admin', icon: Crown }] : [])
@@ -1173,6 +1181,142 @@ export default function ProjectView() {
                   </div>
                 )}
             </TabsContent>
+
+            {/* Milestones Tab */}
+            <TabsContent value="milestones" className="space-y-4 sm:space-y-6">
+              {isLoadingMilestones ? (
+                <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-12 text-center p-6">
+                  <div className="flex items-center justify-center">
+                    <Clock className="h-6 w-6 animate-spin text-gray-400" />
+                    <span className="ml-2 text-gray-600">Loading milestones...</span>
+                  </div>
+                </div>
+              ) : milestones && milestones.length > 0 ? (
+                <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-8">
+                  <div className="space-y-4 sm:space-y-6">
+                    {milestones.map((milestone) => {
+                      const statusColors = {
+                        [ProjectMilestoneStatus.DRAFT]: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
+                        [ProjectMilestoneStatus.ACTIVE]: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Active' },
+                        [ProjectMilestoneStatus.CLAIMED]: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Claimed' },
+                        [ProjectMilestoneStatus.SUBMITTED]: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Submitted' },
+                        [ProjectMilestoneStatus.APPROVED]: { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved' },
+                        [ProjectMilestoneStatus.REJECTED]: { bg: 'bg-red-100', text: 'text-red-700', label: 'Rejected' },
+                        [ProjectMilestoneStatus.PAID]: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Paid' },
+                        [ProjectMilestoneStatus.CANCELLED]: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Cancelled' },
+                      };
+                      const statusInfo = statusColors[milestone.status] || statusColors[ProjectMilestoneStatus.DRAFT];
+                      const typeLabels = {
+                        [ProjectMilestoneType.INTERNAL]: 'Internal',
+                        [ProjectMilestoneType.ASSIGNED]: 'Assigned',
+                        [ProjectMilestoneType.OPEN]: 'Open',
+                      };
+
+                      return (
+                        <div
+                          key={milestone.id.toString()}
+                          className="p-4 sm:p-6 rounded-xl border border-gray-200 bg-white/80 hover:shadow-lg transition-all duration-200"
+                        >
+                          <div className="flex items-start justify-between mb-3 sm:mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                                <h3 className="font-bold text-gray-900 text-base sm:text-lg">{milestone.title}</h3>
+                                <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.bg} ${statusInfo.text}`}>
+                                  {statusInfo.label}
+                                </div>
+                                <div className="px-2 sm:px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                  {typeLabels[milestone.milestoneType]}
+                                </div>
+                              </div>
+                              <p className="text-gray-600 mb-2 text-sm sm:text-base">{milestone.description}</p>
+                              {milestone.requirements && (
+                                <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+                                  <p className="text-xs font-semibold text-gray-700 mb-1">Requirements:</p>
+                                  <p className="text-xs text-gray-600">{milestone.requirements}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                            {milestone.assignedTo && milestone.assignedTo !== '0x0000000000000000000000000000000000000000' && (
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Assigned To</p>
+                                <p className="font-mono text-xs text-gray-700 break-all">
+                                  {milestone.assignedTo.slice(0, 6)}...{milestone.assignedTo.slice(-4)}
+                                </p>
+                              </div>
+                            )}
+                            {milestone.claimedBy && milestone.claimedBy !== '0x0000000000000000000000000000000000000000' && (
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Claimed By</p>
+                                <p className="font-mono text-xs text-gray-700 break-all">
+                                  {milestone.claimedBy.slice(0, 6)}...{milestone.claimedBy.slice(-4)}
+                                </p>
+                              </div>
+                            )}
+                            {milestone.deadline > 0n && (
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Deadline</p>
+                                <p className="text-xs text-gray-700">
+                                  {new Date(Number(milestone.deadline) * 1000).toLocaleDateString()}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {milestone.supportedTokens && milestone.supportedTokens.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-xs text-gray-500 mb-2">Rewards:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {milestone.supportedTokens.map((token, idx) => (
+                                  <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-mono">
+                                    {token.slice(0, 6)}...{token.slice(-4)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Milestone Actions */}
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <MilestoneActions
+                              milestone={milestone}
+                              projectOwner={project?.owner || '0x0000000000000000000000000000000000000000' as Address}
+                              onActionComplete={() => {
+                                // Refetch milestones
+                                window.location.reload();
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-12 text-center p-6">
+                  <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                    <ListChecks className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">No Milestones Yet</h3>
+                  <p className="text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
+                    {isOwner 
+                      ? "Create milestones to track project progress and reward contributors."
+                      : "This project hasn't created any milestones yet."}
+                  </p>
+                  {isOwner && (
+                    <button
+                      onClick={() => setShowCreateMilestoneModal(true)}
+                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium text-sm sm:text-base"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Milestone
+                    </button>
+                  )}
+                </div>
+              )}
+            </TabsContent>
  
             {/* Technical Tab */}
             <TabsContent value="technical" className="space-y-4 sm:space-y-8">
@@ -1464,6 +1608,13 @@ export default function ProjectView() {
                           <Users className="h-4 w-4" />
                           Manage Team
                         </button>
+                        <button 
+                          onClick={() => setShowCreateMilestoneModal(true)}
+                          className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create Milestone
+                        </button>
              </div>
            </div>
 
@@ -1594,6 +1745,17 @@ export default function ProjectView() {
        // Optionally show a success message or refresh data
      }}
    />
+
+   {/* Create Project Milestone Modal */}
+   <CreateProjectMilestoneModal
+     isOpen={showCreateMilestoneModal}
+     onClose={() => setShowCreateMilestoneModal(false)}
+     projectId={projectId}
+     onSuccess={() => {
+       setShowCreateMilestoneModal(false);
+       // Milestones will refetch automatically via the hook
+     }}
+   />
     </>
- );
+  );
 }

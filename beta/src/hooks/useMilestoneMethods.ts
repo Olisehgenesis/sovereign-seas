@@ -573,9 +573,11 @@ export function useAddValidator(contractAddress: Address) {
   };
 }
 
-// Hook for funding promised grant
+// Hook for funding promised grant (updated with Divvi integration)
 export function useFundPromisedGrant(contractAddress: Address) {
-  const { writeContract, isPending, isError, error, isSuccess } = useWriteContract();
+  const { address: user } = useAccount();
+  const { isPending, isError, error, isSuccess } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const fundPromisedGrant = async ({
     grantId,
@@ -587,21 +589,48 @@ export function useFundPromisedGrant(contractAddress: Address) {
     isERC20?: boolean;
   }) => {
     try {
+      if (!user) {
+        throw new Error('User wallet not connected');
+      }
+
+      // Divvi integration - use executeTransactionWithDivvi utility
       if (isERC20) {
-        await writeContract({
-          address: contractAddress,
+        const result = await executeTransactionWithDivvi(
+          contractAddress,
           abi,
-          functionName: 'fundPromisedGrantERC20',
-          args: [grantId, amount]
-        });
+          'fundPromisedGrantERC20',
+          [grantId, amount],
+          user as Address,
+          sendTransactionAsync
+        );
+
+        logDivviOperation('FUND_PROMISED_GRANT_ERC20', {
+          transactionHash: result,
+          user: user,
+          grantId: grantId.toString(),
+          amount: amount.toString()
+        }, 'success');
+
+        return result;
       } else {
-        await writeContract({
-          address: contractAddress,
+        const result = await executeTransactionWithDivvi(
+          contractAddress,
           abi,
-          functionName: 'fundPromisedGrant',
-          args: [grantId],
-          value: amount
-        });
+          'fundPromisedGrant',
+          [grantId],
+          user as Address,
+          sendTransactionAsync,
+          { value: amount }
+        );
+
+        logDivviOperation('FUND_PROMISED_GRANT', {
+          transactionHash: result,
+          user: user,
+          grantId: grantId.toString(),
+          amount: amount.toString()
+        }, 'success');
+
+        return result;
       }
     } catch (err) {
       console.error('Error funding promised grant:', err);

@@ -10,25 +10,25 @@ async function main() {
     ? process.argv[networkIndex + 1]
     : "celo";
 
-  // Get contract address from environment variable or command line arguments
-  // Check for address in environment variable first, then in process.argv
-  let contractAddress = process.env.MILESTONE_CONTRACT_ADDRESS;
+  // Get contract address from environment variable or HARDHAT_PARAM environment variable
+  // Hardhat doesn't pass extra args to scripts, so we use env vars
+  let contractAddress = process.env.MILESTONE_CONTRACT_ADDRESS || process.env.CONTRACT_ADDRESS;
+  
+  // Also check for address in process.argv (in case it's passed differently)
   if (!contractAddress) {
-    // Try to find address in command line arguments (after script name)
-    const scriptIndex = process.argv.findIndex((arg) => arg.includes("verify-milestone.ts"));
-    if (scriptIndex >= 0 && process.argv[scriptIndex + 1]) {
-      contractAddress = process.argv[scriptIndex + 1];
-    } else {
-      // Look for any argument that looks like an Ethereum address
-      contractAddress = process.argv.find((arg) => arg.startsWith("0x") && arg.length === 42);
-    }
+    // Look for any argument that looks like an Ethereum address
+    contractAddress = process.argv.find((arg) => arg.startsWith("0x") && arg.length === 42);
   }
 
   if (!contractAddress) {
     console.error("Error: Contract address is required");
-    console.error("Usage: pnpm run verify:milestone:celo <CONTRACT_ADDRESS>");
-    console.error("   or: pnpm run verify:milestone:celo-sepolia <CONTRACT_ADDRESS>");
-    console.error("\nExample: pnpm run verify:milestone:celo 0x71c3293127cc83620834c74216c2db7adf9d924c");
+    console.error("\nUsage options:");
+    console.error("  1. Set environment variable:");
+    console.error("     CONTRACT_ADDRESS=0x... pnpm run verify:milestone:celo");
+    console.error("  2. Or use the script with address:");
+    console.error("     CONTRACT_ADDRESS=0x871a316b4b9d198fec679d91cb2de16e5bc5ac4f pnpm run verify:milestone:celo");
+    console.error("\nExample:");
+    console.error("  CONTRACT_ADDRESS=0x871a316b4b9d198fec679d91cb2de16e5bc5ac4f pnpm run verify:milestone:celo");
     process.exit(1);
   }
 

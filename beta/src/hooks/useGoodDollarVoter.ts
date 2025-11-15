@@ -4,6 +4,8 @@ import {
 } from 'viem';
 import type { Address, Hash, TransactionReceipt } from 'viem';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
+import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
+import { Interface } from 'ethers';
 
 // Contract ABIs
 const ERC20_ABI = parseAbi([
@@ -73,6 +75,7 @@ interface UseGoodDollarVoterReturn {
 }
 
 const GOOD_DOLLAR_ADDRESS = '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A';
+const DIVVI_CONSUMER_ADDRESS = '0x53eaF4CD171842d8144e45211308e5D90B4b0088' as const;
 
 export const useGoodDollarVoter = (config: UseGoodDollarVoterConfig): UseGoodDollarVoterReturn => {
   const [contractInfo, setContractInfo] = useState<ContractInfo | null>(null);
@@ -241,14 +244,48 @@ export const useGoodDollarVoter = (config: UseGoodDollarVoterConfig): UseGoodDol
         console.log('Approval confirmed');
       }
 
-      // Execute swap and vote
-      const hash = await walletClient.writeContract({
-        address: config.contractAddress,
-        abi: GOOD_DOLLAR_VOTER_ABI,
-        functionName: 'swapAndVote',
-        args: [campaignId, projectId, gsAmount, minCeloOut, bypassCode as `0x${string}`],
+      // Divvi integration - encode function data and append referral tag
+      const swapInterface = new Interface(GOOD_DOLLAR_VOTER_ABI as any);
+      const swapData = swapInterface.encodeFunctionData('swapAndVote', [
+        campaignId,
+        projectId,
+        gsAmount,
+        minCeloOut,
+        bypassCode as `0x${string}`
+      ]);
+
+      // Generate Divvi referral tag
+      const referralTag = getReferralTag({
+        user: account as Address,
+        consumer: DIVVI_CONSUMER_ADDRESS as Address,
+      });
+
+      // Append referral tag to transaction data
+      const dataWithSuffix = swapData + referralTag;
+
+      // Get chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const chainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
+
+      // Execute swap and vote with Divvi referral tag
+      const hash = await walletClient.sendTransaction({
+        account: account as Address,
+        to: config.contractAddress,
+        data: dataWithSuffix as `0x${string}`,
         gas: 1000000n
       });
+
+      // Submit referral to Divvi
+      try {
+        await submitReferral({
+          txHash: hash as `0x${string}`,
+          chainId: chainId
+        });
+        console.log('✅ Divvi referral submitted for swapAndVote');
+      } catch (referralError) {
+        console.warn('Divvi referral submission error:', referralError);
+        // Don't fail the transaction if Divvi submission fails
+      }
 
       return hash;
     } catch (err) {
@@ -257,7 +294,7 @@ export const useGoodDollarVoter = (config: UseGoodDollarVoterConfig): UseGoodDol
     } finally {
       setLoading(false);
     }
-  }, [walletClient, publicClient, account, config.contractAddress]);
+  }, [walletClient, publicClient, account, config.contractAddress, setLoading, setError]);
 
   // Swap and vote with pool
   const swapAndVoteWithPool = useCallback(async (
@@ -268,19 +305,55 @@ export const useGoodDollarVoter = (config: UseGoodDollarVoterConfig): UseGoodDol
     poolId: bigint,
     bypassCode: string = '0x0000000000000000000000000000000000000000000000000000000000000000'
   ): Promise<Hash> => {
-    if (!walletClient) throw new Error('Wallet not connected');
+    if (!walletClient || !account) throw new Error('Wallet not connected');
 
     setLoading(true);
     setError(null);
 
     try {
-      const hash = await walletClient.writeContract({
-        address: config.contractAddress,
-        abi: GOOD_DOLLAR_VOTER_ABI,
-        functionName: 'swapAndVoteWithPool',
-        args: [campaignId, projectId, gsAmount, minCeloOut, poolId, bypassCode as `0x${string}`],
+      // Divvi integration - encode function data and append referral tag
+      const swapInterface = new Interface(GOOD_DOLLAR_VOTER_ABI as any);
+      const swapData = swapInterface.encodeFunctionData('swapAndVoteWithPool', [
+        campaignId,
+        projectId,
+        gsAmount,
+        minCeloOut,
+        poolId,
+        bypassCode as `0x${string}`
+      ]);
+
+      // Generate Divvi referral tag
+      const referralTag = getReferralTag({
+        user: account as Address,
+        consumer: DIVVI_CONSUMER_ADDRESS as Address,
+      });
+
+      // Append referral tag to transaction data
+      const dataWithSuffix = swapData + referralTag;
+
+      // Get chain ID
+      const isTestnet = import.meta.env.VITE_ENV === 'testnet';
+      const chainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
+
+      // Execute swap and vote with Divvi referral tag
+      const hash = await walletClient.sendTransaction({
+        account: account as Address,
+        to: config.contractAddress,
+        data: dataWithSuffix as `0x${string}`,
         gas: 1000000n
       });
+
+      // Submit referral to Divvi
+      try {
+        await submitReferral({
+          txHash: hash as `0x${string}`,
+          chainId: chainId
+        });
+        console.log('✅ Divvi referral submitted for swapAndVoteWithPool');
+      } catch (referralError) {
+        console.warn('Divvi referral submission error:', referralError);
+        // Don't fail the transaction if Divvi submission fails
+      }
 
       return hash;
     } catch (err) {
@@ -289,7 +362,7 @@ export const useGoodDollarVoter = (config: UseGoodDollarVoterConfig): UseGoodDol
     } finally {
       setLoading(false);
     }
-  }, [walletClient, config.contractAddress]);
+  }, [walletClient, account, config.contractAddress, setLoading, setError]);
 
   // Get quote
   const getQuote = useCallback(async (gsAmount: bigint): Promise<bigint> => {
