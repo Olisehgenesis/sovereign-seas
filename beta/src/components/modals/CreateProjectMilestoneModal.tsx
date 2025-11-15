@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { 
   MobileDialog as Dialog,
@@ -11,10 +10,9 @@ import {
 } from '@/components/ui/mobile-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, X, User, Globe, Lock, Users } from 'lucide-react';
+import { Loader2, X, User, Globe, Lock } from 'lucide-react';
 import { useCreateProjectMilestone, ProjectMilestoneType } from '@/hooks/useProjectMilestones';
 import type { Address } from 'viem';
-import { parseEther } from 'viem';
 
 type CreateProjectMilestoneModalProps = {
   isOpen: boolean;
@@ -29,7 +27,6 @@ export default function CreateProjectMilestoneModal({
   projectId,
   onSuccess
 }: CreateProjectMilestoneModalProps) {
-  const { address } = useAccount();
   const { createProjectMilestone, isPending, error, isSuccess } = useCreateProjectMilestone();
 
   // Form state
