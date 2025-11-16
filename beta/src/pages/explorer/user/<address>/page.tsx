@@ -11,8 +11,6 @@ import {
   Coins,
   Calendar,
   CheckCircle,
-  Clock,
-  XCircle,
   ExternalLink,
   Copy,
   Loader2,
@@ -115,7 +113,7 @@ export default function UserProfilePage() {
           tokenAmounts: result[6] as bigint[],
         };
       })
-      .filter((tip: any) => tip !== null && tip.totalTipsInCelo > 0n);
+      .filter((tip): tip is NonNullable<typeof tip> => tip !== null && tip.totalTipsInCelo > 0n);
   }, [tipSummariesData, userProjects]);
 
   const totalTipsReceived = useMemo(() => {
@@ -361,14 +359,14 @@ export default function UserProfilePage() {
                             </div>
                             <Badge
                               variant={
-                                milestone.status === ProjectMilestoneStatus.COMPLETED
+                                milestone.status === ProjectMilestoneStatus.PAID
                                   ? 'default'
                                   : milestone.status === ProjectMilestoneStatus.APPROVED
                                     ? 'secondary'
                                     : 'outline'
                               }
                             >
-                              {milestone.status === ProjectMilestoneStatus.COMPLETED
+                              {milestone.status === ProjectMilestoneStatus.PAID
                                 ? 'Completed'
                                 : milestone.status === ProjectMilestoneStatus.APPROVED
                                   ? 'Approved'
