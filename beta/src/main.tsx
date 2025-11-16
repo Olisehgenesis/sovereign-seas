@@ -15,6 +15,7 @@ import LeaderboardPage from '@/pages/explorer/leaderboard/page'
 import CampaignsPage from '@/pages/explorer/campaigns/page'
 import GrantsPage from '@/pages/explorer/grants/page'
 import GrantView from '@/pages/explorer/grant/<id>/page'
+import UserProfilePage from '@/pages/explorer/user/<address>/page'
 import CreateGrant from '@/pages/app/grant/create'
 import CreateProject from '@/pages/app/project/start'
 import ProjectEdit from '@/pages/app/project/<id>/edit'
@@ -44,6 +45,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/explorer/campaigns" element={<Layout><CampaignsPage /></Layout>} />
           <Route path="/explorer/grants" element={<Layout><GrantsPage /></Layout>} />
           <Route path="/explorer/grant/:id" element={<Layout><GrantView /></Layout>} />
+          <Route path="/explorer/user/:address" element={<Layout><UserProfilePage /></Layout>} />
           <Route path="/explorer/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
 
           {/* App */}

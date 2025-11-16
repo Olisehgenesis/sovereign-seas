@@ -51,6 +51,7 @@ import {
 import { Github, Award } from 'lucide-react';
 
 import { useProjectDetails, useProjectCampaigns, useUpdateProjectMetadata } from '@/hooks/useProjectMethods';
+import { getMainContractAddress } from '@/utils/contractConfig';
 import TipModal from '@/components/TipModal';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import { formatIpfsUrl } from '@/utils/imageUtils';
@@ -398,8 +399,8 @@ export default function ProjectView() {
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
   const [showCreateMilestoneModal, setShowCreateMilestoneModal] = useState(false);
   
-  // Data
-  const contractAddress = import.meta.env.VITE_CONTRACT_V4 as Address;
+  // Data - Use getMainContractAddress to handle testnet/mainnet properly
+  const contractAddress = getMainContractAddress();
   const parsedId = parseIdParam(id);
   const projectId = parsedId ? BigInt(parsedId) : BigInt(0);
   const { project, projectCampaigns, isLoading, error, refetch } = useProjectData(projectId, contractAddress);
@@ -412,8 +413,46 @@ export default function ProjectView() {
   const [githubSaveError, setGithubSaveError] = useState<string>('');
   const [githubSaved, setGithubSaved] = useState<boolean>(false);
   
-  // Check if user is owner
-  const isOwner = isConnected && address && project && address.toLowerCase() === project.owner?.toLowerCase();
+  // Check if user is owner - More defensive check with proper address comparison
+  const isOwner = useMemo(() => {
+    // Early return if not connected or no address
+    if (!isConnected || !address) {
+      return false;
+    }
+    
+    // Early return if project data is still loading or not available
+    if (isLoading || !project) {
+      return false;
+    }
+    
+    // Early return if project owner is not available
+    if (!project.owner) {
+      console.warn('[ProjectView] Project owner is undefined', { projectId, project });
+      return false;
+    }
+    
+    // Normalize both addresses to lowercase for comparison
+    const normalizedUserAddress = address.toLowerCase().trim();
+    const normalizedOwnerAddress = project.owner.toLowerCase().trim();
+    
+    // Debug logging (can be removed in production)
+    if (normalizedUserAddress === normalizedOwnerAddress) {
+      console.log('[ProjectView] Owner match confirmed', {
+        userAddress: normalizedUserAddress,
+        ownerAddress: normalizedOwnerAddress,
+        projectId: projectId.toString()
+      });
+    } else {
+      console.log('[ProjectView] Owner mismatch', {
+        userAddress: normalizedUserAddress,
+        ownerAddress: normalizedOwnerAddress,
+        projectId: projectId.toString(),
+        addressesMatch: normalizedUserAddress === normalizedOwnerAddress
+      });
+    }
+    
+    return normalizedUserAddress === normalizedOwnerAddress;
+  }, [isConnected, address, project, isLoading, projectId]);
   
   // Constants
   const tabs: Tab[] = [
