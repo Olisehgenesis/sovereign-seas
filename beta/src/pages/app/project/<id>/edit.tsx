@@ -62,6 +62,7 @@ import { uploadToIPFS, formatIpfsUrl } from '@/utils/imageUtils';
 
 interface ProjectFormData {
   id: number;
+  owner: string;
   name: string;
   description: string;
   tagline: string;
@@ -311,6 +312,7 @@ export default function EditProjectDetails() {
 
         const projectData: ProjectFormData = {
           id: Number(projectDetails.project.id),
+          owner: projectDetails.project.owner,
           name: projectDetails.project.name,
           description: projectDetails.project.description,
           tagline: bioData.tagline || '',

@@ -128,6 +128,8 @@ export interface Milestone {
 
 // Project creation form interface
 export interface ProjectFormData {
+  id?: number;
+  owner?: Address;
   // Basic Information
   name: string;
   tagline: string;
