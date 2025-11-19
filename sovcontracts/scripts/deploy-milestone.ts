@@ -1,15 +1,14 @@
 import { network } from "hardhat";
 import { getAddress } from "viem";
 
-// Deployed Seas4 contract addresses
-// Celo Mainnet: https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#code
-const SEAS4_MAINNET_ADDRESS = "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a";
-
 const SEAS4_CONTRACT_ADDRESSES: Record<string, string> = {
-  celo: SEAS4_MAINNET_ADDRESS,
-  // For testnet, use mainnet address by default (or override with SEAS4_SEPOLIA_ADDRESS)
-  celoSepolia: process.env.SEAS4_SEPOLIA_ADDRESS || SEAS4_MAINNET_ADDRESS,
+  // Celo Mainnet: https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#code
+  celo: "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a",
+  // Update if/when Seas4 is deployed on Celo Sepolia
+  celoSepolia: "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a",
 };
+
+const SEAS4_MAINNET_ADDRESS = SEAS4_CONTRACT_ADDRESSES.celo;
 
 async function main() {
   // Get network name from command line arguments

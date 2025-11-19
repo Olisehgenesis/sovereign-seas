@@ -110,6 +110,23 @@ export function getMilestoneContractAddress(): `0x${string}` {
 }
 
 /**
+ * Get the BuilderRewardsNFT contract address with testnet support.
+ * Falls back to the canonical mainnet deployment if env vars are missing.
+ */
+const FALLBACK_BUILDER_REWARDS_ADDRESS = '0x70b8d1b5bD6dC55A060C020915a03a448243966f';
+
+export function getBuilderRewardsContractAddress(): `0x${string}` {
+  const mainnetContract =
+    (import.meta.env.VITE_BUILDER_REWARDS_CONTRACT_ADDRESS as string) ||
+    FALLBACK_BUILDER_REWARDS_ADDRESS;
+  const testnetContract =
+    (import.meta.env.VITE_BUILDER_REWARDS_CONTRACT_ADDRESS_TESTNET as string) ||
+    mainnetContract;
+
+  return getContractAddress(mainnetContract, testnetContract);
+}
+
+/**
  * Get the current chain ID based on environment
  */
 export function getCurrentChainId(): number {

@@ -1,7 +1,10 @@
 import { execSync } from "child_process";
 
-// Deployed Seas4 contract address on Celo Mainnet
-const SEAS4_MAINNET_ADDRESS = "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a";
+const SEAS4_CONTRACT_ADDRESSES: Record<string, string> = {
+  celo: "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a",
+  // Update when Seas4 is deployed on Celo Sepolia
+  celoSepolia: "0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a",
+};
 
 async function main() {
   // Get network name from command line arguments first
@@ -33,10 +36,7 @@ async function main() {
   }
 
   // Get Seas4 address for the network
-  const seas4Address =
-    networkName === "celoSepolia"
-      ? process.env.SEAS4_SEPOLIA_ADDRESS || SEAS4_MAINNET_ADDRESS
-      : SEAS4_MAINNET_ADDRESS;
+  const seas4Address = SEAS4_CONTRACT_ADDRESSES[networkName] || SEAS4_CONTRACT_ADDRESSES.celo;
 
   console.log("Verifying MilestoneBasedFunding contract...");
   console.log("Network:", networkName);

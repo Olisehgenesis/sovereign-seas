@@ -3,9 +3,8 @@ pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 interface ISovereignSeasProjects {
@@ -32,7 +31,6 @@ interface ISovereignSeasProjects {
  *         a 0.5% fee on every sale while protocol + air pools earn 0.3%/0.2%.
  */
 contract BuilderRewardsNFT is ERC1155, AccessControl, ReentrancyGuard, Pausable {
-    using Counters for Counters.Counter;
     using SafeCast for uint256;
 
     bytes32 public constant METADATA_ROLE = keccak256("METADATA_ROLE");
@@ -50,7 +48,7 @@ contract BuilderRewardsNFT is ERC1155, AccessControl, ReentrancyGuard, Pausable 
     address public protocolTreasury;
     address public airTreasury;
 
-    Counters.Counter private _nextBuilderId;
+    uint256 private _nextBuilderId;
 
     struct BuilderSlot {
         address builder;
@@ -136,7 +134,7 @@ contract BuilderRewardsNFT is ERC1155, AccessControl, ReentrancyGuard, Pausable 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(METADATA_ROLE, msg.sender);
 
-        _nextBuilderId.increment(); // start IDs at 1
+        _nextBuilderId = 1; // start IDs at 1
     }
 
     /* -------------------------------------------------------------------------- */
@@ -158,8 +156,8 @@ contract BuilderRewardsNFT is ERC1155, AccessControl, ReentrancyGuard, Pausable 
         uint64 projectCount = _validateAndCountProjects(msg.sender, projectIds);
         uint64 tier = _tierForProjectCount(projectCount);
 
-        builderId = _nextBuilderId.current();
-        _nextBuilderId.increment();
+        builderId = _nextBuilderId;
+        _nextBuilderId++;
 
         builderIds[msg.sender] = builderId;
         builderSlots[builderId] = BuilderSlot({
@@ -233,7 +231,7 @@ contract BuilderRewardsNFT is ERC1155, AccessControl, ReentrancyGuard, Pausable 
         uint256 totalCost = uint256(slot.fragmentPrice) * amount;
         require(msg.value == totalCost, "BuilderRewardsNFT: incorrect payment");
 
-        slot.fragmentsSold += amount;
+        slot.fragmentsSold += uint64(amount);
         _mint(msg.sender, builderId, amount, "");
 
         emit FragmentsPurchased(builderId, msg.sender, amount, slot.fragmentPrice);
@@ -411,11 +409,11 @@ contract BuilderRewardsNFT is ERC1155, AccessControl, ReentrancyGuard, Pausable 
     }
 
     function getBuilderCount() external view returns (uint256) {
-        return _nextBuilderId.current() - 1;
+        return _nextBuilderId - 1;
     }
 
     function getBuilderIds(uint256 offset, uint256 limit) external view returns (uint256[] memory) {
-        uint256 total = _nextBuilderId.current() - 1;
+        uint256 total = _nextBuilderId - 1;
         if (offset >= total || limit == 0) {
             return new uint256[](0);
         }

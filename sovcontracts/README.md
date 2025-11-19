@@ -60,7 +60,7 @@ npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
 
 The MilestoneBasedFunding contract interacts with the deployed SovereignSeasV4 contract:
 - **Celo Mainnet**: [0x0cC096B1cC568A22C1F02DAB769881d1aFE6161a](https://celoscan.io/address/0x0cc096b1cc568a22c1f02dab769881d1afe6161a#code) (hardcoded)
-- **Celo Sepolia**: Set `SEAS4_SEPOLIA_ADDRESS` in your `.env` file if Seas4 is deployed on Sepolia
+- **Celo Sepolia**: Update the constant in `scripts/deploy-milestone.ts` if/when Seas4 is deployed on Sepolia
 
 ### Setting Up Private Keys with dotenvx
 
@@ -85,8 +85,7 @@ PRIVATE_KEY=your_private_key_here_without_0x_prefix
 # CELO_SEPOLIA_RPC_URL=https://celo-sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161
 # CELO_SEPOLIA_RPC_URL=https://forno.celo-sepolia.celo-testnet.org
 
-# Seas4 Contract Addresses (optional - mainnet address is hardcoded)
-# SEAS4_SEPOLIA_ADDRESS=0x... (set if Seas4 is deployed on Celo Sepolia)
+# Seas4 Contract Addresses are hardcoded in the scripts. Update them directly if needed.
 ```
 
 2. **The `.env` file is automatically ignored by git** (already in `.gitignore`)
@@ -134,21 +133,21 @@ pnpm run deploy:milestone:ignition:celo-sepolia
 
 After deployment, verify the contract on both CeloScan and Sourcify:
 
-**Using the verification script:**
+**Using the verification scripts:**
 
-Verify on Celo Mainnet:
-```shell
-pnpm run verify:milestone:celo <CONTRACT_ADDRESS>
-```
+- **MilestoneBasedFunding**
+  - Mainnet: `pnpm run verify:milestone:celo <CONTRACT_ADDRESS>`
+  - Celo Sepolia: `pnpm run verify:milestone:celo-sepolia <CONTRACT_ADDRESS>`
 
-Verify on Celo Sepolia:
-```shell
-pnpm run verify:milestone:celo-sepolia <CONTRACT_ADDRESS>
-```
+- **BuilderRewardsNFT**
+  - Mainnet: `BUILDER_REWARDS_ADDRESS=<CONTRACT_ADDRESS> pnpm run verify:builder-rewards:celo`
+  - Celo Sepolia: `BUILDER_REWARDS_ADDRESS=<CONTRACT_ADDRESS> pnpm run verify:builder-rewards:celo-sepolia`
 
-The verification script will:
+The scripts will:
 1. Verify the contract on CeloScan (requires `CELOSCAN_API_KEY` in `.env`)
 2. Verify the contract on Sourcify (automatic, no API key needed)
+
+> ℹ **BuilderRewards default address:** the verifier falls back to `0x70b8d1b5bD6dC55A060C020915a03a448243966f` on both networks. To verify a different deployment, set `BUILDER_REWARDS_ADDRESS` (or `CONTRACT_ADDRESS`) before running the command.
 
 **Manual verification links:**
 - CeloScan Mainnet: `https://celoscan.io/address/<DEPLOYED_ADDRESS>#code`
