@@ -62,6 +62,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TruncatedText from '@/components/TruncatedText';
 import { useProjectMilestones, ProjectMilestoneStatus, ProjectMilestoneType } from '@/hooks/useProjectMilestones';
 import MilestoneActions from '@/components/MilestoneActions';
+import BuilderSlotCard from '@/components/cards/BuilderSlotCard';
 
 // ==================== TYPES ====================
 
@@ -1102,6 +1103,15 @@ export default function ProjectView() {
                   )}
                 </div>
               </div>
+
+              {/* Builder Rewards NFT Card */}
+              {project?.owner && (
+                <div className="sm:bg-white/30 sm:backdrop-blur-md sm:rounded-3xl sm:shadow-xl sm:border sm:border-white/20 sm:p-8">
+                  <BuilderSlotCard 
+                    ownerAddress={project.owner}
+                  />
+                </div>
+              )}
             </TabsContent>
  
             {/* Campaigns Tab */}
