@@ -4,7 +4,9 @@ import { useWriteContract, useReadContract, useReadContracts, useAccount, useSen
 import { formatEther, type Address, type Abi } from 'viem'
 import { milestoneABI as abi } from '@/abi/milestoneABI'
 import { useState, useEffect, useCallback } from 'react'
-import { executeTransactionWithDivvi, logDivviOperation } from '@/utils/divvi'
+// Only import logDivviOperation at top level (it doesn't require SDK)
+// executeTransactionWithDivvi will be imported lazily in write functions
+import { logDivviOperation } from '@/utils/divvi'
 import { getCeloTokenAddress } from '@/utils/contractConfig'
 
 // Types for better TypeScript support
@@ -154,6 +156,8 @@ export function useCreateGrant(contractAddress: Address) {
         }
       }
 
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -227,6 +231,8 @@ export function useSubmitMilestone(contractAddress: Address) {
     percentage: bigint
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -275,6 +281,8 @@ export function useApproveMilestone(contractAddress: Address) {
     message: string
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -323,6 +331,8 @@ export function useRejectMilestone(contractAddress: Address) {
     message: string
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -369,6 +379,8 @@ export function useCheckAndAutoApproveMilestone(contractAddress: Address) {
     milestoneId: bigint
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -417,6 +429,8 @@ export function useResubmitMilestone(contractAddress: Address) {
     newEvidenceHash: string
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -473,6 +487,8 @@ export function useAddFundsToGrant(contractAddress: Address) {
         }
       }
 
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -523,6 +539,8 @@ export function useWithdrawFundsFromGrant(contractAddress: Address) {
     recipient: Address
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -570,6 +588,8 @@ export function useCancelGrant(contractAddress: Address) {
     refundTo: Address
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -616,6 +636,8 @@ export function useAddGrantAdmin(contractAddress: Address) {
     admin: Address
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,
@@ -662,6 +684,8 @@ export function useRemoveGrantAdmin(contractAddress: Address) {
     admin: Address
   }) => {
     try {
+      // Lazy import to avoid loading Divvi SDK for read operations
+      const { executeTransactionWithDivvi } = await import('@/utils/divvi')
       const result = await executeTransactionWithDivvi(
         contractAddress,
         abi,

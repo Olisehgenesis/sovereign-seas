@@ -1,6 +1,22 @@
 // utils/divvi.ts - Divvi Integration Utility Functions
 
-import { getReferralTag, submitReferral } from '@divvi/referral-sdk';
+// Lazy import Divvi SDK to avoid loading it for read-only operations
+// This prevents dynamic import errors in production builds
+let divviSDK: { getReferralTag: (params: { user: Address; consumer: Address }) => string; submitReferral: (params: { txHash: `0x${string}`; chainId: number }) => Promise<void> } | null = null;
+
+const loadDivviSDK = async () => {
+  if (divviSDK) return divviSDK;
+  
+  try {
+    const { getReferralTag, submitReferral } = await import('@divvi/referral-sdk');
+    divviSDK = { getReferralTag, submitReferral };
+    return divviSDK;
+  } catch (error) {
+    console.warn('Divvi SDK not available:', error);
+    return null;
+  }
+};
+
 import { Interface } from 'ethers';
 import type { Address } from 'viem';
 
@@ -13,18 +29,30 @@ export const getChainId = (): number => {
   return isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
 };
 
-// Generate referral tag for a user
-export const generateReferralTag = (userAddress: Address): string => {
-  return getReferralTag({
+// Generate referral tag for a user (lazy loaded)
+export const generateReferralTag = async (userAddress: Address): Promise<string> => {
+  const sdk = await loadDivviSDK();
+  if (!sdk) {
+    console.warn('Divvi SDK not available, skipping referral tag generation');
+    return '';
+  }
+  
+  return sdk.getReferralTag({
     user: userAddress,
     consumer: DIVVI_CONSUMER_ADDRESS,
   });
 };
 
-// Submit referral to Divvi
+// Submit referral to Divvi (lazy loaded)
 export const submitReferralToDivvi = async (txHash: string, chainId?: number): Promise<void> => {
   try {
-    await submitReferral({
+    const sdk = await loadDivviSDK();
+    if (!sdk) {
+      console.warn('Divvi SDK not available, skipping referral submission');
+      return;
+    }
+    
+    await sdk.submitReferral({
       txHash: txHash as `0x${string}`,
       chainId: chainId || getChainId()
     });
@@ -53,9 +81,9 @@ export const executeTransactionWithDivvi = async (
     const contractInterface = new Interface(abi);
     const functionData = contractInterface.encodeFunctionData(functionName, args);
     
-    // Generate referral tag
-    const referralTag = generateReferralTag(userAddress);
-    const dataWithSuffix = functionData + referralTag;
+    // Generate referral tag (now async)
+    const referralTag = await generateReferralTag(userAddress);
+    const dataWithSuffix = referralTag ? functionData + referralTag : functionData;
     
     // Execute transaction
     const txHash = await sendTransactionAsync({
@@ -96,9 +124,9 @@ export const writeContractWithDivvi = async (
     const contractInterface = new Interface(abi);
     const functionData = contractInterface.encodeFunctionData(functionName, args);
     
-    // Generate referral tag
-    const referralTag = generateReferralTag(userAddress);
-    const dataWithSuffix = functionData + referralTag;
+    // Generate referral tag (now async)
+    const referralTag = await generateReferralTag(userAddress);
+    const dataWithSuffix = referralTag ? functionData + referralTag : functionData;
     
     // Execute transaction
     const txHash = await writeContract({
