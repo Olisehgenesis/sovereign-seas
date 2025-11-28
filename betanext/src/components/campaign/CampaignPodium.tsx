@@ -185,8 +185,8 @@ export const CampaignPodium: React.FC<CampaignPodiumProps> = ({
 
                   {/* Matching Amount */}
                   <div className="text-center">
-                    <div className={`${isMobile ? 'text-[0.65em]' : 'text-sm'} font-extrabold text-[#050505]`}>
-                      ~{matchingAmount.toFixed(1)} CELO
+                    <div className={`${isMobile ? 'text-[0.65em]' : 'text-sm'} font-extrabold text-[#050505] flex items-center justify-center gap-1`}>
+                      ~{matchingAmount.toFixed(1)} <Image src="/images/celo.png" alt="CELO" width={isMobile ? 10 : 14} height={isMobile ? 10 : 14} className="inline-block" />
                     </div>
                     {!isMobile && (
                       <div className="text-[0.65em] font-semibold text-[#050505]/60 uppercase tracking-[0.05em]">matched</div>

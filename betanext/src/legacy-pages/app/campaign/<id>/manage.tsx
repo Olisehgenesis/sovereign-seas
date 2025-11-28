@@ -1328,25 +1328,27 @@ export default function CampaignManagePage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-600">Total Treasury:</span>
-                      <span className="font-semibold text-green-600">{Number(campaign.totalFunds) / 1e18} CELO</span>
+                      <span className="font-semibold text-green-600 flex items-center gap-1">
+                        {Number(campaign.totalFunds) / 1e18} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+                      </span>
                    </div>
                    <div className="flex justify-between items-center">
                      <span className="text-slate-600">Platform Fee (15%):</span>
-                     <span className="font-semibold text-blue-600">
-                       {((Number(campaign.totalFunds) / 1e18) * 0.15).toFixed(2)} CELO
+                     <span className="font-semibold text-blue-600 flex items-center gap-1">
+                       {((Number(campaign.totalFunds) / 1e18) * 0.15).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                      </span>
                    </div>
                    <div className="flex justify-between items-center">
                      <span className="text-slate-600">Admin Fee ({Number(campaign.adminFeePercentage)}%):</span>
-                     <span className="font-semibold text-orange-600">
-                       {((Number(campaign.totalFunds) / 1e18) * (Number(campaign.adminFeePercentage) / 100)).toFixed(2)} CELO
+                     <span className="font-semibold text-orange-600 flex items-center gap-1">
+                       {((Number(campaign.totalFunds) / 1e18) * (Number(campaign.adminFeePercentage) / 100)).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                      </span>
                    </div>
                    <div className="pt-2 border-t border-green-200">
                      <div className="flex justify-between items-center">
                        <span className="text-slate-800 font-medium">Available for Distribution:</span>
-                       <span className="font-bold text-green-700">
-                         {((Number(campaign.totalFunds) / 1e18) * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} CELO
+                       <span className="font-bold text-green-700 flex items-center gap-1">
+                         {((Number(campaign.totalFunds) / 1e18) * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                        </span>
                      </div>
                    </div>
@@ -2235,8 +2237,12 @@ export default function CampaignManagePage() {
                            </div>
                          </div>
                          <div className="text-right">
-                           <div className={`font-bold text-sm ${dist.amount > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
-                             {dist.amount > 0 ? `${dist.amount.toFixed(2)} CELO` : 'No funding'}
+                           <div className={`font-bold text-sm ${dist.amount > 0 ? 'text-blue-600' : 'text-slate-400'} flex items-center justify-end gap-1`}>
+                             {dist.amount > 0 ? (
+                               <>
+                                 {dist.amount.toFixed(2)} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                               </>
+                             ) : 'No funding'}
                            </div>
                            <div className="text-xs text-slate-500">
                              {dist.amount > 0 ? `${dist.percentage.toFixed(1)}%` : '0%'}
@@ -2283,8 +2289,12 @@ export default function CampaignManagePage() {
                            </div>
                          </div>
                          <div className="text-right">
-                           <div className={`font-bold text-sm ${dist.amount > 0 ? 'text-purple-600' : 'text-slate-400'}`}>
-                             {dist.amount > 0 ? `${dist.amount.toFixed(2)} CELO` : 'No funding'}
+                           <div className={`font-bold text-sm ${dist.amount > 0 ? 'text-purple-600' : 'text-slate-400'} flex items-center justify-end gap-1`}>
+                             {dist.amount > 0 ? (
+                               <>
+                                 {dist.amount.toFixed(2)} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                               </>
+                             ) : 'No funding'}
                            </div>
                            <div className="text-xs text-slate-500">
                              {dist.amount > 0 ? `${dist.percentage.toFixed(1)}%` : '0%'}
@@ -2641,24 +2651,26 @@ export default function CampaignManagePage() {
                  <div className="space-y-2 text-sm">
                    <div className="flex justify-between">
                      <span className="text-slate-600">Total Campaign Funds:</span>
-                     <span className="font-semibold text-slate-800">{Number(campaign.totalFunds) / 1e18} CELO</span>
+                     <span className="font-semibold text-slate-800 flex items-center gap-1">
+                       {Number(campaign.totalFunds) / 1e18} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+                     </span>
                    </div>
                    <div className="flex justify-between">
                      <span className="text-slate-600">Platform Fee (15%):</span>
-                     <span className="font-semibold text-blue-600">
-                       -{(Number(campaign.totalFunds) / 1e18 * 0.15).toFixed(2)} CELO
+                     <span className="font-semibold text-blue-600 flex items-center gap-1">
+                       -{(Number(campaign.totalFunds) / 1e18 * 0.15).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                      </span>
                    </div>
                    <div className="flex justify-between">
                      <span className="text-slate-600">Admin Fee ({Number(campaign.adminFeePercentage)}%):</span>
-                     <span className="font-semibold text-orange-600">
-                       -{(Number(campaign.totalFunds) / 1e18 * Number(campaign.adminFeePercentage) / 100).toFixed(2)} CELO
+                     <span className="font-semibold text-orange-600 flex items-center gap-1">
+                       -{(Number(campaign.totalFunds) / 1e18 * Number(campaign.adminFeePercentage) / 100).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                      </span>
                    </div>
                    <div className="flex justify-between font-semibold border-t border-slate-200 pt-2">
                      <span className="text-slate-800">Available for Projects:</span>
-                     <span className="text-green-600">
-                       {(Number(campaign.totalFunds) / 1e18 * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} CELO
+                     <span className="text-green-600 flex items-center gap-1">
+                       {(Number(campaign.totalFunds) / 1e18 * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                      </span>
                    </div>
                  </div>
@@ -2769,24 +2781,26 @@ export default function CampaignManagePage() {
                    <div className="space-y-3 text-sm">
                      <div className="flex justify-between">
                        <span className="text-slate-600">Total Campaign Funds:</span>
-                       <span className="font-semibold text-slate-800">{Number(campaign.totalFunds) / 1e18} CELO</span>
+                       <span className="font-semibold text-slate-800 flex items-center gap-1">
+                         {Number(campaign.totalFunds) / 1e18} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+                       </span>
                      </div>
                      <div className="flex justify-between">
                        <span className="text-slate-600">Platform Fee (15%):</span>
-                       <span className="font-semibold text-blue-600">
-                         -{(Number(campaign.totalFunds) / 1e18 * 0.15).toFixed(2)} CELO
+                       <span className="font-semibold text-blue-600 flex items-center gap-1">
+                         -{(Number(campaign.totalFunds) / 1e18 * 0.15).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                        </span>
                      </div>
                      <div className="flex justify-between">
                        <span className="text-slate-600">Admin Fee ({Number(campaign.adminFeePercentage)}%):</span>
-                       <span className="font-semibold text-orange-600">
-                         -{(Number(campaign.totalFunds) / 1e18 * Number(campaign.adminFeePercentage) / 100).toFixed(2)} CELO
+                       <span className="font-semibold text-orange-600 flex items-center gap-1">
+                         -{(Number(campaign.totalFunds) / 1e18 * Number(campaign.adminFeePercentage) / 100).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                        </span>
                      </div>
                      <div className="border-t border-blue-200 pt-2 flex justify-between font-semibold">
                        <span className="text-slate-800">Available for Projects:</span>
-                       <span className="text-green-600">
-                         {(Number(campaign.totalFunds) / 1e18 * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} CELO
+                       <span className="text-green-600 flex items-center gap-1">
+                         {(Number(campaign.totalFunds) / 1e18 * (1 - 0.15 - Number(campaign.adminFeePercentage) / 100)).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                        </span>
                      </div>
                    </div>
@@ -2839,7 +2853,9 @@ export default function CampaignManagePage() {
                            </div>
                          </div>
                          <div className="text-right text-sm">
-                           <div className="font-bold text-blue-600">{dist.amount.toFixed(2)} CELO</div>
+                           <div className="font-bold text-blue-600 flex items-center justify-end gap-1">
+                             {dist.amount.toFixed(2)} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                           </div>
                            <div className="text-xs text-slate-600">{dist.percentage.toFixed(1)}%</div>
                          </div>
                        </div>
@@ -2873,7 +2889,9 @@ export default function CampaignManagePage() {
                            </div>
                          </div>
                          <div className="text-right text-sm">
-                           <div className="font-bold text-purple-600">{dist.amount.toFixed(2)} CELO</div>
+                           <div className="font-bold text-purple-600 flex items-center justify-end gap-1">
+                             {dist.amount.toFixed(2)} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                           </div>
                            <div className="text-xs text-slate-600">{dist.percentage.toFixed(1)}%</div>
                          </div>
                        </div>

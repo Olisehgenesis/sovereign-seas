@@ -1480,8 +1480,9 @@ export default function CreateCampaign() {
                      <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
                        Payout Token <span className="text-[#ef4444]">*</span>
                      </label>
-                     <div className="px-4 py-3 bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-bold">
-                       CELO (More tokens coming soon)
+                     <div className="px-4 py-3 bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-bold flex items-center gap-2">
+                       <img src="/images/celo.png" alt="CELO" width={20} height={20} className="inline-block" />
+                       <span>(More tokens coming soon)</span>
                      </div>
                    </div>
                    
@@ -1489,8 +1490,9 @@ export default function CreateCampaign() {
                      <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
                        Fee Token <span className="text-[#ef4444]">*</span>
                      </label>
-                     <div className="px-4 py-3 bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-bold">
-                       CELO (More tokens coming soon)
+                     <div className="px-4 py-3 bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-bold flex items-center gap-2">
+                       <img src="/images/celo.png" alt="CELO" width={20} height={20} className="inline-block" />
+                       <span>(More tokens coming soon)</span>
                      </div>
                    </div>
                  </div>

@@ -934,8 +934,8 @@ export default function CreateGrant() {
                         Funds locked upfront
                       </div>
                       {isSecured && securedFeeFormatted && (
-                        <div className="text-xs mt-2 font-semibold">
-                          Fee: {securedFeeFormatted} CELO
+                        <div className="text-xs mt-2 font-semibold flex items-center gap-1 justify-center">
+                          Fee: {securedFeeFormatted} <img src="/images/celo.png" alt="CELO" width={12} height={12} className="inline-block" />
                         </div>
                       )}
                     </button>
@@ -954,8 +954,8 @@ export default function CreateGrant() {
                         Funds added later
                       </div>
                       {!isSecured && promisedFeeFormatted && (
-                        <div className="text-xs mt-2 font-semibold">
-                          Fee: {promisedFeeFormatted} CELO
+                        <div className="text-xs mt-2 font-semibold flex items-center gap-1 justify-center">
+                          Fee: {promisedFeeFormatted} <img src="/images/celo.png" alt="CELO" width={12} height={12} className="inline-block" />
                         </div>
                       )}
                     </button>
@@ -1194,13 +1194,17 @@ export default function CreateGrant() {
                     {isSecured && securedFeeFormatted && (
                       <div className="flex justify-between">
                         <span className="text-[#050505] font-semibold">Creation Fee:</span>
-                        <span className="text-[#050505] font-bold">{securedFeeFormatted} CELO</span>
+                        <span className="text-[#050505] font-bold flex items-center gap-1">
+                          {securedFeeFormatted} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                        </span>
                       </div>
                     )}
                     {!isSecured && promisedFeeFormatted && (
                       <div className="flex justify-between">
                         <span className="text-[#050505] font-semibold">Creation Fee:</span>
-                        <span className="text-[#050505] font-bold">{promisedFeeFormatted} CELO</span>
+                        <span className="text-[#050505] font-bold flex items-center gap-1">
+                          {promisedFeeFormatted} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                        </span>
                       </div>
                     )}
                   </div>

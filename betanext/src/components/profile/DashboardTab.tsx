@@ -4,6 +4,7 @@ import { Plus, Trophy, Compass, TrendingUp, Star, Users, Zap, BarChart3 } from '
 import { formatEther } from 'viem';
 import { StatCard } from './StatCard';
 import { ButtonCool } from '@/components/ui/button-cool';
+import Image from 'next/image';
 
 interface DashboardTabProps {
   navigate: (path: string) => void;
@@ -126,13 +127,21 @@ export const DashboardTab = ({
         <StatCard 
           icon={TrendingUp} 
           label="Total Value" 
-          value={`${userMetrics.totalVoteValue} CELO`} 
+          value={
+            <span className="flex items-center gap-1">
+              {userMetrics.totalVoteValue} <Image src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+            </span>
+          } 
           color="green"
         />
         <StatCard 
           icon={Star} 
           label="Avg. Vote" 
-          value={`${userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} CELO`} 
+          value={
+            <span className="flex items-center gap-1">
+              {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} <Image src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+            </span>
+          } 
           color="yellow"
         />
         <StatCard 
@@ -230,7 +239,9 @@ export const DashboardTab = ({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#2563eb] font-semibold">Total Value</p>
-                    <p className="text-xl font-extrabold text-[#050505]">{userMetrics.totalVoteValue} CELO</p>
+                    <p className="text-xl font-extrabold text-[#050505] flex items-center gap-1">
+                      {userMetrics.totalVoteValue} <Image src="/images/celo.png" alt="CELO" width={20} height={20} className="inline-block" />
+                    </p>
                   </div>
                   <div className="w-10 h-10 bg-[#2563eb] rounded-[0.3em] flex items-center justify-center border-[0.15em] border-[#050505]">
                     <TrendingUp className="h-5 w-5 text-white" />
@@ -242,8 +253,8 @@ export const DashboardTab = ({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#a855f7] font-semibold">Avg. Vote</p>
-                    <p className="text-xl font-extrabold text-[#050505]">
-                      {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} CELO
+                    <p className="text-xl font-extrabold text-[#050505] flex items-center gap-1">
+                      {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} <Image src="/images/celo.png" alt="CELO" width={20} height={20} className="inline-block" />
                     </p>
                   </div>
                   <div className="w-10 h-10 bg-[#a855f7] rounded-[0.3em] flex items-center justify-center border-[0.15em] border-[#050505]">
@@ -296,8 +307,10 @@ export const DashboardTab = ({
                   >
                     <div className="w-2 h-2 bg-[#2563eb] rounded-full border-[0.1em] border-[#050505]"></div>
                     <div className="flex-1">
-                      <span className="text-sm text-[#050505] font-semibold">
-                        Voted {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? 'CELO' : 'cUSD'} on{' '}
+                      <span className="text-sm text-[#050505] font-semibold flex items-center gap-1">
+                        Voted {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? (
+                          <Image src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+                        ) : 'cUSD'} on{' '}
                         <span className="font-extrabold">{project?.project.name || `Project #${vote.projectId}`}</span>
                       </span>
                     </div>

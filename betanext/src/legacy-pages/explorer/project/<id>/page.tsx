@@ -471,13 +471,13 @@ export default function ProjectView() {
             <div className="sm:hidden space-y-1">
               {/* CELO Amount */}
               <div className="flex justify-end">
-                <div className="text-xs text-blue-600 font-medium">
-                  ${projectCampaigns ? 
+                <div className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                  {projectCampaigns ? 
                     projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
                       .reduce((sum, c) => 
                         sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
                       ).toFixed(2) 
-                    : '0.00'} CELO received
+                    : '0.00'} <img src="/images/celo.png" alt="CELO" width={12} height={12} className="inline-block" /> received
                 </div>
               </div>
 
@@ -618,13 +618,13 @@ export default function ProjectView() {
 
                   {/* CELO Amount */}
                   <div className="text-center mb-6">
-                    <div className="text-2xl font-bold text-gray-900">
-                      ${projectCampaigns ? 
+                    <div className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
+                      {projectCampaigns ? 
                         projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
                           .reduce((sum, c) => 
                             sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
                           ).toFixed(2) 
-                        : '0.00'} CELO
+                        : '0.00'} <img src="/images/celo.png" alt="CELO" width={24} height={24} className="inline-block" />
                     </div>
                   </div>
 

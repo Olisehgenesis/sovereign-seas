@@ -171,7 +171,9 @@ export const CampaignProjectCard: React.FC<CampaignProjectCardProps> = ({
                   <Trophy className="w-[0.9em] h-[0.9em] text-white" />
                 </div>
                 <div>
-                  <div className="text-[0.85em] font-semibold text-[#050505]">~{matchingAmount.toFixed(2)} CELO</div>
+                  <div className="text-[0.85em] font-semibold text-[#050505] flex items-center gap-1">
+                    ~{matchingAmount.toFixed(2)} <Image src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                  </div>
                   <div className="text-[0.7em] text-[#050505]/70">matched</div>
                 </div>
               </div>

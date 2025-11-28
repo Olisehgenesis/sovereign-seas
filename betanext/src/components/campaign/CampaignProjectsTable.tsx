@@ -287,8 +287,8 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                     
                     {/* Matching - Hidden on mobile if campaign running */}
                     <td className={`px-0.5 py-2 lg:px-2 lg:py-4 whitespace-nowrap ${!hasEnded ? 'hidden lg:table-cell' : ''}`}>
-                      <div className="text-xs lg:text-sm font-semibold text-green-600">
-                        {matchingAmount.toFixed(2)} CELO
+                      <div className="text-xs lg:text-sm font-semibold text-green-600 flex items-center gap-1">
+                        {matchingAmount.toFixed(2)} <Image src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
                       </div>
                       <div className="text-xs text-gray-500">{hasEnded ? 'funded' : 'estimated'}</div>
                     </td>

@@ -483,8 +483,8 @@ export const BuilderSlotCard: React.FC<BuilderSlotCardProps> = ({
         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Fragment Price</span>
-            <span className="text-lg font-bold text-gray-900">
-              {formatEther(slot.fragmentPrice || 0n)} CELO
+            <span className="text-lg font-bold text-gray-900 flex items-center gap-1">
+              {formatEther(slot.fragmentPrice || 0n)} <img src="/images/celo.png" alt="CELO" width={18} height={18} className="inline-block" />
             </span>
           </div>
           {slot.flowPrice && slot.flowPrice > 0n ? (
@@ -498,8 +498,8 @@ export const BuilderSlotCard: React.FC<BuilderSlotCardProps> = ({
                   </div>
                 </div>
               </div>
-              <span className="text-sm font-semibold text-gray-700">
-                {formatEther(slot.flowPrice)} CELO
+              <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                {formatEther(slot.flowPrice)} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
               </span>
             </div>
           ) : null}
@@ -640,11 +640,15 @@ export const BuilderSlotCard: React.FC<BuilderSlotCardProps> = ({
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Price per Fragment</span>
-                  <span className="font-semibold">{formatEther(slot.fragmentPrice || 0n)} CELO</span>
+                  <span className="font-semibold flex items-center gap-1">
+                    {formatEther(slot.fragmentPrice || 0n)} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                  </span>
                 </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>{formatEther((slot.fragmentPrice || 0n) * BigInt(buyAmount))} CELO</span>
+                  <span className="flex items-center gap-1">
+                    {formatEther((slot.fragmentPrice || 0n) * BigInt(buyAmount))} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+                  </span>
                 </div>
               </div>
 
@@ -749,11 +753,15 @@ export const BuilderSlotCard: React.FC<BuilderSlotCardProps> = ({
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Price per Fragment</span>
-                    <span className="font-semibold">{bidPrice} CELO</span>
+                    <span className="font-semibold flex items-center gap-1">
+                      {bidPrice} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Escrow</span>
-                    <span className="font-semibold">{(parseFloat(bidPrice) * bidAmount).toFixed(4)} CELO</span>
+                    <span className="font-semibold flex items-center gap-1">
+                      {(parseFloat(bidPrice) * bidAmount).toFixed(4)} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                    </span>
                   </div>
                 </div>
               )}
@@ -841,11 +849,15 @@ export const BuilderSlotCard: React.FC<BuilderSlotCardProps> = ({
                             </div>
                             <div>
                               <span className="text-gray-600">Price: </span>
-                              <span className="font-semibold">{bid.pricePerFragmentFormatted} CELO</span>
+                              <span className="font-semibold flex items-center gap-1">
+                                {bid.pricePerFragmentFormatted} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-600">Total: </span>
-                              <span className="font-semibold">{bid.totalValueFormatted} CELO</span>
+                              <span className="font-semibold flex items-center gap-1">
+                                {bid.totalValueFormatted} <img src="/images/celo.png" alt="CELO" width={14} height={14} className="inline-block" />
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-600">Expires: </span>

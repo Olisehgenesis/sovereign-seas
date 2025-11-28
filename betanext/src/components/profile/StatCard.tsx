@@ -5,7 +5,7 @@ import { TrendingUp } from 'lucide-react';
 interface StatCardProps {
   icon: React.ElementType;
   label: string;
-  value: string | number;
+  value: string | number | React.ReactNode;
   color?: string;
   trend?: number | null;
   onClick?: React.MouseEventHandler<HTMLDivElement>;

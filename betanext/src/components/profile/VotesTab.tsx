@@ -3,6 +3,7 @@
 import { Vote, DollarSign, BarChart3, Trophy } from 'lucide-react';
 import { formatEther } from 'viem';
 import { ButtonCool } from '@/components/ui/button-cool';
+import Image from 'next/image';
 
 interface VoteHistoryItem {
   projectId: bigint;
@@ -81,7 +82,9 @@ export const VotesTab = ({
                   <DollarSign className="h-4 w-4 text-[#2563eb]" />
                   <span className="font-extrabold text-[#1e40af] text-sm uppercase tracking-[0.05em]">Total Value</span>
                 </div>
-                <p className="text-xl font-extrabold text-[#2563eb]">{userMetrics.totalVoteValue} CELO</p>
+                <p className="text-xl font-extrabold text-[#2563eb] flex items-center gap-1">
+                  {userMetrics.totalVoteValue} <Image src="/images/celo.png" alt="CELO" width={20} height={20} className="inline-block" />
+                </p>
               </div>
               
               <div className="bg-[#f3e8ff] border-[0.2em] border-[#a855f7] rounded-[0.4em] p-3 shadow-[0.2em_0.2em_0_#000000]">
@@ -89,8 +92,8 @@ export const VotesTab = ({
                   <BarChart3 className="h-4 w-4 text-[#a855f7]" />
                   <span className="font-extrabold text-[#6b21a8] text-sm uppercase tracking-[0.05em]">Avg. Vote</span>
                 </div>
-                <p className="text-xl font-extrabold text-[#a855f7]">
-                  {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} CELO
+                <p className="text-xl font-extrabold text-[#a855f7] flex items-center gap-1">
+                  {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} <Image src="/images/celo.png" alt="CELO" width={20} height={20} className="inline-block" />
                 </p>
               </div>
             </div>
@@ -168,13 +171,15 @@ export const VotesTab = ({
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm font-extrabold text-[#10b981]">
-                            {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? 'CELO' : 'cUSD'}
+                          <div className="flex items-center gap-2 text-sm font-extrabold text-[#10b981]">
+                            {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? (
+                              <Image src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+                            ) : 'cUSD'}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm font-extrabold text-[#050505]">
-                            {formatEther(BigInt(vote.celoEquivalent))} CELO
+                          <div className="flex items-center gap-2 text-sm font-extrabold text-[#050505]">
+                            {formatEther(BigInt(vote.celoEquivalent))} <Image src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
                           </div>
                         </td>
                         <td className="px-4 py-3">

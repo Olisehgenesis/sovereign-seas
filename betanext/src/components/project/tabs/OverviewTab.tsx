@@ -118,12 +118,14 @@ export default function OverviewTab({ project, projectCampaigns }: OverviewTabPr
 
           <div className="prose prose-sm sm:prose-lg prose-gray max-w-none">
             <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-              <strong>{project.name}</strong> has participated in <strong>{project.campaignIds?.length || 0} campaign{project.campaignIds?.length === 1 ? '' : 's'}</strong> and has raised <strong>{projectCampaigns ? 
-                projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
-                  .reduce((sum, c) => 
-                    sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
-                  ).toFixed(2) 
-                : '0.00'} CELO</strong> in total funding.
+              <strong>{project.name}</strong> has participated in <strong>{project.campaignIds?.length || 0} campaign{project.campaignIds?.length === 1 ? '' : 's'}</strong> and has raised               <strong className="inline-flex items-center gap-1">
+                {projectCampaigns ? 
+                  projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
+                    .reduce((sum, c) => 
+                      sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
+                    ).toFixed(2) 
+                  : '0.00'} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+              </strong> in total funding.
             </p>
             
             {project.metadata?.category && project.metadata?.projectType && (

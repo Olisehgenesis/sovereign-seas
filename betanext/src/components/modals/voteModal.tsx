@@ -772,7 +772,9 @@ export default function VoteModal({
                   <div className="space-y-2 text-sm text-[#050505] font-semibold">
                     <div className="flex justify-between">
                       <span>Vote Amount:</span>
-                      <span className="font-extrabold">1.0 CELO</span>
+                      <span className="font-extrabold flex items-center gap-1">
+                        1.0 <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Project:</span>
@@ -964,7 +966,9 @@ export default function VoteModal({
                 <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3">
                   <div className="text-sm text-[#050505] flex items-center font-semibold">
                     <TrendingUp className="h-4 w-4 mr-2" />
-                    <span>≈ {Number(celoEquivalentFormatted).toFixed(2)} CELO voting power</span>
+                    <span className="flex items-center gap-1">
+                      ≈ {Number(celoEquivalentFormatted).toFixed(2)} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" /> voting power
+                    </span>
                   </div>
                 </div>
               )}
@@ -973,7 +977,9 @@ export default function VoteModal({
                 <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3">
                   <div className="text-sm text-[#050505] flex items-center font-semibold">
                     <TrendingUp className="h-4 w-4 mr-2" />
-                    <span>≈ {goodDollarEstimate} CELO voting power</span>
+                    <span className="flex items-center gap-1">
+                      ≈ {goodDollarEstimate} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" /> voting power
+                    </span>
                   </div>
                 </div>
               )}

@@ -3,6 +3,7 @@
 import { BarChart3, Trophy, Coins, Vote } from 'lucide-react';
 import { formatEther } from 'viem';
 import type { EnhancedProject } from '../types';
+import Image from 'next/image';
 
 interface AnalyticsTabProps {
   project: EnhancedProject;
@@ -30,7 +31,7 @@ export default function AnalyticsTab({ project, projectCampaigns }: AnalyticsTab
       </div>
       
       <p className="text-lg text-[#050505] mb-6 font-semibold leading-relaxed">
-        {project.name} has participated in <span className="font-extrabold text-[#2563eb]">{project.campaignIds?.length || 0}</span> campaign{project.campaignIds?.length === 1 ? '' : 's'}, raising a total of <span className="font-extrabold text-[#10b981]">{totalFunding.toFixed(2)} CELO</span> and receiving <span className="font-extrabold text-[#a855f7]">{totalVotes.toFixed(1)}</span> votes from the community.
+        {project.name} has participated in <span className="font-extrabold text-[#2563eb]">{project.campaignIds?.length || 0}</span> campaign{project.campaignIds?.length === 1 ? '' : 's'}, raising a total of <span className="font-extrabold text-[#10b981] flex items-center gap-1 inline-flex">{totalFunding.toFixed(2)} <Image src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" /></span> and receiving <span className="font-extrabold text-[#a855f7]">{totalVotes.toFixed(1)}</span> votes from the community.
       </p>
       
       {/* Stat Cards */}
@@ -49,7 +50,9 @@ export default function AnalyticsTab({ project, projectCampaigns }: AnalyticsTab
           <div className="absolute top-[0.3em] right-[0.3em] text-white text-[1em] font-bold z-[2]">★</div>
           <div className="relative z-[2]">
             <div className="flex items-center justify-center mb-2"><Coins className="h-6 w-6 text-[#10b981]" /></div>
-            <div className="text-3xl font-extrabold text-[#10b981] mb-1">{totalFunding.toFixed(2)} <span className='text-lg'>CELO</span></div>
+            <div className="text-3xl font-extrabold text-[#10b981] mb-1 flex items-center justify-center gap-1">
+              {totalFunding.toFixed(2)} <Image src="/images/celo.png" alt="CELO" width={24} height={24} className="inline-block" />
+            </div>
             <div className="text-sm text-[#050505] font-extrabold uppercase tracking-[0.05em]">Total Funding</div>
           </div>
         </div>

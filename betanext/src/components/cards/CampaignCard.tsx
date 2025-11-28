@@ -330,7 +330,9 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
             
             {/* Price */}
             <div className="relative text-[1.8em] font-extrabold text-[#050505] bg-white">
-              <span className="text-[0.6em] font-bold align-top mr-[0.1em]">CELO</span>
+              <span className="text-[0.6em] font-bold align-top mr-[0.1em] flex items-center gap-1">
+                <Image src="/images/celo.png" alt="CELO" width={12} height={12} className="inline-block" />
+              </span>
               {fundsDisplay}
               <div className="absolute bottom-[0.15em] left-0 w-full h-[0.2em] bg-[#00e0b0] opacity-50 -z-10" />
               <div className="block text-[0.4em] font-semibold text-black/60 mt-[0.2em]">Prize Pool</div>
