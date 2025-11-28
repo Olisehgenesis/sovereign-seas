@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "next dev --port 3003",
-    "build": "NEXT_DISABLE_TURBO=1 next build --webpack",
-    "build:pm2": "NEXT_DISABLE_TURBO=1 next build --webpack && pm2 start ecosystem.config.cjs --env production",
+    "build": " next build --webpack",
+    "build:pm2": " next build --webpack && pm2 start ecosystem.config.cjs --env production",
     "start": "next start",
     "lint": "eslint ."
   },
