@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Loader2, Wallet, Check, Gift, TrendingUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { useAccount, usePublicClient, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, parseEther, type Address } from 'viem';
@@ -168,7 +168,6 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   const [selectedToken, setSelectedToken] = useState<any>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [tipStep, setTipStep] = useState<'idle' | 'approving' | 'tipping' | 'done'>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
   
@@ -191,6 +190,12 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       enabled: !!approveTxHash
     }
   });
+
+  // Compute isProcessing directly instead of using useEffect - moved after hook declarations
+  const isProcessing = useMemo(() => 
+    isTipPending || isCeloTipPending || isApprovePending || isTipConfirming || isApproveConfirming,
+    [isTipPending, isCeloTipPending, isApprovePending, isTipConfirming, isApproveConfirming]
+  );
 
   // Token balances - using same structure as wallet modal
   const [tokenBalances, setTokenBalances] = useState<Array<{
@@ -285,12 +290,12 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     fetchBalances();
   }, [userAddress, publicClient]);
 
-  // Set default token
+  // Set default token when modal opens
   useEffect(() => {
     if (isOpen && !selectedToken && supportedTokens.length > 0) {
       setSelectedToken(supportedTokens[0]);
     }
-  }, [isOpen, selectedToken]);
+  }, [isOpen]); // Removed selectedToken from deps to avoid unnecessary re-runs
 
   // Utility functions
   const getSelectedBalance = () => {
@@ -334,7 +339,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
 
     try {
       setError('');
-      setIsProcessing(true);
+      // isProcessing is now computed from hook states, no need to set manually
       
       const amount = parseEther(tipAmount);
       const isCelo = isCeloToken();
@@ -343,7 +348,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       if (!isCelo) {
         if (!publicClient) {
           setError('Unable to connect to blockchain. Please try again.');
-          setIsProcessing(false);
+          // isProcessing is computed from hook states
           return;
         }
         
@@ -405,7 +410,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       }
       
     } catch (error: any) {
-      setIsProcessing(false);
+      // isProcessing is computed from hook states
       setTipStep('idle');
       
       let errorMessage = 'Tipping failed! Please try again.';
@@ -446,7 +451,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
           }
         } catch (error) {
           console.error('Error sending tip after approval:', error);
-          setIsProcessing(false);
+          // isProcessing is computed from hook states
           setTipStep('idle');
         }
       }
@@ -463,7 +468,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     if (isTipConfirmed && txHash) {
       setTipStep('done');
       setCurrentView('success');
-      setIsProcessing(false);
+      // isProcessing is computed from hook states
       
       // Call success callback
       if (onTipSuccess) {
@@ -481,7 +486,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   useEffect(() => {
     if (tipError || celoTipError) {
       const error = tipError || celoTipError;
-      setIsProcessing(false);
+      // isProcessing is computed from hook states
       setTipStep('idle');
       
       let errorMessage = 'Tipping failed! Please try again.';
@@ -498,17 +503,17 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
     }
   }, [tipError, celoTipError]);
 
-  // Update processing state based on transaction states
+  // Update tipStep based on transaction states
   useEffect(() => {
-    const isAnyPending = isTipPending || isCeloTipPending || isApprovePending || isTipConfirming || isApproveConfirming;
-    setIsProcessing(isAnyPending);
-    
     if (isApprovePending || isApproveConfirming) {
       setTipStep('approving');
     } else if (isTipPending || isCeloTipPending || isTipConfirming) {
       setTipStep('tipping');
+    } else if (!isProcessing) {
+      // Only reset to idle if not processing
+      setTipStep(prev => prev === 'done' ? 'done' : 'idle');
     }
-  }, [isTipPending, isCeloTipPending, isApprovePending, isTipConfirming, isApproveConfirming]);
+  }, [isApprovePending, isApproveConfirming, isTipPending, isCeloTipPending, isTipConfirming, isProcessing]);
 
   // Reset on modal close
   useEffect(() => {
@@ -518,7 +523,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       setSelectedToken(null);
       setMessage('');
       setError('');
-      setIsProcessing(false);
+      // isProcessing is computed from hook states
       setTipStep('idle');
     }
   }, [isOpen]);

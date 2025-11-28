@@ -1110,16 +1110,8 @@ export function useAllCampaigns(contractAddress: Address) {
 
 // Main hook for campaign methods - following the same pattern as useProject
 export function useCampaign(contractAddress: Address, campaignId?: string | number) {
-  const [isInitialized, setIsInitialized] = useState(false)
-  console.log('contractAddress', contractAddress)
-  console.log('campaignId', campaignId)
-
-  // Initialize the hook
-  useEffect(() => {
-    if (contractAddress) {
-      setIsInitialized(true)
-    }
-  }, [contractAddress])
+  // Direct computation instead of useEffect
+  const isInitialized = !!contractAddress
 
   // Get campaign count
   const { campaignCount, isLoading: countLoading, error: countError } = useCampaignCount(contractAddress)

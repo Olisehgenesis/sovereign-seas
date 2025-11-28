@@ -4,6 +4,7 @@ import { useAllProjects } from '@/hooks/useProjectMethods';
 import type { Address } from 'viem';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import { getProjectRoute } from '@/utils/hashids';
+import { ButtonCool } from '@/components/ui/button-cool';
 
 type TeamMember = {
   name?: string;
@@ -92,80 +93,192 @@ const LeaderboardPage = () => {
 
       <div className="min-h-screen">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6 flex items-center gap-2">
-            <Anchor className="h-5 w-5 text-blue-600" />
-            <h1 className="text-xl font-bold text-gray-900">Anchor Points Leaderboard</h1>
+          {/* Header */}
+          <div className="mb-8">
+            <div className="inline-block bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] px-[1.5em] py-[1em]">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-[1.4em] h-[1.4em] flex items-center justify-center bg-[#2563eb] border-[0.12em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_rgba(0,0,0,0.2)]">
+                  <Anchor className="w-[0.9em] h-[0.9em] text-white" />
+                </div>
+                <h1 className="text-2xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">Anchor Points Leaderboard</h1>
+              </div>
+              <p className="text-[#050505] font-semibold text-[0.9em]">Discover projects and their core team at a glance</p>
+            </div>
           </div>
 
           {isLoading && (
             <div className="flex items-center justify-center h-48">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+              <div className="relative bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] px-8 py-6">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-[0.2em] border-[#2563eb] border-t-transparent"></div>
+              </div>
             </div>
           )}
 
           {error && (
-            <div className="text-center text-red-600">Failed to load projects.</div>
+            <div className="group relative w-full max-w-[22em] mx-auto">
+              <div className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2]">
+                <div 
+                  className="relative px-[1.4em] py-[1.4em] text-white font-extrabold text-center border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                  style={{ 
+                    background: '#ef4444',
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                    backgroundBlendMode: 'overlay'
+                  }}
+                >
+                  <span className="text-[1.2em]">Error</span>
+                </div>
+                <div className="relative px-[1.5em] py-[1.5em] z-[2] text-center">
+                  <p className="text-[#050505] text-[0.95em] font-medium">Failed to load projects.</p>
+                </div>
+              </div>
+            </div>
           )}
 
           {!isLoading && !error && (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GitHub</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creator</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team CEO</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Link</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {rows.map(row => (
-                    <tr key={`row-${row.id?.toString()}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{row.name}</span>
-                          <span className="text-xs text-gray-500">ID #{row.id?.toString()}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {row.github ? (
-                          <a href={row.github} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700">
-                            <Github className="h-4 w-4" />
-                            <span className="truncate max-w-[220px] align-middle">{row.github.replace(/^https?:\/\//, '')}</span>
-                          </a>
-                        ) : (
-                          <span className="text-gray-400 text-sm">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <code className="text-xs text-gray-700 break-all">{row.creator}</code>
-                      </td>
-                      <td className="px-4 py-3">
-                        {row.ceoName ? (
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-gray-500" />
-                            <span className="text-gray-900 text-sm">{row.ceoName}</span>
-                            {row.ceoLinkedIn && (
-                              <a href={row.ceoLinkedIn} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 text-xs">LinkedIn</a>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <a
-                          href={getProjectRoute(Number(row.id))}
-                          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+            <div className="group relative w-full">
+              {/* Pattern Overlays */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-30 transition-opacity duration-[400ms] z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              
+              {/* Main Table Container */}
+              <div 
+                className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2]"
+                style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+              >
+                {/* Accent Corner */}
+                <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+                <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr>
+                        <th 
+                          className="px-4 py-3 text-left text-xs font-extrabold text-white uppercase tracking-wider border-b-[0.2em] border-[#050505]"
+                          style={{ 
+                            background: '#2563eb',
+                            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                            backgroundBlendMode: 'overlay'
+                          }}
                         >
-                          View <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          Project
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-left text-xs font-extrabold text-white uppercase tracking-wider border-b-[0.2em] border-[#050505]"
+                          style={{ 
+                            background: '#2563eb',
+                            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                            backgroundBlendMode: 'overlay'
+                          }}
+                        >
+                          GitHub
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-left text-xs font-extrabold text-white uppercase tracking-wider border-b-[0.2em] border-[#050505]"
+                          style={{ 
+                            background: '#2563eb',
+                            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                            backgroundBlendMode: 'overlay'
+                          }}
+                        >
+                          Creator
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-left text-xs font-extrabold text-white uppercase tracking-wider border-b-[0.2em] border-[#050505]"
+                          style={{ 
+                            background: '#2563eb',
+                            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                            backgroundBlendMode: 'overlay'
+                          }}
+                        >
+                          Team CEO
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-right text-xs font-extrabold text-white uppercase tracking-wider border-b-[0.2em] border-[#050505]"
+                          style={{ 
+                            background: '#2563eb',
+                            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                            backgroundBlendMode: 'overlay'
+                          }}
+                        >
+                          Link
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {rows.map((row, index) => (
+                        <tr 
+                          key={`row-${row.id?.toString()}`}
+                          className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                        >
+                          <td className="px-4 py-3 border-b-[0.1em] border-[#050505]">
+                            <div className="flex flex-col">
+                              <span className="font-extrabold text-[#050505] text-[0.9em]">{row.name}</span>
+                              <span className="text-xs text-[#050505] font-medium">ID #{row.id?.toString()}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 border-b-[0.1em] border-[#050505]">
+                            {row.github ? (
+                              <a 
+                                href={row.github} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="inline-flex items-center gap-1 text-[#2563eb] hover:text-[#1d4ed8] font-semibold text-[0.85em] transition-colors"
+                              >
+                                <Github className="h-4 w-4" />
+                                <span className="truncate max-w-[220px] align-middle">{row.github.replace(/^https?:\/\//, '')}</span>
+                              </a>
+                            ) : (
+                              <span className="text-gray-400 text-sm font-medium">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 border-b-[0.1em] border-[#050505]">
+                            <code className="text-xs text-[#050505] break-all font-mono bg-gray-100 px-2 py-1 border-[0.1em] border-[#050505] rounded-[0.2em]">{row.creator}</code>
+                          </td>
+                          <td className="px-4 py-3 border-b-[0.1em] border-[#050505]">
+                            {row.ceoName ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-[1.2em] h-[1.2em] flex items-center justify-center bg-[#2563eb] border-[0.1em] border-[#050505] rounded-[0.2em]">
+                                  <User className="h-[0.8em] w-[0.8em] text-white" />
+                                </div>
+                                <span className="text-[#050505] text-sm font-extrabold">{row.ceoName}</span>
+                                {row.ceoLinkedIn && (
+                                  <a 
+                                    href={row.ceoLinkedIn} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-[#2563eb] hover:text-[#1d4ed8] text-xs font-semibold"
+                                  >
+                                    LinkedIn
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm font-medium">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right border-b-[0.1em] border-[#050505]">
+                            <a
+                              href={getProjectRoute(Number(row.id))}
+                              className="inline-flex items-center gap-1 text-[#2563eb] hover:text-[#1d4ed8] font-extrabold text-[0.85em] transition-colors"
+                            >
+                              View <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Corner Slice */}
+                <div className="absolute bottom-0 left-0 w-[1.5em] h-[1.5em] bg-white border-r-[0.25em] border-t-[0.25em] border-[#050505] rounded-tl-[0.5em] z-[1]" />
+              </div>
             </div>
           )}
         </div>

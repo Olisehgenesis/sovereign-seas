@@ -197,7 +197,8 @@ export default function CreateProject() {
   const { address, walletsReady } = useActiveWallet();
   const publicClient = usePublicClient();
   const { ensureCorrectChain, targetChain } = useChainSwitch();
-  const [isMounted, setIsMounted] = useState(false);
+  // Direct initialization instead of useEffect
+  const [isMounted] = useState(true);
   const { createProject, isSuccess, isPending, error: contractError } = useCreateProject(contractAddress);
   
   // Collapsible sections state
@@ -316,9 +317,6 @@ export default function CreateProject() {
     keyFeatures: ['']
   });
   
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
   
   // Cleanup function for memory management
   useEffect(() => {

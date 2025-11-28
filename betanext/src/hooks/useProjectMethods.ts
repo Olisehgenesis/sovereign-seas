@@ -845,14 +845,8 @@ export function useAllProjects(contractAddress: Address) {
 
 // Main hook for project methods - FIXED VERSION
 export function useProject(contractAddress: Address) {
-  const [isInitialized, setIsInitialized] = useState(false)
-
-  // Initialize the hook
-  useEffect(() => {
-    if (contractAddress) {
-      setIsInitialized(true)
-    }
-  }, [contractAddress])
+  // Direct computation instead of useEffect
+  const isInitialized = !!contractAddress
 
   // Get project count
   const { projectCount, isLoading: countLoading, error: countError } = useProjectCount(contractAddress)

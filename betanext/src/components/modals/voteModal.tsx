@@ -380,19 +380,16 @@ export default function VoteModal({
     fetchBalances();
   }, [address, publicClient]);
 
-  // Set default token
+  // Set default token when modal opens - prioritize CELO
   useEffect(() => {
-    if (isOpen && !selectedToken && goodDollarToken) {
-      setSelectedToken(goodDollarToken.address);
+    if (isOpen && !selectedToken) {
+      if (celoToken) {
+        setSelectedToken(celoToken.address);
+      } else if (goodDollarToken) {
+        setSelectedToken(goodDollarToken.address);
+      }
     }
-  }, [isOpen, goodDollarToken]);
-
-  // Ensure default token is CELO when modal opens
-  useEffect(() => {
-    if (isOpen && celoToken) {
-      setSelectedToken(celoToken.address);
-    }
-  }, [isOpen, celoToken]);
+  }, [isOpen, celoToken, goodDollarToken]); // Removed selectedToken from deps
 
   // Handle GoodDollar estimates
   useEffect(() => {
@@ -406,7 +403,7 @@ export default function VoteModal({
         }
       })();
     }
-  }, [selectedToken, voteAmount, getGoodDollarQuote, goodDollarLoading, goodDollarToken]);
+  }, [selectedToken, voteAmount, goodDollarLoading, goodDollarToken]); // Removed getGoodDollarQuote - should be stable from hook
 
   // Check claim eligibility
   const checkClaimEligibility = async () => {
@@ -584,7 +581,7 @@ export default function VoteModal({
     }
   }, [isPending, isSuccess, onClose, navigate, campaignId]);
 
-  // Reset on modal close
+  // Reset on modal close - optimized dependencies
   useEffect(() => {
     if (!isOpen) {
       setCurrentView('vote');
@@ -601,7 +598,7 @@ export default function VoteModal({
       setGoodDollarEstimate('');
       reset();
     }
-  }, [isOpen, goodDollarToken, reset]);
+  }, [isOpen, goodDollarToken?.address, reset]); // Use goodDollarToken?.address instead of whole object
 
   // Utility functions
   const getSelectedBalance = () => {

@@ -3,7 +3,7 @@ import { useWriteContract, useReadContract, useSendTransaction, useAccount, useP
 import { parseEther, formatEther } from 'viem'
 import type { Address } from 'viem'
 import { contractABI as abi } from '@/abi/seas4ABI'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Interface } from "ethers";
 import { erc20ABI } from "@/abi/erc20ABI"
 
@@ -603,25 +603,36 @@ export function useVotingManager(contractAddress: Address, campaignId: bigint, u
     vote.campaignId === campaignId
   )
 
-  // Calculate voting statistics
-  const calculateVotingStats = useCallback(async () => {
-    if (!user || !campaignId) return
+  // Calculate voting statistics using useMemo instead of useCallback + useEffect
+  const computedVotingStats = useMemo(() => {
+    if (!user || !campaignId) {
+      return {
+        isInitialized: false,
+        hasVoted: false,
+        canVote: false,
+        votingPower: 0n,
+        allocations: [] as VoteAllocation[]
+      }
+    }
 
     const hasVotedInCampaign = campaignVoteHistory.length > 0
-    const totalUserVotes = totalVotes
 
-    setVotingState(prev => ({
-      ...prev,
+    return {
       isInitialized: true,
       hasVoted: hasVotedInCampaign,
       canVote: true, // This would need campaign timing checks
-      votingPower: totalUserVotes
-    }))
+      votingPower: totalVotes,
+      allocations: [] as VoteAllocation[]
+    }
   }, [user, campaignId, campaignVoteHistory.length, totalVotes])
 
+  // Update state when computed stats change
   useEffect(() => {
-    calculateVotingStats()
-  }, [calculateVotingStats])
+    setVotingState(prev => ({
+      ...prev,
+      ...computedVotingStats
+    }))
+  }, [computedVotingStats])
 
   // Helper function to format token amount
   const formatTokenAmount = useCallback((amount: bigint | string | number): string => {
@@ -704,7 +715,7 @@ export function useVotingManager(contractAddress: Address, campaignId: bigint, u
     getTotalAllocatedAmount,
 
     // Actions
-    calculateVotingStats
+    // calculateVotingStats removed - now using computedVotingStats via useMemo
   }
 }
 

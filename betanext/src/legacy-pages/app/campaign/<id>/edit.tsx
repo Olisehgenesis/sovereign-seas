@@ -174,9 +174,88 @@ export default function EditCampaignDetails() {
     isSuccess: updateMetadataSuccess 
   } = useUpdateCampaignMetadata(contractAddress);
   
-  // Initialize campaign state with data from the hook
-  const [originalCampaign, setOriginalCampaign] = useState<CampaignFormData | null>(null);
-  const [campaign, setCampaign] = useState<CampaignFormData | null>(null);
+  // Helper function to parse metadata safely
+  const parseMetadata = (jsonString: string, fallback: any = {}) => {
+    try {
+      return jsonString ? JSON.parse(jsonString) : fallback;
+    } catch (error) {
+      console.warn('Failed to parse metadata:', error);
+      return fallback;
+    }
+  };
+
+  // Helper function to determine campaign status
+  const getCampaignStatus = (startTime: bigint, endTime: bigint, active: boolean): 'upcoming' | 'active' | 'ended' | 'paused' => {
+    const now = Math.floor(Date.now() / 1000);
+    const start = Number(startTime);
+    const end = Number(endTime);
+    
+    if (now < start) {
+      return 'upcoming';
+    } else if (now >= start && now <= end && active) {
+      return 'active';
+    } else if (now > end) {
+      return 'ended';
+    } else {
+      return 'paused';
+    }
+  };
+
+  // Compute initial campaign data from campaignDetails using useMemo
+  const initialCampaignData = useMemo(() => {
+    if (!campaignDetails) return null;
+    const { campaign: campaignData, metadata } = campaignDetails;
+    // Parse metadata
+    const mainInfo = parseMetadata(metadata.mainInfo, {});
+    const additionalInfo = parseMetadata(metadata.additionalInfo, {});
+    return {
+      id: Number(campaignData.id),
+      name: campaignData.name,
+      description: campaignData.description,
+      campaignType: mainInfo.campaignType || 'hackathon',
+      category: mainInfo.category || 'DeFi',
+      tags: mainInfo.tags || [],
+      logo: mainInfo.logo || '',
+      website: mainInfo.website || '',
+      videoLink: mainInfo.videoLink || '',
+      startDate: new Date(Number(campaignData.startTime) * 1000).toISOString().slice(0, 16),
+      endDate: new Date(Number(campaignData.endTime) * 1000).toISOString().slice(0, 16),
+      prizePool: mainInfo.prizePool || '0',
+      maxParticipants: mainInfo.maxParticipants || '0',
+      maxWinners: campaignData.maxWinners.toString(),
+      adminFeePercentage: campaignData.adminFeePercentage.toString(),
+      useQuadraticDistribution: campaignData.useQuadraticDistribution,
+      useCustomDistribution: campaignData.useCustomDistribution,
+      customDistributionNotes: metadata.customDistributionData || '',
+      eligibilityCriteria: additionalInfo.eligibilityCriteria || [''],
+      requirements: additionalInfo.requirements || [''],
+      judgesCriteria: additionalInfo.judgesCriteria || [''],
+      rewards: {
+        distribution: additionalInfo.rewards?.distribution || []
+      },
+      submissionGuidelines: additionalInfo.submissionGuidelines || '',
+      twitter: additionalInfo.social?.twitter || '',
+      discord: additionalInfo.social?.discord || '',
+      telegram: additionalInfo.social?.telegram || '',
+      contactEmail: additionalInfo.contactEmail || '',
+      payoutToken: campaignData.payoutToken,
+      feeToken: campaignData.feeToken,
+      active: campaignData.active,
+      status: getCampaignStatus(campaignData.startTime, campaignData.endTime, campaignData.active)
+    } as CampaignFormData;
+  }, [campaignDetails]);
+
+  // Initialize campaign state with data from the hook using lazy initializer
+  const [originalCampaign, setOriginalCampaign] = useState<CampaignFormData | null>(() => initialCampaignData);
+  const [campaign, setCampaign] = useState<CampaignFormData | null>(() => initialCampaignData);
+  
+  // Update state when initialCampaignData changes (only if not already set)
+  useEffect(() => {
+    if (initialCampaignData && !originalCampaign && !campaign) {
+      setOriginalCampaign(initialCampaignData);
+      setCampaign(initialCampaignData);
+    }
+  }, [initialCampaignData, originalCampaign, campaign]);
   
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -209,82 +288,8 @@ export default function EditCampaignDetails() {
     'Climate', 'Social Impact', 'Research', 'Other'
   ];
 
-  // Helper function to parse metadata safely
-  const parseMetadata = (jsonString: string, fallback: any = {}) => {
-    try {
-      return jsonString ? JSON.parse(jsonString) : fallback;
-    } catch (error) {
-      console.warn('Failed to parse metadata:', error);
-      return fallback;
-    }
-  };
-
-  // Helper function to determine campaign status
-  const getCampaignStatus = (startTime: bigint, endTime: bigint, active: boolean): 'upcoming' | 'active' | 'ended' | 'paused' => {
-    const now = Math.floor(Date.now() / 1000);
-    const start = Number(startTime);
-    const end = Number(endTime);
-    
-    if (now < start) {
-      return 'upcoming';
-    } else if (now >= start && now <= end && active) {
-      return 'active';
-    } else if (now > end) {
-      return 'ended';
-    } else {
-      return 'paused';
-    }
-  };
-
-  useEffect(() => {
-    if (campaignDetails && !originalCampaign && !campaign) {
-      const { campaign: campaignData, metadata } = campaignDetails;
-      // Parse metadata
-      const mainInfo = parseMetadata(metadata.mainInfo, {});
-      const additionalInfo = parseMetadata(metadata.additionalInfo, {});
-      const formattedCampaign: CampaignFormData = {
-        id: Number(campaignData.id),
-        name: campaignData.name,
-        description: campaignData.description,
-        campaignType: mainInfo.campaignType || 'hackathon',
-        category: mainInfo.category || 'DeFi',
-        tags: mainInfo.tags || [],
-        logo: mainInfo.logo || '',
-        website: mainInfo.website || '',
-        videoLink: mainInfo.videoLink || '',
-        startDate: new Date(Number(campaignData.startTime) * 1000).toISOString().slice(0, 16),
-        endDate: new Date(Number(campaignData.endTime) * 1000).toISOString().slice(0, 16),
-        prizePool: mainInfo.prizePool || '0',
-        maxParticipants: mainInfo.maxParticipants || '0',
-        maxWinners: campaignData.maxWinners.toString(),
-        adminFeePercentage: campaignData.adminFeePercentage.toString(),
-        useQuadraticDistribution: campaignData.useQuadraticDistribution,
-        useCustomDistribution: campaignData.useCustomDistribution,
-        customDistributionNotes: metadata.customDistributionData || '',
-        eligibilityCriteria: additionalInfo.eligibilityCriteria || [''],
-        requirements: additionalInfo.requirements || [''],
-        judgesCriteria: additionalInfo.judgesCriteria || [''],
-        rewards: {
-          distribution: additionalInfo.rewards?.distribution || []
-        },
-        submissionGuidelines: additionalInfo.submissionGuidelines || '',
-        twitter: additionalInfo.social?.twitter || '',
-        discord: additionalInfo.social?.discord || '',
-        telegram: additionalInfo.social?.telegram || '',
-        contactEmail: additionalInfo.contactEmail || '',
-        payoutToken: campaignData.payoutToken,
-        feeToken: campaignData.feeToken,
-        active: campaignData.active,
-        status: getCampaignStatus(campaignData.startTime, campaignData.endTime, campaignData.active)
-      };
-      setOriginalCampaign(formattedCampaign);
-      setCampaign(formattedCampaign);
-    }
-  }, [campaignDetails, originalCampaign, campaign]);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  // Remove mount useEffect - use direct initialization
+  const [isMounted] = useState(true);
 
   // Check for changes using useMemo to prevent infinite loops
   const hasChanges = useMemo(() => {

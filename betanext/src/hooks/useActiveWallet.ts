@@ -1,5 +1,5 @@
 import { useWallets } from '@privy-io/react-auth';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 export function useActiveWallet() {
   const { wallets, ready } = useWallets();
@@ -8,13 +8,6 @@ export function useActiveWallet() {
     if (!ready || !wallets || wallets.length === 0) return undefined;
     return wallets[0];
   }, [wallets, ready]);
-
-  // Debug logs for wallet readiness and selection
-  useEffect(() => {
-    // Summarize wallet addresses for concise logging
-    const addresses = (wallets || []).map(w => w.address);
-    console.log('[useActiveWallet] ready:', ready, 'wallets:', addresses, 'primary:', primaryWallet?.address);
-  }, [ready, wallets, primaryWallet?.address]);
 
   const selectConnectedWallet = (desiredAddress?: string) => {
     if (!ready || !wallets || wallets.length === 0) return undefined;
