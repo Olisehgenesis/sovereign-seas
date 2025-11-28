@@ -3,6 +3,7 @@ import { Trophy, CheckCircle, Timer, Activity, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCampaignRoute } from '@/utils/hashids';
 import { capitalizeWords } from '@/utils/textUtils';
+import { extractIpfsCid, fetchIpfsImageObjectUrl } from '@/utils/imageUtils';
 
 interface CampaignCardProps {
   title: string;
@@ -30,6 +31,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState('');
   const [currentStatus, setCurrentStatus] = useState(status);
+  const [resolvedLogo, setResolvedLogo] = useState<string | undefined>(undefined);
 
   // Countdown effect
   useEffect(() => {
@@ -86,6 +88,74 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo?.icon;
 
+  // Resolve IPFS-based logos via IPFS HTTP client; fall back to direct URL for non-IPFS logos
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLogo = async () => {
+      if (!logo) {
+        setResolvedLogo(undefined);
+        return;
+      }
+
+      // If this isn't an IPFS-style value, just use it directly
+      const cid = extractIpfsCid(logo);
+      if (!cid) {
+        setResolvedLogo(logo);
+        return;
+      }
+
+      try {
+        const url = await fetchIpfsImageObjectUrl(logo);
+        if (!cancelled) {
+          setResolvedLogo(url);
+        }
+      } catch (error) {
+        console.error('[CampaignCard] Failed to fetch image via IPFS client, falling back to URL', {
+          error,
+          logo,
+        });
+        if (!cancelled) {
+          setResolvedLogo(logo);
+        }
+      }
+    };
+
+    loadLogo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [logo]);
+
+  // Try a secondary IPFS gateway if the first image URL fails
+  const getFallbackImageUrl = (src: string | undefined | null): string | null => {
+    if (!src) return null;
+    try {
+      const url = new URL(src);
+      const parts = url.pathname.split('/');
+      const ipfsIndex = parts.findIndex((p) => p === 'ipfs');
+      const cid = ipfsIndex !== -1 ? parts[ipfsIndex + 1] : null;
+      if (!cid) return null;
+
+      // Flip between MyFilebase, Pinata and ipfs.io as fallbacks
+      if (url.hostname === 'inner-salmon-leopard.myfilebase.com') {
+        return `https://gateway.pinata.cloud/ipfs/${cid}`;
+      }
+      if (url.hostname === 'gateway.pinata.cloud') {
+        return `https://ipfs.io/ipfs/${cid}`;
+      }
+      if (url.hostname === 'ipfs.io') {
+        return `https://gateway.pinata.cloud/ipfs/${cid}`;
+      }
+
+      // If some other host, keep it simple and try ipfs.io
+      return `https://ipfs.io/ipfs/${cid}`;
+    } catch {
+      return null;
+    }
+  };
+
   const handleCardClick = () => {
     if (campaignId) {
       console.log('Campaign card clicked, navigating to:', getCampaignRoute(Number(campaignId)));
@@ -105,11 +175,26 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
       <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-105">
         {/* Background Logo/Image */}
         <div className="absolute inset-0">
-          {logo ? (
+          {resolvedLogo ? (
             <img 
-              src={logo} 
+              src={resolvedLogo} 
               alt={title}
               className="w-full h-full object-cover brightness-75"
+              onError={(e) => {
+                const originalSrc = e.currentTarget.src;
+                const fallback = getFallbackImageUrl(originalSrc);
+                console.warn('[CampaignCard] image load failed, attempting fallback', {
+                  campaignId,
+                  originalSrc,
+                  fallback,
+                });
+                if (fallback && fallback !== originalSrc) {
+                  e.currentTarget.src = fallback;
+                } else {
+                  // Hide broken image and let gradient background show
+                  e.currentTarget.style.display = 'none';
+                }
+              }}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">

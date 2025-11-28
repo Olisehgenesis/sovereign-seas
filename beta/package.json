@@ -17,6 +17,8 @@
     "@goodsdks/citizen-sdk": "^1.2.0",
     "@goodsdks/engagement-sdk": "^1.0.1",
     "@headlessui/react": "^2.2.7",
+    "@helia/http": "^3.0.11",
+    "@helia/unixfs": "^6.0.3",
     "@privy-io/react-auth": "^2.24.0",
     "@privy-io/wagmi": "^1.0.6",
     "@radix-ui/react-dialog": "^1.1.15",

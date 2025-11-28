@@ -286,10 +286,20 @@ const HomePage = () => {
               const status = getCampaignStatus(campaign);
               
               let logo;
+              let rawLogo;
               try {
                 const additionalInfo = JSON.parse(campaignDetails.metadata?.additionalInfo || '{}');
-                logo = (additionalInfo as any).logo || (additionalInfo as any).media?.logo;
-                if (logo) logo = formatIpfsUrl(logo);
+                rawLogo = (additionalInfo as any).logo || (additionalInfo as any).media?.logo;
+                logo = rawLogo;
+                if (logo) {
+                  logo = formatIpfsUrl(logo);
+                  console.log('[HomePage] Campaign card logo URL', {
+                    source: 'desktop',
+                    campaignId: campaign.id?.toString?.() ?? campaign.id,
+                    rawLogo,
+                    formattedLogo: logo,
+                  });
+                }
               } catch {
                 logo = undefined;
               }
@@ -310,10 +320,20 @@ const HomePage = () => {
             {/* Project Cards */}
             {featuredProjects.map((projectDetails) => {
               let logo, location;
+              let rawLogo;
               try {
                 const additionalData = JSON.parse(projectDetails.metadata?.additionalData || '{}');
-                logo = additionalData.media?.logo || additionalData.logo;
-                if (logo) logo = formatIpfsUrl(logo);
+                rawLogo = additionalData.media?.logo || additionalData.logo;
+                logo = rawLogo;
+                if (logo) {
+                  logo = formatIpfsUrl(logo);
+                  console.log('[HomePage] Project card logo URL', {
+                    source: 'desktop',
+                    projectId: projectDetails.project.id?.toString?.() ?? projectDetails.project.id,
+                    rawLogo,
+                    formattedLogo: logo,
+                  });
+                }
                 
                 const bioData = JSON.parse(projectDetails.metadata?.bio || '{}');
                 location = bioData.location;
@@ -346,10 +366,20 @@ const HomePage = () => {
                 const status = getCampaignStatus(campaign);
                 
                 let logo;
+                let rawLogo;
                 try {
                   const additionalInfo = JSON.parse(campaignDetails.metadata?.additionalInfo || '{}');
-                  logo = (additionalInfo as any).logo || (additionalInfo as any).media?.logo;
-                  if (logo) logo = formatIpfsUrl(logo);
+                  rawLogo = (additionalInfo as any).logo || (additionalInfo as any).media?.logo;
+                  logo = rawLogo;
+                  if (logo) {
+                    logo = formatIpfsUrl(logo);
+                    console.log('[HomePage] Campaign card logo URL', {
+                      source: 'mobile',
+                      campaignId: campaign.id?.toString?.() ?? campaign.id,
+                      rawLogo,
+                      formattedLogo: logo,
+                    });
+                  }
                 } catch {
                   logo = undefined;
                 }
@@ -386,10 +416,20 @@ const HomePage = () => {
             <div className="grid grid-cols-1 gap-8">
               {featuredProjects.map((projectDetails) => {
                 let logo, location;
+                let rawLogo;
                 try {
                   const additionalData = JSON.parse(projectDetails.metadata?.additionalData || '{}');
-                  logo = additionalData.media?.logo || additionalData.logo;
-                  if (logo) logo = formatIpfsUrl(logo);
+                  rawLogo = additionalData.media?.logo || additionalData.logo;
+                  logo = rawLogo;
+                  if (logo) {
+                    logo = formatIpfsUrl(logo);
+                    console.log('[HomePage] Project card logo URL', {
+                      source: 'mobile',
+                      projectId: projectDetails.project.id?.toString?.() ?? projectDetails.project.id,
+                      rawLogo,
+                      formattedLogo: logo,
+                    });
+                  }
                   
                   const bioData = JSON.parse(projectDetails.metadata?.bio || '{}');
                   location = bioData.location;
