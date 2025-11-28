@@ -16,6 +16,7 @@ import Stepper from '@/components/ui/stepper';
 import { getMainContractAddress } from '@/utils/contractConfig';
 import EngagementRewardsCard from '@/components/cards/EngagementRewardsCard';
 import GlobeCoverage from '@/components/GlobeCoverage';
+import { Button } from '@/components/ui/button';
 
 // Helper function to determine campaign status
 const getCampaignStatus = (campaign: any): 'upcoming' | 'active' | 'ended' | 'paused' => {
@@ -214,19 +215,22 @@ export default function HomePage() {
               
               {/* CTA Buttons - Side by side on mobile */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:gap-4 mt-4 sm:mt-6">
-                <button 
+                <Button 
                   onClick={() => router.push('/app/project/start')}
-                  className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-2 sm:px-5 lg:px-6 py-1.5 sm:py-2.5 lg:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm lg:text-base flex items-center justify-center"
+                  variant="secondary"
+                  size="default"
+                  className="flex items-center justify-center"
                 >
                   Create Project
                   <ChevronRight className="ml-1 sm:ml-2 w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <button 
+                </Button>
+                <Button 
                   onClick={() => router.push('/app/campaign/start')}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-2 sm:px-5 lg:px-6 py-1.5 sm:py-2.5 lg:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm lg:text-base"
+                  variant="primary"
+                  size="default"
                 >
                   Host a Campaign
-                </button>
+                </Button>
               </div>
 
               {/* Stats Words - Single line on mobile */}

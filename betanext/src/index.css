@@ -125,3 +125,113 @@
     font-family: 'Google Sans Code', 'Roboto Mono', 'Roboto', monospace, system-ui, -apple-system, 'Segoe UI', sans-serif !important;
   }
 }
+
+@layer components {
+  .button-89 {
+    --b: 3px;   /* border thickness */
+    --s: .45em; /* size of the corner */
+    --color: #2563eb; /* primary color - blue-600 */
+    --color-hover: #1d4ed8; /* blue-700 for hover */
+    
+    padding: calc(.5em + var(--s)) calc(.9em + var(--s));
+    color: var(--color);
+    --_p: var(--s);
+    background:
+      conic-gradient(from 90deg at var(--b) var(--b),#0000 90deg,var(--color) 0)
+      var(--_p) var(--_p)/calc(100% - var(--b) - 2*var(--_p)) calc(100% - var(--b) - 2*var(--_p));
+    transition: .3s linear, color 0s, background-color 0s, box-shadow 0.3s ease;
+    outline: var(--b) solid #0000;
+    outline-offset: .6em;
+    font-size: 14px;
+    font-weight: 500;
+    border: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    position: relative;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .button-89:hover,
+  .button-89:focus-visible {
+    --_p: 0px;
+    outline-color: var(--color);
+    outline-offset: .05em;
+    color: var(--color);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3), 0 2px 4px rgba(37, 99, 235, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .button-89:active {
+    background: var(--color);
+    color: #fff;
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  }
+
+  .button-89.h-8 {
+    font-size: 12px;
+    --s: .4em;
+    padding: calc(.4em + var(--s)) calc(.7em + var(--s));
+  }
+
+  .button-89.h-10 {
+    font-size: 16px;
+    --s: .5em;
+    padding: calc(.6em + var(--s)) calc(1em + var(--s));
+  }
+
+  .button-89-secondary {
+    --b: 3px;
+    --s: .45em;
+    --color: #4b5563; /* secondary color - gray-600 */
+    --color-hover: #374151; /* gray-700 for hover */
+    
+    padding: calc(.5em + var(--s)) calc(.9em + var(--s));
+    color: var(--color);
+    --_p: var(--s);
+    background:
+      conic-gradient(from 90deg at var(--b) var(--b),#0000 90deg,var(--color) 0)
+      var(--_p) var(--_p)/calc(100% - var(--b) - 2*var(--_p)) calc(100% - var(--b) - 2*var(--_p));
+    transition: .3s linear, color 0s, background-color 0s, box-shadow 0.3s ease;
+    outline: var(--b) solid #0000;
+    outline-offset: .6em;
+    font-size: 14px;
+    font-weight: 500;
+    border: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    position: relative;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .button-89-secondary:hover,
+  .button-89-secondary:focus-visible {
+    --_p: 0px;
+    outline-color: var(--color);
+    outline-offset: .05em;
+    color: var(--color);
+    box-shadow: 0 4px 12px rgba(75, 85, 99, 0.25), 0 2px 4px rgba(75, 85, 99, 0.15);
+    transform: translateY(-1px);
+  }
+
+  .button-89-secondary:active {
+    background: var(--color);
+    color: #fff;
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(75, 85, 99, 0.15);
+  }
+
+  .button-89-secondary.h-8 {
+    font-size: 12px;
+    --s: .4em;
+    padding: calc(.4em + var(--s)) calc(.7em + var(--s));
+  }
+
+  .button-89-secondary.h-10 {
+    font-size: 16px;
+    --s: .5em;
+    padding: calc(.6em + var(--s)) calc(1em + var(--s));
+  }
+}

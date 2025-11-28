@@ -139,10 +139,11 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
       className={`group relative ${className} cursor-pointer`}
       onClick={handleCardClick}
       onMouseDown={() => console.log('Campaign card mouse down, campaignId:', campaignId)}
+      style={{ pointerEvents: 'auto' }}
     >
-      <div className="relative">
+      <div className="relative" style={{ pointerEvents: 'auto' }}>
         {/* Elevated face */}
-        <div className="relative z-10 h-64 rounded-3xl overflow-hidden bg-gray-900 shadow-2xl transition duration-500 group-hover:-translate-y-6 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.6)]">
+        <div className="relative z-10 h-64 rounded-3xl overflow-hidden bg-gray-900 shadow-2xl transition duration-500 group-hover:-translate-y-6 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.6)]" style={{ pointerEvents: 'auto' }}>
           <div className="absolute inset-0">
             {imageSrc ? (
               <Image
@@ -208,7 +209,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
         </div>
 
         {/* Supporting face */}
-        <div className="absolute inset-x-3 -bottom-10 rounded-3xl bg-white shadow-[0_25px_60px_rgba(0,0,0,0.35)] transition duration-500 group-hover:-translate-y-2">
+        <div className="absolute inset-x-3 -bottom-10 rounded-3xl bg-white shadow-[0_25px_60px_rgba(0,0,0,0.35)] transition duration-500 group-hover:-translate-y-2" style={{ pointerEvents: 'none' }}>
           <div className="p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex flex-col">
@@ -234,6 +235,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
                   }
                 }}
                 className="w-10 h-10 rounded-full border border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-colors flex items-center justify-center"
+                style={{ pointerEvents: 'auto' }}
                 aria-label="View campaign details"
               >
                 <ArrowRight className="h-4 w-4" />

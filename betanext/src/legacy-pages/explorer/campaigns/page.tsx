@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from '@/utils/nextAdapter';
 import { 
   Search,
@@ -92,7 +92,6 @@ export default function CampaignsPage() {
   const navigate = useNavigate();
   const [isMounted, setIsMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [processedCampaigns, setProcessedCampaigns] = useState<EnhancedCampaign[]>([]);
 
   // Get campaigns data
   const { campaigns, isLoading, error } = useAllCampaigns(CONTRACT_ADDRESS);
@@ -101,9 +100,9 @@ export default function CampaignsPage() {
     setIsMounted(true);
   }, []);
 
-  // Process campaigns data
-  useEffect(() => {
-    if (!campaigns) return;
+  // Process campaigns data using useMemo to prevent infinite loops
+  const processedCampaigns = useMemo(() => {
+    if (!campaigns) return [];
 
     const enhanced = campaigns.map(campaignDetails => {
       const parsedMetadata = parseCampaignMetadata(campaignDetails);
@@ -146,7 +145,7 @@ export default function CampaignsPage() {
       return Number(b.startTime) - Number(a.startTime);
     });
 
-    setProcessedCampaigns(filtered);
+    return filtered;
   }, [campaigns, searchTerm]);
 
   if (!isMounted) {
@@ -241,6 +240,15 @@ export default function CampaignsPage() {
                 logo = undefined;
               }
               
+              // Ensure campaignId is properly converted to string
+              const campaignId = campaign.id?.toString ? campaign.id.toString() : String(campaign.id);
+              
+              console.log('[CampaignsPage] Rendering campaign card:', { 
+                id: campaign.id, 
+                campaignId, 
+                name: campaign.name 
+              });
+              
               return (
                 <CampaignCard
                   key={campaign.id.toString()}
@@ -248,8 +256,8 @@ export default function CampaignsPage() {
                   description={campaign.metadata.tagline || campaign.metadata.bio || campaign.description}
                   logo={logo}
                   status={campaign.status}
-                  className="border-blue-300 scale-75"
-                  campaignId={campaign.id.toString()}
+                  className="border-blue-300"
+                  campaignId={campaignId}
                   descriptionTruncateSize={96}
                   startTime={Number(campaign.startTime)}
                   endTime={Number(campaign.endTime)}
@@ -281,7 +289,7 @@ export default function CampaignsPage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate('/app/campaigns/start')}
+                  onClick={() => navigate('/app/campaign/start')}
                   className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
                 >
                   <Trophy className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
