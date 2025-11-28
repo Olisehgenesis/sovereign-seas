@@ -137,7 +137,6 @@ const Section = ({ id, title, icon: Icon, children, required = false, expandedSe
 };
 
 export default function EditCampaignDetails() {
-  const [isMounted, setIsMounted] = useState(false);
   const [expandedSection, setExpandedSection] = useState('basic');
   const params = useParams();
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;

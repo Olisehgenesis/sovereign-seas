@@ -72,6 +72,7 @@
     "@types/react-dom": "^18.3.7",
     "@types/react-helmet-async": "^1.0.3",
     "@wagmi/cli": "^2.5.1",
+    "baseline-browser-mapping": "^2.8.32",
     "buffer": "^6.0.3",
     "eslint": "^9.33.0",
     "eslint-config-next": "^16.0.0",
