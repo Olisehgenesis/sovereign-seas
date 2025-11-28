@@ -7,20 +7,16 @@ import { formatEther } from 'viem';
 import { 
   Globe,
   Calendar,
- 
   CheckCircle,
- 
   Share2,
   Users,
   Trophy,
- 
   Shield,
   Copy,
   Twitter,
   Linkedin,
   Mail,
   MessageCircle,
- 
   Send,
   Terminal,
   X,
@@ -28,7 +24,6 @@ import {
   Video,
   Play,
   TrendingUp,
- 
   Edit,
   Crown,
   Timer,
@@ -36,11 +31,9 @@ import {
   Vote,
   Coins,
   Activity,
- 
   BarChart3,
   Gauge,
   Clock,
-  Rocket,
   Search,
   Camera,
   Lock,
@@ -63,126 +56,17 @@ import TruncatedText from '@/components/TruncatedText';
 import { useProjectMilestones, ProjectMilestoneStatus, ProjectMilestoneType } from '@/hooks/useProjectMilestones';
 import MilestoneActions from '@/components/MilestoneActions';
 import BuilderSlotCard from '@/components/cards/BuilderSlotCard';
+import ProjectLoadingState from '@/components/project/ProjectLoadingState';
+import ProjectErrorState from '@/components/project/ProjectErrorState';
+import ProjectLogo from '@/components/project/ProjectLogo';
+import ProjectShareModal from '@/components/project/ProjectShareModal';
+import OverviewTab from '@/components/project/tabs/OverviewTab';
+import CampaignsTab from '@/components/project/tabs/CampaignsTab';
+import AnalyticsTab from '@/components/project/tabs/AnalyticsTab';
+import { formatDate } from '@/components/project/utils';
+import type { EnhancedProject, ParsedMetadata, Tab, SharePlatform, TabId } from '@/components/project/types';
 
-// ==================== TYPES ====================
-
-interface ParsedMetadata {
-  // Basic info
-  tagline?: string;
-  category?: string;
-  tags?: string[];
-  location?: string;
-  establishedDate?: string;
-  website?: string;
-  projectType?: string;
-  maturityLevel?: string;
-  status?: string;
-  openSource?: boolean;
-  
-  // Technical
-  blockchain?: string;
-  smartContracts?: string[];
-  techStack?: string[];
-  license?: string;
-  developmentStage?: string;
-  auditReports?: string[];
-  kycCompliant?: boolean;
-  regulatoryCompliance?: string[];
-  
-  // Media & Links
-  logo?: string;
-  demoVideo?: string;
-  coverImage?: string;
-  demoUrl?: string;
-  githubRepo?: string;
-  documentation?: string;
-  karmaGapProfile?: string;
-  
-  // Social
-  twitter?: string;
-  linkedin?: string;
-  discord?: string;
-  telegram?: string;
-  youtube?: string;
-  instagram?: string;
-  
-  // Team & Contact
-  teamMembers?: TeamMember[];
-  contactEmail?: string;
-  businessEmail?: string;
-  phone?: string;
-  
-  // Features
-  keyFeatures?: string[];
-  innovation?: string;
-  useCases?: string[];
-  targetAudience?: string;
-  
-  // Metrics
-  milestones?: Milestone[];
-  launchDate?: string;
-  userCount?: string;
-  transactionVolume?: string;
-  tvl?: string;
-}
-
-interface TeamMember {
-  name: string;
-  role: string;
-  email: string;
-  linkedin: string;
-  twitter: string;
-  avatar: string;
-}
-
-interface Milestone {
-  title: string;
-  description: string;
-  targetDate: string;
-  status: 'planned' | 'in-progress' | 'completed';
-}
-
-interface EnhancedProject {
-  // Core blockchain data
-  id: bigint;
-  owner: Address;
-  name: string;
-  description: string;
-  transferrable: boolean;
-  active: boolean;
-  createdAt: bigint;
-  campaignIds: bigint[];
-  contracts?: Address[];
-  
-  // Parsed metadata
-  metadata?: ParsedMetadata;
-}
-
-interface CampaignStatus {
-  bgClass: string;
-  textClass: string;
-  badgeClass: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-}
-
-type TabId = 'overview' | 'campaigns' | 'milestones' | 'technical' | 'team' | 'analytics' | 'admin';
-
-interface Tab {
-  id: TabId;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: number;
-}
-
-interface SharePlatform {
-  id: 'twitter' | 'linkedin' | 'copy';
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-  bgColor: string;
-  textColor: string;
-  description: string;
-}
+// Types are now imported from @/components/project/types
 
 // ==================== HOOKS ====================
 
@@ -295,91 +179,7 @@ const useProjectData = (projectId: bigint, contractAddress: Address) => {
   };
 };
 
-// ==================== UTILITIES ====================
-
-const getCampaignStatusStyling = (status: string): CampaignStatus => {
-  switch (status) {
-    case 'active':
-      return {
-        bgClass: 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200',
-        textClass: 'text-emerald-700',
-        badgeClass: 'bg-emerald-500',
-        icon: Activity,
-        label: 'Active'
-      };
-    case 'ended':
-      return {
-        bgClass: 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200',
-        textClass: 'text-blue-700',
-        badgeClass: 'bg-blue-500',
-        icon: Trophy,
-        label: 'Completed'
-      };
-    case 'upcoming':
-      return {
-        bgClass: 'bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200',
-        textClass: 'text-amber-700',
-        badgeClass: 'bg-amber-500',
-        icon: Timer,
-        label: 'Upcoming'
-      };
-    default:
-      return {
-        bgClass: 'bg-gray-50 border-gray-200',
-        textClass: 'text-gray-700',
-        badgeClass: 'bg-gray-500',
-        icon: Clock,
-        label: 'Inactive'
-      };
-  }
-};
-
-const formatDate = (timestamp: bigint): string => {
-  return new Date(Number(timestamp) * 1000).toLocaleDateString();
-};
-
-const formatYear = (dateString: string): string => {
-  return new Date(dateString).getFullYear().toString();
-};
-
-// ==================== COMPONENTS ====================
-
-interface ProjectLogoProps {
-  logo?: string;
-  name: string;
-  verified?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-}
-
-const ProjectLogo: React.FC<ProjectLogoProps> = ({ logo, name, size = 'md' }) => {
-  const sizeClasses = {
-    sm: 'w-12 h-12 text-lg',
-    md: 'w-20 h-20 text-2xl',
-    lg: 'w-32 h-32 text-4xl'
-  };
-
-
-  return (
-    <div className="relative">
-      {logo ? (
-        <img 
-          src={formatIpfsUrl(logo)} 
-          alt={`${name} logo`}
-          className={`${sizeClasses[size]} rounded-full object-cover`}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            const fallback = target.nextSibling as HTMLElement;
-            if (fallback) fallback.style.display = 'flex';
-          }}
-        />
-      ) : null}
-      <div className={`${sizeClasses[size]} bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold ${logo ? 'hidden' : 'flex'}`}>
-        {name?.charAt(0) || 'P'}
-      </div>
-    </div>
-  );
-};
+// Utilities and components are now imported from @/components/project
 
 
 
@@ -585,35 +385,12 @@ export default function ProjectView() {
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative mb-8">
-            <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-            <Rocket className="h-10 w-10 text-blue-600 absolute inset-0 m-auto animate-pulse" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-gray-900">Loading Project</h2>
-            <p className="text-gray-600">Fetching project details...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <ProjectLoadingState />;
   }
   
   // Error state
   if (error || !project) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md mx-auto">
-          <div className="text-6xl mb-8">🚀</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Project Not Found</h1>
-          <p className="text-gray-600 mb-8 leading-relaxed">
-            {error ? `Error: ${error.message}` : 'This project doesn\'t exist or has been removed.'}
-          </p>
-        </div>
-      </div>
-    );
+    return <ProjectErrorState error={error || undefined} />;
   }
 
   return (
@@ -750,7 +527,7 @@ export default function ProjectView() {
             <div className="flex flex-row gap-2 sm:gap-4">
               <button 
                 onClick={() => setIsTipModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-6 py-1.5 sm:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none"
+                className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-2 sm:px-6 py-1.5 sm:py-3 border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none uppercase tracking-[0.05em]"
               >
                 <Coins className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Tip Project</span>
@@ -761,7 +538,7 @@ export default function ProjectView() {
                   href={project.metadata?.website || project.metadata?.demoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-2 sm:px-6 py-1.5 sm:py-3 rounded-full font-medium transition-colors text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none"
+                  className="bg-white hover:bg-gray-50 text-[#050505] px-2 sm:px-6 py-1.5 sm:py-3 border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none uppercase tracking-[0.05em]"
                 >
                   {project.metadata?.website ? (
                     <>
@@ -771,7 +548,7 @@ export default function ProjectView() {
                     </>
                   ) : (
                     <>
-                  <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       <span className="hidden sm:inline">Demo Project</span>
                       <span className="sm:hidden">Demo</span>
                     </>
@@ -912,19 +689,19 @@ export default function ProjectView() {
  
         {/* Navigation Tabs - Hidden on Mobile */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabId)} className="mb-2 sm:mb-8">
-          <TabsList className="hidden sm:flex bg-white/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-2 w-full justify-start h-20">
+          <TabsList className="hidden sm:flex bg-transparent p-0 w-full justify-start gap-3 mb-6">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="flex items-center gap-3 px-4 py-4 text-base font-medium whitespace-nowrap data-[state=active]:bg-gray-100 data-[state=active]:text-gray-700 data-[state=active]:border-gray-300 data-[state=active]:shadow-sm h-16 flex-1"
+                className="flex items-center gap-4 px-6 py-5 text-base font-extrabold whitespace-nowrap data-[state=active]:bg-[#2563eb] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:text-[#050505] border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] data-[state=active]:shadow-[0.3em_0.3em_0_#000000] data-[state=active]:hover:shadow-[0.4em_0.4em_0_#000000] data-[state=inactive]:hover:shadow-[0.3em_0.3em_0_#000000] data-[state=active]:hover:-translate-x-[0.1em] data-[state=active]:hover:-translate-y-[0.1em] data-[state=inactive]:hover:-translate-x-[0.1em] data-[state=inactive]:hover:-translate-y-[0.1em] min-h-[4.5rem] flex-1 uppercase tracking-[0.05em] transition-all"
               >
-                <div className="p-1.5 rounded-lg bg-gray-100 data-[state=active]:bg-gray-200">
-                  <tab.icon className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-white/20 data-[state=active]:bg-white/30 data-[state=inactive]:bg-[#2563eb]/10 border-[0.15em] data-[state=active]:border-white/50 data-[state=inactive]:border-[#2563eb]/30">
+                  <tab.icon className="h-6 w-6" />
                 </div>
-                <span>{tab.label}</span>
+                <span className="text-lg">{tab.label}</span>
                 {tab.badge !== undefined && tab.badge > 0 && (
-                  <span className="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-full font-semibold">
+                  <span className="bg-white/80 data-[state=active]:bg-white/80 data-[state=inactive]:bg-[#2563eb]/10 text-[#050505] data-[state=active]:text-[#050505] data-[state=inactive]:text-[#2563eb] text-sm px-3 py-1.5 rounded-full font-extrabold border-[0.15em] border-[#050505] data-[state=active]:border-[#050505] data-[state=inactive]:border-[#2563eb] shadow-[0.1em_0.1em_0_#000000]">
                     {tab.badge}
                   </span>
                 )}
@@ -938,311 +715,51 @@ export default function ProjectView() {
           <div className="space-y-8">
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-4 sm:space-y-8">
-              {/* Mobile: No Card, Desktop: Card */}
-              <div className="sm:bg-white/30 sm:backdrop-blur-md sm:rounded-3xl sm:shadow-xl sm:border sm:border-white/20 sm:p-8 sm:p-12 relative">
-                {/* Social Media Icons - Top Right Corner */}
-                {(project.metadata?.twitter || project.metadata?.linkedin || project.metadata?.discord || 
-                  project.metadata?.telegram || project.metadata?.youtube || project.metadata?.instagram || 
-                  project.metadata?.contactEmail) && (
-                  <div className="absolute top-2 right-2 sm:top-6 sm:right-6 flex gap-1 sm:gap-2">
-                    {project.metadata?.twitter && (
-                      <a 
-                        href={project.metadata.twitter}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
-                        title="Follow on Twitter"
-                      >
-                        <Twitter className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </a>
-                    )}
-                    
-                    {project.metadata?.contactEmail && (
-                      <a 
-                        href={`mailto:${project.metadata.contactEmail}`}
-                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-gray-500 hover:bg-gray-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
-                        title="Contact via Email"
-                      >
-                        <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </a>
-                    )}
-                    
-                    {project.metadata?.linkedin && (
-                      <a 
-                        href={project.metadata.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
-                        title="Connect on LinkedIn"
-                      >
-                        <Linkedin className="h-4 w-4 sm:h-5 sm:w-5" />
-                        </a>
-                      )}
-                    
-                    {project.metadata?.discord && (
-                      <a 
-                        href={project.metadata.discord}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-purple-500 hover:bg-purple-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
-                        title="Join Discord"
-                      >
-                        <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </a>
-                    )}
-                    
-                    {project.metadata?.telegram && (
-                      <a 
-                        href={project.metadata.telegram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-blue-400 hover:bg-blue-500 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
-                        title="Join Telegram"
-                      >
-                        <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </a>
-                    )}
-
-                    {project.metadata?.youtube && (
-                      <a 
-                        href={project.metadata.youtube}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
-                        title="Subscribe on YouTube"
-                      >
-                        <Video className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </a>
-                    )}
-
-                    {project.metadata?.instagram && (
-                      <a 
-                        href={project.metadata.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-pink-500 hover:bg-pink-600 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-110"
-                        title="Follow on Instagram"
-                      >
-                        <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                <div className="prose prose-sm sm:prose-lg prose-gray max-w-none">
-                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                    <strong>{project.name}</strong> has participated in <strong>{project.campaignIds?.length || 0} campaign{project.campaignIds?.length === 1 ? '' : 's'}</strong> and has raised <strong>{projectCampaigns ? 
-                      projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
-                        .reduce((sum, c) => 
-                          sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
-                        ).toFixed(2) 
-                      : '0.00'} CELO</strong> in total funding.
-                  </p>
-                  
-                  {project.metadata?.category && project.metadata?.projectType && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      It is a <strong>{project.metadata.projectType}</strong> under the <strong>{project.metadata.category}</strong> category.
-                    </p>
-                  )}
-                  
-                  {project.metadata?.maturityLevel && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      The project has reached a <strong>{project.metadata.maturityLevel}</strong> maturity level.
-                    </p>
-                  )}
-                  
-                  {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      Built with <strong>{project.metadata.techStack.join(', ')}</strong> technology stack.
-                    </p>
-                  )}
-                  
-                  {project.metadata?.keyFeatures && project.metadata.keyFeatures.length > 0 && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      <strong>The key features include but are not limited to </strong> {project.metadata.keyFeatures.join(', ')}.
-                    </p>
-                  )}
-                  
-                  {project.transferrable !== undefined && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      The project is <strong>{project.transferrable ? 'transferrable' : 'non-transferrable'}</strong> and is currently <strong>{project.active ? 'active' : 'inactive'}</strong>.
-                    </p>
-                  )}
-                  
-                  {project.metadata?.innovation && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      <strong>Innovation:</strong> {project.metadata.innovation}
-                    </p>
-                  )}
-                  
-                  {project.metadata?.targetAudience && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      <strong>Target Audience:</strong> {project.metadata.targetAudience}
-                    </p>
-                  )}
-                  
-                  {project.metadata?.useCases && project.metadata.useCases.length > 0 && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      <strong>Use Cases:</strong> {project.metadata.useCases.join(', ')}.
-                    </p>
-                  )}
-                  
-                  {project.metadata?.establishedDate && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      <strong>Established:</strong> {formatYear(project.metadata.establishedDate)}
-                    </p>
-                  )}
-                  
-                  {project.metadata?.milestones && project.metadata.milestones.length > 0 && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      <strong>Current Milestones:</strong> {project.metadata.milestones.filter(m => m.status === 'in-progress').length > 0 ? 
-                        project.metadata.milestones.filter(m => m.status === 'in-progress').map(m => m.title).join(', ') + ' in progress' :
-                        'No active milestones at this time'
-                      }.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Builder Rewards NFT Card */}
-              {project?.owner && (
-                <div className="sm:bg-white/30 sm:backdrop-blur-md sm:rounded-3xl sm:shadow-xl sm:border sm:border-white/20 sm:p-8">
-                  <BuilderSlotCard 
-                    ownerAddress={project.owner}
-                  />
-                </div>
-              )}
+              <OverviewTab project={project} projectCampaigns={projectCampaigns || []} />
             </TabsContent>
  
             {/* Campaigns Tab */}
-            <TabsContent value="campaigns" className="space-y-4 sm:space-y-6">
-                {projectCampaigns && projectCampaigns.length > 0 ? (
-                  <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-8">
-                    <div className="space-y-4 sm:space-y-6">
-                      {projectCampaigns?.filter((campaign): campaign is NonNullable<typeof campaign> => campaign !== null).map((campaign) => {
-                        const styling = getCampaignStatusStyling(campaign.status);
-                        
-                        return (
-                          <div
-                            key={campaign.id.toString()}
-                            className={`p-3 sm:p-6 sm:rounded-xl sm:border ${styling.bgClass} sm:hover:shadow-lg transition-all duration-200 sm:backdrop-blur-sm border-b border-gray-200 sm:border-b-0`}
-                          >
-                            <div className="flex items-start justify-between mb-3 sm:mb-4">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                  <h3 className="font-bold text-gray-900 text-base sm:text-lg">{campaign.name}</h3>
-                                  <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 sm:gap-1.5 ${styling.textClass} bg-white/50`}>
-                                    <styling.icon className="w-3 h-3" />
-                                    {styling.label}
-                                  </div>
-                                </div>
-                                <TruncatedText
-                                  text={campaign.description}
-                                  maxLength={250}
-                                  className="text-gray-600 mb-3 sm:mb-4 leading-relaxed text-sm sm:text-base"
-                                  showIcon={true}
-                                  expandText="Read more"
-                                  collapseText="Read less"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                              <div className="text-center">
-                                <p className="text-xs text-gray-500 mb-1">Total Funds</p>
-                                <p className="font-bold text-green-600 text-sm sm:text-lg">
-                                  {parseFloat(formatEther(campaign.totalFunds)).toFixed(2)} CELO
-                                </p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-xs text-gray-500 mb-1">Your Votes</p>
-                                <p className="font-bold text-blue-600 text-sm sm:text-lg">
-                                  {parseFloat(formatEther(campaign.participation?.voteCount || 0n)).toFixed(1)}
-                                </p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-xs text-gray-500 mb-1">Max Winners</p>
-                                <p className="font-bold text-purple-600 text-sm sm:text-lg">
-                                  {Number(campaign.maxWinners) || 'All'}
-                                </p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-xs text-gray-500 mb-1">Approval</p>
-                                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
-                                  campaign.participation?.approved 
-                                    ? 'bg-green-100 text-green-700 border border-green-200' 
-                                    : 'bg-amber-100 text-amber-700 border border-amber-200'
-                                }`}>
-                                  {campaign.participation?.approved ? (
-                                    <>
-                                      <CheckCircle className="w-3 h-3" />
-                                      Approved
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Clock className="w-3 h-3" />
-                                      Pending
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                              <button
-                                onClick={() => navigate(getCampaignRoute(Number(campaign.id)))}
-                                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-white/80 border border-gray-200 text-gray-700 rounded-lg hover:bg-white hover:shadow-md transition-all duration-200 font-medium text-sm sm:text-base"
-                              >
-                                <Eye className="h-4 w-4" />
-                                View Campaign
-                              </button>
-                              {campaign.status === 'active' && (
-                                <button
-                                  onClick={() => openVoteModal(campaign.id.toString())}
-                                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md text-sm sm:text-base"
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                  Go to Campaign
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-12 text-center p-6">
-                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                      <Trophy className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">No Active Campaigns</h3>
-                    <p className="text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
-                      This project hasn't joined any campaigns yet. Check back later for funding opportunities.
-                    </p>
-                    <button
-                      onClick={() => navigate('/campaigns')}
-                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium text-sm sm:text-base"
-                    >
-                      <Search className="h-4 w-4" />
-                      Browse Campaigns
-                    </button>
-                  </div>
-                )}
+            <TabsContent value="campaigns" className="space-y-6 sm:space-y-8">
+              <CampaignsTab campaigns={projectCampaigns || []} contractAddress={contractAddress} />
             </TabsContent>
 
             {/* Milestones Tab */}
-            <TabsContent value="milestones" className="space-y-4 sm:space-y-6">
+            <TabsContent value="milestones" className="space-y-6 sm:space-y-8">
               {isLoadingMilestones ? (
-                <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-12 text-center p-6">
-                  <div className="flex items-center justify-center">
-                    <Clock className="h-6 w-6 animate-spin text-gray-400" />
-                    <span className="ml-2 text-gray-600">Loading milestones...</span>
+                <div className="group relative">
+                  <div 
+                    className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+                  <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                  <div className="relative bg-white sm:border-[0.35em] sm:border-[#2563eb] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-12 text-center p-6 z-[2]">
+                    <div className="flex items-center justify-center">
+                      <Clock className="h-6 w-6 animate-spin text-[#2563eb]" />
+                      <span className="ml-2 text-[#050505] font-extrabold uppercase tracking-[0.05em]">Loading milestones...</span>
+                    </div>
                   </div>
                 </div>
               ) : milestones && milestones.length > 0 ? (
-                <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-8">
-                  <div className="space-y-4 sm:space-y-6">
+                <div className="group relative">
+                  <div 
+                    className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+                  <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                  <div className="relative bg-white sm:border-[0.35em] sm:border-[#a855f7] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-8 z-[2]">
+                    <h2 className="text-2xl font-extrabold text-[#050505] mb-6 uppercase tracking-[0.05em] flex items-center gap-3">
+                      <ListChecks className="h-6 w-6 text-[#a855f7]" />
+                      Project Milestones ({milestones.length})
+                    </h2>
+                    <div className="space-y-4 sm:space-y-6">
                     {milestones.map((milestone) => {
                       const statusColors = {
                         [ProjectMilestoneStatus.DRAFT]: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
@@ -1264,8 +781,11 @@ export default function ProjectView() {
                       return (
                         <div
                           key={milestone.id.toString()}
-                          className="p-4 sm:p-6 rounded-xl border border-gray-200 bg-white/80 hover:shadow-lg transition-all duration-200"
+                          className="group/item relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.4em_0.4em_0_#000000] hover:shadow-[0.5em_0.5em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all duration-200 p-4 sm:p-6"
+                          style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
                         >
+                          <div className="absolute -top-[0.8em] -right-[0.8em] w-[3em] h-[3em] bg-[#a855f7] rotate-45 z-[1]" />
+                          <div className="absolute top-[0.3em] right-[0.3em] text-white text-[1em] font-bold z-[2]">★</div>
                           <div className="flex items-start justify-between mb-3 sm:mb-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
@@ -1341,28 +861,40 @@ export default function ProjectView() {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="sm:bg-white/70 sm:backdrop-blur-sm sm:rounded-2xl sm:shadow-lg sm:border sm:border-white/20 sm:p-12 text-center p-6">
-                  <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                    <ListChecks className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                <div className="group relative">
+                  <div 
+                    className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+                  <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                  <div className="relative bg-white sm:border-[0.35em] sm:border-[#a855f7] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-12 text-center p-6 z-[2]">
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-[#a855f7]/20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 border-[0.2em] border-[#a855f7]">
+                      <ListChecks className="h-8 w-8 sm:h-12 sm:w-12 text-[#a855f7]" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-extrabold text-[#050505] mb-2 sm:mb-3 uppercase tracking-[0.05em]">No Milestones Yet</h3>
+                    <p className="text-[#050505] mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base font-semibold">
+                      {isOwner 
+                        ? "Create milestones to track project progress and reward contributors."
+                        : "This project hasn't created any milestones yet."}
+                    </p>
+                    {isOwner && (
+                      <button
+                        onClick={() => setShowCreateMilestoneModal(true)}
+                        className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-[#2563eb] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create Milestone
+                      </button>
+                    )}
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">No Milestones Yet</h3>
-                  <p className="text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
-                    {isOwner 
-                      ? "Create milestones to track project progress and reward contributors."
-                      : "This project hasn't created any milestones yet."}
-                  </p>
-                  {isOwner && (
-                    <button
-                      onClick={() => setShowCreateMilestoneModal(true)}
-                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium text-sm sm:text-base"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Create Milestone
-                    </button>
-                  )}
                 </div>
               )}
             </TabsContent>
@@ -1551,144 +1083,179 @@ export default function ProjectView() {
             </TabsContent>
  
             {/* Analytics Tab */}
-            <TabsContent value="analytics" className="space-y-8">
-                {/* Analytics Summary */}
-                <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-6 mb-4">
-                  <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-3">
-                    <BarChart3 className="h-5 w-5 text-blue-600" />
-                    Project Analytics
-                  </h3>
-                  <p className="text-lg text-gray-700 mb-4 font-serif">
-                    {project.name} has participated in <span className="font-bold text-blue-600">{project.campaignIds?.length || 0}</span> campaign{project.campaignIds?.length === 1 ? '' : 's'}, raising a total of <span className="font-bold text-green-600">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0).toFixed(2) : '0.00'} CELO</span> and receiving <span className="font-bold text-purple-600">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.voteCount || 0n)), 0).toFixed(1) : '0.0'}</span> votes from the community. Dive into the stats below to see how this project is performing!
-                  </p>
-                  {/* Stat Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
-                    <div className="p-4 rounded-xl border bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 text-center shadow-sm">
-                      <div className="flex items-center justify-center mb-1"><Trophy className="h-5 w-5 text-blue-500" /></div>
-                      <div className="text-2xl font-bold text-blue-700">{project.campaignIds?.length || 0}</div>
-                      <div className="text-xs text-blue-700 font-medium">Campaigns</div>
-                    </div>
-                    <div className="p-4 rounded-xl border bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 text-center shadow-sm">
-                      <div className="flex items-center justify-center mb-1"><Coins className="h-5 w-5 text-green-500" /></div>
-                      <div className="text-2xl font-bold text-green-700">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0).toFixed(2) : '0.00'} <span className='text-xs'>CELO</span></div>
-                      <div className="text-xs text-green-700 font-medium">Total Funding</div>
-                    </div>
-                    <div className="p-4 rounded-xl border bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 text-center shadow-sm">
-                      <div className="flex items-center justify-center mb-1"><Vote className="h-5 w-5 text-purple-500" /></div>
-                      <div className="text-2xl font-bold text-purple-700">{projectCampaigns ? projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null).reduce((sum, c) => sum + parseFloat(formatEther(c.participation?.voteCount || 0n)), 0).toFixed(1) : '0.0'}</div>
-                      <div className="text-xs text-purple-700 font-medium">Total Votes</div>
-                    </div>
-                  </div>
-                </div>
-                {/* ... existing campaign performance ... */}
+            <TabsContent value="analytics" className="space-y-6 sm:space-y-8">
+              <AnalyticsTab project={project} projectCampaigns={projectCampaigns || []} />
             </TabsContent>
 
             {/* Admin Tab */}
             {isOwner && (
               <TabsContent value="admin" className="space-y-8">
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <Crown className="h-6 w-6 text-red-600" />
-                </div>
-                    Admin Actions
-              </h3>
-              
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border border-red-200">
-                      <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                        <Edit className="h-5 w-5" />
-                        Project Management
-                      </h4>
-                      <div className="space-y-3">
-                        <button 
-                          onClick={() => navigate(`/app/project/edit/${id}`)}
-                          className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Edit Project Details
-                        </button>
-                        {!normalizedGithub && (
-                          <div className="p-3 bg-white rounded-lg border border-red-200">
-                            <p className="text-sm text-red-800 mb-2">GitHub repository not set. Add it now:</p>
-                            {!showSetGithub ? (
-                              <button
-                                onClick={() => setShowSetGithub(true)}
-                                className="w-full flex items-center justify-center gap-2 p-2 bg-red-100 hover:bg-red-200 rounded-md text-red-800 transition-colors"
-                              >
-                                <Github className="h-4 w-4" />
-                                Add GitHub URL
-                              </button>
-                            ) : (
-                              <div className="space-y-2">
-                                <input
-                                  type="url"
-                                  value={newGithub}
-                                  onChange={(e) => setNewGithub(e.target.value)}
-                                  placeholder="https://github.com/org/repo"
-                                  className="w-full px-3 py-2 border rounded-md text-sm"
-                                />
-                                {githubSaveError && <p className="text-xs text-red-600">{githubSaveError}</p>}
-                                {githubSaved && <p className="text-xs text-green-600">GitHub URL saved.</p>}
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={handleSaveGithub}
-                                    disabled={isUpdatingGithub}
-                                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-60"
-                                  >
-                                    {isUpdatingGithub ? 'Saving...' : 'Save'}
-                                  </button>
-                                  <button
-                                    onClick={() => setShowSetGithub(false)}
-                                    className="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#ef4444] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2]"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#ef4444] rotate-45 z-[1]" />
+                    <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                    
+                    <div 
+                      className="relative px-[1.5em] py-[1.4em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                      style={{ 
+                        background: '#ef4444',
+                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                        backgroundBlendMode: 'overlay'
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-[0.3em] flex items-center justify-center border-[0.15em] border-white/30">
+                          <Crown className="h-6 w-6 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-extrabold text-white">Admin Actions</h3>
+                      </div>
+                    </div>
+                    
+                    <div className="relative px-[1.5em] py-[1.5em] z-[2]">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="group/item relative">
+                          <div 
+                            className="absolute inset-0 pointer-events-none opacity-0 group-hover/item:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                            style={{
+                              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                              backgroundSize: '0.5em 0.5em'
+                            }}
+                          />
+                          
+                          <div 
+                            className="relative bg-white border-[0.35em] border-[#ef4444] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] overflow-hidden z-[2] p-6"
+                            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                          >
+                            <div className="absolute -top-[0.8em] -right-[0.8em] w-[3em] h-[3em] bg-[#ef4444] rotate-45 z-[1]" />
+                            <div className="absolute top-[0.3em] right-[0.3em] text-white text-[1em] font-bold z-[2]">★</div>
+                            
+                            <div className="relative z-[2]">
+                              <h4 className="font-extrabold text-[#050505] mb-3 flex items-center gap-2 uppercase tracking-[0.05em]">
+                                <Edit className="h-5 w-5" />
+                                Project Management
+                              </h4>
+                              <div className="space-y-3">
+                                <button 
+                                  onClick={() => navigate(`/app/project/edit/${id}`)}
+                                  className="w-full flex items-center justify-center gap-2 p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] text-[#050505] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  Edit Project Details
+                                </button>
+                                {!normalizedGithub && (
+                                  <div className="p-3 bg-gray-50 border-[0.15em] border-gray-300 rounded-[0.4em] shadow-[0.1em_0.1em_0_#000000]">
+                                    <p className="text-sm text-[#050505] mb-2 font-semibold">GitHub repository not set. Add it now:</p>
+                                    {!showSetGithub ? (
+                                      <button
+                                        onClick={() => setShowSetGithub(true)}
+                                        className="w-full flex items-center justify-center gap-2 p-2 bg-[#ef4444] text-white border-[0.15em] border-[#050505] rounded-[0.3em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]"
+                                      >
+                                        <Github className="h-4 w-4" />
+                                        Add GitHub URL
+                                      </button>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        <input
+                                          type="url"
+                                          value={newGithub}
+                                          onChange={(e) => setNewGithub(e.target.value)}
+                                          placeholder="https://github.com/org/repo"
+                                          className="w-full px-3 py-2 border-[0.2em] border-[#050505] rounded-[0.3em] text-sm font-semibold shadow-[0.1em_0.1em_0_#000000] focus:outline-none"
+                                        />
+                                        {githubSaveError && <p className="text-xs text-[#ef4444] font-semibold">{githubSaveError}</p>}
+                                        {githubSaved && <p className="text-xs text-[#10b981] font-semibold">GitHub URL saved.</p>}
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={handleSaveGithub}
+                                            disabled={isUpdatingGithub}
+                                            className="flex-1 px-3 py-2 bg-[#2563eb] text-white border-[0.15em] border-[#050505] rounded-[0.3em] text-sm font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all disabled:opacity-60 uppercase tracking-[0.05em]"
+                                          >
+                                            {isUpdatingGithub ? 'Saving...' : 'Save'}
+                                          </button>
+                                          <button
+                                            onClick={() => setShowSetGithub(false)}
+                                            className="px-3 py-2 bg-white border-[0.15em] border-[#050505] rounded-[0.3em] text-sm font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <button className="w-full flex items-center justify-center gap-2 p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] text-[#050505] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">
+                                  <Trophy className="h-4 w-4" />
+                                  Manage Campaigns
+                                </button>
+                                <button className="w-full flex items-center justify-center gap-2 p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] text-[#050505] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">
+                                  <Users className="h-4 w-4" />
+                                  Manage Team
+                                </button>
+                                <button 
+                                  onClick={() => setShowCreateMilestoneModal(true)}
+                                  className="w-full flex items-center justify-center gap-2 p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] text-[#050505] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  Create Milestone
+                                </button>
                               </div>
-                            )}
+                            </div>
                           </div>
-                        )}
-                        <button className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors">
-                   <Trophy className="h-4 w-4" />
-                          Manage Campaigns
-                        </button>
-                        <button className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors">
-                          <Users className="h-4 w-4" />
-                          Manage Team
-                        </button>
-                        <button 
-                          onClick={() => setShowCreateMilestoneModal(true)}
-                          className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-red-200 text-red-700 hover:text-red-800 transition-colors"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Create Milestone
-                        </button>
-             </div>
-           </div>
+                        </div>
 
-                    <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-                      <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
-                        <Shield className="h-5 w-5" />
-                        Project Settings
-                      </h4>
-             <div className="space-y-3">
-                        <button className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-amber-200 text-amber-700 hover:text-amber-800 transition-colors">
-                          <Lock className="h-4 w-4" />
-                          Transfer Ownership
-                        </button>
-                        <button className="w-full flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-50 rounded-lg border border-amber-200 text-amber-700 hover:text-amber-800 transition-colors">
-                          <Activity className="h-4 w-4" />
-                          Toggle Active Status
-                        </button>
-                        <button className="w-full flex items-center justify-center gap-2 p-3 bg-red-100 hover:bg-red-200 rounded-lg border border-red-300 text-red-700 hover:text-red-800 transition-colors">
-                          <X className="h-4 w-4" />
-                          Archive Project
-                        </button>
-                   </div>
-                   </div>
-                   </div>
-                   </div>
+                        <div className="group/item relative">
+                          <div 
+                            className="absolute inset-0 pointer-events-none opacity-0 group-hover/item:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                            style={{
+                              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                              backgroundSize: '0.5em 0.5em'
+                            }}
+                          />
+                          
+                          <div 
+                            className="relative bg-white border-[0.35em] border-[#f59e0b] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] overflow-hidden z-[2] p-6"
+                            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                          >
+                            <div className="absolute -top-[0.8em] -right-[0.8em] w-[3em] h-[3em] bg-[#f59e0b] rotate-45 z-[1]" />
+                            <div className="absolute top-[0.3em] right-[0.3em] text-white text-[1em] font-bold z-[2]">★</div>
+                            
+                            <div className="relative z-[2]">
+                              <h4 className="font-extrabold text-[#050505] mb-3 flex items-center gap-2 uppercase tracking-[0.05em]">
+                                <Shield className="h-5 w-5" />
+                                Project Settings
+                              </h4>
+                              <div className="space-y-3">
+                                <button className="w-full flex items-center justify-center gap-2 p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] text-[#050505] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">
+                                  <Lock className="h-4 w-4" />
+                                  Transfer Ownership
+                                </button>
+                                <button className="w-full flex items-center justify-center gap-2 p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] text-[#050505] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">
+                                  <Activity className="h-4 w-4" />
+                                  Toggle Active Status
+                                </button>
+                                <button className="w-full flex items-center justify-center gap-2 p-3 bg-[#ef4444] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">
+                                  <X className="h-4 w-4" />
+                                  Archive Project
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
             )}
            </div>
@@ -1698,51 +1265,16 @@ export default function ProjectView() {
         </Tabs>
 
      {/* Share Modal */}
-     {showShareModal && (
-       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto">
-         <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-md shadow-2xl border border-white/20 md:rounded-3xl md:max-w-md md:p-8 p-0 h-full md:h-auto overflow-y-auto transition-all duration-300 mt-4 sm:mt-8 lg:mt-16 mb-4">
-           <div className="p-8 md:p-8 p-6">
-             <div className="flex items-center justify-between mb-8">
-               <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                 <div className="p-2 bg-blue-100 rounded-lg">
-                   <Share2 className="h-5 w-5 text-blue-600" />
-                 </div>
-                 Share Project
-               </h3>
-               <button
-                 onClick={() => setShowShareModal(false)}
-                 className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100"
-               >
-                 <X className="h-5 w-5" />
-               </button>
-             </div>
-             
-             <div className="space-y-4">
-               {sharePlatforms.map((platform) => (
-                 <button
-                   key={platform.id}
-                   onClick={() => handleShare(platform.id)}
-                   className="w-full flex items-center gap-4 p-4 bg-gray-50/80 hover:bg-gray-100/80 rounded-xl transition-all duration-200 group border border-gray-200"
-                 >
-                   <div className={`w-12 h-12 ${platform.bgColor} rounded-full flex items-center justify-center shadow-sm`}>
-                     <platform.icon className="h-5 w-5 text-white" />
-                   </div>
-                   <div className="flex-1 text-left">
-                     <p className="font-semibold text-gray-900">{platform.name}</p>
-                     <p className="text-sm text-gray-600">{platform.description}</p>
-                   </div>
-                   {platform.id === 'copy' && copiedUrl ? (
-                     <CheckCircle className="h-5 w-5 text-green-500" />
-                   ) : (
-                     <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                   )}
-                 </button>
-               ))}
-             </div>
-           </div>
-         </div>
-       </div>
-     )}
+     <ProjectShareModal
+       isOpen={showShareModal}
+       onClose={() => setShowShareModal(false)}
+       projectName={project.name}
+       projectTagline={project.metadata?.tagline}
+       projectDescription={project.description}
+       sharePlatforms={sharePlatforms}
+       onShare={handleShare}
+       copiedUrl={copiedUrl}
+     />
 
      {/* Project Campaigns Modal */}
      <ProjectCampaignsModal

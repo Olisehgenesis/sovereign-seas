@@ -40,6 +40,7 @@ import { useChainSwitch } from '@/hooks/useChainSwitch';
 import { useNavigate } from '@/utils/nextAdapter';
 import { getCampaignRoute } from '@/utils/hashids';
 import DynamicHelmet from '@/components/DynamicHelmet';
+import { ButtonCool } from '@/components/ui/button-cool';
 
 interface Campaign {
   name: string;
@@ -92,17 +93,45 @@ const Section = ({ title, icon: Icon, children, required = false, isVisible = tr
   if (!isVisible) return null;
   
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-purple-100 mb-6 overflow-hidden">
-      <div className="p-6">
-        <div className="flex items-center mb-6">
-          <Icon className="h-6 w-6 text-purple-600 mr-3" />
-          <h3 className="text-xl font-semibold text-gray-800">
+    <div className="group relative w-full mb-6">
+      {/* Pattern Overlays */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+          backgroundSize: '0.5em 0.5em'
+        }}
+      />
+      
+      {/* Main Card */}
+      <div 
+        className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em] group-hover:scale-[1.01]"
+        style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+      >
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+
+        {/* Title Area */}
+        <div 
+          className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+          style={{ 
+            background: '#a855f7',
+            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay'
+          }}
+        >
+          <div className="flex items-center">
+            <Icon className="h-6 w-6 mr-3 text-white" />
+            <h3 className="text-xl font-extrabold text-white">
             {title}
-            {required && <span className="text-red-500 ml-1">*</span>}
+              {required && <span className="text-[#ef4444] ml-1">*</span>}
           </h3>
+          </div>
         </div>
         
-        <div className="pt-0">
+        {/* Body */}
+        <div className="relative px-[1.4em] py-[1.5em] z-[2]">
           {children}
         </div>
       </div>
@@ -903,76 +932,185 @@ export default function CreateCampaign() {
           {/* Main Content */}
           <div>
 
-          {/* Success/Error Messages */}
-          {successMessage && (
-            <div className="mb-6 bg-emerald-50 rounded-xl p-4 border border-emerald-200 flex items-start">
-              <CheckCircle className="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0 mt-0.5" />
-              <p className="text-emerald-700">{successMessage}</p>
+          {/* Error Summary Panel - Always visible when there are errors */}
+          {(errorMessage || Object.values(formErrors).some(err => err !== '')) && (
+            <div className="mb-6 group relative w-full">
+              {/* Pattern Overlays */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              
+              {/* Error Card */}
+              <div 
+                className="relative bg-white border-[0.35em] border-[#ef4444] rounded-[0.6em] shadow-[0.7em_0.7em_0_#ef4444] transition-all duration-[400ms] overflow-hidden z-[2]"
+                style={{ boxShadow: 'inset 0 0 0 0.15em rgba(239, 68, 68, 0.1)' }}
+              >
+                {/* Accent Corner */}
+                <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#ef4444] rotate-45 z-[1]" />
+                <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">⚠</div>
+
+                {/* Title Area */}
+                <div 
+                  className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                  style={{ 
+                    background: '#ef4444',
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                    backgroundBlendMode: 'overlay'
+                  }}
+                >
+                  <div className="flex items-center">
+                    <XCircle className="h-6 w-6 mr-3 text-white" />
+                    <h3 className="text-xl font-extrabold text-white">Errors Found</h3>
             </div>
-          )}
+                </div>
           
+                {/* Error Content */}
+                <div className="relative px-[1.4em] py-[1.5em] z-[2] space-y-3">
           {errorMessage && (
-            <div className="mb-6 bg-red-50 rounded-xl p-4 border border-red-200 flex items-start">
-              <XCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700">{errorMessage}</p>
+                    <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] p-3">
+                      <p className="text-[#991b1b] font-bold text-base">{errorMessage}</p>
+                    </div>
+                  )}
+                  
+                  {Object.values(formErrors).some(err => err !== '') && (
+                    <div>
+                      <p className="text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Form Validation Errors:</p>
+                      <div className="space-y-2">
+                        {formErrors.name && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Campaign Name:</span> {formErrors.name}</p>
+                          </div>
+                        )}
+                        {formErrors.description && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Description:</span> {formErrors.description}</p>
+                          </div>
+                        )}
+                        {formErrors.campaignType && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Campaign Type:</span> {formErrors.campaignType}</p>
+                          </div>
+                        )}
+                        {formErrors.startDate && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Start Date:</span> {formErrors.startDate}</p>
+                          </div>
+                        )}
+                        {formErrors.endDate && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">End Date:</span> {formErrors.endDate}</p>
+                          </div>
+                        )}
+                        {formErrors.prizePool && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Prize Pool:</span> {formErrors.prizePool}</p>
+                          </div>
+                        )}
+                        {formErrors.contactEmail && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Contact Email:</span> {formErrors.contactEmail}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Chain Status and Manual Switch */}
-                    {address && (
-            <div className="mb-6 bg-blue-50 rounded-xl p-4 border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`w-3 h-3 rounded-full mr-3 ${isOnCorrectChain ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-                  <div>
-                    <p className="text-blue-800 font-medium">
-                      {isOnCorrectChain ? 'Connected to correct network' : 'Wrong network detected'}
-                    </p>
-                    <p className="text-blue-600 text-sm">
-                      Current: {currentChainId === 42220 ? 'Celo Mainnet' : currentChainId === 44787 ? 'Celo Alfajores (Testnet)' : `Chain ${currentChainId}`}
-                      {!isOnCorrectChain && (
-                        <span className="ml-2">
-                          → Required: {targetChain.name} ({targetChain.id})
-                        </span>
-                      )}
-                    </p>
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 group relative w-full">
+              {/* Pattern Overlays */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              
+              {/* Success Card */}
+              <div 
+                className="relative bg-white border-[0.35em] border-[#10b981] rounded-[0.6em] shadow-[0.7em_0.7em_0_#10b981] transition-all duration-[400ms] overflow-hidden z-[2]"
+                style={{ boxShadow: 'inset 0 0 0 0.15em rgba(16, 185, 129, 0.1)' }}
+              >
+                {/* Accent Corner */}
+                <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#10b981] rotate-45 z-[1]" />
+                <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">✓</div>
+
+                {/* Title Area */}
+                <div 
+                  className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                  style={{ 
+                    background: '#10b981',
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                    backgroundBlendMode: 'overlay'
+                  }}
+                >
+                  <div className="flex items-center">
+                    <CheckCircle className="h-6 w-6 mr-3 text-white" />
+                    <h3 className="text-xl font-extrabold text-white">Success</h3>
                   </div>
                 </div>
-                {!isOnCorrectChain && (
-                  <button
-                    type="button"
-                    onClick={handleManualChainSwitch}
-                    disabled={isChainSwitching}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
-                    {isChainSwitching ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Switching...
-                      </>
-                    ) : (
-                      <>
-                        <Globe className="h-4 w-4 mr-2" />
-                        Switch Network
-                      </>
-                    )}
-                  </button>
-                )}
+
+                {/* Success Content */}
+                <div className="relative px-[1.4em] py-[1.5em] z-[2]">
+                  <p className="text-[#050505] font-bold text-base">{successMessage}</p>
+                </div>
               </div>
-              
-              {chainSwitchError && (
-                <div className="mt-3 p-3 bg-red-100 rounded-lg border border-red-200">
-                  <p className="text-red-700 text-sm">{chainSwitchError}</p>
-                </div>
-              )}
-              
-              {showChainSwitch && !isOnCorrectChain && (
-                <div className="mt-3 p-3 bg-yellow-100 rounded-lg border border-yellow-200">
-                  <p className="text-yellow-800 text-sm">
-                    Automatic network switching failed. Please use the "Switch Network" button above or switch manually in your wallet.
-                  </p>
-                </div>
-              )}
+            </div>
+          )}
+
+          {/* Network Status Badge */}
+          {address && (
+            <div className="mb-6 flex justify-end">
+              <div className={`inline-flex items-center px-4 py-2 rounded-[0.4em] border-[0.2em] border-[#050505] shadow-[0.2em_0.2em_0_#000000] font-bold text-sm ${
+                isOnCorrectChain 
+                  ? 'bg-[#10b981] text-white' 
+                  : 'bg-[#ef4444] text-white'
+              }`}>
+                <div className={`w-2 h-2 rounded-full mr-2 border-[0.1em] border-white ${
+                  isOnCorrectChain ? 'bg-white' : 'bg-white'
+                }`}></div>
+                {isOnCorrectChain ? 'Connected' : 'Disconnected'}
+              </div>
+            </div>
+          )}
+          
+          {/* Chain Switch Error - Only show if there's an error */}
+          {chainSwitchError && (
+            <div className="mb-6 flex justify-end">
+              <div className="inline-flex items-center px-4 py-2 bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em]">
+                <XCircle className="h-4 w-4 text-[#ef4444] mr-2" />
+                <p className="text-[#991b1b] font-bold text-sm">{chainSwitchError}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Manual Chain Switch Button - Only show if wrong network */}
+          {address && !isOnCorrectChain && !isChainSwitching && (
+            <div className="mb-6 flex justify-end">
+              <button
+                type="button"
+                onClick={handleManualChainSwitch}
+                className="px-4 py-2 bg-white text-[#050505] border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold text-sm flex items-center"
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                Switch Network
+              </button>
             </div>
           )}
 
@@ -992,28 +1130,33 @@ export default function CreateCampaign() {
                 {/* Campaign Name & Type */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-purple-700 font-medium mb-3">
-                      Campaign Name <span className="text-red-500">*</span>
+                    <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                      Campaign Name <span className="text-[#ef4444]">*</span>
                     </label>
                     <input
                       ref={nameInputRef}
                       type="text"
                       value={campaign.name}
                       onChange={(e) => handleFieldChange('name', e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                      className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.name ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400`}
                       placeholder="Enter your campaign name"
                     />
-                    {formErrors.name && <p className="mt-2 text-red-500 text-sm">{formErrors.name}</p>}
+                    {formErrors.name && (
+                      <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                        <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                        <p className="text-[#991b1b] font-bold text-sm">{formErrors.name}</p>
+                      </div>
+                    )}
                   </div>
                   
                   <div>
-                    <label className="block text-purple-700 font-medium mb-3">
+                    <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
                       Category
                     </label>
                     <select
                       value={campaign.category}
                       onChange={(e) => handleFieldChange('category', e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                      className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all"
                     >
                       <option value="">Select category</option>
                       {categories.map(cat => (
@@ -1025,8 +1168,8 @@ export default function CreateCampaign() {
                 
                 {/* Campaign Type Selection */}
                 <div>
-                  <label className="block text-purple-700 font-medium mb-3">
-                    Campaign Type <span className="text-red-500">*</span>
+                  <label className="block text-[#050505] font-extrabold mb-3 uppercase text-sm tracking-[0.05em]">
+                    Campaign Type <span className="text-[#ef4444]">*</span>
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {campaignTypes.map((type) => {
@@ -1035,19 +1178,17 @@ export default function CreateCampaign() {
                         <div
                           key={type.value}
                           onClick={() => handleFieldChange('campaignType', type.value)}
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                          className={`p-4 rounded-[0.4em] border-[0.2em] cursor-pointer transition-all duration-200 font-bold ${
                             campaign.campaignType === type.value
-                              ? 'border-purple-500 bg-purple-50'
-                              : 'border-gray-200 hover:border-purple-300'
+                              ? 'border-[#a855f7] bg-[#a855f7] text-white shadow-[0.3em_0.3em_0_#000000]'
+                              : 'border-[#050505] bg-white text-[#050505] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em]'
                           }`}
                         >
                           <div className="flex items-center">
                             <IconComponent className={`h-5 w-5 mr-2 ${
-                              campaign.campaignType === type.value ? 'text-purple-600' : 'text-gray-500'
+                              campaign.campaignType === type.value ? 'text-white' : 'text-[#a855f7]'
                             }`} />
-                            <span className={`font-medium ${
-                              campaign.campaignType === type.value ? 'text-purple-700' : 'text-gray-700'
-                            }`}>
+                            <span>
                               {type.label}
                             </span>
                           </div>
@@ -1055,44 +1196,58 @@ export default function CreateCampaign() {
                       );
                     })}
                   </div>
-                  {formErrors.campaignType && <p className="mt-2 text-red-500 text-sm">{formErrors.campaignType}</p>}
+                  {formErrors.campaignType && (
+                    <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                      <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                      <p className="text-[#991b1b] font-bold text-sm">{formErrors.campaignType}</p>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Description */}
                 <div>
-                  <label className="block text-purple-700 font-medium mb-3">
-                    Campaign Description <span className="text-red-500">*</span>
+                  <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                    Campaign Description <span className="text-[#ef4444]">*</span>
                   </label>
                   <textarea
                     value={campaign.description}
                     onChange={(e) => handleFieldChange('description', e.target.value)}
                     rows={6}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                    className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.description ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400 resize-none`}
                     placeholder="Provide a comprehensive description of your campaign, its goals, and what participants can expect..."
                   />
-                  {formErrors.description && <p className="mt-2 text-red-500 text-sm">{formErrors.description}</p>}
-                  <p className="mt-2 text-gray-500 text-sm">Minimum 100 characters • {campaign.description.length} characters</p>
+                  {formErrors.description && (
+                    <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                      <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                      <p className="text-[#991b1b] font-bold text-sm">{formErrors.description}</p>
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className={`text-sm font-bold ${campaign.description.length < 100 ? 'text-[#ef4444]' : 'text-[#10b981]'}`}>
+                      {campaign.description.length < 100 ? `Minimum 100 characters • ${campaign.description.length}/100` : `✓ ${campaign.description.length} characters`}
+                    </p>
+                  </div>
                 </div>
                 
                 {/* Tags */}
                 <div>
-                  <label className="block text-purple-700 font-medium mb-3">
+                  <label className="block text-[#050505] font-extrabold mb-3 uppercase text-sm tracking-[0.05em]">
                     Tags
                   </label>
                   {campaign.tags.map((tag, index) => (
-                    <div key={index} className="flex mb-3">
+                    <div key={index} className="flex mb-3 gap-2">
                       <input
                         type="text"
                         value={tag}
                         onChange={(e) => updateArrayItem('tags', index, e.target.value)}
-                        className="flex-1 px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                        className="flex-1 px-4 py-2.5 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                         placeholder="Enter tag (e.g., Innovation, DeFi, Social Impact)"
                       />
                       {campaign.tags.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeArrayItem('tags', index)}
-                          className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-r-xl hover:bg-gray-200 transition-colors border-y border-r border-gray-200"
+                          className="px-3 py-2.5 bg-[#ef4444] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1102,7 +1257,7 @@ export default function CreateCampaign() {
                   <button
                     type="button"
                     onClick={() => addArrayItem('tags')}
-                    className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors border border-purple-200"
+                    className="inline-flex items-center px-4 py-2 bg-[#10b981] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Tag
@@ -1122,7 +1277,7 @@ export default function CreateCampaign() {
               <div className="space-y-6">
                 {/* Logo Upload */}
                 <div>
-                  <label className="block text-purple-700 font-medium mb-3">
+                  <label className="block text-[#050505] font-extrabold mb-3 uppercase text-sm tracking-[0.05em]">
                     Campaign Logo
                   </label>
                   
@@ -1132,7 +1287,7 @@ export default function CreateCampaign() {
                         <img
                           src={logoPreview}
                           alt="Logo preview"
-                          className="w-32 h-32 object-cover rounded-xl border-2 border-purple-200 shadow-lg"
+                          className="w-32 h-32 object-cover rounded-[0.4em] border-[0.2em] border-[#050505] shadow-[0.3em_0.3em_0_#000000]"
                         />
                         <button
                           type="button"
@@ -1144,15 +1299,15 @@ export default function CreateCampaign() {
                               logoFileInputRef.current.value = '';
                             }
                           }}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          className="absolute -top-2 -right-2 w-8 h-8 bg-[#ef4444] text-white border-[0.15em] border-[#050505] rounded-full flex items-center justify-center shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
                   )}
                   
-                  <div className="border-2 border-dashed border-purple-200 rounded-xl p-6 text-center hover:border-purple-300 transition-colors">
+                  <div className="border-[0.2em] border-dashed border-[#050505] rounded-[0.4em] p-6 text-center bg-white shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] transition-all">
                     <input
                       type="file"
                       ref={logoFileInputRef}
@@ -1161,20 +1316,20 @@ export default function CreateCampaign() {
                       className="hidden"
                     />
                     <div className="space-y-4">
-                      <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                        <Upload className="h-8 w-8 text-purple-500" />
+                      <div className="mx-auto w-16 h-16 bg-[#a855f7] border-[0.2em] border-[#050505] rounded-full flex items-center justify-center shadow-[0.2em_0.2em_0_#000000]">
+                        <Upload className="h-8 w-8 text-white" />
                       </div>
                       <div>
                         <button
                           type="button"
                           onClick={() => logoFileInputRef.current?.click()}
-                          className="px-6 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center mx-auto"
+                          className="px-6 py-3 bg-[#a855f7] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold flex items-center mx-auto"
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           {logoFile ? 'Change Logo' : 'Choose Logo File'}
                         </button>
-                        <p className="text-sm text-gray-500 mt-2">PNG, JPG, SVG up to 10MB</p>
-                        <p className="text-xs text-gray-400 mt-1">Recommended: 400x400px square format</p>
+                        <p className="text-sm font-bold text-[#050505] mt-2">PNG, JPG, SVG up to 10MB</p>
+                        <p className="text-xs font-semibold text-[#050505]/70 mt-1">Recommended: 400x400px square format</p>
                       </div>
                     </div>
                   </div>
@@ -1183,27 +1338,27 @@ export default function CreateCampaign() {
                 {/* Website & Video */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-purple-700 font-medium mb-3">
+                    <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
                       Campaign Website
                     </label>
                     <input
                       type="url"
                       value={campaign.website}
                       onChange={(e) => handleFieldChange('website', e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                      className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                       placeholder="https://yourcampaign.com"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-purple-700 font-medium mb-3">
+                    <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
                       Video Link
                     </label>
                     <input
                       type="url"
                       value={campaign.videoLink}
                       onChange={(e) => handleFieldChange('videoLink', e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                      className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                       placeholder="https://youtube.com/watch?v=..."
                     />
                   </div>
@@ -1223,44 +1378,54 @@ export default function CreateCampaign() {
               <div className="space-y-8">
                 {/* Timeline */}
                 <div>
-                  <h4 className="text-lg font-semibold text-purple-700 mb-4">Campaign Timeline</h4>
+                  <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Campaign Timeline</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-purple-700 font-medium mb-3">
-                        Start Date <span className="text-red-500">*</span>
+                      <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                        Start Date <span className="text-[#ef4444]">*</span>
                       </label>
                       <input
                         type="datetime-local"
                         value={campaign.startDate}
                         onChange={(e) => handleFieldChange('startDate', e.target.value)}
                         min={new Date().toISOString().slice(0, 16)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                        className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.startDate ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all`}
                         placeholder="Select start date and time"
                       />
-                      {formErrors.startDate && <p className="mt-2 text-red-500 text-sm">{formErrors.startDate}</p>}
-                      <p className="mt-1 text-xs text-gray-500">Campaign must start in the future</p>
+                      {formErrors.startDate && (
+                        <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                          <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                          <p className="text-[#991b1b] font-bold text-sm">{formErrors.startDate}</p>
+                        </div>
+                      )}
+                      <p className="mt-1 text-xs font-bold text-[#050505]">Campaign must start in the future</p>
                     </div>
                     
                     <div>
-                      <label className="block text-purple-700 font-medium mb-3">
-                        End Date <span className="text-red-500">*</span>
+                      <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                        End Date <span className="text-[#ef4444]">*</span>
                       </label>
                       <input
                         type="datetime-local"
                         value={campaign.endDate}
                         onChange={(e) => handleFieldChange('endDate', e.target.value)}
                         min={campaign.startDate || new Date().toISOString().slice(0, 16)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                        className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.endDate ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all`}
                         placeholder="Select end date and time"
                       />
-                      {formErrors.endDate && <p className="mt-2 text-red-500 text-sm">{formErrors.endDate}</p>}
-                      <p className="mt-1 text-xs text-gray-500">Must be after start date</p>
+                      {formErrors.endDate && (
+                        <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                          <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                          <p className="text-[#991b1b] font-bold text-sm">{formErrors.endDate}</p>
+                        </div>
+                      )}
+                      <p className="mt-1 text-xs font-bold text-[#050505]">Must be after start date</p>
                     </div>
                   </div>
                   
                   {campaign.startDate && campaign.endDate && (
-                    <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                      <p className="text-purple-700 font-medium">
+                    <div className="mt-4 p-4 bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+                      <p className="text-[#2563eb] font-extrabold uppercase tracking-[0.05em]">
                         Duration: {getDurationInDays()} days
                       </p>
                     </div>
@@ -1269,12 +1434,12 @@ export default function CreateCampaign() {
 
                 {/* Prize Pool & Token Settings */}
                 <div>
-                  <h4 className="text-lg font-semibold text-purple-700 mb-4">Prize Pool & Tokens</h4>
+                  <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Prize Pool & Tokens</h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <label className="block text-purple-700 font-medium mb-3">
-                        Prize Pool (CELO) <span className="text-red-500">*</span>
+                      <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                        Prize Pool (CELO) <span className="text-[#ef4444]">*</span>
                       </label>
                       <input
                         type="number"
@@ -1282,18 +1447,23 @@ export default function CreateCampaign() {
                         min="0"
                         value={campaign.prizePool}
                         onChange={(e) => handleFieldChange('prizePool', e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                        className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.prizePool ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400`}
                         placeholder="50000"
                       />
-                      {formErrors.prizePool && <p className="mt-2 text-red-500 text-sm">{formErrors.prizePool}</p>}
+                      {formErrors.prizePool && (
+                        <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                          <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                          <p className="text-[#991b1b] font-bold text-sm">{formErrors.prizePool}</p>
+                        </div>
+                      )}
                     </div>
                     
                     <div>
-                      <label className="block text-purple-700 font-medium mb-3">Admin Fee (%)</label>
+                      <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Admin Fee (%)</label>
                       <select
                        value={campaign.adminFeePercentage}
                        onChange={(e) => handleFieldChange('adminFeePercentage', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all"
                      >
                        <option value="0">0% - No admin fee</option>
                        <option value="3">3% - Low fee</option>
@@ -1307,19 +1477,19 @@ export default function CreateCampaign() {
                  {/* Payout & Fee Token Selection - CELO Only */}
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3">
-                       Payout Token <span className="text-red-500">*</span>
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                       Payout Token <span className="text-[#ef4444]">*</span>
                      </label>
-                     <div className="px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 text-gray-700">
+                     <div className="px-4 py-3 bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-bold">
                        CELO (More tokens coming soon)
                      </div>
                    </div>
                    
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3">
-                       Fee Token <span className="text-red-500">*</span>
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                       Fee Token <span className="text-[#ef4444]">*</span>
                      </label>
-                     <div className="px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 text-gray-700">
+                     <div className="px-4 py-3 bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-bold">
                        CELO (More tokens coming soon)
                      </div>
                    </div>
@@ -1327,9 +1497,9 @@ export default function CreateCampaign() {
 
                  {/* Prize Distribution */}
                  <div>
-                   <label className="block text-purple-700 font-medium mb-3">Prize Distribution (CELO)</label>
+                   <label className="block text-[#050505] font-extrabold mb-3 uppercase text-sm tracking-[0.05em]">Prize Distribution (CELO)</label>
                    {campaign.rewards.distribution.map((prize, index) => (
-                     <div key={index} className="flex mb-3">
+                     <div key={index} className="flex mb-3 gap-2">
                        <input
                          type="text"
                          value={prize}
@@ -1341,7 +1511,7 @@ export default function CreateCampaign() {
                              distribution: updated
                            });
                          }}
-                         className="flex-1 px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                         className="flex-1 px-4 py-2.5 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                          placeholder={`1st Place: 20,000 CELO`}
                        />
                        {campaign.rewards.distribution.length > 1 && (
@@ -1355,7 +1525,7 @@ export default function CreateCampaign() {
                                distribution: updated
                              });
                            }}
-                           className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-r-xl hover:bg-gray-200 transition-colors border-y border-r border-gray-200"
+                           className="px-3 py-2.5 bg-[#ef4444] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                          >
                            <Trash2 className="h-4 w-4" />
                          </button>
@@ -1368,7 +1538,7 @@ export default function CreateCampaign() {
                        ...campaign.rewards,
                        distribution: [...campaign.rewards.distribution, '']
                      })}
-                     className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors border border-purple-200"
+                     className="inline-flex items-center px-4 py-2 bg-[#10b981] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                    >
                      <Plus className="h-4 w-4 mr-2" />
                      Add Prize
@@ -1378,29 +1548,29 @@ export default function CreateCampaign() {
 
                {/* Participants & Winners */}
                <div>
-                 <h4 className="text-lg font-semibold text-purple-700 mb-4">Participation Settings</h4>
+                 <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Participation Settings</h4>
                  
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3">Max Participants</label>
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Max Participants</label>
                      <input
                        type="number"
                        min="0"
                        value={campaign.maxParticipants}
                        onChange={(e) => handleFieldChange('maxParticipants', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="Leave empty for unlimited"
                      />
                    </div>
                    
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3">Max Winners</label>
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Max Winners</label>
                      <input
                        type="number"
                        min="0"
                        value={campaign.maxWinners}
                        onChange={(e) => handleFieldChange('maxWinners', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="Leave empty for unlimited"
                      />
                    </div>
@@ -1409,75 +1579,75 @@ export default function CreateCampaign() {
 
                {/* Distribution Method */}
                <div>
-                 <h4 className="text-lg font-semibold text-purple-700 mb-4 flex items-center">
+                 <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em] flex items-center">
                    Funding Options
                    <a 
                      href="https://seas.xyz/docs/funding" 
                      target="_blank" 
                      rel="noopener noreferrer"
-                     className="ml-2 text-purple-500 hover:text-purple-700 transition-colors"
+                     className="ml-2 text-[#2563eb] hover:text-[#1d4ed8] transition-colors"
                    >
                      <HelpCircle className="h-4 w-4" />
                    </a>
                  </h4>
                  
                  <div className="space-y-4">
-                   <div className="flex items-start space-x-4 p-4 rounded-xl border-2 border-purple-200 bg-purple-50">
-                     <label className="flex items-center mt-1">
+                   <div className={`flex items-start space-x-4 p-4 rounded-[0.4em] border-[0.2em] ${campaign.useQuadraticDistribution && !campaign.useCustomDistribution ? 'border-[#a855f7] bg-[#f3e8ff] shadow-[0.2em_0.2em_0_#000000]' : 'border-[#050505] bg-white shadow-[0.1em_0.1em_0_#000000]'}`}>
+                     <label className="flex items-center mt-1 cursor-pointer">
                        <input
                          type="radio"
                          name="distributionMethod"
                          checked={campaign.useQuadraticDistribution && !campaign.useCustomDistribution}
                          onChange={() => handleFieldChange('useQuadraticDistribution', true)}
-                         className="mr-3 text-purple-500"
+                         className="mr-3 w-5 h-5 text-[#a855f7] cursor-pointer"
                        />
-                       <span className="font-medium text-purple-800">Quadratic Distribution (Recommended)</span>
+                       <span className="font-extrabold text-[#050505]">Quadratic Distribution (Recommended)</span>
                      </label>
                      <div>
-                       <p className="text-purple-700 text-sm">Square root weighting for more balanced and democratic distribution</p>
+                       <p className="text-[#050505] font-semibold text-sm">Square root weighting for more balanced and democratic distribution</p>
                      </div>
                    </div>
                    
-                   <div className="flex items-start space-x-4 p-4 rounded-xl border border-gray-200">
-                     <label className="flex items-center mt-1">
+                   <div className={`flex items-start space-x-4 p-4 rounded-[0.4em] border-[0.2em] ${!campaign.useQuadraticDistribution && !campaign.useCustomDistribution ? 'border-[#a855f7] bg-[#f3e8ff] shadow-[0.2em_0.2em_0_#000000]' : 'border-[#050505] bg-white shadow-[0.1em_0.1em_0_#000000]'}`}>
+                     <label className="flex items-center mt-1 cursor-pointer">
                        <input
                          type="radio"
                          name="distributionMethod"
                          checked={!campaign.useQuadraticDistribution && !campaign.useCustomDistribution}
                          onChange={() => handleFieldChange('useQuadraticDistribution', false)}
-                         className="mr-3 text-purple-500"
+                         className="mr-3 w-5 h-5 text-[#a855f7] cursor-pointer"
                        />
-                       <span className="font-medium">Linear Distribution</span>
+                       <span className="font-extrabold text-[#050505]">Linear Distribution</span>
                      </label>
                      <div>
-                       <p className="text-gray-600 text-sm">Direct proportion to votes received</p>
+                       <p className="text-[#050505] font-semibold text-sm">Direct proportion to votes received</p>
                      </div>
                    </div>
                    
-                   <div className="flex items-start space-x-4 p-4 rounded-xl border border-gray-200">
-                     <label className="flex items-center mt-1">
+                   <div className={`flex items-start space-x-4 p-4 rounded-[0.4em] border-[0.2em] ${campaign.useCustomDistribution ? 'border-[#a855f7] bg-[#f3e8ff] shadow-[0.2em_0.2em_0_#000000]' : 'border-[#050505] bg-white shadow-[0.1em_0.1em_0_#000000]'}`}>
+                     <label className="flex items-center mt-1 cursor-pointer">
                        <input
                          type="radio"
                          name="distributionMethod"
                          checked={campaign.useCustomDistribution}
                          onChange={() => handleFieldChange('useCustomDistribution', true)}
-                         className="mr-3 text-purple-500"
+                         className="mr-3 w-5 h-5 text-[#a855f7] cursor-pointer"
                        />
-                       <span className="font-medium">Custom Distribution</span>
+                       <span className="font-extrabold text-[#050505]">Custom Distribution</span>
                      </label>
                      <div>
-                       <p className="text-gray-600 text-sm">Manual distribution by campaign admin</p>
+                       <p className="text-[#050505] font-semibold text-sm">Manual distribution by campaign admin</p>
                      </div>
                    </div>
                    
                    {campaign.useCustomDistribution && (
                      <div className="mt-4">
-                       <label className="block text-purple-700 font-medium mb-3">Custom Distribution Notes</label>
+                       <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Custom Distribution Notes</label>
                        <textarea
                          value={campaign.customDistributionNotes}
                          onChange={(e) => handleFieldChange('customDistributionNotes', e.target.value)}
                          rows={3}
-                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                         className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400 resize-none"
                          placeholder="Describe your custom distribution logic..."
                        />
                      </div>
@@ -1499,29 +1669,34 @@ export default function CreateCampaign() {
              <div className="space-y-8">
                {/* Contact Information */}
                <div>
-                 <h4 className="text-lg font-semibold text-purple-700 mb-4">Contact Information</h4>
+                 <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Contact Information</h4>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3">
-                       Contact Email <span className="text-red-500">*</span>
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                       Contact Email <span className="text-[#ef4444]">*</span>
                      </label>
                      <input
                        type="email"
                        value={campaign.contactEmail}
                        onChange={(e) => handleFieldChange('contactEmail', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.contactEmail ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400`}
                        placeholder="contact@yourcampaign.com"
                      />
-                     {formErrors.contactEmail && <p className="mt-2 text-red-500 text-sm">{formErrors.contactEmail}</p>}
+                     {formErrors.contactEmail && (
+                       <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                         <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                         <p className="text-[#991b1b] font-bold text-sm">{formErrors.contactEmail}</p>
+                       </div>
+                     )}
                    </div>
                    
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3">Website</label>
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Website</label>
                      <input
                        type="url"
                        value={campaign.website}
                        onChange={(e) => handleFieldChange('website', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="https://yourcampaign.com"
                      />
                    </div>
@@ -1530,10 +1705,10 @@ export default function CreateCampaign() {
 
                {/* Social Media */}
                <div>
-                 <h4 className="text-lg font-semibold text-purple-700 mb-4">Social Media & Community</h4>
+                 <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Social Media & Community</h4>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3 flex items-center">
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em] flex items-center">
                        <Twitter className="h-4 w-4 mr-2" />
                        Twitter
                      </label>
@@ -1541,13 +1716,13 @@ export default function CreateCampaign() {
                        type="url"
                        value={campaign.twitter}
                        onChange={(e) => handleFieldChange('twitter', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="https://twitter.com/yourcampaign"
                      />
                    </div>
                    
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3 flex items-center">
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em] flex items-center">
                        <Globe className="h-4 w-4 mr-2" />
                        Discord
                      </label>
@@ -1555,13 +1730,13 @@ export default function CreateCampaign() {
                        type="url"
                        value={campaign.discord}
                        onChange={(e) => handleFieldChange('discord', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="https://discord.gg/yourcampaign"
                      />
                    </div>
                    
                    <div>
-                     <label className="block text-purple-700 font-medium mb-3 flex items-center">
+                     <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em] flex items-center">
                        <Globe className="h-4 w-4 mr-2" />
                        Telegram
                      </label>
@@ -1569,7 +1744,7 @@ export default function CreateCampaign() {
                        type="url"
                        value={campaign.telegram}
                        onChange={(e) => handleFieldChange('telegram', e.target.value)}
-                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="https://t.me/yourcampaign"
                      />
                    </div>
@@ -1578,21 +1753,21 @@ export default function CreateCampaign() {
 
                {/* Eligibility Criteria */}
                <div>
-                 <h4 className="text-lg font-semibold text-purple-700 mb-4">Eligibility Criteria</h4>
+                 <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Eligibility Criteria</h4>
                  {campaign.eligibilityCriteria.map((criteria, index) => (
-                   <div key={index} className="flex mb-3">
+                   <div key={index} className="flex mb-3 gap-2">
                      <input
                        type="text"
                        value={criteria}
                        onChange={(e) => updateArrayItem('eligibilityCriteria', index, e.target.value)}
-                       className="flex-1 px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="flex-1 px-4 py-2.5 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="Must be building on blockchain technology"
                      />
                      {campaign.eligibilityCriteria.length > 1 && (
                        <button
                          type="button"
                          onClick={() => removeArrayItem('eligibilityCriteria', index)}
-                         className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-r-xl hover:bg-gray-200 transition-colors border-y border-r border-gray-200"
+                         className="px-3 py-2.5 bg-[#ef4444] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                        >
                          <Trash2 className="h-4 w-4" />
                        </button>
@@ -1602,7 +1777,7 @@ export default function CreateCampaign() {
                  <button
                    type="button"
                    onClick={() => addArrayItem('eligibilityCriteria')}
-                   className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors border border-purple-200"
+                   className="inline-flex items-center px-4 py-2 bg-[#10b981] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                  >
                    <Plus className="h-4 w-4 mr-2" />
                    Add Criterion
@@ -1611,21 +1786,21 @@ export default function CreateCampaign() {
 
                {/* Requirements */}
                <div>
-                 <h4 className="text-lg font-semibold text-purple-700 mb-4">Requirements</h4>
+                 <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Requirements</h4>
                  {campaign.requirements.map((requirement, index) => (
-                   <div key={index} className="flex mb-3">
+                   <div key={index} className="flex mb-3 gap-2">
                      <input
                        type="text"
                        value={requirement}
                        onChange={(e) => updateArrayItem('requirements', index, e.target.value)}
-                       className="flex-1 px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="flex-1 px-4 py-2.5 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="Working prototype or MVP"
                      />
                      {campaign.requirements.length > 1 && (
                        <button
                          type="button"
                          onClick={() => removeArrayItem('requirements', index)}
-                         className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-r-xl hover:bg-gray-200 transition-colors border-y border-r border-gray-200"
+                         className="px-3 py-2.5 bg-[#ef4444] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                        >
                          <Trash2 className="h-4 w-4" />
                        </button>
@@ -1635,7 +1810,7 @@ export default function CreateCampaign() {
                  <button
                    type="button"
                    onClick={() => addArrayItem('requirements')}
-                   className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors border border-purple-200"
+                   className="inline-flex items-center px-4 py-2 bg-[#10b981] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                  >
                    <Plus className="h-4 w-4 mr-2" />
                    Add Requirement
@@ -1644,21 +1819,21 @@ export default function CreateCampaign() {
 
                {/* Judging Criteria */}
                <div>
-                 <h4 className="text-lg font-semibold text-purple-700 mb-4">Judging Criteria</h4>
+                 <h4 className="text-lg font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">Judging Criteria</h4>
                  {campaign.judgesCriteria.map((criteria, index) => (
-                   <div key={index} className="flex mb-3">
+                   <div key={index} className="flex mb-3 gap-2">
                      <input
                        type="text"
                        value={criteria}
                        onChange={(e) => updateArrayItem('judgesCriteria', index, e.target.value)}
-                       className="flex-1 px-4 py-2.5 rounded-l-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                       className="flex-1 px-4 py-2.5 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400"
                        placeholder="Technical innovation (30%)"
                      />
                      {campaign.judgesCriteria.length > 1 && (
                        <button
                          type="button"
                          onClick={() => removeArrayItem('judgesCriteria', index)}
-                         className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-r-xl hover:bg-gray-200 transition-colors border-y border-r border-gray-200"
+                         className="px-3 py-2.5 bg-[#ef4444] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                        >
                          <Trash2 className="h-4 w-4" />
                        </button>
@@ -1668,7 +1843,7 @@ export default function CreateCampaign() {
                  <button
                    type="button"
                    onClick={() => addArrayItem('judgesCriteria')}
-                   className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors border border-purple-200"
+                   className="inline-flex items-center px-4 py-2 bg-[#10b981] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-bold"
                  >
                    <Plus className="h-4 w-4 mr-2" />
                    Add Criterion
@@ -1677,12 +1852,12 @@ export default function CreateCampaign() {
 
                {/* Submission Guidelines */}
                <div>
-                 <label className="block text-purple-700 font-medium mb-3">Submission Guidelines</label>
+                 <label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Submission Guidelines</label>
                  <textarea
                    value={campaign.submissionGuidelines}
                    onChange={(e) => handleFieldChange('submissionGuidelines', e.target.value)}
                    rows={4}
-                   className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-800 transition-all"
+                   className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400 resize-none"
                    placeholder="Detailed guidelines for project submissions, including required documents, formats, and deadlines..."
                  />
                </div>
@@ -1942,44 +2117,48 @@ export default function CreateCampaign() {
              </div>
            </Section>
 
-           {/* Card Navigation */}
-           <div className="flex justify-between items-center mt-6 mb-4">
-             <button
-               type="button"
-               onClick={goToPreviousCard}
-               disabled={currentCardIndex === 0}
-               className="flex items-center px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-             >
-               <ArrowLeft className="h-4 w-4 mr-2" />
-               Previous
-             </button>
-             
-             <div className="flex items-center space-x-2">
-               {cardSections.map((_, index) => (
-                 <button
-                   key={index}
-                   onClick={() => goToCard(index)}
-                   className={`w-3 h-3 rounded-full transition-colors ${
-                     index === currentCardIndex 
-                       ? 'bg-purple-600' 
-                       : index < currentCardIndex 
-                         ? 'bg-green-500' 
-                         : 'bg-gray-300'
-                   }`}
-                 />
-               ))}
-             </div>
-             
-             <button
-               type="button"
-               onClick={goToNextCard}
-               disabled={currentCardIndex === cardSections.length - 1}
-               className="flex items-center px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-             >
-               Next
-               <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
-             </button>
-           </div>
+          {/* Card Navigation */}
+          <div className="flex justify-between items-center mt-6 mb-4">
+            <ButtonCool
+              onClick={goToPreviousCard}
+              disabled={currentCardIndex === 0}
+              text="Previous"
+              bgColor="#ffffff"
+              textColor="#050505"
+              borderColor="#050505"
+              size="md"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+            </ButtonCool>
+            
+            <div className="flex items-center space-x-2 bg-white px-3 py-2 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+              {cardSections.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToCard(index)}
+                  className={`w-3 h-3 rounded-full border-[0.15em] border-[#050505] transition-all ${
+                    index === currentCardIndex 
+                      ? 'bg-[#a855f7] shadow-[0.1em_0.1em_0_#000000] scale-110' 
+                      : index < currentCardIndex 
+                        ? 'bg-[#10b981]' 
+                        : 'bg-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+            
+            <ButtonCool
+              onClick={goToNextCard}
+              disabled={currentCardIndex === cardSections.length - 1}
+              text="Next"
+              bgColor="#ffffff"
+              textColor="#050505"
+              borderColor="#050505"
+              size="md"
+            >
+              <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+            </ButtonCool>
+          </div>
 
            {/* Submit Button - Only show on last step */}
            {currentCardIndex === cardSections.length - 1 && (
@@ -1988,14 +2167,49 @@ export default function CreateCampaign() {
              {(() => {
                if (!canBypass && feeAmount != null && Number(feeAmount) > 0 && celoBalance && Number(celoBalance.value) < Number(feeAmount)) {
                  return (
-                   <div className="bg-red-50 rounded-xl p-4 border border-red-200">
-                     <div className="flex items-start">
-                       <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-                       <div>
-                         <p className="text-red-700 font-medium">Insufficient CELO Balance</p>
-                         <p className="text-red-600 text-sm mt-1">
-                           You need {(Number(feeAmount) / 1e18).toFixed(6)} CELO to create a campaign, 
-                           but you only have {(Number(celoBalance.value) / 1e18).toFixed(6)} CELO. 
+                  <div className="group relative w-full mb-6">
+                    {/* Pattern Overlays */}
+                    <div 
+                      className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                      style={{
+                        backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                        backgroundSize: '0.5em 0.5em'
+                      }}
+                    />
+                    
+                    {/* Warning Card */}
+                    <div 
+                      className="relative bg-white border-[0.35em] border-[#ef4444] rounded-[0.6em] shadow-[0.7em_0.7em_0_#ef4444] transition-all duration-[400ms] overflow-hidden z-[2]"
+                      style={{ boxShadow: 'inset 0 0 0 0.15em rgba(239, 68, 68, 0.1)' }}
+                    >
+                      {/* Accent Corner */}
+                      <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#ef4444] rotate-45 z-[1]" />
+                      <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">⚠</div>
+
+                      {/* Title Area */}
+                      <div 
+                        className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                        style={{ 
+                          background: '#ef4444',
+                          backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                          backgroundBlendMode: 'overlay'
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <AlertCircle className="h-6 w-6 mr-3 text-white" />
+                          <h3 className="text-lg font-extrabold text-white">Insufficient CELO Balance</h3>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="relative px-[1.4em] py-[1.5em] z-[2]">
+                        <p className="text-[#050505] font-bold text-base mb-2">
+                          You need <span className="text-[#ef4444] font-extrabold">{(Number(feeAmount) / 1e18).toFixed(6)} CELO</span> to create a campaign
+                        </p>
+                        <p className="text-[#050505] font-semibold text-sm">
+                          Your current balance: <span className="text-[#ef4444] font-extrabold">{(Number(celoBalance.value) / 1e18).toFixed(6)} CELO</span>
+                        </p>
+                        <p className="text-[#050505] font-bold text-sm mt-2">
                            Please add more CELO to your wallet before proceeding.
                          </p>
                        </div>
@@ -2010,17 +2224,49 @@ export default function CreateCampaign() {
              {(() => {
                if (isUploading || loading) {
                  return (
-                   <div className="bg-white rounded-xl p-6 border border-gray-200">
-                     <div className="flex items-center justify-between mb-2">
-                       <span className="font-medium text-gray-700">
+                  <div className="group relative w-full mb-6">
+                    {/* Pattern Overlays */}
+                    <div 
+                      className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                      style={{
+                        backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                        backgroundSize: '0.5em 0.5em'
+                      }}
+                    />
+                    
+                    {/* Progress Card */}
+                    <div 
+                      className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#2563eb] transition-all duration-[400ms] overflow-hidden z-[2]"
+                      style={{ boxShadow: 'inset 0 0 0 0.15em rgba(37, 99, 235, 0.1)' }}
+                    >
+                      {/* Accent Corner */}
+                      <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+                      <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">⟳</div>
+
+                      {/* Title Area */}
+                      <div 
+                        className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                        style={{ 
+                          background: '#2563eb',
+                          backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                          backgroundBlendMode: 'overlay'
+                        }}
+                      >
+                        <div className="flex items-center">
+                          <Loader2 className="h-6 w-6 mr-3 text-white animate-spin" />
+                          <h3 className="text-lg font-extrabold text-white">
                          {isUploading ? 'Uploading Files...' : 'Creating Campaign...'}
-                       </span>
-                       <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+                          </h3>
                      </div>
-                     <p className="text-sm text-gray-500">
-                       {isUploading ? 'Uploading media files to IPFS...' : ''}
-                       {loading && !isUploading ? 'Preparing transaction...' : ''}
-                     </p>
+                      </div>
+
+                      {/* Content */}
+                      <div className="relative px-[1.4em] py-[1.5em] z-[2]">
+                        <p className="text-[#050505] font-bold text-base">
+                          {isUploading ? 'Uploading media files to IPFS...' : 'Preparing transaction...'}
+                        </p>
+                      </div>
+                    </div>
                    </div>
                  );
                }
@@ -2032,7 +2278,7 @@ export default function CreateCampaign() {
                <button
                  type="submit"
                   disabled={!!loading || !!isUploading || !!isChainSwitching || (!canBypass && !!feeAmount && !!celoBalance && Number(celoBalance.value) < Number(feeAmount)) as any}
-                 className="px-12 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold text-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center group border border-emerald-400/30 relative overflow-hidden"
+                className="px-12 py-4 bg-[#10b981] text-white border-[0.3em] border-[#050505] rounded-[0.5em] shadow-[0.4em_0.4em_0_#000000] hover:shadow-[0.5em_0.5em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-[0.4em_0.4em_0_#000000] transition-all font-extrabold text-lg uppercase tracking-[0.05em] flex items-center group relative overflow-hidden"
                >
                  {loading || isUploading ? (
                    <>
@@ -2043,7 +2289,6 @@ export default function CreateCampaign() {
                    <>
                      <Trophy className="h-5 w-5 mr-3 group-hover:rotate-12 transition-transform duration-300" />
                      Launch Campaign
-                     <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
                    </>
                  )}
                </button>

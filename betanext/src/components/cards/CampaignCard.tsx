@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Trophy, CheckCircle, Timer, Activity, ArrowRight } from 'lucide-react';
+import { Trophy, CheckCircle, Timer, Activity, Users, Clock, Award, Vote } from 'lucide-react';
 import { useNavigate } from '@/utils/nextAdapter';
 import { getCampaignRoute } from '@/utils/hashids';
 import { capitalizeWords } from '@/utils/textUtils';
 import { ipfsImageLoader } from '@/utils/imageUtils';
+import { formatEther } from 'viem';
 
 interface CampaignCardProps {
   title: string;
@@ -16,6 +17,10 @@ interface CampaignCardProps {
   descriptionTruncateSize?: number;
   startTime?: number;
   endTime?: number;
+  totalFunds?: bigint;
+  maxWinners?: bigint;
+  totalVotes?: number;
+  projectCount?: number;
 }
 
 const CampaignCard: React.FC<CampaignCardProps> = ({
@@ -27,7 +32,11 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   campaignId,
   descriptionTruncateSize = 40,
   startTime,
-  endTime
+  endTime,
+  totalFunds,
+  maxWinners,
+  totalVotes = 0,
+  projectCount = 0
 }) => {
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState('');
@@ -76,18 +85,39 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
   const getStatusInfo = () => {
     switch (currentStatus) {
       case 'upcoming':
-        return { class: 'bg-cyan-400 text-black', text: 'Coming Soon', icon: Timer };
+        return { text: 'Coming Soon', color: '#3b82f6', bgColor: '#dbeafe' };
       case 'active':
-        return { class: 'bg-gradient-to-r from-black to-gray-800 text-white', text: 'Active', icon: Activity };
+        return { text: 'Active', color: '#10b981', bgColor: '#d1fae5' };
       case 'ended':
       case 'paused':
       default:
-        return { class: 'bg-gray-200 text-gray-700', text: 'Ended', icon: CheckCircle };
+        return { text: 'Ended', color: '#6b7280', bgColor: '#f3f4f6' };
     }
   };
 
   const statusInfo = getStatusInfo();
-  const StatusIcon = statusInfo?.icon;
+  
+  // Format total funds
+  const formattedFunds = totalFunds ? parseFloat(formatEther(totalFunds)).toFixed(1) : '0';
+  const fundsDisplay = parseFloat(formattedFunds) >= 1000 
+    ? `${(parseFloat(formattedFunds) / 1000).toFixed(1)}K` 
+    : formattedFunds;
+
+  // Calculate dynamic title font size based on length
+  // Longer titles get smaller font, shorter titles get larger font
+  const titleLength = title.length;
+  
+  // Use CSS clamp for automatic responsive sizing
+  // Formula: clamp(min, preferred, max)
+  // Preferred size decreases as title length increases
+  const calculateTitleSize = () => {
+    // Calculate preferred size: starts at 1.4em for short titles, decreases to 0.7em for very long
+    // Using a linear interpolation: 1.4 - (length - 5) * 0.015
+    const preferredSize = Math.max(0.7, Math.min(1.4, 1.4 - (titleLength - 5) * 0.015));
+    return `clamp(0.7em, ${preferredSize}em, 1.4em)`;
+  };
+
+  const titleFontSize = calculateTitleSize();
 
   useEffect(() => {
     if (!logo) {
@@ -136,112 +166,202 @@ const CampaignCard: React.FC<CampaignCardProps> = ({
 
   return (
     <div
-      className={`group relative ${className} cursor-pointer`}
+      className={`group relative w-full max-w-[22em] ${className} cursor-pointer`}
       onClick={handleCardClick}
-      onMouseDown={() => console.log('Campaign card mouse down, campaignId:', campaignId)}
       style={{ pointerEvents: 'auto' }}
     >
-      <div className="relative" style={{ pointerEvents: 'auto' }}>
-        {/* Elevated face */}
-        <div className="relative z-10 h-64 rounded-3xl overflow-hidden bg-gray-900 shadow-2xl transition duration-500 group-hover:-translate-y-6 group-hover:shadow-[0_25px_60px_rgba(0,0,0,0.6)]" style={{ pointerEvents: 'auto' }}>
-          <div className="absolute inset-0">
-            {imageSrc ? (
-              <Image
-                loader={ipfsImageLoader}
-                src={imageSrc}
-                alt={title}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover opacity-60"
-                onError={(event) => {
-                  const originalSrc = event.currentTarget.src;
-                  const fallback = getFallbackImageUrl(originalSrc);
-                  console.warn('[CampaignCard] image load failed, attempting fallback', {
-                    campaignId,
-                    originalSrc,
-                    fallback,
-                  });
-                  if (fallback && fallback !== originalSrc) {
-                    setImageSrc(fallback);
-                  } else {
-                    setImageSrc(undefined);
-                  }
-                }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                <Trophy className="h-16 w-16 text-gray-600" />
-              </div>
-            )}
-          </div>
+      {/* Pattern Grid Overlay */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+          backgroundSize: '0.5em 0.5em'
+        }}
+      />
+      
+      {/* Dots Overlay */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-[400ms] z-[1]"
+        style={{
+          backgroundImage: 'radial-gradient(#cfcfcf 1px, transparent 1px)',
+          backgroundSize: '1em 1em',
+          backgroundPosition: '-0.5em -0.5em'
+        }}
+      />
 
-          <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/60 to-transparent" />
-          <div className="relative h-full p-5 flex flex-col justify-between">
-            {statusInfo && (
-              <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${statusInfo.class}`}>
-                  {StatusIcon && <StatusIcon className="h-3.5 w-3.5 mr-1" />}
-                  {statusInfo.text}
-                </span>
-                {timeLeft && (
-                  <span className="text-[10px] uppercase tracking-[0.3em] text-gray-300">
-                    {currentStatus === 'upcoming' ? 'Starts in' : currentStatus === 'active' ? 'Ends in' : ''}
-                  </span>
-                )}
-              </div>
-            )}
+      {/* Main Card */}
+      <div 
+        className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden origin-center z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em] group-hover:scale-[1.02] active:translate-x-[0.1em] active:translate-y-[0.1em] active:scale-[0.98] active:shadow-[0.5em_0.5em_0_#000000]"
+        style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+      >
+        {/* Accent Corner */}
+        <div 
+          className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#00e0b0] rotate-45 z-[1]"
+        />
+        <div className="absolute top-[0.4em] right-[0.4em] text-[#050505] text-[1.2em] font-bold z-[2]">★</div>
 
-            <div>
-              <h3 className="text-2xl font-semibold text-white mb-3 line-clamp-2">
-                {capitalizeWords(title)}
-              </h3>
-              {timeLeft && timeLeft !== 'Ended' && (
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-1 text-xs text-white mb-3">
-                  <Timer className="h-3.5 w-3.5" />
-                  {timeLeft}
+        {/* Title Area */}
+        <div 
+          className="relative px-[1.4em] py-[1.4em] text-white font-extrabold flex justify-between items-center border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{ 
+            background: statusInfo.color || '#2563eb',
+            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay'
+          }}
+        >
+          <span 
+            className="flex-1 pr-2 break-words"
+            style={{ 
+              fontSize: titleFontSize,
+              lineHeight: '1.2',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word'
+            }}
+          >
+            {capitalizeWords(title)}
+          </span>
+          <span 
+            className="bg-white text-[#050505] text-[0.6em] font-extrabold px-[0.8em] py-[0.4em] border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_#000000] uppercase tracking-[0.1em] rotate-[3deg] transition-all duration-300 group-hover:rotate-[-2deg] group-hover:scale-110 group-hover:shadow-[0.25em_0.25em_0_#000000] flex-shrink-0 ml-2"
+          >
+            {statusInfo.text}
+          </span>
+        </div>
+
+        {/* Card Body */}
+        <div className="relative px-[1.5em] py-[1.5em] z-[2]">
+          {/* Image Area */}
+          <div className="flex justify-center mb-[1.5em] -mt-[2em]">
+            <div className="w-[6em] h-[6em] rounded-full border-[0.4em] border-white shadow-[0_0.5em_1em_rgba(0,0,0,0.2),0.3em_0.3em_0_#000000] overflow-hidden bg-[#4d61ff] transition-all duration-300 group-hover:scale-110 group-hover:rotate-[5deg] group-hover:shadow-[0_0.7em_1.5em_rgba(0,0,0,0.3),0.4em_0.4em_0_#000000]">
+              {imageSrc ? (
+                <Image
+                  loader={ipfsImageLoader}
+                  src={imageSrc}
+                  alt={title}
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                  onError={(event) => {
+                    const originalSrc = event.currentTarget.src;
+                    const fallback = getFallbackImageUrl(originalSrc);
+                    if (fallback && fallback !== originalSrc) {
+                      setImageSrc(fallback);
+                    } else {
+                      setImageSrc(undefined);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Trophy className="h-12 w-12 text-white" />
                 </div>
               )}
-              <p className="text-sm text-white/80 line-clamp-2">
-                {description.length > descriptionTruncateSize ? `${description.substring(0, descriptionTruncateSize)}...` : description}
-              </p>
             </div>
+          </div>
+
+          {/* Description */}
+          <div className="mb-[1.5em] text-[#050505] text-[0.95em] leading-[1.4] font-medium line-clamp-3">
+            {description.length > descriptionTruncateSize 
+              ? `${description.substring(0, descriptionTruncateSize)}...` 
+              : description}
+          </div>
+
+          {/* Feature Grid */}
+          <div className="grid grid-cols-2 gap-[1em] mb-[1.5em]">
+            {/* Time Left */}
+            {timeLeft && timeLeft !== 'Ended' && (
+              <div className="flex items-center gap-[0.6em] transition-transform duration-200 hover:translate-x-[0.3em]">
+                <div className="w-[1.4em] h-[1.4em] flex items-center justify-center bg-[#4d61ff] border-[0.12em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_rgba(0,0,0,0.2)] transition-all duration-200 hover:bg-[#5e70ff] hover:rotate-[-5deg]">
+                  <Clock className="w-[0.9em] h-[0.9em] text-white" />
+                </div>
+                <span className="text-[0.85em] font-semibold text-[#050505]">{timeLeft.split(' ')[0]}</span>
+              </div>
+            )}
+
+            {/* Status */}
+            <div className="flex items-center gap-[0.6em] transition-transform duration-200 hover:translate-x-[0.3em]">
+              <div className="w-[1.4em] h-[1.4em] flex items-center justify-center bg-[#4d61ff] border-[0.12em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_rgba(0,0,0,0.2)] transition-all duration-200 hover:bg-[#5e70ff] hover:rotate-[-5deg]">
+                <Activity className="w-[0.9em] h-[0.9em] text-white" />
+              </div>
+              <span className="text-[0.85em] font-semibold text-[#050505]">{statusInfo.text}</span>
+            </div>
+
+            {/* Vote Count */}
+            {totalVotes > 0 && (
+              <div className="flex items-center gap-[0.6em] transition-transform duration-200 hover:translate-x-[0.3em]">
+                <div className="w-[1.4em] h-[1.4em] flex items-center justify-center bg-[#4d61ff] border-[0.12em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_rgba(0,0,0,0.2)] transition-all duration-200 hover:bg-[#5e70ff] hover:rotate-[-5deg]">
+                  <Vote className="w-[0.9em] h-[0.9em] text-white" />
+                </div>
+                <span className="text-[0.85em] font-semibold text-[#050505]">{totalVotes.toFixed(1)} Votes</span>
+              </div>
+            )}
+
+            {/* Project Count */}
+            {projectCount > 0 && (
+              <div className="flex items-center gap-[0.6em] transition-transform duration-200 hover:translate-x-[0.3em]">
+                <div className="w-[1.4em] h-[1.4em] flex items-center justify-center bg-[#4d61ff] border-[0.12em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_rgba(0,0,0,0.2)] transition-all duration-200 hover:bg-[#5e70ff] hover:rotate-[-5deg]">
+                  <Users className="w-[0.9em] h-[0.9em] text-white" />
+                </div>
+                <span className="text-[0.85em] font-semibold text-[#050505]">{projectCount} Projects</span>
+              </div>
+            )}
+
+            {/* Max Winners */}
+            {maxWinners && (
+              <div className="flex items-center gap-[0.6em] transition-transform duration-200 hover:translate-x-[0.3em]">
+                <div className="w-[1.4em] h-[1.4em] flex items-center justify-center bg-[#4d61ff] border-[0.12em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_rgba(0,0,0,0.2)] transition-all duration-200 hover:bg-[#5e70ff] hover:rotate-[-5deg]">
+                  <Award className="w-[0.9em] h-[0.9em] text-white" />
+                </div>
+                <span className="text-[0.85em] font-semibold text-[#050505]">{Number(maxWinners)} Winners</span>
+              </div>
+            )}
+
+            {/* Verified */}
+            <div className="flex items-center gap-[0.6em] transition-transform duration-200 hover:translate-x-[0.3em]">
+              <div className="w-[1.4em] h-[1.4em] flex items-center justify-center bg-[#4d61ff] border-[0.12em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_rgba(0,0,0,0.2)] transition-all duration-200 hover:bg-[#5e70ff] hover:rotate-[-5deg]">
+                <CheckCircle className="w-[0.9em] h-[0.9em] text-white" />
+              </div>
+              <span className="text-[0.85em] font-semibold text-[#050505]">Verified</span>
+            </div>
+          </div>
+
+          {/* Card Actions */}
+          <div className="flex justify-between items-center mt-[1.5em] pt-[1.2em] border-t-[0.15em] border-dashed border-black/15 relative">
+            <div className="absolute -top-[0.8em] left-1/2 -translate-x-1/2 rotate-90 bg-white px-[0.5em] text-[1em] text-black/40">✂</div>
+            
+            {/* Price */}
+            <div className="relative text-[1.8em] font-extrabold text-[#050505] bg-white">
+              <span className="text-[0.6em] font-bold align-top mr-[0.1em]">CELO</span>
+              {fundsDisplay}
+              <div className="absolute bottom-[0.15em] left-0 w-full h-[0.2em] bg-[#00e0b0] opacity-50 -z-10" />
+              <div className="block text-[0.4em] font-semibold text-black/60 mt-[0.2em]">Prize Pool</div>
+            </div>
+
+            {/* Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardClick();
+              }}
+              className="relative bg-[#4d61ff] text-white text-[0.9em] font-bold px-[1.2em] py-[0.7em] border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] cursor-pointer transition-all duration-200 overflow-hidden uppercase tracking-[0.05em] hover:bg-[#5e70ff] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] hover:shadow-[0.4em_0.4em_0_#000000] active:translate-x-[0.1em] active:translate-y-[0.1em] active:shadow-[0.15em_0.15em_0_#000000]"
+              style={{ pointerEvents: 'auto' }}
+            >
+              <span className="relative z-10">View</span>
+              <div 
+                className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-[left] duration-[600ms] hover:left-full"
+              />
+            </button>
           </div>
         </div>
 
-        {/* Supporting face */}
-        <div className="absolute inset-x-3 -bottom-10 rounded-3xl bg-white shadow-[0_25px_60px_rgba(0,0,0,0.35)] transition duration-500 group-hover:-translate-y-2" style={{ pointerEvents: 'none' }}>
-          <div className="p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <div className="flex flex-col">
-                <span className="uppercase tracking-[0.25em] text-gray-400 text-[10px]">Status</span>
-                <span className="text-gray-900 font-medium">{capitalizeWords(currentStatus)}</span>
-              </div>
-              {timeLeft === 'Ended' && (
-                <div className="text-right">
-                  <span className="uppercase tracking-[0.25em] text-gray-400 text-[10px]">Completed</span>
-                  <span className="block text-gray-900 font-medium">Campaign wrap</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-600 flex-1 pr-4 leading-relaxed">
-                {description.length > descriptionTruncateSize ? `${description.substring(0, descriptionTruncateSize)}...` : description}
-              </p>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (campaignId) {
-                    navigate(getCampaignRoute(Number(campaignId)));
-                  }
-                }}
-                className="w-10 h-10 rounded-full border border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-colors flex items-center justify-center"
-                style={{ pointerEvents: 'auto' }}
-                aria-label="View campaign details"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+        {/* Accent Shape */}
+        <div className="absolute w-[2.5em] h-[2.5em] bg-[#4d61ff] border-[0.15em] border-[#050505] rounded-[0.3em] rotate-45 -bottom-[1.2em] right-[2em] z-0 transition-transform duration-300 group-hover:rotate-[55deg] group-hover:scale-110" />
+
+        {/* Corner Slice */}
+        <div className="absolute bottom-0 left-0 w-[1.5em] h-[1.5em] bg-white border-r-[0.25em] border-t-[0.25em] border-[#050505] rounded-tl-[0.5em] z-[1]" />
+
+        {/* Stamp */}
+        <div className="absolute bottom-[1.5em] left-[1.5em] w-[4em] h-[4em] flex items-center justify-center border-[0.15em] border-black/30 rounded-full rotate-[-15deg] opacity-20 z-[1]">
+          <span className="text-[0.6em] font-extrabold uppercase tracking-[0.05em]">Verified</span>
         </div>
       </div>
     </div>

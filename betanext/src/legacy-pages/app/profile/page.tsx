@@ -8,41 +8,34 @@ import { useAccount, useBalance, useWalletClient } from 'wagmi';
 import { 
   FileCode,
   Vote,
-  Coins,
   Trophy,
-  Plus,
-  Filter,
-  SortAsc,
-  ExternalLink,
   Wallet,
   Loader2,
-  TrendingUp,
-  Users,
-  Zap,
-  DollarSign,
-  BarChart3,
   Home,
-  Compass,
+  Shield,
   CheckCircle,
   AlertCircle,
-  Shield,
-  UserCheck,
   X,
-  Star,
   User,
-  CreditCard,
-  Smartphone
+  CreditCard
 } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { useUserVoteHistory } from '@/hooks/useVotingMethods';
 import {type Address } from 'viem';
 import { formatEther } from 'viem';
-import { formatIpfsUrl } from '@/utils/imageUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { getGoodLink } from '@/utils/get-good-link';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { ProfileTabs } from '@/components/profile/ProfileTabs';
+import { DashboardTab } from '@/components/profile/DashboardTab';
+import { ProjectsTab } from '@/components/profile/ProjectsTab';
+import { CampaignsTab } from '@/components/profile/CampaignsTab';
+import { VotesTab } from '@/components/profile/VotesTab';
+import { IdentityTab } from '@/components/profile/IdentityTab';
+import { VerificationComponent } from '@/components/profile/VerificationComponent';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
@@ -122,374 +115,11 @@ const parseCampaignMetadata = (campaignDetails: any) => {
   return parsedMetadata;
 };
 
-// GoodDollar imports
 import GoodDollarVerifyModal from '@/components/goodDollar';
-import LocationBadge from '@/components/LocationBadge';
-import { getNormalizedLocation } from '@/utils/locationUtils';
-import CountryFlag from 'react-country-flag';
-import { getFlagColorData } from '@/utils/flagUtils';
-// Add GoodDollar logo import (add the image to public/images/gooddollar.png if not present)
-// import goodDollarLogo from '/public/images/good.png';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_V4 as Address;
 const CELO_TOKEN = process.env.NEXT_PUBLIC_CELO_TOKEN as Address;
-
-interface StatCardProps {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  color?: string;
-  trend?: number | null;
-  onClick?: React.MouseEventHandler<HTMLDivElement>;
-}
-
-function VerificationComponent({ onSuccess, onError }: { onSuccess: () => void; onError: (error: any) => void }) {
-  const { address } = useAccount();
-  const [universalLink, setUniversalLink] = useState<string | null>(null);
-  const [selfApp, setSelfApp] = useState<any>(null);
-  const [SelfQRcodeWrapper, setSelfQRcodeWrapper] = useState<any>(null);
-  const [isClient, setIsClient] = useState(false);
-
-  // Only load on client side
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsClient(true);
-      // Dynamically import the selfxyz modules
-      Promise.all([
-        import('@selfxyz/qrcode').then(mod => mod.SelfAppBuilder),
-        import('@selfxyz/qrcode').then(mod => mod.SelfQRcodeWrapper),
-        import('@selfxyz/core').then(mod => mod.getUniversalLink)
-      ]).then(([SelfAppBuilder, QRWrapper, getUniversalLink]) => {
-        setSelfQRcodeWrapper(() => QRWrapper);
-        
-        if (address) {
-          const app = new SelfAppBuilder({
-            version : 2,
-            appName: "Sovereign Seas",
-            scope: "seasv2",
-            endpoint: "https://selfauth.vercel.app/api/verify",
-            logoBase64: "https://i.postimg.cc/mrmVf9hm/self.png",
-            endpointType: "https",
-            userDefinedData: "Sovereign Seas V4.2",
-            userId: address,
-            userIdType: "hex",
-            disclosures: {
-              nationality: true,
-              minimumAge: 18,
-              gender: true,
-              excludedCountries: [],
-              ofac: false,
-            },
-          }).build();
-          setSelfApp(app);
-          setUniversalLink(getUniversalLink(app as any));
-        }
-      }).catch(err => {
-        console.error('Failed to load selfxyz modules:', err);
-      });
-    }
-  }, [address]);
-
-  if (!isClient || !address || !selfApp) return null;
-
-  return (
-    <div>
-      {/* Show deep link button on mobile */}
-      <div className="md:hidden flex flex-col items-center gap-2 mb-4">
-        <button
-          onClick={() => {
-            if (universalLink && typeof window !== 'undefined') {
-              window.open(universalLink, '_blank');
-            }
-          }}
-                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors duration-150 font-medium"
-        >
-          <Smartphone className="h-5 w-5" />
-          Open Self App
-        </button>
-        <p className="text-xs text-gray-500">Tap to open the Self app directly</p>
-      </div>
-      {/* Show QR code on desktop */}
-      {SelfQRcodeWrapper && (
-        <div className="hidden md:flex justify-center">
-          <SelfQRcodeWrapper
-            selfApp={selfApp}
-            onSuccess={onSuccess}
-            darkMode={true}
-            onError={onError}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-
-
-const StatCard = ({ icon: Icon, label, value, color = 'blue', trend = null, onClick }: StatCardProps) => (
-  <div 
-    className={`bg-gradient-to-br from-${color}-50 to-${color}-100 rounded-xl p-4 shadow-sm border border-${color}-200/50 hover:shadow-lg transition-shadow duration-150 ${onClick ? 'cursor-pointer' : ''}`}
-    onClick={onClick}
-  >
-    <div className="flex items-center justify-between mb-2">
-      <div 
-        className={`w-10 h-10 bg-${color}-500/10 rounded-lg flex items-center justify-center`}
-      >
-        <Icon className={`h-5 w-5 text-${color}-600`} />
-      </div>
-      {trend && (
-        <div 
-          className={`flex items-center gap-1 text-xs ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}
-        >
-          <TrendingUp className="h-3 w-3" />
-          <span>{Math.abs(trend)}%</span>
-        </div>
-      )}
-    </div>
-    <p 
-      className="text-2xl font-bold text-gray-900 mb-1"
-    >
-      {value}
-    </p>
-    <p className="text-xs font-medium text-gray-600">{label}</p>
-  </div>
-);
-
-interface ProjectCardProps {
-  project: {
-    name: string;
-    description: string;
-    active: boolean;
-    createdAt: bigint;
-    campaignIds?: bigint[];
-    metadata: {
-      tagline?: string;
-      category?: string;
-      tags?: string[];
-      location?: string;
-      establishedDate?: string;
-      website?: string;
-      blockchain?: string;
-      techStack?: string[];
-      license?: string;
-      developmentStage?: string;
-      openSource?: boolean;
-      logo?: string;
-      coverImage?: string;
-      demoVideo?: string;
-      demoUrl?: string;
-      githubRepo?: string;
-      documentation?: string;
-      karmaGapProfile?: string;
-      twitter?: string;
-      linkedin?: string;
-      discord?: string;
-      telegram?: string;
-      teamMembers?: any[];
-      contactEmail?: string;
-      keyFeatures?: string[];
-      bio?: string;
-    };
-  };
-  onClick: () => void;
-}
-
-const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
-  const location = getNormalizedLocation(project.metadata);
-
-  // Get logo from processed metadata
-  const projectLogo = project.metadata.logo || project.metadata.coverImage || null;
-
-  // Debug logging for logo issues
-  if (IS_DEV && !projectLogo) {
-    console.log(`No logo found for project ${project.name}:`, {
-      metadata: project.metadata,
-      logo: project.metadata.logo,
-      coverImage: project.metadata.coverImage
-    });
-  }
-
-  return (
-    <div 
-      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-shadow duration-150 group relative"
-    >
-      {/* Location Badge (card style) */}
-      <LocationBadge location={location} variant="card" />
-              <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-4">
-            {projectLogo ? (
-              <img
-                src={formatIpfsUrl(projectLogo)}
-                alt={`${project.name} logo`}
-                className="w-12 h-12 rounded-xl object-cover shadow-md"
-                onError={(e) => {
-                  console.warn(`Failed to load logo for project ${project.name}:`, projectLogo);
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            ) : (
-              <div 
-                className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-md"
-              >
-                {project.name?.charAt(0)}
-              </div>
-            )}
-            <div>
-              <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors duration-150 mb-1">
-                {project.name}
-              </h3>
-              <div 
-                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                  project.active ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-50'
-                }`}
-              >
-                {project.active ? 'Active' : 'Inactive'}
-              </div>
-            </div>
-          </div>
-        <div>
-          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors duration-150" />
-        </div>
-      </div>
-      
-      <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">{project.description}</p>
-      
-      <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-        <span>Created {new Date(Number(project.createdAt) * 1000).toLocaleDateString()}</span>
-        <span className="font-medium">{project.campaignIds?.length || 0} campaigns</span>
-      </div>
-      
-      <button
-        onClick={onClick}
-        className="w-full px-4 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors duration-150 text-sm font-semibold"
-      >
-        View Project
-      </button>
-    </div>
-  );
-};
-
-interface CampaignCardProps {
-  campaign: {
-    name: string;
-    description: string;
-    active: boolean;
-    startTime: bigint;
-    endTime: bigint;
-    maxWinners: bigint;
-    totalFunds: bigint;
-    metadata: {
-      type?: string;
-      category?: string;
-      tags?: string[];
-      logo?: string;
-      bannerImage?: string;
-      bio?: string;
-      tagline?: string;
-      [key: string]: any;
-    };
-  };
-  onClick: () => void;
-}
-
-const CampaignCard = ({ campaign, onClick }: CampaignCardProps) => {
-  // Get logo from processed metadata
-  const campaignLogo = campaign.metadata.logo || campaign.metadata.bannerImage || null;
-
-  // Debug logging for logo issues
-  if (IS_DEV && !campaignLogo) {
-    console.log(`No logo found for campaign ${campaign.name}:`, {
-      metadata: campaign.metadata,
-      logo: campaign.metadata.logo,
-      bannerImage: campaign.metadata.bannerImage
-    });
-  }
-
-  const getStatus = () => {
-    const now = Math.floor(Date.now() / 1000);
-    const start = Number(campaign.startTime);
-    const end = Number(campaign.endTime);
-    
-    if (!campaign.active) return 'inactive';
-    if (now < start) return 'upcoming';
-    if (now >= start && now <= end) return 'active';
-    return 'ended';
-  };
-
-  const status = getStatus();
-  const statusColors = {
-    active: 'text-green-600 bg-green-50',
-    ended: 'text-gray-600 bg-gray-50',
-    upcoming: 'text-blue-600 bg-blue-50',
-    inactive: 'text-red-600 bg-red-50'
-  };
-
-  return (
-    <div 
-      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200/50 hover:shadow-xl transition-shadow duration-150 group"
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-4">
-          {campaignLogo ? (
-            <img
-              src={formatIpfsUrl(campaignLogo)}
-              alt={`${campaign.name} logo`}
-              className="w-12 h-12 rounded-xl object-cover shadow-md"
-              onError={(e) => {
-                console.warn(`Failed to load logo for campaign ${campaign.name}:`, campaignLogo);
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div 
-              className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md"
-            >
-              <Trophy className="h-5 w-5" />
-            </div>
-          )}
-          <div>
-                        <h3 className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors duration-150 mb-1">
-              {campaign.name}
-            </h3>
-            <div 
-              className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${statusColors[status]}`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </div>
-          </div>
-        </div>
-        <div>
-          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors duration-150" />
-        </div>
-      </div>
-      
-      <p className="text-gray-600 text-sm mb-4 line-clamp-3 leading-relaxed">{campaign.description}</p>
-      
-      <div className="space-y-2 mb-4">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Total Funds</span>
-          <span className="font-semibold text-green-600">{formatEther(BigInt(campaign.totalFunds))} CELO</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Max Winners</span>
-          <span className="font-semibold text-purple-600">{campaign.maxWinners.toString()}</span>
-        </div>
-      </div>
-      
-      <button
-        onClick={onClick}
-        className="w-full px-4 py-3 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors duration-150 text-sm font-semibold"
-      >
-        View Campaign
-      </button>
-    </div>
-  );
-};
-
-
-
   
 
 
@@ -1029,11 +659,29 @@ export default function ProfilePage() {
 
   if (!address) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-sm mx-auto p-6 bg-white rounded-lg shadow-sm">
-          <Wallet className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-gray-800 mb-2">Connect Your Wallet</h1>
-          <p className="text-gray-600 mb-4 text-sm">Please connect your wallet to view your profile.</p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="group relative w-full max-w-sm mx-auto">
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          
+          <div 
+            className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2]"
+            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+          >
+            <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+            <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            
+            <div className="relative px-6 py-6 text-center z-[2]">
+              <Wallet className="h-12 w-12 text-[#2563eb] mx-auto mb-4" />
+              <h1 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Connect Your Wallet</h1>
+              <p className="text-[#050505] mb-4 text-sm font-semibold">Please connect your wallet to view your profile.</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1041,42 +689,33 @@ export default function ProfilePage() {
 
   if (projectsLoading || campaignsLoading || votesLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 text-sm">Loading your profile...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="group relative w-full max-w-sm mx-auto">
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          
+          <div 
+            className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2]"
+            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+          >
+            <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+            <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            
+            <div className="relative px-6 py-6 text-center z-[2]">
+              <Loader2 className="h-8 w-8 text-[#2563eb] animate-spin mx-auto mb-4" />
+              <p className="text-[#050505] text-sm font-bold">Loading your profile...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Get theme colors based on nationality
-  const getThemeColors = () => {
-    if (verificationDetails?.self?.isVerified && verificationDetails.self.nationality) {
-      const countryCode = verificationDetails.self.nationality.length === 3 
-        ? verificationDetails.self.nationality.substring(0, 2).toUpperCase()
-        : verificationDetails.self.nationality.toUpperCase();
-      
-      const flagData = getFlagColorData(countryCode);
-      if (flagData) {
-        const baseColor = flagData.borderColor.replace('border-', '').replace('-300', '');
-        return {
-          from: `${baseColor}-50`,
-          via: 'white',
-          to: `${baseColor}-50`,
-          accent: `${baseColor}-100`
-        };
-      }
-    }
-    return {
-      from: 'indigo-50',
-      via: 'white', 
-      to: 'purple-50',
-      accent: 'indigo-100'
-    };
-  };
-
-  const themeColors = getThemeColors();
 
   return (
     <>
@@ -1091,858 +730,97 @@ export default function ProfilePage() {
       }}
     />
     
-    <div className={`min-h-screen bg-gradient-to-br from-${themeColors.from} via-${themeColors.via} to-${themeColors.to}`}>
+    <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Profile Header */}
-        <div className={`bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-${themeColors.accent.replace('-100', '-200')}/50 p-6 mb-8`}>
-          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-lg">
-                  {address?.slice(2, 4).toUpperCase()}
-                </div>
-                {/* Badges Row - Show as smaller stacked cards */}
-                <div className="flex flex-col gap-3 mt-4 w-48">
-                  {/* GoodDollar Badge Card */}
-                  <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.gooddollar?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                    <img src="/images/good.png" alt="GoodDollar" className={`h-5 w-5 mb-1 ${verificationDetails?.gooddollar?.isVerified ? '' : 'opacity-50'}`} />
-                    <span className="text-base font-bold mb-0.5">GoodDollar</span>
-                    {verificationDetails?.gooddollar?.isVerified ? (
-                      <div className="flex items-center gap-1 mb-1">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-green-700 font-semibold text-xs">Verified</span>
-                      </div>
-                    ) : (
-                      <button
-                        className="mt-1 px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors duration-150"
-                        onClick={handleGoodDollarVerifyClick}
-                      >
-                        Verify with GoodDollar
-                      </button>
-                    )}
-                    {/* Show expiry if available */}
-                    {verificationDetails?.gooddollar?.isVerified && verificationDetails.gooddollar.expiry?.expiryDate && (() => {
-                      try {
-                        return (
-                          <span className="mt-1 text-[10px] text-gray-500">
-                            exp. {new Date(verificationDetails.gooddollar.expiry.expiryDate).toLocaleDateString()}
-                          </span>
-                        );
-                      } catch (error) {
-                        console.error('Error parsing expiry date:', error);
-                        return null;
-                      }
-                    })()}
-                  </div>
-                  {/* Self Badge Card */}
-                  <div className={`flex flex-col items-center p-2 rounded-xl border shadow transition-all ${verificationDetails?.self?.isVerified ? `${themeColors.accent} border-${themeColors.accent.replace('-100', '-200')}` : 'bg-gray-50 border-gray-200'}`}>
-                    <Shield className={`h-5 w-5 mb-1 ${verificationDetails?.self?.isVerified ? `text-${themeColors.accent.replace('-100', '-600')}` : 'text-gray-400'}`} />
-                    <span className="text-base font-bold mb-0.5">Self Protocol</span>
-                    {verificationLoading ? (
-                      <div className="flex items-center gap-1 mb-1">
-                        <Loader2 className={`h-4 w-4 text-${themeColors.accent.replace('-100', '-600')} animate-spin`} />
-                        <span className={`text-${themeColors.accent.replace('-100', '-700')} font-semibold text-xs`}>Loading...</span>
-                      </div>
-                    ) : verificationDetails?.self?.isVerified ? (
-                      <div className="flex items-center gap-1 mb-1">
-                        <CheckCircle className={`h-4 w-4 text-${themeColors.accent.replace('-100', '-600')}`} />
-                        <span className={`text-${themeColors.accent.replace('-100', '-700')} font-semibold text-xs`}>Verified</span>
-                      </div>
-                    ) : (
-                      <button
-                        className={`mt-1 px-3 py-1 bg-${themeColors.accent.replace('-100', '-600')} text-white rounded-lg text-xs font-semibold hover:bg-${themeColors.accent.replace('-100', '-700')} transition-colors duration-150`}
-                        onClick={() => { setShowVerification(true); setShowMethodSelection(false); }}
-                      >
-                        Verify with Self Protocol
-                      </button>
-                    )}
-                    {/* Show nationality if available */}
-                    {verificationDetails?.self?.isVerified && verificationDetails.self.nationality && (
-                      <span className="mt-1 text-[10px] text-gray-500">{verificationDetails.self.nationality}</span>
-                    )}
-                    {/* Show verification timestamp if available */}
-                    {verificationDetails?.self?.isVerified && verificationDetails.self.timestamp && (() => {
-                      try {
-                        return (
-                          <span className="mt-1 text-[10px] text-gray-500">
-                            {new Date(verificationDetails.self.timestamp).toLocaleDateString()}
-                          </span>
-                        );
-                      } catch (error) {
-                        console.error('Error parsing timestamp:', error);
-                        return null;
-                      }
-                    })()}
-                  </div>
-                </div>
-                {/* End Badges Row */}
-                {isVerified && (
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                    <CheckCircle className="h-4 w-4 text-white" />
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Profile</h1>
-                  {/* Nationality Flag */}
-                  {verificationDetails?.self?.isVerified && verificationDetails.self.nationality && (() => {
-                    // Convert 3-letter country code to 2-letter if needed
-                    const countryCode = verificationDetails.self.nationality.length === 3 
-                      ? verificationDetails.self.nationality.substring(0, 2).toUpperCase()
-                      : verificationDetails.self.nationality.toUpperCase();
-                    
-                    const flagData = getFlagColorData(countryCode);
-                    const flagBorderColor = flagData?.borderColor || 'border-blue-200';
-                    const flagBgColor = flagBorderColor.replace('border-', 'bg-').replace('-300', '-50');
-                    
-                    return (
-                      <div className={`flex items-center gap-2 px-3 py-2 ${flagBgColor} rounded-full border ${flagBorderColor} shadow-sm`}>
-                        <CountryFlag 
-                          countryCode={countryCode} 
-                          svg 
-                          style={{ width: '1.2em', height: '1.2em', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }} 
-                          title={`Nationality: ${verificationDetails.self.nationality}`}
-                        />
-                        <span className="text-sm font-semibold text-gray-800">
-                          {verificationDetails.self.nationality}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                  {isVerified ? (
-                    <div className="flex items-center gap-2 px-2 py-1 bg-green-50 rounded-full">
-                      <Shield className="h-4 w-4 text-green-600" />
-                      <span className="text-xs font-medium text-green-700">
-                        Verified by {verificationProviders.length > 1 ? 'Multiple Providers' : verificationProviders[0] || 'Self Protocol'}
-                      </span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowMethodSelection(true)}
-                      className="flex items-center gap-1 px-2 py-1 bg-yellow-50 hover:bg-yellow-100 rounded-full transition-colors duration-150"
-                    >
-                      <Shield className="h-4 w-4 text-yellow-600" />
-                      <span className="text-xs font-medium text-yellow-700">Verify</span>
-                    </button>
-                  )}
-                </div>
-                <p className="text-gray-600 text-sm font-mono bg-gray-50/50 px-2 py-1 rounded-lg">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex-1 lg:ml-auto">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={FileCode} label="Projects" value={userMetrics.projects} color="blue" />
-                <StatCard icon={Trophy} label="Campaigns" value={userMetrics.campaigns} color="purple" />
-                <StatCard icon={Vote} label="Votes" value={userMetrics.votes} color="green" />
-                <StatCard icon={Coins} label="Balance" value={`${userMetrics.balance} CELO`} color="amber" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProfileHeader
+          address={address}
+          isVerified={isVerified}
+          verificationDetails={verificationDetails}
+          verificationProviders={verificationProviders}
+          verificationLoading={verificationLoading}
+          onVerifyClick={() => { setShowVerification(true); setShowMethodSelection(false); }}
+          onGoodDollarVerifyClick={handleGoodDollarVerifyClick}
+          userMetrics={userMetrics}
+        />
 
-        {/* Enhanced Navigation Tabs */}
-        <div 
-          className="flex flex-wrap gap-2 mb-8"
-        >
-          {[
+        {/* Navigation Tabs */}
+        <ProfileTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          tabs={[
             { id: 'dashboard', label: 'Dashboard', icon: Home },
             { id: 'projects', label: 'Projects', icon: FileCode, count: userMetrics.projects },
             { id: 'campaigns', label: 'Campaigns', icon: Trophy, count: userMetrics.campaigns },
             { id: 'votes', label: 'Votes', icon: Vote, count: userMetrics.votes },
             { id: 'identity', label: 'Identity', icon: Shield }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-sm relative ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                  : 'bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-gray-50 border border-gray-200'
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-              {tab.count !== undefined && (
-                <span 
-                  className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    activeTab === tab.id
-                      ? 'bg-white text-blue-600'
-                      : 'bg-blue-100 text-blue-600'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+          ]}
+        />
 
-        {/* Enhanced Dashboard Tab */}
+        {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div 
-            className="space-y-8"
-          >
-            {/* Quick Actions */}
-            <div 
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
-            >
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  {
-                    title: 'New Project',
-                    subtitle: 'Start building',
-                    icon: Plus,
-                    color: 'from-blue-500 to-indigo-600',
-                    bgColor: 'from-blue-50 to-indigo-50',
-                    hoverColor: 'hover:from-blue-100 hover:to-indigo-100',
-                    action: () => navigate('/app/project/start')
-                  },
-                  {
-                    title: 'New Campaign',
-                    subtitle: 'Launch funding',
-                    icon: Trophy,
-                    color: 'from-purple-500 to-indigo-600',
-                    bgColor: 'from-purple-50 to-indigo-50',
-                    hoverColor: 'hover:from-purple-100 hover:to-indigo-100',
-                    action: () => navigate('/app/campaign/start')
-                  },
-                  {
-                    title: 'Explore',
-                    subtitle: 'Discover projects',
-                    icon: Compass,
-                    color: 'from-green-500 to-teal-600',
-                    bgColor: 'from-green-50 to-teal-50',
-                    hoverColor: 'hover:from-green-100 hover:to-teal-100',
-                    action: () => navigate('/explore')
-                  }
-                ].map((action) => (
-                  <button
-                    key={action.title}
-                    onClick={action.action}
-                    className={`flex items-center gap-3 p-4 bg-gradient-to-br ${action.bgColor} rounded-xl ${action.hoverColor} transition-all group shadow-sm hover:shadow-md`}
-                  >
-                    <div 
-                      className={`w-10 h-10 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center text-white shadow-md`}
-                    >
-                      <action.icon className="h-5 w-5" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-semibold text-gray-900">{action.title}</h3>
-                      <p className="text-xs text-gray-600">{action.subtitle}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Enhanced Stats Grid */}
-            <div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-            >
-              <StatCard 
-                icon={TrendingUp} 
-                label="Total Value" 
-                value={`${userMetrics.totalVoteValue} CELO`} 
-                color="green"
-              />
-              <StatCard 
-                icon={Star} 
-                label="Avg. Vote" 
-                value={`${userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} CELO`} 
-                color="yellow"
-              />
-              <StatCard 
-                icon={Users} 
-                label="Active Projects" 
-                value={userProjects.filter(p => p.active).length}
-                color="purple"
-              />
-              <StatCard 
-                icon={Zap} 
-                label="Active Campaigns" 
-                value={userCampaigns.filter(c => c.active).length}
-                color="blue"
-              />
-            </div>
-
-            {/* Visual Analytics Section */}
-            <div 
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
-            >
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Analytics Overview</h2>
-              
-              {/* Progress Bars */}
-              <div className="space-y-4 mb-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Project Completion</span>
-                    <span className="font-semibold text-blue-600">
-                      {userProjects.filter(p => p.active).length}/{userProjects.length}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                                             className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-200"
-                      style={{ width: `${userProjects.length > 0 ? (userProjects.filter(p => p.active).length / userProjects.length) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Campaign Success Rate</span>
-                    <span className="font-semibold text-purple-600">
-                      {userCampaigns.filter(c => c.active).length}/{userCampaigns.length}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                                             className="bg-gradient-to-r from-purple-500 to-indigo-600 h-3 rounded-full transition-all duration-200"
-                      style={{ width: `${userCampaigns.length > 0 ? (userCampaigns.filter(c => c.active).length / userCampaigns.length) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Voting Activity</span>
-                    <span className="font-semibold text-green-600">{userMetrics.votes} votes</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                                             className="bg-gradient-to-r from-green-500 to-teal-600 h-3 rounded-full transition-all duration-200"
-                      style={{ width: `${Math.min(userMetrics.votes * 10, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Visual Stats Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div 
-                  className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-blue-600 font-medium">Total Value</p>
-                      <p className="text-xl font-bold text-blue-900">{userMetrics.totalVoteValue} CELO</p>
-                    </div>
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="h-5 w-5 text-blue-600" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div 
-                  className="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-200 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-purple-600 font-medium">Avg. Vote</p>
-                      <p className="text-xl font-bold text-purple-900">
-                        {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} CELO
-                      </p>
-                    </div>
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <BarChart3 className="h-5 w-5 text-purple-600" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Activity Section */}
-            <div 
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-200/50"
-            >
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h2>
-              <div className="space-y-3">
-                {voteHistory.slice(0, 3).map((vote, index) => {
-                  const project = allProjects?.find(p => p.project.id === vote.projectId);
-                  // const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
-                  
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150"
-                    >
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <div className="flex-1">
-                        <span className="text-sm text-gray-900">
-                          Voted {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? 'CELO' : 'cUSD'} on{' '}
-                          <span className="font-medium">{project?.project.name || `Project #${vote.projectId}`}</span>
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        {new Date().toLocaleDateString()}
-                      </span>
-                    </div>
-                  );
-                })}
-                {voteHistory.length === 0 && (
-                  <div
-                    className="text-center py-4 text-gray-500 text-sm"
-                  >
-                    No recent activity
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <DashboardTab
+            navigate={navigate}
+            userMetrics={userMetrics}
+            userProjects={userProjects}
+            userCampaigns={userCampaigns}
+            voteHistory={voteHistory || []}
+            allProjects={allProjects}
+            CELO_TOKEN={CELO_TOKEN}
+          />
         )}
 
         {/* Projects Tab */}
         {activeTab === 'projects' && (
-          <div className="space-y-4">
-            {/* Filters */}
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                  <select
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Projects</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <SortAsc className="h-4 w-4 text-gray-500" />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="recent">Most Recent</option>
-                    <option value="name">Name A-Z</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Projects Grid */}
-            <div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-            >
-              {filteredProjects.map((project) => (
-                <div
-                  key={project.id.toString()}
-                >
-                  <ProjectCard
-                    project={project}
-                    onClick={() => navigate(getProjectRoute(Number(project.id)))}
-                  />
-                </div>
-              ))}
-              
-              {filteredProjects.length === 0 && (
-                <div 
-                  className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200"
-                >
-                  <FileCode className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Projects Found</h3>
-                  <p className="text-gray-600 mb-4 text-sm">
-                    {filter === 'all' 
-                      ? "You haven't created any projects yet." 
-                      : `No ${filter} projects found.`
-                    }
-                  </p>
-                  <button
-                    onClick={() => navigate('/app/project/start')}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 text-sm font-medium"
-                  >
-                    Create Project
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <ProjectsTab
+            filteredProjects={filteredProjects}
+            filter={filter}
+            sortBy={sortBy}
+            onFilterChange={setFilter}
+            onSortChange={setSortBy}
+            navigate={navigate}
+            getProjectRoute={getProjectRoute}
+          />
         )}
 
         {/* Campaigns Tab */}
         {activeTab === 'campaigns' && (
-          <div 
-            className="space-y-4"
-          >
-            <div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-            >
-              {userCampaigns.map((campaign) => (
-                <div
-                  key={campaign.id.toString()}
-                >
-                  <CampaignCard
-                    campaign={campaign}
-                    onClick={() => navigate(getCampaignRoute(Number(campaign.id)))}
-                  />
-                </div>
-              ))}
-              
-              {userCampaigns.length === 0 && (
-                <div 
-                  className="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200"
-                >
-                  <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Campaigns Found</h3>
-                  <p className="text-gray-600 mb-4 text-sm">You haven't created any campaigns yet.</p>
-                  <button
-                    onClick={() => navigate('/app/campaign/start')}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-150 text-sm font-medium"
-                  >
-                    Launch Campaign
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <CampaignsTab
+            userCampaigns={userCampaigns}
+            navigate={navigate}
+            getCampaignRoute={getCampaignRoute}
+          />
         )}
 
         {/* Votes Tab */}
         {activeTab === 'votes' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Voting Summary</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-green-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Vote className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-green-900 text-sm">Total Votes</span>
-                  </div>
-                  <p className="text-xl font-bold text-green-600">{userMetrics.votes}</p>
-                </div>
-                
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium text-blue-900 text-sm">Total Value</span>
-                  </div>
-                  <p className="text-xl font-bold text-blue-600">{userMetrics.totalVoteValue} CELO</p>
-                </div>
-                
-                <div className="bg-purple-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <BarChart3 className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium text-purple-900 text-sm">Avg. Vote</span>
-                  </div>
-                  <p className="text-xl font-bold text-purple-600">
-                    {userMetrics.votes > 0 ? (Number(userMetrics.totalVoteValue) / userMetrics.votes).toFixed(2) : '0.00'} CELO
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Votes Table */}
-            {voteHistory.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Project
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Campaign
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Amount
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          CELO Equivalent
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {voteHistory.map((vote, index) => {
-                        // Find project and campaign details
-                        const project = allProjects?.find(p => p.project.id === vote.projectId);
-                        const campaign = allCampaigns?.find(c => c.campaign.id === vote.campaignId);
-                        
-                        return (
-                          <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                            <td className="px-4 py-3">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-bold mr-3">
-                                  {project?.project.name?.charAt(0) || 'P'}
-                                </div>
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {project?.project.name || `Project #${vote.projectId}`}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    ID: {vote.projectId.toString()}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white mr-3">
-                                  <Trophy className="h-4 w-4" />
-                                </div>
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {campaign?.campaign.name || `Campaign #${vote.campaignId}`}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    ID: {vote.campaignId.toString()}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm font-medium text-green-600">
-                                {formatEther(BigInt(vote.amount))} {vote.token === CELO_TOKEN ? 'CELO' : 'cUSD'}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm text-gray-900">
-                                {formatEther(BigInt(vote.celoEquivalent))} CELO
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex space-x-2">
-                                <button
-                                  onClick={() => navigate(getProjectRoute(Number(vote.projectId)))}
-                                  className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-150 text-xs font-medium"
-                                >
-                                  View Project
-                                </button>
-                                <button
-                                  onClick={() => navigate(getCampaignRoute(Number(vote.campaignId)))}
-                                  className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors duration-150 text-xs font-medium"
-                                >
-                                  View Campaign
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            
-            {voteHistory.length === 0 && (
-              <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
-                <Vote className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Votes Cast Yet</h3>
-                <p className="text-gray-600 mb-4 text-sm">Start participating by voting on projects you believe in.</p>
-                <button
-                  onClick={() => navigate('/explore')}
-                                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-150 text-sm font-medium"
-                >
-                  Explore Projects
-                </button>
-              </div>
-            )}
-          </div>
+          <VotesTab
+            userMetrics={userMetrics}
+            voteHistory={voteHistory || []}
+            allProjects={allProjects}
+            allCampaigns={allCampaigns}
+            CELO_TOKEN={CELO_TOKEN}
+            navigate={navigate}
+            getProjectRoute={getProjectRoute}
+            getCampaignRoute={getCampaignRoute}
+          />
         )}
 
-     {/* Identity Tab */}
-     {activeTab === 'identity' && (
-       <div className="space-y-6">
-                    {/* Identity Status */}
-           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-             <div className="flex items-center justify-between mb-4">
-               <div className="flex items-center gap-3">
-                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                   isVerified ? 'bg-green-50' : 'bg-yellow-50'
-                 }`}>
-                   <Shield className={`h-6 w-6 ${
-                     isVerified ? 'text-green-600' : 'text-yellow-600'
-                   }`} />
-                 </div>
-                 <div>
-                   <h2 className="text-lg font-bold text-gray-900">
-                     Identity Verification
-                   </h2>
-                   <p className="text-sm text-gray-600">
-                     {isVerified ? 'Your identity has been verified' : 'Verify your identity for enhanced security'}
-                   </p>
-                 </div>
-               </div>
-               {isVerified && (
-                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
-                   <CheckCircle className="h-4 w-4 text-green-600" />
-                   <span className="text-sm font-medium text-green-700">
-                     Verified ({verificationProviders.join(', ')})
-                   </span>
-                 </div>
-               )}
-             </div>
+        {/* Identity Tab */}
+        {activeTab === 'identity' && (
+          <IdentityTab
+            isVerified={isVerified}
+            verificationProviders={verificationProviders}
+            verificationDetails={verificationDetails}
+            verificationLoading={verificationLoading}
+            onVerifyClick={() => { setShowVerification(true); setShowMethodSelection(false); }}
+            onMethodSelectionClick={() => setShowMethodSelection(true)}
+            debugApiCall={IS_DEV ? debugApiCall : undefined}
+            refreshVerificationData={refreshVerificationData}
+            showDebugTools={IS_DEV}
+          />
+        )}
 
-             {/* Verification Progress Circle */}
-             <div className="flex items-center justify-center mb-6">
-               <div className="relative">
-                 <svg className="w-24 h-24 transform -rotate-90">
-                   <circle
-                     cx="48"
-                     cy="48"
-                     r="36"
-                     stroke="currentColor"
-                     strokeWidth="8"
-                     fill="transparent"
-                     className="text-gray-200"
-                   />
-                   <circle
-                     cx="48"
-                     cy="48"
-                     r="36"
-                     stroke="currentColor"
-                     strokeWidth="8"
-                     fill="transparent"
-                     className="text-green-500"
-                     strokeLinecap="round"
-                     style={{ 
-                       strokeDasharray: `${isVerified ? 226 : 113} 226`,
-                       transition: 'stroke-dasharray 0.3s ease-in-out'
-                     }}
-                   />
-                 </svg>
-                 <div className="absolute inset-0 flex items-center justify-center">
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-gray-900">
-                       {isVerified ? '100%' : '50%'}
-                     </div>
-                     <div className="text-xs text-gray-500">Verified</div>
-                   </div>
-                 </div>
-               </div>
-             </div>
-
-           {!isVerified && (
-             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-               <div className="flex items-start gap-3">
-                 <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                 <div>
-                   <h3 className="font-semibold text-amber-800 mb-1">
-                     V3 Preview: Anti-Sybil Future
-                   </h3>
-                   <p className="text-sm text-amber-700 mb-3">
-                     With the upcoming V3 release, identity verification through Self Protocol will help prevent Sybil attacks and ensure fair participation in campaigns and voting.
-                   </p>
-                   <ul className="text-sm text-amber-700 space-y-1">
-                     <li>• Enhanced voting integrity</li>
-                     <li>• Reduced spam and fake accounts</li>
-                     <li>• Increased trust in project funding</li>
-                     <li>• Better reputation system</li>
-                   </ul>
-                 </div>
-               </div>
-             </div>
-           )}
-
-           {/* Verification Actions */}
-           <div className="space-y-4">
-             {!isVerified ? (
-               <button
-                 onClick={() => setShowMethodSelection(true)}
-                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 font-medium"
-               >
-                 <UserCheck className="h-5 w-5" />
-                 Start Identity Verification
-               </button>
-             ) : (
-               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                 <div className="flex items-center gap-3">
-                   <CheckCircle className="h-6 w-6 text-green-600" />
-                   <div>
-                     <h3 className="font-semibold text-green-800">Identity Verified</h3>
-                     <p className="text-sm text-green-700">
-                       Your account is verified and ready for V3 features
-                     </p>
-                     {verificationProviders.length > 0 && (
-                       <div className="mt-2">
-                         <p className="text-xs text-green-600 font-medium">Verification Methods:</p>
-                         <div className="flex flex-wrap gap-1 mt-1">
-                           {verificationProviders.map((provider, index) => (
-                             <span 
-                               key={index}
-                               className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"
-                             >
-                               {provider === 'self' ? 'Self Protocol' : 
-                                provider === 'gooddollar' ? 'GoodDollar' : provider}
-                             </span>
-                           ))}
-                         </div>
-                       </div>
-                     )}
-                   </div>
-                 </div>
-               </div>
-             )}
-           </div>
-
-           {/* Benefits */}
-           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="p-4 bg-blue-50 rounded-lg">
-               <h4 className="font-semibold text-blue-800 mb-2">Enhanced Security</h4>
-               <p className="text-sm text-blue-700">
-                 Protect your account and participate in verified-only campaigns
-               </p>
-             </div>
-             <div className="p-4 bg-purple-50 rounded-lg">
-               <h4 className="font-semibold text-purple-800 mb-2">Reputation Building</h4>
-               <p className="text-sm text-purple-700">
-                 Build trust within the community with verified identity
-               </p>
-             </div>
-           </div>
-
-           {/* Debug Section (only in development) */}
-           {true && (
-             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-               <h4 className="font-semibold text-yellow-800 mb-2">Debug Tools</h4>
-               <p className="text-sm text-yellow-700 mb-3">
-                 Development tools to help debug verification issues
-               </p>
-               <div className="space-y-2">
-                 <button
-                   onClick={() => debugApiCall()}
-                   className="px-3 py-1 bg-yellow-600 text-white rounded text-xs font-medium hover:bg-yellow-700 transition-colors duration-150"
-                 >
-                   Test API Call
-                 </button>
-                 <button
-                   onClick={() => refreshVerificationData()}
-                   className="ml-2 px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors duration-150"
-                 >
-                   Refresh Data
-                 </button>
-                 <button
-                   onClick={() => {
-                     console.log('Current verification state:', {
-                       isVerified,
-                       verificationProviders,
-                       verificationDetails,
-                       verificationLoading
-                     });
-                   }}
-                   className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors duration-150"
-                 >
-                   Log State
-                 </button>
-               </div>
-             </div>
-           )}
-         </div>
-       </div>
-     )}
 
      {/* Verification Method Selection Modal */}
      {showMethodSelection && (

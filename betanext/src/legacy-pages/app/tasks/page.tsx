@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useOpenMilestones, useUserClaimedMilestones, useUserAssignedMilestones, useClaimOpenMilestone, ProjectMilestoneType, ProjectMilestoneStatus } from '@/hooks/useProjectMilestones';
 import { formatEther } from 'viem';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useProjectMilestoneTokenDetails } from '@/hooks/useProjectMilestones';
@@ -148,12 +148,30 @@ export default function TasksPage() {
   if (!isConnected || !address) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8 text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Wallet</h2>
-          <p className="text-gray-600 mb-6">
-            Please connect your wallet to view and claim available tasks.
-          </p>
+        <div className="group relative w-full max-w-md">
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          
+          <div 
+            className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center p-8"
+            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+          >
+            <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+            <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            
+            <div className="relative z-[2]">
+              <AlertCircle className="h-12 w-12 text-[#2563eb] mx-auto mb-4" />
+              <h2 className="text-2xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Connect Your Wallet</h2>
+              <p className="text-[#050505] mb-6 font-semibold">
+                Please connect your wallet to view and claim available tasks.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -163,231 +181,401 @@ export default function TasksPage() {
     <div className="min-h-screen p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <ListChecks className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+        <div className="group relative w-full mb-8">
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          
+          <div 
+            className="relative bg-white border-[0.35em] border-[#10b981] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em]"
+            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+          >
+            <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#10b981] rotate-45 z-[1]" />
+            <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            
+            <div 
+              className="relative px-[1.5em] py-[1.4em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+              style={{ 
+                background: '#10b981',
+                backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                backgroundBlendMode: 'overlay'
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-[0.3em] flex items-center justify-center border-[0.15em] border-white/30">
+                  <ListChecks className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Tasks & Milestones</h1>
+                  <p className="text-white/90 text-sm font-semibold mt-1">
+                    Browse open milestones, claim tasks, and track your progress
+                  </p>
+                </div>
+              </div>
             </div>
-            Tasks & Milestones
-          </h1>
-          <p className="text-gray-600 text-sm sm:text-base">
-            Browse open milestones, claim tasks, and track your progress
-          </p>
+          </div>
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="mb-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white/60 backdrop-blur-md rounded-2xl shadow-lg border border-white/20 p-2">
-            <TabsTrigger value="open" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">Open Tasks</span>
-              <span className="sm:hidden">Open</span>
-              {filteredOpenMilestones.length > 0 && (
-                <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-semibold">
-                  {filteredOpenMilestones.length}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            { id: 'open', label: 'Open Tasks', icon: Globe, count: filteredOpenMilestones.length, color: '#2563eb' },
+            { id: 'my-tasks', label: 'My Tasks', icon: User, count: myTasks.length, color: '#a855f7' },
+            { id: 'pending', label: 'Pending', icon: Clock, count: pendingTasks.length, color: '#f59e0b' },
+            { id: 'completed', label: 'Completed', icon: CheckCircle, count: completedTasks.length, color: '#10b981' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-[0.4em] font-extrabold transition-all text-sm relative border-[0.2em] uppercase tracking-[0.05em] ${
+                activeTab === tab.id
+                  ? 'bg-[#2563eb] text-white border-[#050505] shadow-[0.3em_0.3em_0_#000000]'
+                  : 'bg-white text-[#050505] border-[#050505] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em]'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+              {tab.count > 0 && (
+                <span 
+                  className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-extrabold border-[0.15em] ${
+                    activeTab === tab.id
+                      ? 'bg-white text-[#2563eb] border-[#050505] shadow-[0.15em_0.15em_0_#000000]'
+                      : 'bg-[#2563eb] text-white border-[#050505] shadow-[0.15em_0.15em_0_#000000]'
+                  }`}
+                >
+                  {tab.count}
                 </span>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="my-tasks" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">My Tasks</span>
-              <span className="sm:hidden">Mine</span>
-              {myTasks.length > 0 && (
-                <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold">
-                  {myTasks.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Pending</span>
-              <span className="sm:hidden">Pending</span>
-              {pendingTasks.length > 0 && (
-                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">
-                  {pendingTasks.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="completed" className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Completed</span>
-              <span className="sm:hidden">Done</span>
-              {completedTasks.length > 0 && (
-                <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">
-                  {completedTasks.length}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+            </button>
+          ))}
+        </div>
+        
+        {/* Tab Content */}
+        <div className="space-y-4">
 
           {/* Open Tasks Tab */}
-          <TabsContent value="open" className="space-y-4">
-            {/* Search and Filters */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-4 space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search milestones..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-12"
+          {activeTab === 'open' && (
+            <div className="space-y-4">
+              {/* Search and Filters */}
+              <div className="group relative w-full">
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                  style={{
+                    backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                    backgroundSize: '0.5em 0.5em'
+                  }}
                 />
-              </div>
-              
-              {/* Filters */}
-              <div className="flex flex-wrap gap-3">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-600" />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as FilterOption)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="open">Open</option>
-                    <option value="claimed">Claimed</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
                 
-                <div className="flex items-center gap-2">
-                  <ArrowUpDown className="h-4 w-4 text-gray-600" />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="deadline-soon">Deadline Soonest</option>
-                    <option value="deadline-late">Deadline Latest</option>
-                  </select>
+                <div 
+                  className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2]"
+                  style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                >
+                  <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+                  <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                  
+                  <div className="relative px-[1.5em] py-[1.5em] z-[2] space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#050505]" />
+                      <Input
+                        type="text"
+                        placeholder="Search milestones..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-12 border-[0.2em] border-[#050505] rounded-[0.4em] font-semibold focus:outline-none"
+                      />
+                    </div>
+                    
+                    {/* Filters */}
+                    <div className="flex flex-wrap gap-3">
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-[#050505]" />
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value as FilterOption)}
+                          className="px-3 py-2 border-[0.2em] border-[#050505] rounded-[0.4em] text-sm font-semibold bg-white shadow-[0.2em_0.2em_0_#000000] focus:outline-none"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="open">Open</option>
+                          <option value="claimed">Claimed</option>
+                          <option value="submitted">Submitted</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4 text-[#050505]" />
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value as SortOption)}
+                          className="px-3 py-2 border-[0.2em] border-[#050505] rounded-[0.4em] text-sm font-semibold bg-white shadow-[0.2em_0.2em_0_#000000] focus:outline-none"
+                        >
+                          <option value="newest">Newest First</option>
+                          <option value="oldest">Oldest First</option>
+                          <option value="deadline-soon">Deadline Soonest</option>
+                          <option value="deadline-late">Deadline Latest</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Milestones List */}
-            {isLoadingOpen ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Loading available milestones...</p>
-              </div>
-            ) : filteredOpenMilestones.length > 0 ? (
-              <div className="space-y-4">
-                {filteredOpenMilestones.map((milestone) => (
-                  <MilestoneCard
-                    key={milestone.id.toString()}
-                    milestone={milestone}
-                    onClaim={() => {}}
-                    onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
-                    showActions={true}
+              {/* Milestones List */}
+              {isLoadingOpen ? (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
                   />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <Globe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Open Tasks</h3>
-                <p className="text-gray-600">
-                  {searchQuery ? 'No tasks match your search.' : "More tasks coming soon! Check back later or create a project to add milestones."}
-                </p>
-              </div>
-            )}
-          </TabsContent>
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center p-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <Loader2 className="h-8 w-8 animate-spin text-[#2563eb] mx-auto mb-4" />
+                    <p className="text-[#050505] font-semibold">Loading available milestones...</p>
+                  </div>
+                </div>
+              ) : filteredOpenMilestones.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredOpenMilestones.map((milestone) => (
+                    <MilestoneCard
+                      key={milestone.id.toString()}
+                      milestone={milestone}
+                      onClaim={() => {}}
+                      onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
+                      showActions={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center py-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+                    <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                    
+                    <div className="relative z-[2]">
+                      <Globe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">No Open Tasks</h3>
+                      <p className="text-[#050505] font-semibold">
+                        {searchQuery ? 'No tasks match your search.' : "More tasks coming soon! Check back later or create a project to add milestones."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* My Tasks Tab */}
-          <TabsContent value="my-tasks" className="space-y-4">
-            {isLoadingAssigned || isLoadingClaimed ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Loading your tasks...</p>
-              </div>
-            ) : myTasks.length > 0 ? (
-              <div className="space-y-4">
-                {myTasks.map((milestone) => (
-                  <MilestoneCard
-                    key={milestone.id.toString()}
-                    milestone={milestone}
-                    onClaim={() => {}}
-                    onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
-                    showActions={true}
+          {activeTab === 'my-tasks' && (
+            <div className="space-y-4">
+              {isLoadingAssigned || isLoadingClaimed ? (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
                   />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Tasks Assigned</h3>
-                <p className="text-gray-600">
-                  You don't have any tasks assigned yet. Browse open tasks to claim one!
-                </p>
-              </div>
-            )}
-          </TabsContent>
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#a855f7] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center p-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <Loader2 className="h-8 w-8 animate-spin text-[#a855f7] mx-auto mb-4" />
+                    <p className="text-[#050505] font-semibold">Loading your tasks...</p>
+                  </div>
+                </div>
+              ) : myTasks.length > 0 ? (
+                <div className="space-y-4">
+                  {myTasks.map((milestone) => (
+                    <MilestoneCard
+                      key={milestone.id.toString()}
+                      milestone={milestone}
+                      onClaim={() => {}}
+                      onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
+                      showActions={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#a855f7] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center py-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+                    <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                    
+                    <div className="relative z-[2]">
+                      <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">No Tasks Assigned</h3>
+                      <p className="text-[#050505] font-semibold">
+                        You don't have any tasks assigned yet. Browse open tasks to claim one!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Pending Tasks Tab */}
-          <TabsContent value="pending" className="space-y-4">
-            {isLoadingAssigned || isLoadingClaimed ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Loading pending tasks...</p>
-              </div>
-            ) : pendingTasks.length > 0 ? (
-              <div className="space-y-4">
-                {pendingTasks.map((milestone) => (
-                  <MilestoneCard
-                    key={milestone.id.toString()}
-                    milestone={milestone}
-                    onClaim={() => {}}
-                    onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
-                    showActions={true}
+          {activeTab === 'pending' && (
+            <div className="space-y-4">
+              {isLoadingAssigned || isLoadingClaimed ? (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
                   />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Pending Tasks</h3>
-                <p className="text-gray-600">
-                  You don't have any pending tasks. All your tasks are either completed or submitted!
-                </p>
-              </div>
-            )}
-          </TabsContent>
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#f59e0b] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center p-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <Loader2 className="h-8 w-8 animate-spin text-[#f59e0b] mx-auto mb-4" />
+                    <p className="text-[#050505] font-semibold">Loading pending tasks...</p>
+                  </div>
+                </div>
+              ) : pendingTasks.length > 0 ? (
+                <div className="space-y-4">
+                  {pendingTasks.map((milestone) => (
+                    <MilestoneCard
+                      key={milestone.id.toString()}
+                      milestone={milestone}
+                      onClaim={() => {}}
+                      onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
+                      showActions={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#f59e0b] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center py-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#f59e0b] rotate-45 z-[1]" />
+                    <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                    
+                    <div className="relative z-[2]">
+                      <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">No Pending Tasks</h3>
+                      <p className="text-[#050505] font-semibold">
+                        You don't have any pending tasks. All your tasks are either completed or submitted!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Completed Tasks Tab */}
-          <TabsContent value="completed" className="space-y-4">
-            {isLoadingAssigned || isLoadingClaimed ? (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Loading completed tasks...</p>
-              </div>
-            ) : completedTasks.length > 0 ? (
-              <div className="space-y-4">
-                {completedTasks.map((milestone) => (
-                  <MilestoneCard
-                    key={milestone.id.toString()}
-                    milestone={milestone}
-                    onClaim={() => {}}
-                    onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
-                    showActions={true}
+          {activeTab === 'completed' && (
+            <div className="space-y-4">
+              {isLoadingAssigned || isLoadingClaimed ? (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
                   />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-                <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Completed Tasks</h3>
-                <p className="text-gray-600">
-                  Complete your pending tasks to see them here!
-                </p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#10b981] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center p-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <Loader2 className="h-8 w-8 animate-spin text-[#10b981] mx-auto mb-4" />
+                    <p className="text-[#050505] font-semibold">Loading completed tasks...</p>
+                  </div>
+                </div>
+              ) : completedTasks.length > 0 ? (
+                <div className="space-y-4">
+                  {completedTasks.map((milestone) => (
+                    <MilestoneCard
+                      key={milestone.id.toString()}
+                      milestone={milestone}
+                      onClaim={() => {}}
+                      onView={() => navigate(`/explorer/project/${milestone.projectId}`)}
+                      showActions={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="group relative w-full">
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                      backgroundSize: '0.5em 0.5em'
+                    }}
+                  />
+                  
+                  <div 
+                    className="relative bg-white border-[0.35em] border-[#10b981] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden z-[2] text-center py-12"
+                    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+                  >
+                    <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#10b981] rotate-45 z-[1]" />
+                    <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+                    
+                    <div className="relative z-[2]">
+                      <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">No Completed Tasks</h3>
+                      <p className="text-[#050505] font-semibold">
+                        Complete your pending tasks to see them here!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -449,111 +637,148 @@ function MilestoneCard({
     return token?.symbol || `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}`;
   };
 
+  const statusColorMap: Record<ProjectMilestoneStatus, string> = {
+    [ProjectMilestoneStatus.DRAFT]: '#6b7280',
+    [ProjectMilestoneStatus.ACTIVE]: '#2563eb',
+    [ProjectMilestoneStatus.CLAIMED]: '#a855f7',
+    [ProjectMilestoneStatus.SUBMITTED]: '#f59e0b',
+    [ProjectMilestoneStatus.APPROVED]: '#10b981',
+    [ProjectMilestoneStatus.REJECTED]: '#ef4444',
+    [ProjectMilestoneStatus.PAID]: '#10b981',
+    [ProjectMilestoneStatus.CANCELLED]: '#6b7280',
+  };
+  
+  const statusColor = statusColorMap[milestone.status as ProjectMilestoneStatus] || '#6b7280';
+
   return (
-    <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-200">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <h3 className="text-xl font-bold text-gray-900">{milestone.title}</h3>
-            <div className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${statusInfo.bg} ${statusInfo.text}`}>
-              <StatusIcon className="w-3 h-3" />
-              {statusInfo.label}
-            </div>
-            <div className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-              {typeLabels[milestone.milestoneType as ProjectMilestoneType]}
+    <div className="group relative w-full">
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+          backgroundSize: '0.5em 0.5em'
+        }}
+      />
+      
+      <div 
+        className="relative bg-white border-[0.35em] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em] group-hover:scale-[1.02]"
+        style={{ 
+          borderColor: statusColor,
+          boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)'
+        }}
+      >
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] rotate-45 z-[1]" style={{ backgroundColor: statusColor }} />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+        
+        <div className="relative px-[1.5em] py-[1.5em] z-[2]">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <h3 className="text-xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">{milestone.title}</h3>
+                <span 
+                  className="bg-white text-[#050505] text-[0.6em] font-extrabold px-[0.8em] py-[0.4em] border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_#000000] uppercase tracking-[0.1em] rotate-[3deg] transition-all duration-300 group-hover:rotate-[-2deg] group-hover:scale-110"
+                  style={{ borderColor: statusColor, backgroundColor: statusInfo.bg.replace('bg-', '').includes('blue') ? '#dbeafe' : statusInfo.bg.replace('bg-', '').includes('green') ? '#d1fae5' : statusInfo.bg.replace('bg-', '').includes('purple') ? '#f3e8ff' : '#f3f4f6' }}
+                >
+                  {statusInfo.label}
+                </span>
+                <span className="bg-white text-[#050505] text-[0.6em] font-extrabold px-[0.8em] py-[0.4em] border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_#000000] uppercase tracking-[0.1em] rotate-[-3deg]">
+                  {typeLabels[milestone.milestoneType as ProjectMilestoneType]}
+                </span>
+              </div>
+              <p className="text-[#050505] mb-3 font-semibold">{milestone.description}</p>
+              {milestone.requirements && (
+                <div className="p-3 bg-gray-50 border-[0.15em] border-gray-200 rounded-[0.4em] mb-3 shadow-[0.1em_0.1em_0_#000000]">
+                  <p className="text-xs font-extrabold text-[#050505] mb-1 uppercase tracking-[0.05em]">Requirements:</p>
+                  <p className="text-sm text-[#050505] font-semibold">{milestone.requirements}</p>
+                </div>
+              )}
             </div>
           </div>
-          <p className="text-gray-600 mb-3">{milestone.description}</p>
-          {milestone.requirements && (
-            <div className="p-3 bg-gray-50 rounded-lg mb-3">
-              <p className="text-xs font-semibold text-gray-700 mb-1">Requirements:</p>
-              <p className="text-sm text-gray-600">{milestone.requirements}</p>
+
+          {/* Rewards */}
+          {tokenDetails && tokenDetails.tokens.length > 0 && (
+            <div className="mb-4 p-3 bg-[#dbeafe] border-[0.15em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+              <p className="text-xs font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Rewards:</p>
+              <div className="flex flex-wrap gap-2">
+                {tokenDetails.tokens.map((token, idx) => {
+                  const amount = tokenDetails.rewardAmounts[idx];
+                  const symbol = getTokenSymbol(token);
+                  return (
+                    <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-white border-[0.15em] border-[#2563eb] rounded-[0.3em] text-xs font-extrabold shadow-[0.1em_0.1em_0_#000000]">
+                      <Coins className="h-3 w-3 text-[#2563eb]" />
+                      <span className="text-[#050505]">{formatEther(amount)} {symbol}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Rewards */}
-      {tokenDetails && tokenDetails.tokens.length > 0 && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-xs font-semibold text-gray-700 mb-2">Rewards:</p>
-          <div className="flex flex-wrap gap-2">
-            {tokenDetails.tokens.map((token, idx) => {
-              const amount = tokenDetails.rewardAmounts[idx];
-              const symbol = getTokenSymbol(token);
-              return (
-                <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-white rounded text-xs font-semibold">
-                  <Coins className="h-3 w-3 text-blue-600" />
-                  <span>{formatEther(amount)} {symbol}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Metadata */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 text-sm">
-        {milestone.deadline > 0n && (
-          <div className="flex items-center gap-2 text-gray-600">
-            <Calendar className="h-4 w-4" />
-            <span>Deadline: {new Date(Number(milestone.deadline) * 1000).toLocaleDateString()}</span>
-          </div>
-        )}
-        {milestone.assignedTo && milestone.assignedTo !== '0x0000000000000000000000000000000000000000' && (
-          <div className="flex items-center gap-2 text-gray-600">
-            <User className="h-4 w-4" />
-            <span className="font-mono text-xs">
-              {milestone.assignedTo.slice(0, 6)}...{milestone.assignedTo.slice(-4)}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="space-y-3">
-        {showActions ? (
-          <MilestoneActions
-            milestone={milestone}
-            projectOwner={projectOwner}
-            onActionComplete={() => {
-              // Refetch data if needed
-              window.location.reload();
-            }}
-            showViewButton={true}
-            onView={onView}
-          />
-        ) : (
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={onView}
-              className="flex-1"
-            >
-              View Project
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-            {canClaim && (
-              <Button
-                onClick={handleClaim}
-                disabled={isClaiming}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                {isClaiming ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Claiming...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Claim Task
-                  </>
-                )}
-              </Button>
+          {/* Metadata */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 text-sm">
+            {milestone.deadline > 0n && (
+              <div className="flex items-center gap-2 text-[#050505] font-semibold">
+                <Calendar className="h-4 w-4" />
+                <span>Deadline: {new Date(Number(milestone.deadline) * 1000).toLocaleDateString()}</span>
+              </div>
+            )}
+            {milestone.assignedTo && milestone.assignedTo !== '0x0000000000000000000000000000000000000000' && (
+              <div className="flex items-center gap-2 text-[#050505] font-semibold">
+                <User className="h-4 w-4" />
+                <span className="font-mono text-xs">
+                  {milestone.assignedTo.slice(0, 6)}...{milestone.assignedTo.slice(-4)}
+                </span>
+              </div>
             )}
           </div>
-        )}
+
+          {/* Actions */}
+          <div className="space-y-3">
+            {showActions ? (
+              <MilestoneActions
+                milestone={milestone}
+                projectOwner={projectOwner}
+                onActionComplete={() => {
+                  window.location.reload();
+                }}
+                showViewButton={true}
+                onView={onView}
+              />
+            ) : (
+              <div className="flex gap-3">
+                <ButtonCool
+                  onClick={onView}
+                  text="View Project"
+                  bgColor="#2563eb"
+                  hoverBgColor="#1d4ed8"
+                  textColor="#ffffff"
+                  borderColor="#050505"
+                  size="sm"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </ButtonCool>
+                {canClaim && (
+                  <ButtonCool
+                    onClick={handleClaim}
+                    text={isClaiming ? "Claiming..." : "Claim Task"}
+                    bgColor="#10b981"
+                    hoverBgColor="#059669"
+                    textColor="#ffffff"
+                    borderColor="#050505"
+                    size="sm"
+                    disabled={isClaiming}
+                  >
+                    {isClaiming ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4" />
+                    )}
+                  </ButtonCool>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

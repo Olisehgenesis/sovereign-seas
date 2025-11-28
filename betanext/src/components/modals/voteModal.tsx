@@ -24,7 +24,7 @@ import {
   MobileDialogDescription as DialogDescription,
   MobileDialogHeader as DialogHeader,
 } from '@/components/ui/mobile-dialog';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
@@ -77,7 +77,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
       <button
         onClick={() => setIsOpen(true)}
         disabled={disabled}
-        className={`w-full h-12 rounded-xl border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors flex items-center justify-between px-4 ${
+        className={`w-full h-12 rounded-[0.4em] border-[0.2em] border-[#050505] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all flex items-center justify-between px-4 bg-white font-extrabold ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
         }`}
       >
@@ -102,11 +102,23 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
 
       {/* Token Modal */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 relative">
+          <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+          <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+          
+          <DialogHeader className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+            style={{ 
+              background: '#2563eb',
+              backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+              backgroundBlendMode: 'overlay'
+            }}
+          >
+            <DialogDescription className="text-white text-xl font-extrabold uppercase tracking-[0.05em]">
+              Select Token
+            </DialogDescription>
           </DialogHeader>
           
-          <div className="mt-4 space-y-2">
+          <div className="relative px-[1.5em] py-[1.5em] space-y-2 z-[2]">
             {tokens.map((token) => (
               <button
                 key={token.address}
@@ -114,8 +126,8 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
                   onTokenSelect(token.address);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors ${
-                  selectedToken === token.address ? 'bg-blue-50 border border-blue-200' : ''
+                className={`w-full flex items-center justify-between p-3 border-[0.2em] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold ${
+                  selectedToken === token.address ? 'bg-[#dbeafe] border-[#2563eb] text-[#050505]' : 'bg-white border-[#050505] text-[#050505]'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -129,15 +141,15 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
                     }}
                   />
                   <div className="text-left">
-                    <div className="font-semibold text-gray-900">{token.name}</div>
-                    <div className="text-sm text-gray-500">{token.symbol}</div>
+                    <div className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">{token.name}</div>
+                    <div className="text-sm text-[#050505] font-semibold">{token.symbol}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-500">Balance</div>
-                  <div className="font-semibold text-gray-900">{getBalance(token.address)}</div>
+                  <div className="text-sm text-[#050505] font-semibold">Balance</div>
+                  <div className="font-extrabold text-[#050505]">{getBalance(token.address)}</div>
                   {selectedToken === token.address && (
-                    <Check className="h-4 w-4 text-blue-600 mt-1" />
+                    <Check className="h-4 w-4 text-[#2563eb] mt-1" />
                   )}
                 </div>
               </button>
@@ -620,186 +632,203 @@ export default function VoteModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col bg-white p-0 [&>button]:hidden">
-        <DialogHeader className="p-6 pb-3">
-          {/* Header */}
-          <div className="bg-gray-500 p-4 text-white relative overflow-hidden rounded-t-lg -m-6 mb-3">
-            <div className="relative z-10">
-              <DialogDescription className="text-white text-2xl">
-                Vote for: <span className="font-semibold text-yellow-200 uppercase">{selectedProject.name}</span>
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden relative">
+        {/* Pattern Grid Overlay */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          style={{
+            backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em'
+          }}
+        />
+
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+
+        <DialogHeader className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{ 
+            background: '#2563eb',
+            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay'
+          }}
+        >
+          <DialogDescription className="text-white text-2xl font-extrabold uppercase tracking-[0.05em]">
+            Vote for: <span className="text-yellow-200">{selectedProject.name}</span>
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-8 pb-0">
+        <div className="flex-1 overflow-y-auto px-[1.5em] pb-0 relative z-[2]">
           
           {/* Success View */}
           {currentView === 'success' && (
-            <div className="text-center space-y-6">
+            <div className="text-center space-y-6 py-6">
               <div className="relative">
-                <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-[#10b981] border-[0.2em] border-[#050505] rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0.3em_0.3em_0_#000000]">
                   <Check className="h-10 w-10 text-white" />
                 </div>
                 <div className="absolute -top-2 -right-2 text-2xl">🎉</div>
               </div>
               
               <div>
-                <h4 className="text-2xl font-bold text-emerald-600 mb-2">
+                <h4 className="text-2xl font-extrabold text-[#10b981] mb-2 uppercase tracking-[0.05em]">
                   Vote Cast Successfully!
                 </h4>
-                <p className="text-gray-600 mb-6">
-                  Your vote has been registered for <span className="font-semibold text-blue-600">{selectedProject.name}</span>
+                <p className="text-[#050505] mb-6 font-semibold">
+                  Your vote has been registered for <span className="font-extrabold text-[#2563eb]">{selectedProject.name}</span>
                 </p>
               </div>
 
-              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
-                <CardContent className="p-4">
-                  <h5 className="font-semibold text-blue-800 mb-3 flex items-center justify-center">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share Your Support
-                  </h5>
-                  <div className="flex gap-3">
-                    <Button asChild className="flex-1 bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white">
-                      <a
-                        href={`https://twitter.com/intent/tweet?text=Just voted for ${selectedProject.name} on @SovSeas! 🗳️✨ Community funding at its finest! %23CommunityFunding %23SovSeas`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Twitter className="h-4 w-4 mr-2" />
-                        Share
-                      </a>
-                    </Button>
-                    <Button
-                      onClick={handleClose}
-                      variant="outline"
-                      className="flex-1"
+              <div className="bg-[#dbeafe] border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] p-4">
+                <h5 className="font-extrabold text-[#050505] mb-3 flex items-center justify-center uppercase tracking-[0.05em]">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share Your Support
+                </h5>
+                <div className="flex gap-3">
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=Just voted for ${selectedProject.name} on @SovSeas! 🗳️✨ Community funding at its finest! %23CommunityFunding %23SovSeas`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block"
+                  >
+                    <ButtonCool
+                      text="Share"
+                      bgColor="#1DA1F2"
+                      hoverBgColor="#1a8cd8"
+                      textColor="#ffffff"
+                      borderColor="#050505"
+                      size="md"
                     >
-                      Close
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                      <Twitter className="h-4 w-4" />
+                    </ButtonCool>
+                  </a>
+                  <ButtonCool
+                    onClick={handleClose}
+                    text="Close"
+                    bgColor="#ffffff"
+                    hoverBgColor="#f3f4f6"
+                    textColor="#050505"
+                    borderColor="#050505"
+                    size="md"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
           {/* Claim View */}
           {currentView === 'claim' && (
-            <div className="space-y-6">
+            <div className="space-y-6 py-6">
               <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-[#10b981] border-[0.2em] border-[#050505] rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0.3em_0.3em_0_#000000]">
                   <Shield className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Claim Free Vote</h3>
-                <p className="text-gray-600">Verified users get one free vote per campaign</p>
+                <h3 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Claim Free Vote</h3>
+                <p className="text-[#050505] font-semibold">Verified users get one free vote per campaign</p>
               </div>
 
               {isCheckingEligibility && (
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardContent className="p-4 flex items-center">
-                    <Loader2 className="h-5 w-5 text-blue-600 mr-3 animate-spin" />
-                    <span className="text-blue-700 font-medium">Checking verification status...</span>
-                  </CardContent>
-                </Card>
+                <div className="bg-[#dbeafe] border-[0.2em] border-[#2563eb] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 flex items-center">
+                  <Loader2 className="h-5 w-5 text-[#2563eb] mr-3 animate-spin" />
+                  <span className="text-[#050505] font-extrabold uppercase tracking-[0.05em]">Checking verification status...</span>
+                </div>
               )}
 
               {!isCheckingEligibility && eligibilityStatus.eligible !== undefined && (
-                <Card className={`border-2 ${
+                <div className={`border-[0.2em] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 ${
                   eligibilityStatus.eligible 
-                    ? 'bg-green-50 border-green-200' 
-                    : 'bg-red-50 border-red-200'
+                    ? 'bg-[#d1fae5] border-[#10b981]' 
+                    : 'bg-[#fee2e2] border-[#ef4444]'
                 }`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center mb-2">
-                      {eligibilityStatus.eligible ? (
-                        <>
-                          <Check className="h-5 w-5 text-green-600 mr-2" />
-                          <span className="font-semibold text-green-800">Eligible for Free Vote</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                          <span className="font-semibold text-red-800">Not Eligible</span>
-                        </>
-                      )}
-                    </div>
-                    <p className={`text-sm ${
-                      eligibilityStatus.eligible ? 'text-green-700' : 'text-red-700'
-                    }`}>
-                      {eligibilityStatus.reason}
-                    </p>
-                  </CardContent>
-                </Card>
+                  <div className="flex items-center mb-2">
+                    {eligibilityStatus.eligible ? (
+                      <>
+                        <Check className="h-5 w-5 text-[#10b981] mr-2" />
+                        <span className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">Eligible for Free Vote</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-5 w-5 text-[#ef4444] mr-2" />
+                        <span className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">Not Eligible</span>
+                      </>
+                    )}
+                  </div>
+                  <p className={`text-sm font-semibold text-[#050505]`}>
+                    {eligibilityStatus.reason}
+                  </p>
+                </div>
               )}
 
               {claimError && (
-                <Card className="bg-red-50 border-2 border-red-200">
-                  <CardContent className="p-4 flex items-start">
-                    <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm font-medium text-red-800">{claimError}</p>
-                  </CardContent>
-                </Card>
+                <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 flex items-start">
+                  <AlertCircle className="h-5 w-5 text-[#ef4444] mr-3 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">{claimError}</p>
+                </div>
               )}
 
               {eligibilityStatus.eligible && (
-                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold text-green-800 mb-3 flex items-center">
-                      <Gift className="h-4 w-4 mr-2" />
-                      Free Vote Details
-                    </h4>
-                    <div className="space-y-2 text-sm text-green-700">
-                      <div className="flex justify-between">
-                        <span>Vote Amount:</span>
-                        <span className="font-semibold">1.0 CELO</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Project:</span>
-                        <span className="font-semibold">{selectedProject.name}</span>
-                      </div>
+                <div className="bg-[#d1fae5] border-[0.2em] border-[#10b981] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4">
+                  <h4 className="font-extrabold text-[#050505] mb-3 flex items-center uppercase tracking-[0.05em]">
+                    <Gift className="h-4 w-4 mr-2" />
+                    Free Vote Details
+                  </h4>
+                  <div className="space-y-2 text-sm text-[#050505] font-semibold">
+                    <div className="flex justify-between">
+                      <span>Vote Amount:</span>
+                      <span className="font-extrabold">1.0 CELO</span>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex justify-between">
+                      <span>Project:</span>
+                      <span className="font-extrabold">{selectedProject.name}</span>
+                    </div>
+                  </div>
+                </div>
               )}
 
               <div className="flex gap-3">
                 {!eligibilityStatus.eligible && !isCheckingEligibility && (
-                  <Button
+                  <ButtonCool
                     onClick={checkClaimEligibility}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    text="Check Eligibility"
+                    bgColor="#2563eb"
+                    hoverBgColor="#1d4ed8"
+                    textColor="#ffffff"
+                    borderColor="#050505"
+                    size="md"
                   >
-                    <Shield className="h-4 w-4 mr-2" />
-                    Check Eligibility
-                  </Button>
+                    <Shield className="h-4 w-4" />
+                  </ButtonCool>
                 )}
                 
                 {eligibilityStatus.eligible && (
-                  <Button
+                  <ButtonCool
                     onClick={handleClaimFreeVote}
+                    text={isClaimProcessing ? "Claiming..." : "Claim Now"}
+                    bgColor="#10b981"
+                    hoverBgColor="#059669"
+                    textColor="#ffffff"
+                    borderColor="#050505"
+                    size="md"
                     disabled={isClaimProcessing}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg text-white"
                   >
                     {isClaimProcessing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Claiming...
-                      </>
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        <Zap className="h-4 w-4 mr-2" />
-                        Claim Now
-                      </>
+                      <Zap className="h-4 w-4" />
                     )}
-                  </Button>
+                  </ButtonCool>
                 )}
                 
-                <Button
+                <ButtonCool
                   onClick={() => setCurrentView('vote')}
+                  text="Back"
+                  bgColor="#ffffff"
+                  hoverBgColor="#f3f4f6"
+                  textColor="#050505"
+                  borderColor="#050505"
+                  size="md"
                   disabled={isClaimProcessing}
-                  variant="outline"
-                >
-                  Back
-                </Button>
+                />
               </div>
             </div>
           )}
@@ -809,47 +838,43 @@ export default function VoteModal({
             <div className="space-y-8">
               
               {error && (
-                <Card className="bg-red-50 border-2 border-red-200">
-                  <CardContent className="p-4 flex items-start">
-                    <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm font-medium text-red-800">{error}</p>
-                  </CardContent>
-                </Card>
+                <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 flex items-start">
+                  <AlertCircle className="h-5 w-5 text-[#ef4444] mr-3 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">{error}</p>
+                </div>
               )}
 
               {(isProcessing || isPending) && (
-                <Card className="bg-amber-50 border-2 border-amber-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center mb-3">
-                      <Loader2 className="h-5 w-5 text-amber-600 mr-3 animate-spin" />
-                      <p className="text-sm font-medium text-amber-800">Processing transaction...</p>
-                    </div>
-                    {countdown > 0 && (
-                      <div>
-                        <p className="text-xs text-amber-700 mb-2">
-                          Redirecting to campaign page in {countdown}s if no confirmation
-                        </p>
-                        <div className="bg-amber-200 rounded-full h-2">
-                          <div 
-                            className="bg-amber-500 h-2 rounded-full transition-all duration-1000"
-                            style={{ width: `${(countdown / 12) * 100}%` }}
-                          />
-                        </div>
+                <div className="bg-[#fef3c7] border-[0.2em] border-[#f59e0b] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4">
+                  <div className="flex items-center mb-3">
+                    <Loader2 className="h-5 w-5 text-[#f59e0b] mr-3 animate-spin" />
+                    <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">Processing transaction...</p>
+                  </div>
+                  {countdown > 0 && (
+                    <div>
+                      <p className="text-xs text-[#050505] mb-2 font-semibold">
+                        Redirecting to campaign page in {countdown}s if no confirmation
+                      </p>
+                      <div className="bg-[#fde68a] border-[0.15em] border-[#050505] rounded-full h-2 shadow-[0.1em_0.1em_0_#000000]">
+                        <div 
+                          className="bg-[#f59e0b] h-2 rounded-full transition-all duration-1000 border-[0.1em] border-[#050505]"
+                          style={{ width: `${(countdown / 12) * 100}%` }}
+                        />
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </div>
+                  )}
+                </div>
               )}
 
 
               {/* Amount Input */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-gray-800">
+                  <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                     Vote Amount
                   </label>
                   {selectedToken && (
-                    <div className="text-xs text-gray-600 flex items-center">
+                    <div className="text-xs text-[#050505] flex items-center font-semibold">
                       <Wallet className="h-3 w-3 mr-1" />
                       Available: {getSelectedBalance()} {getSelectedSymbol()}
                     </div>
@@ -871,7 +896,7 @@ export default function VoteModal({
                       }}
                       placeholder="0.00"
                       disabled={isProcessing || isPending}
-                      className="text-xl font-semibold h-12"
+                      className="text-xl font-extrabold h-12 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none"
                       step="0.01"
                       min="0"
                       max={getSelectedBalance()}
@@ -939,25 +964,21 @@ export default function VoteModal({
               
               {/* Token Conversion Info */}
               {cUSDToken && selectedToken === cUSDToken.address && voteAmount && parseFloat(voteAmount) > 0 && (
-                <Card className="bg-gray-50 border-gray-200">
-                  <CardContent className="p-3">
-                    <div className="text-sm text-gray-600 flex items-center">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      <span>≈ {Number(celoEquivalentFormatted).toFixed(2)} CELO voting power</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3">
+                  <div className="text-sm text-[#050505] flex items-center font-semibold">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    <span>≈ {Number(celoEquivalentFormatted).toFixed(2)} CELO voting power</span>
+                  </div>
+                </div>
               )}
               
               {goodDollarToken && selectedToken === goodDollarToken.address && voteAmount && parseFloat(voteAmount) > 0 && goodDollarEstimate && (
-                <Card className="bg-gray-50 border-gray-200">
-                  <CardContent className="p-3">
-                    <div className="text-sm text-gray-600 flex items-center">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      <span>≈ {goodDollarEstimate} CELO voting power</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3">
+                  <div className="text-sm text-[#050505] flex items-center font-semibold">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    <span>≈ {goodDollarEstimate} CELO voting power</span>
+                  </div>
+                </div>
               )}
               
 
@@ -966,17 +987,24 @@ export default function VoteModal({
         </div>
         
         {/* Action Buttons */}
-        <div className="p-8 pt-6 flex justify-end gap-3">
-          <Button
-            variant="outline"
+        <div className="p-[1.5em] pt-6 flex justify-end gap-3 border-t-[0.35em] border-[#050505] relative z-[2]">
+          <ButtonCool
             onClick={handleClose}
-            size="default"
-            className="w-24 h-12 text-base"
-          >
-            Cancel
-          </Button>
-          <Button
+            text="Cancel"
+            bgColor="#ffffff"
+            hoverBgColor="#f3f4f6"
+            textColor="#050505"
+            borderColor="#050505"
+            size="md"
+          />
+          <ButtonCool
             onClick={handleVote}
+            text={isProcessing || isPending ? "Processing..." : "Cast Vote"}
+            bgColor="#2563eb"
+            hoverBgColor="#1d4ed8"
+            textColor="#ffffff"
+            borderColor="#050505"
+            size="md"
             disabled={
               isProcessing || 
               isPending || 
@@ -985,14 +1013,7 @@ export default function VoteModal({
               parseFloat(voteAmount) > parseFloat(getSelectedBalance()) || 
               parseFloat(voteAmount) <= 0
             }
-            className="w-32 bg-gradient-to-r from-blue-600 to-indigo-700 hover:shadow-lg hover:-translate-y-0.5 text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none h-12 text-base"
-          >
-            {isProcessing || isPending ? (
-              <span>Processing...</span>
-            ) : (
-              <span>Cast Vote</span>
-            )}
-          </Button>
+          />
         </div>
       </DialogContent>
     </Dialog>

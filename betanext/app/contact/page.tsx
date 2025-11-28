@@ -1,11 +1,7 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { Mail, Twitter, Linkedin, Send, MessageCircle, Navigation2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { ButtonCool } from '@/components/ui/button-cool';
 
 export const metadata: Metadata = {
   title: 'Contact | SovSeas',
@@ -50,144 +46,250 @@ const builderLinks = [
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-transparent text-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-24">
-        <div className="space-y-5 text-center mb-16">
-          <span className="inline-flex items-center justify-center rounded-full border border-white/25 bg-black/60 px-5 py-1 text-[10px] font-semibold tracking-[0.35em] text-gray-200 uppercase">
-            SovSeas Contact
-          </span>
-          <div className="mx-auto max-w-3xl rounded-3xl border border-white/20 bg-black/50 px-6 py-6 backdrop-blur-2xl">
-            <h1 className="text-4xl sm:text-5xl font-semibold text-white mb-4">Let&apos;s build open oceans together</h1>
-            <p className="text-sm text-gray-200">
-              SovSeas is built by Code 3 Spaces, incubated by the Celo Proof of Ship program, and crafted in code by Oliseh Genesis.
-              Reach out for partnerships, grants, or operational support.
-            </p>
+    <div className="min-h-screen bg-transparent">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-24">
+        {/* Header Section */}
+        <div className="space-y-5 text-center mb-12 sm:mb-16">
+          <div className="group relative inline-block">
+            <div 
+              className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+              style={{
+                backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                backgroundSize: '0.5em 0.5em'
+              }}
+            />
+            <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+            <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            <div className="relative bg-white sm:border-[0.35em] sm:border-[#2563eb] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-8 p-6 z-[2]">
+              <span className="inline-flex items-center justify-center bg-[#2563eb] text-white px-4 py-2 text-xs font-extrabold tracking-[0.3em] uppercase border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_#000000] mb-4">
+                SovSeas Contact
+              </span>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#050505] mb-4 uppercase tracking-[0.05em]">
+                Let&apos;s build open oceans together
+              </h1>
+              <p className="text-base sm:text-lg text-[#050505] font-semibold leading-relaxed">
+                SovSeas is built by Code 3 Spaces, incubated by the Celo Proof of Ship program, and crafted in code by Oliseh Genesis.
+                Reach out for partnerships, grants, or operational support.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-10">
-          <Card className="border border-white/30 bg-black/60 backdrop-blur-2xl text-white rounded-3xl px-8 py-10 shadow-[0_30px_80px_rgba(0,0,0,0.65)]">
-            <CardHeader className="px-0">
-              <CardTitle className="text-2xl font-semibold">Direct line</CardTitle>
-              <CardDescription className="text-gray-400">
-                Prefer inboxes, not forms? Send mail and we&apos;ll reply within two business days.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-0 space-y-6">
-              <div className="flex items-center justify-between rounded-2xl border border-white/30 bg-black/40 px-5 py-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Email</p>
-                  <p className="text-lg text-white font-medium">innovationsug@gmail.com</p>
-                </div>
-                <Button asChild size="icon" variant="outline" className="rounded-full border-white/60 text-white hover:bg-white hover:text-black">
-                  <Link href="mailto:innovationsug@gmail.com">
-                    <Mail className="h-4 w-4" />
-                  </Link>
-                </Button>
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-10">
+          {/* Direct Line Card */}
+          <div className="group relative">
+            <div 
+              className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+              style={{
+                backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                backgroundSize: '0.5em 0.5em'
+              }}
+            />
+            <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#10b981] rotate-45 z-[1]" />
+            <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            <div className="relative bg-white sm:border-[0.35em] sm:border-[#10b981] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-8 p-6 z-[2]">
+              <div className="mb-6">
+                <h2 className="text-2xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Direct line</h2>
+                <p className="text-[#050505] font-semibold">
+                  Prefer inboxes, not forms? Send mail and we&apos;ll reply within two business days.
+                </p>
               </div>
 
-              <form action="mailto:innovationsug@gmail.com" method="POST" className="space-y-4">
-                <div>
-                  <Label htmlFor="name" className="text-gray-100">Name</Label>
-                  <Input id="name" name="name" required className="mt-2 border-white/30 bg-black/40 text-white placeholder:text-gray-500 focus-visible:ring-white" />
+              <div className="space-y-6">
+                {/* Email Card */}
+                <div className="group/item relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.4em_0.4em_0_#000000] p-4 sm:p-5 hover:shadow-[0.5em_0.5em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-[#050505] font-extrabold mb-1">Email</p>
+                      <p className="text-lg text-[#050505] font-extrabold">innovationsug@gmail.com</p>
+                    </div>
+                    <Link 
+                      href="mailto:innovationsug@gmail.com"
+                      className="p-3 bg-[#2563eb] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
+                    >
+                      <Mail className="h-5 w-5" />
+                    </Link>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="email" className="text-gray-100">Email</Label>
-                  <Input id="email" name="email" type="email" required className="mt-2 border-white/30 bg-black/40 text-white placeholder:text-gray-500 focus-visible:ring-white" />
-                </div>
-                <div>
-                  <Label htmlFor="message" className="text-gray-100">Message</Label>
-                  <Textarea id="message" name="message" rows={4} required className="mt-2 border-white/30 bg-black/40 text-white placeholder:text-gray-500 focus-visible:ring-white" />
-                </div>
-                <Button type="submit" className="w-full bg-white text-black hover:bg-gray-200 rounded-full">
-                  <Send className="h-4 w-4 mr-2" />
-                  Send note
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
 
-          <div className="space-y-8">
-            <Card className="border border-white/30 rounded-3xl bg-black/55 backdrop-blur-2xl text-white shadow-[0_25px_70px_rgba(0,0,0,0.55)]">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Built by Code 3 Spaces
-                  <Navigation2 className="h-5 w-5 text-gray-400" />
-                </CardTitle>
-                <CardDescription className="text-gray-400">
+                {/* Contact Form */}
+                <form action="mailto:innovationsug@gmail.com" method="POST" className="space-y-4">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">
+                      Name
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      required
+                      className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-semibold placeholder:text-gray-400 focus:outline-none focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] transition-all"
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-semibold placeholder:text-gray-400 focus:outline-none focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] transition-all"
+                      placeholder="your.email@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">
+                      Message
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      rows={4}
+                      required
+                      className="w-full px-4 py-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-[#050505] font-semibold placeholder:text-gray-400 focus:outline-none focus:shadow-[0.3em_0.3em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] transition-all resize-none"
+                      placeholder="Your message..."
+                    />
+                  </div>
+                  <ButtonCool
+                    type="submit"
+                    text="Send note"
+                    bgColor="#2563eb"
+                    textColor="#ffffff"
+                    borderColor="#050505"
+                    size="lg"
+                    className="w-full"
+                  >
+                    <Send className="h-4 w-4 ml-2" />
+                  </ButtonCool>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6 sm:space-y-8">
+            {/* Code 3 Spaces Card */}
+            <div className="group relative">
+              <div 
+                className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+              <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+              <div className="relative bg-white sm:border-[0.35em] sm:border-[#a855f7] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-8 p-6 z-[2]">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">Built by Code 3 Spaces</h3>
+                  <Navigation2 className="h-5 w-5 text-[#a855f7]" />
+                </div>
+                <p className="text-[#050505] font-semibold mb-6">
                   Strategic studio stewarding SovSeas across research, product, and deployment.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-2xl border border-white/25 p-4 bg-black/40">
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500 mb-2">Incubation</p>
-                  <p className="text-sm text-gray-200">
+                </p>
+                
+                <div className="mb-6 p-4 bg-white border-[0.2em] border-[#a855f7] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+                  <p className="text-xs uppercase tracking-[0.3em] text-[#050505] font-extrabold mb-2">Incubation</p>
+                  <p className="text-sm text-[#050505] font-semibold">
                     Proudly incubated by the Celo Proof of Ship program—anchoring regenerative finance for ocean-positive ventures.
                   </p>
                 </div>
+
                 <div className="space-y-3">
                   {studioLinks.map(({ title, href, handle, icon: Icon }) => (
                     <Link
                       key={title}
                       href={href}
                       target="_blank"
-                      className="flex items-center justify-between rounded-2xl border border-white/25 px-4 py-3 bg-black/35 hover:bg-black/25 transition-colors"
+                      className="group/link flex items-center justify-between p-4 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
                     >
                       <div>
-                        <p className="text-sm font-medium text-white">{title}</p>
-                        <p className="text-xs text-gray-400">{handle}</p>
+                        <p className="text-sm font-extrabold text-[#050505]">{title}</p>
+                        <p className="text-xs text-[#050505] font-semibold">{handle}</p>
                       </div>
-                      <Icon className="h-4 w-4 text-gray-300" />
+                      <Icon className="h-5 w-5 text-[#a855f7]" />
                     </Link>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="border border-white/30 rounded-3xl bg-black/65 backdrop-blur-2xl text-white">
-              <CardHeader>
-                <CardTitle>Code by Oliseh Genesis</CardTitle>
-                <CardDescription className="text-gray-400">
+            {/* Oliseh Genesis Card */}
+            <div className="group relative">
+              <div 
+                className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+              <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+              <div className="relative bg-white sm:border-[0.35em] sm:border-[#2563eb] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-8 p-6 z-[2]">
+                <h3 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Code by Oliseh Genesis</h3>
+                <p className="text-[#050505] font-semibold mb-6">
                   Builder, systems designer, and maintainer of the SovSeas codebase.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {builderLinks.map(({ label, href, handle, icon: Icon }) => (
-                  <Link
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    className="flex items-center justify-between rounded-2xl border border-white/25 px-4 py-3 bg-black/35 hover:bg-black/25 transition-colors"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-white">{label}</p>
-                      <p className="text-xs text-gray-400">{handle}</p>
-                    </div>
-                    <Icon className="h-4 w-4 text-gray-300" />
-                  </Link>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border border-white/25 rounded-3xl bg-black/50 backdrop-blur-2xl text-white">
-              <CardContent className="py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Community channel</p>
-                  <p className="text-lg font-semibold text-white">Follow SovSeas on X</p>
-                  <p className="text-sm text-gray-400">Stay close to voyage logs, bounty drops, and campaign updates.</p>
+                </p>
+                <div className="space-y-3">
+                  {builderLinks.map(({ label, href, handle, icon: Icon }) => (
+                    <Link
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      className="group/link flex items-center justify-between p-4 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
+                    >
+                      <div>
+                        <p className="text-sm font-extrabold text-[#050505]">{label}</p>
+                        <p className="text-xs text-[#050505] font-semibold">{handle}</p>
+                      </div>
+                      <Icon className="h-5 w-5 text-[#2563eb]" />
+                    </Link>
+                  ))}
                 </div>
-                <Button asChild className="bg-white text-black rounded-full hover:bg-gray-200">
-                  <Link href="https://x.com/sovseas" target="_blank">
-                    <Twitter className="h-4 w-4 mr-2" />
-                    @sovseas
+              </div>
+            </div>
+
+            {/* Community Channel Card */}
+            <div className="group relative">
+              <div 
+                className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#10b981] rotate-45 z-[1]" />
+              <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+              <div className="relative bg-white sm:border-[0.35em] sm:border-[#10b981] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-8 p-6 z-[2]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-[#050505] font-extrabold mb-1">Community channel</p>
+                    <p className="text-lg font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Follow SovSeas on X</p>
+                    <p className="text-sm text-[#050505] font-semibold">Stay close to voyage logs, bounty drops, and campaign updates.</p>
+                  </div>
+                  <Link 
+                    href="https://x.com/sovseas" 
+                    target="_blank"
+                    className="inline-flex items-center justify-center"
+                  >
+                    <ButtonCool
+                      text="@sovseas"
+                      bgColor="#10b981"
+                      textColor="#ffffff"
+                      borderColor="#050505"
+                      size="md"
+                    >
+                      <Twitter className="h-4 w-4 ml-2" />
+                    </ButtonCool>
                   </Link>
-                </Button>
-              </CardContent>
-            </Card>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

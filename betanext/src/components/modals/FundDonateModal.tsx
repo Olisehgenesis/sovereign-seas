@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { 
   MobileDialog as Dialog,
   MobileDialogContent as DialogContent,
@@ -140,23 +140,38 @@ export default function FundDonateModal({ isOpen, onClose, title = 'Fund Pool', 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl bg-white p-0 [&>button]:hidden">
-        <DialogHeader className="p-6 pb-3">
-          <div className="bg-gray-500 p-4 text-white relative overflow-hidden rounded-t-lg -m-6 mb-3">
-            <div className="relative z-10">
-              <DialogDescription className="text-white text-2xl">{title}</DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="max-w-xl bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden relative">
+        {/* Pattern Grid Overlay */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          style={{
+            backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em'
+          }}
+        />
+
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+
+        <DialogHeader className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{ 
+            background: '#2563eb',
+            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay'
+          }}
+        >
+          <DialogDescription className="text-white text-2xl font-extrabold uppercase tracking-[0.05em]">{title}</DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-5">
+        <div className="relative px-[1.5em] pb-[1.5em] space-y-5 z-[2]">
           {errorMsg && (
-            <div className="p-3 rounded border border-red-200 bg-red-50 text-sm text-red-700">{errorMsg}</div>
+            <div className="p-3 border-[0.2em] border-[#ef4444] bg-[#fee2e2] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-sm text-[#050505] font-extrabold uppercase tracking-[0.05em]">{errorMsg}</div>
           )}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-gray-800">Amount</label>
-              <div className="text-xs text-gray-600 flex items-center">
+              <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">Amount</label>
+              <div className="text-xs text-[#050505] flex items-center font-semibold">
                 <Wallet className="h-3 w-3 mr-1" />
                 Available: {selectedBalance} {selectedSymbol}
               </div>
@@ -167,28 +182,28 @@ export default function FundDonateModal({ isOpen, onClose, title = 'Fund Pool', 
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
                 placeholder="0.00"
-                className="text-lg font-semibold h-12"
+                className="text-lg font-extrabold h-12 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none"
                 step="0.01"
                 min="0"
               />
               <div className="relative w-72">
-                <button onClick={() => setSelectorOpen(!selectorOpen)} className="w-full h-12 rounded-xl border-2 border-gray-200 hover:border-blue-300 px-3 flex items-center justify-between">
-                  <span className="font-semibold text-gray-900">{tokenMeta?.symbol || selectedSymbol || tokenMeta?.name || selectedName || 'Token'}</span>
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                <button onClick={() => setSelectorOpen(!selectorOpen)} className="w-full h-12 rounded-[0.4em] border-[0.2em] border-[#050505] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all px-3 flex items-center justify-between bg-white font-extrabold">
+                  <span className="text-[#050505]">{tokenMeta?.symbol || selectedSymbol || tokenMeta?.name || selectedName || 'Token'}</span>
+                  <ChevronDown className="h-5 w-5 text-[#050505]" />
                 </button>
                 {selectorOpen && (
-                  <div className="absolute z-50 mt-2 w-full bg-white border rounded-lg shadow">
+                  <div className="absolute z-50 mt-2 w-full bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000]">
                     {tokenBalances.map((tb, idx) => (
-                      <button key={`${tb.address}-${idx}`} className={`w-full flex items-center justify-between p-3 hover:bg-gray-50 ${selectedToken === tb.address ? 'bg-blue-50' : ''}`}
+                      <button key={`${tb.address}-${idx}`} className={`w-full flex items-center justify-between p-3 border-b-[0.15em] border-gray-300 last:border-b-0 hover:bg-gray-50 font-extrabold ${selectedToken === tb.address ? 'bg-[#dbeafe]' : ''}`}
                         onClick={() => { setSelectedToken(tb.address); setSelectorOpen(false); }}>
                         <div className="text-left">
-                          <div className="font-semibold text-gray-900">{tb.name}</div>
-                          <div className="text-sm text-gray-500">{tb.symbol}</div>
+                          <div className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">{tb.name}</div>
+                          <div className="text-sm text-[#050505] font-semibold">{tb.symbol}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-gray-500">Balance</div>
-                          <div className="font-semibold text-gray-900">{tb.formattedBalance}</div>
-                          {selectedToken === tb.address && <Check className="h-4 w-4 text-blue-600 mt-1 ml-auto" />}
+                          <div className="text-sm text-[#050505] font-semibold">Balance</div>
+                          <div className="font-extrabold text-[#050505]">{tb.formattedBalance}</div>
+                          {selectedToken === tb.address && <Check className="h-4 w-4 text-[#2563eb] mt-1 ml-auto" />}
                         </div>
                       </button>
                     ))}
@@ -199,13 +214,13 @@ export default function FundDonateModal({ isOpen, onClose, title = 'Fund Pool', 
           </div>
 
           <div className="flex items-start space-x-2">
-            <input id="agree-fund" type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1" />
-            <label htmlFor="agree-fund" className="text-sm text-gray-600">
+            <input id="agree-fund" type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 w-5 h-5 border-[0.15em] border-[#050505] rounded-[0.2em] accent-[#2563eb]" />
+            <label htmlFor="agree-fund" className="text-sm text-[#050505] font-semibold">
               I understand this will transfer funds to the prize pool and may be distributed per campaign rules.
             </label>
           </div>
 
-          <div className="flex justify-between gap-3 pt-2">
+          <div className="flex justify-between gap-3 pt-2 border-t-[0.35em] border-[#050505]">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -216,20 +231,28 @@ export default function FundDonateModal({ isOpen, onClose, title = 'Fund Pool', 
                   const decimalsStr = prompt('Enter token decimals', '18') || '18';
                   const decimals = Number(decimalsStr) || 18;
                   addCustomToken({ address: addr as string, name, symbol, decimals });
-                  // Force refresh by resetting selection; balances will reload on reopen
                   setSelectedToken(addr);
                 }}
-                className="text-xs underline text-blue-600"
+                className="text-xs underline text-[#2563eb] font-extrabold uppercase tracking-[0.05em]"
               >
                 Add custom token
               </button>
             </div>
             
             <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose} className="h-11">Cancel</Button>
-            <Button onClick={handleConfirm} disabled={!canConfirm} className="h-11">
-              {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : 'Confirm'}
-            </Button>
+            <ButtonCool onClick={onClose} text="Cancel" bgColor="#ffffff" hoverBgColor="#f3f4f6" textColor="#050505" borderColor="#050505" size="md" />
+            <ButtonCool 
+              onClick={handleConfirm} 
+              text={isSubmitting ? "Processing..." : "Confirm"}
+              bgColor="#2563eb"
+              hoverBgColor="#1d4ed8"
+              textColor="#ffffff"
+              borderColor="#050505"
+              size="md"
+              disabled={!canConfirm}
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            </ButtonCool>
             </div>
           </div>
 

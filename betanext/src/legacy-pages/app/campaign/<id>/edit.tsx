@@ -89,33 +89,49 @@ const Section = ({ id, title, icon: Icon, children, required = false, expandedSe
   const isExpanded = expandedSection === id;
   
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-purple-100 mb-6 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => toggleSection(id)}
-        className="w-full p-6 flex items-center justify-between hover:bg-purple-50 transition-colors"
-      >
-        <div className="flex items-center">
-          <Icon className="h-6 w-6 text-purple-600 mr-3" />
-          <h3 className="text-xl font-semibold text-gray-800">
-            {title}
-            {required && <span className="text-red-500 ml-1">*</span>}
-          </h3>
-        </div>
-        {isExpanded ? (
-          <ChevronUp className="h-5 w-5 text-gray-500" />
-        ) : (
-          <ChevronDown className="h-5 w-5 text-gray-500" />
-        )}
-      </button>
+    <div className="group relative w-full mb-6">
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+          backgroundSize: '0.5em 0.5em'
+        }}
+      />
       
-      {isExpanded && (
-        <div className="px-6 pb-6 border-t border-gray-100">
-          <div className="pt-6">
-            {children}
+      <div 
+        className="relative bg-white border-[0.35em] border-[#a855f7] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2]"
+        style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+      >
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+        
+        <button
+          type="button"
+          onClick={() => toggleSection(id)}
+          className="w-full p-6 flex items-center justify-between hover:bg-purple-50/50 transition-colors relative z-[2]"
+        >
+          <div className="flex items-center">
+            <Icon className="h-6 w-6 text-[#a855f7] mr-3" />
+            <h3 className="text-xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+              {title}
+              {required && <span className="text-[#ef4444] ml-1">*</span>}
+            </h3>
           </div>
-        </div>
-      )}
+          {isExpanded ? (
+            <ChevronUp className="h-5 w-5 text-[#050505]" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-[#050505]" />
+          )}
+        </button>
+        
+        {isExpanded && (
+          <div className="px-6 pb-6 border-t-[0.35em] border-[#050505] relative z-[2]">
+            <div className="pt-6">
+              {children}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

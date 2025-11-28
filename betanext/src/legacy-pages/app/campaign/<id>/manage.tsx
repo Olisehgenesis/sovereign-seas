@@ -858,7 +858,7 @@ export default function CampaignManagePage() {
           <h1 className="text-3xl font-bold text-slate-800 mb-4">Invalid Campaign ID</h1>
           <p className="text-slate-600 mb-8">The campaign ID "{id}" is not valid or could not be decoded.</p>
           <button
-            onClick={() => navigate('/explore')}
+            onClick={() => navigate('/explorer/campaigns')}
             className="px-8 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200"
           >
             Browse Campaigns
@@ -876,7 +876,7 @@ export default function CampaignManagePage() {
           <h1 className="text-3xl font-bold text-slate-800 mb-4">Campaign Not Found</h1>
           <p className="text-slate-600 mb-8">The campaign you're looking for doesn't exist or has been removed.</p>
           <button
-            onClick={() => navigate('/explore')}
+            onClick={() => navigate('/explorer/campaigns')}
             className="px-8 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200"
           >
             Browse Campaigns
@@ -916,73 +916,111 @@ export default function CampaignManagePage() {
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Professional Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate(`/explore/campaign/${id}`)}
-              className="inline-flex items-center px-4 py-2 bg-white text-slate-700 hover:text-blue-600 rounded-lg border border-slate-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Campaign
-            </button>
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800">Campaign Management</h1>
-                <p className="text-sm text-slate-500">Administrative Dashboard</p>
+        <div className="group relative w-full mb-8">
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          
+          <div 
+            className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2]"
+            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+          >
+            <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+            <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            
+            <div className="relative px-[1.5em] py-[1.5em] z-[2]">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => navigate(`/explore/campaign/${id}`)}
+                    className="inline-flex items-center px-4 py-2 bg-white text-[#050505] border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Campaign
+                  </button>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-[#2563eb] border-[0.2em] border-[#050505] rounded-[0.3em] flex items-center justify-center shadow-[0.2em_0.2em_0_#000000]">
+                      <Shield className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">Campaign Management</h1>
+                      <p className="text-sm text-[#050505] font-semibold">Administrative Dashboard</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3 flex-wrap">
+                  <button
+                    onClick={refetchAllData}
+                    disabled={sortedLoading}
+                    className="p-2 bg-white border-[0.2em] border-[#050505] rounded-[0.3em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
+                  >
+                    <RotateCcw className={`h-4 w-4 text-[#050505] ${sortedLoading ? 'animate-spin' : ''}`} />
+                  </button>
+                  
+                  <button
+                    onClick={() => navigate(`/app/campaign/edit/${id}`)}
+                    className="px-4 py-2 bg-[#6366f1] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em] flex items-center space-x-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Edit Campaign</span>
+                  </button>
+                  
+                  {canDistribute && (
+                    <button
+                      onClick={() => setShowDistributeModal(true)}
+                      className="px-4 py-2 bg-[#10b981] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em] flex items-center space-x-2"
+                    >
+                      <Award className="h-4 w-4" />
+                      <span>Distribute Funds</span>
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => setShowSimulateModal(true)}
+                    className="px-4 py-2 bg-[#2563eb] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em] flex items-center space-x-2"
+                  >
+                    <Calculator className="h-4 w-4" />
+                    <span>Simulate</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={refetchAllData}
-              disabled={sortedLoading}
-              className="p-2 bg-white rounded-lg border border-slate-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <RotateCcw className={`h-4 w-4 text-slate-600 ${sortedLoading ? 'animate-spin' : ''}`} />
-            </button>
-            
-            <button
-              onClick={() => navigate(`/app/campaign/edit/${id}`)}
-              className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors duration-200 flex items-center space-x-2"
-            >
-              <Edit className="h-4 w-4" />
-              <span>Edit Campaign</span>
-            </button>
-            
-            {canDistribute && (
-              <button
-                onClick={() => setShowDistributeModal(true)}
-                className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2"
-              >
-                <Award className="h-4 w-4" />
-                <span>Distribute Funds</span>
-              </button>
-            )}
-            
-            <button
-              onClick={() => setShowSimulateModal(true)}
-              className="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
-            >
-              <Calculator className="h-4 w-4" />
-              <span>Simulate</span>
-            </button>
           </div>
         </div>
 
         {/* Status + Metrics + Actions */}
         <div className="space-y-4 mb-8">
           {/* Status Banner */}
-          <div className={`${canDistribute ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-blue-50'} border-l-4 p-4 rounded`}>
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-sm font-medium text-slate-900">
+          <div className={`group relative w-full`}>
+            <div 
+              className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+              style={{
+                backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                backgroundSize: '0.5em 0.5em'
+              }}
+            />
+            
+            <div 
+              className={`relative bg-white border-[0.35em] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] overflow-hidden z-[2] p-4`}
+              style={{ 
+                borderColor: canDistribute ? '#f59e0b' : '#2563eb',
+                backgroundColor: canDistribute ? '#fef3c7' : '#dbeafe',
+                boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)'
+              }}
+            >
+              <div className="absolute -top-[0.8em] -right-[0.8em] w-[3em] h-[3em] rotate-45 z-[1]" style={{ backgroundColor: canDistribute ? '#f59e0b' : '#2563eb' }} />
+              <div className="absolute top-[0.3em] right-[0.3em] text-white text-[1em] font-bold z-[2]">★</div>
+              
+              <div className="relative z-[2]">
+                <h3 className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                   {canDistribute ? 'Campaign has ended — distribution available' : hasStarted ? 'Campaign in progress' : 'Campaign not started'}
                 </h3>
-                <p className="text-sm text-slate-600 mt-1">
+                <p className="text-sm text-[#050505] mt-1 font-semibold">
                   {hasEnded ? 'You can distribute funds to approved projects.' : hasStarted ? 'Collect votes and contributions until the deadline.' : 'Configure details before the campaign starts.'}
                 </p>
               </div>
@@ -995,20 +1033,20 @@ export default function CampaignManagePage() {
           <div className="flex flex-wrap items-center gap-3">
             {/* Primary */}
             {canDistribute && (
-              <button onClick={() => setShowDistributeModal(true)} className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Distribute Funds</button>
+              <button onClick={() => setShowDistributeModal(true)} className="px-4 py-2 bg-[#6366f1] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">Distribute Funds</button>
             )}
             {pendingProjects > 0 && (
-              <button onClick={() => setActiveTab('approval')} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Review Projects</button>
+              <button onClick={() => setActiveTab('approval')} className="px-4 py-2 bg-[#2563eb] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">Review Projects</button>
             )}
             {campaignPoolId !== undefined && campaignPoolId !== 0n && (
-              <button onClick={() => setShowFundPoolModal(true)} className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Fund Pool</button>
+              <button onClick={() => setShowFundPoolModal(true)} className="px-4 py-2 bg-[#10b981] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">Fund Pool</button>
             )}
 
             {/* Secondary */}
             <div className="relative">
               <details className="group">
-                <summary className="px-4 py-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 cursor-pointer">More Actions</summary>
-                <div className="absolute z-10 mt-2 w-56 bg-white rounded-lg border border-slate-200 shadow-lg p-2 space-y-1">
+                <summary className="px-4 py-2 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em] cursor-pointer">More Actions</summary>
+                <div className="absolute z-10 mt-2 w-56 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] p-2 space-y-1">
                   <button onClick={() => {
                     try {
                       const rows: string[] = [];
@@ -1029,50 +1067,68 @@ export default function CampaignManagePage() {
                       document.body.removeChild(link);
                       URL.revokeObjectURL(url);
                     } catch (e) { console.error('Export failed', e); }
-                  }} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">Export Data</button>
-                  <button onClick={() => console.log('Analytics not implemented')} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">View Analytics</button>
-                  <button onClick={() => console.log('Simulation not implemented')} className="w-full text-left px-3 py-2 rounded hover:bg-slate-50">Simulate Distribution</button>
+                  }} className="w-full text-left px-3 py-2 border-[0.15em] border-[#050505] rounded-[0.3em] font-semibold hover:bg-gray-50 transition-all uppercase tracking-[0.05em]">Export Data</button>
+                  <button onClick={() => console.log('Analytics not implemented')} className="w-full text-left px-3 py-2 border-[0.15em] border-[#050505] rounded-[0.3em] font-semibold hover:bg-gray-50 transition-all uppercase tracking-[0.05em]">View Analytics</button>
+                  <button onClick={() => console.log('Simulation not implemented')} className="w-full text-left px-3 py-2 border-[0.15em] border-[#050505] rounded-[0.3em] font-semibold hover:bg-gray-50 transition-all uppercase tracking-[0.05em]">Simulate Distribution</button>
                 </div>
               </details>
             </div>
 
             {/* Admin */}
             {(isSuperAdmin || (poolsOwner && address && poolsOwner.toLowerCase() === address.toLowerCase())) && (
-              <button onClick={() => setActiveTab('admin')} className="px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-900">Admin Controls</button>
+              <button onClick={() => setActiveTab('admin')} className="px-4 py-2 bg-[#1f2937] text-white border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all uppercase tracking-[0.05em]">Admin Controls</button>
             )}
           </div>
         </div>
 
         {/* Campaign Info Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-4 mb-4">
-                <h2 className="text-2xl font-bold text-slate-800">{campaign.name}</h2>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  hasEnded ? 'bg-slate-100 text-slate-700' : hasStarted ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  <Clock className="h-3 w-3 mr-1 inline" />
-                  {hasEnded ? 'Ended' : hasStarted ? 'Active' : 'Upcoming'}
-                </span>
-              </div>
-              <p className="text-slate-600 mb-4">{campaign.description}</p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-slate-800">{totalProjects}</div>
-                  <div className="text-sm text-slate-600">Total Projects</div>
-                </div>
-                <div className="bg-green-50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-green-600">{approvedProjects}</div>
-                  <div className="text-sm text-slate-600">Approved</div>
-                </div>
-                <div className="bg-amber-50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-amber-600">{pendingProjects}</div>
-                  <div className="text-sm text-slate-600">Pending</div>
-                </div>
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-blue-600">{Number(campaign.totalFunds) / 1e18}</div>
-                  <div className="text-sm text-slate-600">CELO Treasury</div>
+        <div className="group relative w-full mb-8">
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          
+          <div 
+            className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2]"
+            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+          >
+            <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+            <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+            
+            <div className="relative px-[1.5em] py-[1.5em] z-[2]">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-4 mb-4 flex-wrap">
+                    <h2 className="text-2xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">{campaign.name}</h2>
+                    <span className={`px-3 py-1 border-[0.15em] border-[#050505] rounded-[0.3em] text-sm font-extrabold shadow-[0.1em_0.1em_0_#000000] uppercase tracking-[0.05em] ${
+                      hasEnded ? 'bg-gray-100 text-[#050505]' : hasStarted ? 'bg-[#d1fae5] text-[#050505]' : 'bg-[#fef3c7] text-[#050505]'
+                    }`}>
+                      <Clock className="h-3 w-3 mr-1 inline" />
+                      {hasEnded ? 'Ended' : hasStarted ? 'Active' : 'Upcoming'}
+                    </span>
+                  </div>
+                  <p className="text-[#050505] mb-4 font-semibold">{campaign.description}</p>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gray-50 border-[0.15em] border-gray-300 rounded-[0.4em] p-3 shadow-[0.1em_0.1em_0_#000000]">
+                      <div className="text-2xl font-extrabold text-[#050505]">{totalProjects}</div>
+                      <div className="text-sm text-[#050505] font-semibold">Total Projects</div>
+                    </div>
+                    <div className="bg-[#d1fae5] border-[0.15em] border-[#10b981] rounded-[0.4em] p-3 shadow-[0.1em_0.1em_0_#000000]">
+                      <div className="text-2xl font-extrabold text-[#050505]">{approvedProjects}</div>
+                      <div className="text-sm text-[#050505] font-semibold">Approved</div>
+                    </div>
+                    <div className="bg-[#fef3c7] border-[0.15em] border-[#f59e0b] rounded-[0.4em] p-3 shadow-[0.1em_0.1em_0_#000000]">
+                      <div className="text-2xl font-extrabold text-[#050505]">{pendingProjects}</div>
+                      <div className="text-sm text-[#050505] font-semibold">Pending</div>
+                    </div>
+                    <div className="bg-[#dbeafe] border-[0.15em] border-[#2563eb] rounded-[0.4em] p-3 shadow-[0.1em_0.1em_0_#000000]">
+                      <div className="text-2xl font-extrabold text-[#050505]">{totalCampaignVotes.toFixed(1)}</div>
+                      <div className="text-sm text-[#050505] font-semibold">Total Votes</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

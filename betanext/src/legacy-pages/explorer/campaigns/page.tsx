@@ -10,6 +10,7 @@ import { type Address } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import CampaignCard from '@/components/cards/CampaignCard';
 import DynamicHelmet from '@/components/DynamicHelmet';
+import { ButtonCool } from '@/components/ui/button-cool';
 
 // Get contract address from environment
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_V4 as Address;
@@ -155,19 +156,56 @@ export default function CampaignsPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-blue-50 to-cyan-50 flex items-center justify-center p-4">
-        <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl max-w-md mx-auto border border-red-200">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Unable to Load Campaigns</h2>
-            <p className="text-gray-600 mb-6">{error.message || 'Something went wrong'}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium"
+        <div className="group relative w-full max-w-[22em]">
+          {/* Pattern Overlays */}
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          
+          {/* Main Card */}
+          <div 
+            className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2]"
+            style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+          >
+            {/* Accent Corner */}
+            <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#ef4444] rotate-45 z-[1]" />
+            <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">⚠</div>
+
+            {/* Title Area */}
+            <div 
+              className="relative px-[1.4em] py-[1.4em] text-white font-extrabold text-center border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+              style={{ 
+                background: '#ef4444',
+                backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                backgroundBlendMode: 'overlay'
+              }}
             >
-              Try Again
-            </button>
+              <span className="text-[1.2em]">Unable to Load Campaigns</span>
+            </div>
+
+            {/* Body */}
+            <div className="relative px-[1.5em] py-[1.5em] z-[2] text-center">
+              <div className="w-16 h-16 bg-red-100 border-[0.15em] border-[#050505] rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0.2em_0.2em_0_#000000]">
+                <AlertTriangle className="h-8 w-8 text-[#ef4444]" />
+              </div>
+              <p className="text-[#050505] text-[0.95em] leading-[1.4] font-medium mb-6">{error.message || 'Something went wrong'}</p>
+              <ButtonCool
+                onClick={() => window.location.reload()}
+                text="Try Again"
+                bgColor="#ef4444"
+                hoverBgColor="#dc2626"
+                borderColor="#050505"
+                textColor="#ffffff"
+                size="md"
+              />
+            </div>
+
+            {/* Corner Slice */}
+            <div className="absolute bottom-0 left-0 w-[1.5em] h-[1.5em] bg-white border-r-[0.25em] border-t-[0.25em] border-[#050505] rounded-tl-[0.5em] z-[1]" />
           </div>
         </div>
       </div>
@@ -192,39 +230,48 @@ export default function CampaignsPage() {
         {/* Search Input */}
         <div className="mb-8 flex justify-end">
           <div className="flex items-center gap-2">
-            <div className="relative">
+            <div className="relative group">
               <input
                 type="text"
                 placeholder="Search campaigns..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-4 pr-12 py-2 w-64 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
+                className="pl-4 pr-12 py-2 w-64 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:outline-none focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] transition-all duration-200 text-sm font-medium text-[#050505] placeholder:text-gray-400"
               />
-              <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                <Search className="h-4 w-4" />
-              </button>
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <Search className="h-4 w-4 text-[#050505]" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Results Count */}
         <div className="mb-6">
-          <p className="text-gray-600">
-            {isLoading ? 'Loading campaigns...' : `${processedCampaigns.length} campaigns found`}
-          </p>
+          <div className="inline-block bg-white border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_#000000] px-[1em] py-[0.5em]">
+            <p className="text-[#050505] text-[0.9em] font-bold uppercase tracking-[0.05em]">
+              {isLoading ? 'Loading campaigns...' : `${processedCampaigns.length} campaigns found`}
+            </p>
+          </div>
         </div>
 
         {/* Campaigns Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 gap-y-12">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 p-6 animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
-                <div className="h-6 bg-gray-200 rounded-lg w-3/4 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded-lg w-1/2 mb-6"></div>
-                <div className="space-y-3">
-                  <div className="h-4 bg-gray-200 rounded-lg"></div>
-                  <div className="h-4 bg-gray-200 rounded-lg w-5/6"></div>
+              <div key={index} className="group relative w-full max-w-[22em]">
+                <div className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden animate-pulse">
+                  <div className="px-[1.4em] py-[1.4em] bg-[#2563eb] border-b-[0.35em] border-[#050505]">
+                    <div className="h-6 bg-blue-300 rounded w-3/4"></div>
+                  </div>
+                  <div className="px-[1.5em] py-[1.5em]">
+                    <div className="h-24 bg-gray-200 rounded-full mb-4 mx-auto w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6 mb-4"></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -261,42 +308,85 @@ export default function CampaignsPage() {
                   descriptionTruncateSize={96}
                   startTime={Number(campaign.startTime)}
                   endTime={Number(campaign.endTime)}
+                  totalFunds={campaign.totalFunds}
+                  maxWinners={campaign.maxWinners}
+                  totalVotes={0} // TODO: Fetch actual vote counts
+                  projectCount={0} // TODO: Fetch actual project counts
                 />
               );
             })}
           </div>
         ) : (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 sm:p-8 text-center border border-blue-100 shadow-lg relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-100/50 via-transparent to-indigo-100/50"></div>
-            <div className="relative z-10">
-              <div className="inline-flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 mb-4 text-white">
-                <Trophy className="h-6 w-6 sm:h-8 sm:w-8" />
+          <div className="group relative w-full max-w-[22em] mx-auto">
+            {/* Pattern Overlays */}
+            <div 
+              className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+              style={{
+                backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                backgroundSize: '0.5em 0.5em'
+              }}
+            />
+            
+            {/* Main Card */}
+            <div 
+              className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em] group-hover:scale-[1.02]"
+              style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+            >
+              {/* Accent Corner */}
+              <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#00e0b0] rotate-45 z-[1]" />
+              <div className="absolute top-[0.4em] right-[0.4em] text-[#050505] text-[1.2em] font-bold z-[2]">★</div>
+
+              {/* Title Area */}
+              <div 
+                className="relative px-[1.4em] py-[1.4em] text-white font-extrabold text-center border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                style={{ 
+                  background: '#2563eb',
+                  backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                  backgroundBlendMode: 'overlay'
+                }}
+              >
+                <span className="text-[1.2em]">No Campaigns Found</span>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">No Campaigns Found</h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm sm:text-base">
-                {searchTerm 
-                  ? 'No campaigns match your search criteria. Try adjusting your search terms.'
-                  : 'Be the first to start a funding campaign and shape the future of blockchain innovation!'
-                }
-              </p>
-              {searchTerm ? (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
-                >
-                  Clear Search
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate('/app/campaign/start')}
-                  className="px-4 sm:px-6 py-2 sm:py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium hover:shadow-xl transition-all inline-flex items-center group relative overflow-hidden"
-                >
-                  <Trophy className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                  Start Campaign
-                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-                </button>
-              )}
+
+              {/* Body */}
+              <div className="relative px-[1.5em] py-[1.5em] z-[2] text-center">
+                <div className="inline-flex items-center justify-center h-16 w-16 bg-[#2563eb] border-[0.15em] border-[#050505] rounded-full mb-4 shadow-[0.2em_0.2em_0_#000000]">
+                  <Trophy className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-[1.1em] font-bold text-[#050505] mb-2">No Campaigns Found</h3>
+                <p className="text-[#050505] text-[0.9em] leading-[1.4] font-medium mb-6 max-w-md mx-auto">
+                  {searchTerm 
+                    ? 'No campaigns match your search criteria. Try adjusting your search terms.'
+                    : 'Be the first to start a funding campaign and shape the future of blockchain innovation!'
+                  }
+                </p>
+                {searchTerm ? (
+                  <ButtonCool
+                    onClick={() => setSearchTerm('')}
+                    text="Clear Search"
+                    bgColor="#2563eb"
+                    hoverBgColor="#1d4ed8"
+                    borderColor="#050505"
+                    textColor="#ffffff"
+                    size="md"
+                  />
+                ) : (
+                  <ButtonCool
+                    onClick={() => navigate('/app/campaign/start')}
+                    text="Start Campaign"
+                    bgColor="#2563eb"
+                    hoverBgColor="#1d4ed8"
+                    borderColor="#050505"
+                    textColor="#ffffff"
+                    size="md"
+                  >
+                    <Trophy className="w-4 h-4" />
+                  </ButtonCool>
+                )}
+              </div>
+
+              {/* Corner Slice */}
+              <div className="absolute bottom-0 left-0 w-[1.5em] h-[1.5em] bg-white border-r-[0.25em] border-t-[0.25em] border-[#050505] rounded-tl-[0.5em] z-[1]" />
             </div>
           </div>
         )}

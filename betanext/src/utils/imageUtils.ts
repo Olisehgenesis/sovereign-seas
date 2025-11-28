@@ -31,6 +31,24 @@ const getUnixFs = async () => {
 export const extractIpfsCid = (url: string): string | null => {
   if (!url || url.startsWith("File selected:")) return null;
 
+  // Handle full URLs (https://gateway.com/ipfs/cid or https://gateway.com/ipfs/cid/path)
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split("/");
+    const ipfsIndex = pathParts.findIndex((part) => part === "ipfs");
+    if (ipfsIndex !== -1 && pathParts[ipfsIndex + 1]) {
+      // Extract CID (may have additional path segments, so take first part after /ipfs/)
+      const cid = pathParts[ipfsIndex + 1];
+      // Validate CID format (base58 or base32)
+      if (/^[a-zA-Z0-9]{46,}$/.test(cid)) {
+        return cid;
+      }
+    }
+  } catch {
+    // Not a valid URL, continue with string parsing
+  }
+
+  // Handle string paths
   const parts = url.trim().split("/");
 
   // Look for 'ipfs' in the URL segments
@@ -41,17 +59,24 @@ export const extractIpfsCid = (url: string): string | null => {
   // Case 1: /ipfs/<cid>
   if (ipfsIndex !== -1 && parts[ipfsIndex + 1]) {
     cid = parts[ipfsIndex + 1];
+    // Validate CID format
+    if (/^[a-zA-Z0-9]{46,}$/.test(cid)) {
+      return cid;
+    }
   }
   // Case 2: ipfs://<cid>...
   else if (url.startsWith("ipfs://")) {
     cid = url.replace("ipfs://", "").split("/")[0];
+    if (/^[a-zA-Z0-9]{46,}$/.test(cid)) {
+      return cid;
+    }
   }
   // Case 3: Raw CID
   else if (/^[a-zA-Z0-9]{46,}$/.test(url)) {
-    cid = url;
+    return url;
   }
 
-  return cid || null;
+  return null;
 };
 
 export async function uploadToIPFS(file: File) {
@@ -72,24 +97,44 @@ export async function uploadToIPFS(file: File) {
     throw error;
   }
 }
+/**
+ * Formats an IPFS URL for READING (uses public gateways)
+ * For uploading, use uploadToIPFS which uses the custom gateway
+ */
 export const formatIpfsUrl = (url: string): string => {
   const cid = extractIpfsCid(url);
   if (!cid) return url;
 
-  // Use configurable gateway for WRITE-related URLs (env controls where uploads point)
-  const gateway =
-    process.env.NEXT_PUBLIC_PINATA_GATEWAY || "ipfs.io";
-
-  return `https://${gateway}/ipfs/${cid}`;
+  // For reading, always use public gateways (not the custom authenticated gateway)
+  // Default to ipfs.io public gateway
+  return `https://ipfs.io/ipfs/${cid}`;
 };
 
-export const ipfsImageLoader: ImageLoader = ({ src }) => {
+export const ipfsImageLoader: ImageLoader = ({ src, width, quality }) => {
   if (!src) return "";
 
+  // Always try to extract CID first, even from full URLs
+  // This ensures we strip custom gateway URLs and use public gateways
+  const cid = extractIpfsCid(src);
+  
+  if (cid) {
+    // Always use public gateway for reading images
+    // Strip any custom gateway URLs (including *.mypinata.cloud) and use public ipfs.io
+    const publicUrl = `https://ipfs.io/ipfs/${cid}`;
+    // Debug: log if we're converting from custom gateway
+    if (src.includes('mypinata.cloud') || src.includes('pinata.cloud')) {
+      console.log('[ipfsImageLoader] Converting custom gateway URL to public:', { original: src, converted: publicUrl });
+    }
+    return publicUrl;
+  }
+
+  // If src is already a full URL and not IPFS, return it as-is
+  // (for non-IPFS images like regular HTTP images)
   if (src.startsWith("http")) {
     return src;
   }
 
+  // Fallback: try to format as IPFS URL (for raw CIDs or ipfs:// URLs)
   return formatIpfsUrl(src);
 };
 

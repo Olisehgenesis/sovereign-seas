@@ -56,6 +56,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ButtonCool } from '@/components/ui/button-cool';
 import {
   Select,
   SelectContent,
@@ -79,21 +80,49 @@ const Section = ({ title, icon: Icon, children, required = false, isVisible = tr
   if (!isVisible) return null;
   
   return (
-    <Card className="mb-4 bg-transparent border-blue-100">
-      <CardHeader className="pb-4">
-        <div className="flex items-center">
-          <Icon className="h-5 w-5 text-blue-600 mr-2" />
-          <CardTitle className="text-lg">
-            {title}
-            {required && <span className="text-red-500 ml-1">*</span>}
-          </CardTitle>
-        </div>
-      </CardHeader>
+    <div className="group relative w-full mb-6">
+      {/* Pattern Overlays */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+        style={{
+          backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+          backgroundSize: '0.5em 0.5em'
+        }}
+      />
       
-      <CardContent className="pt-0">
-        {children}
-      </CardContent>
-    </Card>
+      {/* Main Card */}
+      <div 
+        className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em] group-hover:scale-[1.01]"
+        style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+      >
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+
+        {/* Title Area */}
+        <div 
+          className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+          style={{ 
+            background: '#a855f7',
+            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay'
+          }}
+        >
+          <div className="flex items-center">
+            <Icon className="h-6 w-6 mr-3 text-white" />
+            <h3 className="text-xl font-extrabold text-white">
+              {title}
+              {required && <span className="text-[#ef4444] ml-1">*</span>}
+            </h3>
+          </div>
+        </div>
+        
+        {/* Body */}
+        <div className="relative px-[1.4em] py-[1.5em] z-[2]">
+          {children}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -799,18 +828,139 @@ export default function CreateProject() {
             
           </div>
 
-          {/* Success/Error Messages */}
-          {successMessage && (
-            <div className="mb-4 bg-transparent backdrop-blur-sm rounded-xl p-3 border border-emerald-200 flex items-start">
-              <CheckCircle className="h-4 w-4 text-emerald-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-emerald-700 text-sm">{successMessage}</p>
+          {/* Error Summary Panel - Always visible when there are errors */}
+          {(errorMessage || Object.values(formErrors).some(err => err !== '' && typeof err === 'string')) && (
+            <div className="mb-6 group relative w-full">
+              {/* Pattern Overlays */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              
+              {/* Error Card */}
+              <div 
+                className="relative bg-white border-[0.35em] border-[#ef4444] rounded-[0.6em] shadow-[0.7em_0.7em_0_#ef4444] transition-all duration-[400ms] overflow-hidden z-[2]"
+                style={{ boxShadow: 'inset 0 0 0 0.15em rgba(239, 68, 68, 0.1)' }}
+              >
+                {/* Accent Corner */}
+                <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#ef4444] rotate-45 z-[1]" />
+                <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">⚠</div>
+
+                {/* Title Area */}
+                <div 
+                  className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                  style={{ 
+                    background: '#ef4444',
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                    backgroundBlendMode: 'overlay'
+                  }}
+                >
+                  <div className="flex items-center">
+                    <XCircle className="h-6 w-6 mr-3 text-white" />
+                    <h3 className="text-xl font-extrabold text-white">Errors Found</h3>
+                  </div>
+                </div>
+
+                {/* Error Content */}
+                <div className="relative px-[1.4em] py-[1.5em] z-[2] space-y-3">
+                  {errorMessage && (
+                    <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] p-3">
+                      <p className="text-[#991b1b] font-bold text-base">{errorMessage}</p>
+                    </div>
+                  )}
+                  
+                  {Object.entries(formErrors).some(([key, err]) => err !== '' && typeof err === 'string') && (
+                    <div>
+                      <p className="text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">Form Validation Errors:</p>
+                      <div className="space-y-2">
+                        {formErrors.name && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Project Name:</span> {formErrors.name}</p>
+                          </div>
+                        )}
+                        {formErrors.tagline && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Tagline:</span> {formErrors.tagline}</p>
+                          </div>
+                        )}
+                        {formErrors.description && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Description:</span> {formErrors.description}</p>
+                          </div>
+                        )}
+                        {formErrors.category && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Category:</span> {formErrors.category}</p>
+                          </div>
+                        )}
+                        {formErrors.githubRepo && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">GitHub Repo:</span> {formErrors.githubRepo}</p>
+                          </div>
+                        )}
+                        {formErrors.contactEmail && (
+                          <div className="flex items-start bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                            <XCircle className="h-4 w-4 text-[#ef4444] mr-2 mt-0.5 flex-shrink-0" />
+                            <p className="text-[#991b1b] font-semibold text-sm"><span className="font-extrabold">Contact Email:</span> {formErrors.contactEmail}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
-          
-          {errorMessage && (
-            <div className="mb-4 bg-transparent backdrop-blur-sm rounded-xl p-3 border border-red-200 flex items-start">
-              <XCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700 text-sm">{errorMessage}</p>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 group relative w-full">
+              {/* Pattern Overlays */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-50 transition-opacity duration-[400ms] z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
+              />
+              
+              {/* Success Card */}
+              <div 
+                className="relative bg-white border-[0.35em] border-[#10b981] rounded-[0.6em] shadow-[0.7em_0.7em_0_#10b981] transition-all duration-[400ms] overflow-hidden z-[2]"
+                style={{ boxShadow: 'inset 0 0 0 0.15em rgba(16, 185, 129, 0.1)' }}
+              >
+                {/* Accent Corner */}
+                <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#10b981] rotate-45 z-[1]" />
+                <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">✓</div>
+
+                {/* Title Area */}
+                <div 
+                  className="relative px-[1.4em] py-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+                  style={{ 
+                    background: '#10b981',
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                    backgroundBlendMode: 'overlay'
+                  }}
+                >
+                  <div className="flex items-center">
+                    <CheckCircle className="h-6 w-6 mr-3 text-white" />
+                    <h3 className="text-xl font-extrabold text-white">Success</h3>
+                  </div>
+                </div>
+
+                {/* Success Content */}
+                <div className="relative px-[1.4em] py-[1.5em] z-[2]">
+                  <p className="text-[#050505] font-bold text-base">{successMessage}</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -830,48 +980,70 @@ export default function CreateProject() {
                 {/* Project Name & Tagline */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="flex items-center text-blue-700 font-medium">
-                      <Hash className="h-4 w-4 mr-2" />
-                      Project Name *
+                    <Label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                      <Hash className="h-4 w-4 mr-2 inline" />
+                      Project Name <span className="text-[#ef4444]">*</span>
                     </Label>
                     <Input
                       type="text"
                       value={project.name}
                       onChange={(e) => setProject({...project, name: e.target.value})}
                       placeholder="Enter your project name"
+                      className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.name ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400`}
                     />
-                    {formErrors.name && <p className="text-red-500 text-sm">{formErrors.name}</p>}
+                    {formErrors.name && (
+                      <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                        <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                        <p className="text-[#991b1b] font-bold text-sm">{formErrors.name}</p>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="flex items-center text-blue-700 font-medium">
-                      <Star className="h-4 w-4 mr-2" />
-                      Tagline *
+                    <Label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                      <Star className="h-4 w-4 mr-2 inline" />
+                      Tagline <span className="text-[#ef4444]">*</span>
                     </Label>
                     <Input
                       type="text"
                       value={project.tagline}
                       onChange={(e) => setProject({...project, tagline: e.target.value})}
                       placeholder="Brief, catchy description"
+                      className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.tagline ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400`}
                     />
-                    {formErrors.tagline && <p className="text-red-500 text-sm">{formErrors.tagline}</p>}
+                    {formErrors.tagline && (
+                      <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                        <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                        <p className="text-[#991b1b] font-bold text-sm">{formErrors.tagline}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label className="flex items-center text-blue-700 font-medium">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Project Description *
+                  <Label className="block text-[#050505] font-extrabold mb-2 uppercase text-sm tracking-[0.05em]">
+                    <FileText className="h-4 w-4 mr-2 inline" />
+                    Project Description <span className="text-[#ef4444]">*</span>
                   </Label>
                   <Textarea
                     value={project.description}
                     onChange={(e) => setProject({...project, description: e.target.value})}
                     rows={6}
                     placeholder="Provide a comprehensive description of your project, its purpose, and value proposition..."
+                    className={`w-full px-4 py-3 bg-white border-[0.2em] ${formErrors.description ? 'border-[#ef4444]' : 'border-[#050505]'} rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] focus:shadow-[0.4em_0.4em_0_#000000] focus:-translate-x-[0.1em] focus:-translate-y-[0.1em] text-[#050505] font-semibold transition-all placeholder:text-gray-400 resize-none`}
                   />
-                  {formErrors.description && <p className="text-red-500 text-sm">{formErrors.description}</p>}
-                  <p className="text-muted-foreground text-sm">Minimum 50 characters • {project.description.length} characters</p>
+                  {formErrors.description && (
+                    <div className="mt-2 flex items-center bg-[#fee2e2] border-[0.15em] border-[#ef4444] rounded-[0.3em] p-2">
+                      <XCircle className="h-4 w-4 text-[#ef4444] mr-2 flex-shrink-0" />
+                      <p className="text-[#991b1b] font-bold text-sm">{formErrors.description}</p>
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className={`text-sm font-bold ${project.description.length < 50 ? 'text-[#ef4444]' : 'text-[#10b981]'}`}>
+                      {project.description.length < 50 ? `Minimum 50 characters • ${project.description.length}/50` : `✓ ${project.description.length} characters`}
+                    </p>
+                  </div>
                 </div>
                 
                 {/* Category & Type */}
@@ -1846,46 +2018,48 @@ export default function CreateProject() {
              </div>
            </Section>
 
-           {/* Card Navigation */}
-           <div className="flex justify-between items-center mt-6 mb-4">
-             <Button
-               type="button"
-               variant="outline"
-               onClick={goToPreviousCard}
-               disabled={currentCardIndex === 0}
-               className="flex items-center"
-             >
-               <ArrowLeft className="h-4 w-4 mr-2" />
-               Previous
-             </Button>
-             
-             <div className="flex items-center space-x-2">
-               {cardSections.map((_, index) => (
-                 <button
-                   key={index}
-                   onClick={() => goToCard(index)}
-                   className={`w-3 h-3 rounded-full transition-colors ${
-                     index === currentCardIndex 
-                       ? 'bg-blue-600' 
-                       : index < currentCardIndex 
-                         ? 'bg-green-500' 
-                         : 'bg-gray-300'
-                   }`}
-                 />
-               ))}
-             </div>
-             
-             <Button
-               type="button"
-               variant="outline"
-               onClick={goToNextCard}
-               disabled={currentCardIndex === cardSections.length - 1}
-               className="flex items-center"
-             >
-               Next
-               <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
-             </Button>
-           </div>
+          {/* Card Navigation */}
+          <div className="flex justify-between items-center mt-6 mb-4">
+            <ButtonCool
+              onClick={goToPreviousCard}
+              disabled={currentCardIndex === 0}
+              text="Previous"
+              bgColor="#ffffff"
+              textColor="#050505"
+              borderColor="#050505"
+              size="md"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+            </ButtonCool>
+            
+            <div className="flex items-center space-x-2 bg-white px-3 py-2 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+              {cardSections.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToCard(index)}
+                  className={`w-3 h-3 rounded-full border-[0.15em] border-[#050505] transition-all ${
+                    index === currentCardIndex 
+                      ? 'bg-[#a855f7] shadow-[0.1em_0.1em_0_#000000] scale-110' 
+                      : index < currentCardIndex 
+                        ? 'bg-[#10b981]' 
+                        : 'bg-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+            
+            <ButtonCool
+              onClick={goToNextCard}
+              disabled={currentCardIndex === cardSections.length - 1}
+              text="Next"
+              bgColor="#ffffff"
+              textColor="#050505"
+              borderColor="#050505"
+              size="md"
+            >
+              <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+            </ButtonCool>
+          </div>
 
            {/* Submit Button - Only show on last step */}
            {currentCardIndex === cardSections.length - 1 && (

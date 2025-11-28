@@ -1,10 +1,14 @@
 import { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
 import { useAllProjects } from '@/hooks/useProjectMethods';
-import ProjectCard from '@/components/cards/ProjectCard';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import type { Address } from 'viem';
 import DynamicHelmet from '@/components/DynamicHelmet';
+import ProjectsSearchBar from '@/components/projects/ProjectsSearchBar';
+import ProjectsResultsCount from '@/components/projects/ProjectsResultsCount';
+import ProjectsEmptyState from '@/components/projects/ProjectsEmptyState';
+import ProjectsLoadingState from '@/components/projects/ProjectsLoadingState';
+import ProjectsErrorState from '@/components/projects/ProjectsErrorState';
+import ProjectsGrid from '@/components/projects/ProjectsGrid';
 
 const ProjectsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,28 +58,11 @@ const ProjectsPage = () => {
   }, [processedProjects, searchTerm]);
   
   if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ProjectsLoadingState />;
   }
   
   if (error) {
-    return (
-      <div className="min-h-screen">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Projects</h2>
-            <p className="text-gray-600">There was an error loading the projects. Please try again later.</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <ProjectsErrorState />;
   }
   
   return (
@@ -93,58 +80,36 @@ const ProjectsPage = () => {
     
     <div className="min-h-screen">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search Input */}
-        <div className="mb-8 flex justify-end">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-4 pr-12 py-2 w-64 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
-              />
-              <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors">
-                <Search className="h-4 w-4" />
-              </button>
+        {/* Header Section with Retro Theme */}
+        <div className="mb-8 border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] bg-white p-6 relative">
+          {/* Pattern Grid Overlay */}
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          {/* Accent Corner */}
+          <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+          <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+          
+          <div className="relative z-[2]">
+            <h1 className="text-3xl font-extrabold text-[#050505] mb-6 uppercase tracking-[0.05em]">Projects</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <ProjectsResultsCount count={filteredProjects.length} isLoading={isLoading} />
+              <div className="flex-1 sm:flex-initial">
+                <ProjectsSearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Results Count */}
-        <div className="mb-6">
-          <p className="text-gray-600">
-            {isLoading ? 'Loading projects...' : `${filteredProjects.length} projects found`}
-          </p>
         </div>
         
-        {/* Projects Grid */}
+        {/* Projects Content */}
         {filteredProjects.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Search className="h-12 w-12 mx-auto" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
-            <p className="text-gray-600">
-              {searchTerm ? 'Try adjusting your search terms' : 'No projects are available at the moment'}
-            </p>
-          </div>
+          <ProjectsEmptyState searchTerm={searchTerm} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProjects.map((projectDetails) => (
-              <ProjectCard
-                key={`project-${projectDetails.project.id}`}
-                title={projectDetails.project.name}
-                description={projectDetails.project.description}
-                logo={projectDetails.logo}
-                location={projectDetails.location}
-                campaignCount={projectDetails.campaignCount}
-                projectId={projectDetails.project.id?.toString()}
-                projectOwner={projectDetails.project.owner}
-                contractAddress={CONTRACT_ADDRESS}
-              />
-            ))}
-          </div>
+          <ProjectsGrid projects={filteredProjects} contractAddress={CONTRACT_ADDRESS} />
         )}
       </div>
     </div>

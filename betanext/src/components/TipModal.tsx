@@ -9,7 +9,7 @@ import {
   MobileDialogDescription as DialogDescription,
   MobileDialogHeader as DialogHeader,
 } from '@/components/ui/mobile-dialog';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
@@ -70,7 +70,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
       <button
         onClick={() => setIsOpen(true)}
         disabled={disabled}
-        className={`w-full h-12 rounded-xl border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors flex items-center justify-between px-4 ${
+        className={`w-full h-12 rounded-[0.4em] border-[0.2em] border-[#050505] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all flex items-center justify-between px-4 bg-white font-extrabold ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
         }`}
       >
@@ -95,11 +95,23 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
 
       {/* Token Modal */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 relative">
+          <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+          <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+          
+          <DialogHeader className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
+            style={{ 
+              background: '#2563eb',
+              backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+              backgroundBlendMode: 'overlay'
+            }}
+          >
+            <DialogDescription className="text-white text-xl font-extrabold uppercase tracking-[0.05em]">
+              Select Token
+            </DialogDescription>
           </DialogHeader>
           
-          <div className="mt-4 space-y-2">
+          <div className="relative px-[1.5em] py-[1.5em] space-y-2 z-[2]">
             {tokens.map((token) => (
               <button
                 key={token.address}
@@ -107,8 +119,8 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
                   onTokenSelect(token.address);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors ${
-                  selectedToken === token.address ? 'bg-blue-50 border border-blue-200' : ''
+                className={`w-full flex items-center justify-between p-3 border-[0.2em] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold ${
+                  selectedToken === token.address ? 'bg-[#dbeafe] border-[#2563eb] text-[#050505]' : 'bg-white border-[#050505] text-[#050505]'
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -122,20 +134,20 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
                     }}
                   />
                   <div className="text-left">
-                    <div className="font-semibold text-gray-900">{token.name}</div>
-                    <div className="text-sm text-gray-500">{token.symbol}</div>
+                    <div className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">{token.name}</div>
+                    <div className="text-sm text-[#050505] font-semibold">{token.symbol}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-500">Balance</div>
-                  <div className="font-semibold text-gray-900">{getBalance(token.address)}</div>
+                  <div className="text-sm text-[#050505] font-semibold">Balance</div>
+                  <div className="font-extrabold text-[#050505]">{getBalance(token.address)}</div>
                   {selectedToken === token.address && (
-                    <Check className="h-4 w-4 text-blue-600 mt-1" />
+                    <Check className="h-4 w-4 text-[#2563eb] mt-1" />
                   )}
                 </div>
               </button>
             ))}
-  </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
@@ -519,56 +531,71 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col bg-white p-0 [&>button]:hidden">
-        <DialogHeader className="p-6 pb-3">
-          {/* Header */}
-          <div className="bg-gray-500 p-4 text-white relative overflow-hidden rounded-t-lg -m-6 mb-3">
-            <div className="relative z-10">
-              <DialogDescription className="text-white text-2xl">
-                Tip: <span className="font-semibold text-yellow-200 uppercase">{project.name}</span>
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden relative">
+        {/* Pattern Grid Overlay */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          style={{
+            backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em'
+          }}
+        />
+
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+
+        <DialogHeader className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{ 
+            background: '#2563eb',
+            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay'
+          }}
+        >
+          <DialogDescription className="text-white text-2xl font-extrabold uppercase tracking-[0.05em]">
+            Tip: <span className="text-yellow-200">{project.name}</span>
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-8 pb-0">
+        <div className="flex-1 overflow-y-auto px-[1.5em] pb-0 relative z-[2]">
           
           {/* Success View */}
           {currentView === 'success' && (
-            <div className="text-center space-y-6">
+            <div className="text-center space-y-6 py-6">
               <div className="relative">
-                <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-[#10b981] border-[0.2em] border-[#050505] rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0.3em_0.3em_0_#000000]">
                   <Check className="h-10 w-10 text-white" />
                 </div>
                 <div className="absolute -top-2 -right-2 text-2xl">🎉</div>
               </div>
               
               <div>
-                <h4 className="text-2xl font-bold text-emerald-600 mb-2">
+                <h4 className="text-2xl font-extrabold text-[#10b981] mb-2 uppercase tracking-[0.05em]">
                   Tip Sent Successfully!
                 </h4>
-                <p className="text-gray-600 mb-6">
-                  Your tip has been sent to <span className="font-semibold text-blue-600">{project.name}</span>
+                <p className="text-[#050505] mb-6 font-semibold">
+                  Your tip has been sent to <span className="font-extrabold text-[#2563eb]">{project.name}</span>
                 </p>
               </div>
 
-              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
-                <CardContent className="p-4">
-                  <h5 className="font-semibold text-blue-800 mb-3 flex items-center justify-center">
-                    <Gift className="h-4 w-4 mr-2" />
-                    Thank You!
-                  </h5>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Your support helps fund this amazing project and contributes to the community.
-                  </p>
-                  <Button
-                onClick={handleClose}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Close
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="bg-[#dbeafe] border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] p-4">
+                <h5 className="font-extrabold text-[#050505] mb-3 flex items-center justify-center uppercase tracking-[0.05em]">
+                  <Gift className="h-4 w-4 mr-2" />
+                  Thank You!
+                </h5>
+                <p className="text-sm text-[#050505] mb-4 font-semibold">
+                  Your support helps fund this amazing project and contributes to the community.
+                </p>
+                <ButtonCool
+                  onClick={handleClose}
+                  text="Close"
+                  bgColor="#2563eb"
+                  hoverBgColor="#1d4ed8"
+                  textColor="#ffffff"
+                  borderColor="#050505"
+                  size="md"
+                />
+              </div>
             </div>
           )}
 
@@ -577,42 +604,38 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
             <div className="space-y-8">
               
               {error && (
-                <Card className="bg-red-50 border-2 border-red-200">
-                  <CardContent className="p-4 flex items-start">
-                    <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm font-medium text-red-800">{error}</p>
-                  </CardContent>
-                </Card>
+                <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 flex items-start">
+                  <AlertCircle className="h-5 w-5 text-[#ef4444] mr-3 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">{error}</p>
+                </div>
               )}
 
               {(isProcessing || tipStep !== 'idle') && (
-                <Card className="bg-amber-50 border-2 border-amber-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center mb-3">
-                      <Loader2 className="h-5 w-5 text-amber-600 mr-3 animate-spin" />
-                      <p className="text-sm font-medium text-amber-800">
-                        {tipStep === 'approving' ? 'Approving token...' : 
-                         tipStep === 'tipping' ? 'Sending tip...' : 
-                         'Processing transaction...'}
-                      </p>
-                    </div>
-                    {txHash && (
-                      <p className="text-xs text-amber-700 mt-2">
-                        Transaction: {txHash.slice(0, 10)}...{txHash.slice(-8)}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                <div className="bg-[#fef3c7] border-[0.2em] border-[#f59e0b] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4">
+                  <div className="flex items-center mb-3">
+                    <Loader2 className="h-5 w-5 text-[#f59e0b] mr-3 animate-spin" />
+                    <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                      {tipStep === 'approving' ? 'Approving token...' : 
+                       tipStep === 'tipping' ? 'Sending tip...' : 
+                       'Processing transaction...'}
+                    </p>
+                  </div>
+                  {txHash && (
+                    <p className="text-xs text-[#050505] mt-2 font-semibold">
+                      Transaction: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* Amount Input */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-gray-800">
+                  <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                     Tip Amount
                   </label>
                   {selectedToken && (
-                    <div className="text-xs text-gray-600 flex items-center">
+                    <div className="text-xs text-[#050505] flex items-center font-semibold">
                       <Wallet className="h-3 w-3 mr-1" />
                       Available: {getSelectedBalance()} {getSelectedSymbol()}
                     </div>
@@ -622,18 +645,18 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <Input
-                 type="number"
-                 value={tipAmount}
+                      type="number"
+                      value={tipAmount}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         setTipAmount(e.target.value);
                       }}
-                 placeholder="0.00"
+                      placeholder="0.00"
                       disabled={isProcessing}
-                      className="text-xl font-semibold h-12"
+                      className="text-xl font-extrabold h-12 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none"
                       step="0.01"
-                 min="0"
-               />
-                 </div>
+                      min="0"
+                    />
+                  </div>
                   <div className="w-48">
                     <TokenSelector 
                       selectedToken={selectedToken?.address || ''}
@@ -644,76 +667,73 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                       disabled={isProcessing}
                       tokenBalances={tokenBalances}
                     />
-                 </div>
-                 </div>
-             </div>
+                  </div>
+                </div>
+              </div>
 
-             {/* Message Input */}
+              {/* Message Input */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-800">
+                <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                   Message (Optional)
                 </label>
                 <Input
-                 type="text"
-                 value={message}
+                  type="text"
+                  value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Leave a message for the project..."
                   disabled={isProcessing}
-                  className="h-12"
+                  className="h-12 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none font-semibold"
                   maxLength={100}
                 />
-                <div className="text-xs text-gray-500 text-right">
+                <div className="text-xs text-[#050505] text-right font-semibold">
                   {message.length}/100 characters
-             </div>
-             </div>
+                </div>
+              </div>
 
               {/* Token Conversion Info */}
               {selectedToken && tipAmount && parseFloat(tipAmount) > 0 && (
-                <Card className="bg-gray-50 border-gray-200">
-                  <CardContent className="p-3">
-                    <div className="text-sm text-gray-600 flex items-center">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      <span>≈ {tipAmount} {selectedToken.symbol} tip</span>
-               </div>
-                  </CardContent>
-                </Card>
-             )}
+                <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3">
+                  <div className="text-sm text-[#050505] flex items-center font-semibold">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    <span>≈ {tipAmount} {selectedToken.symbol} tip</span>
+                  </div>
+                </div>
+              )}
                </div>
              )}
         </div>
         
         {/* Action Buttons */}
-        <div className="p-8 pt-6 flex justify-end gap-3">
-          <Button
-            variant="outline"
+        <div className="p-[1.5em] pt-6 flex justify-end gap-3 border-t-[0.35em] border-[#050505] relative z-[2]">
+          <ButtonCool
             onClick={handleClose}
-            size="default"
-            className="w-24 h-12 text-base"
-          >
-            Cancel
-          </Button>
-          <Button
+            text="Cancel"
+            bgColor="#ffffff"
+            hoverBgColor="#f3f4f6"
+            textColor="#050505"
+            borderColor="#050505"
+            size="md"
+          />
+          <ButtonCool
             onClick={handleTip}
-               disabled={
-                 isProcessing ||
-                 !tipAmount ||
-                 !selectedToken ||
-                 !userAddress ||
+            text={isProcessing ? (tipStep === 'approving' ? 'Approving...' : 'Sending...') : 'Send Tip'}
+            bgColor="#2563eb"
+            hoverBgColor="#1d4ed8"
+            textColor="#ffffff"
+            borderColor="#050505"
+            size="md"
+            disabled={
+              isProcessing ||
+              !tipAmount ||
+              !selectedToken ||
+              !userAddress ||
               parseFloat(tipAmount) > parseFloat(getSelectedBalance()) || 
               parseFloat(tipAmount) <= 0
             }
-            className="w-32 bg-gradient-to-r from-blue-600 to-indigo-700 hover:shadow-lg hover:-translate-y-0.5 text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none h-12 text-base"
           >
-            {isProcessing ? (
-              <span className="flex items-center">
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {tipStep === 'approving' ? 'Approving...' : 'Sending...'}
-              </span>
-            ) : (
-              <span>Send Tip</span>
-            )}
-          </Button>
-                 </div>
+            {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
+          </ButtonCool>
+        </div>
       </DialogContent>
     </Dialog>
  );

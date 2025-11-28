@@ -16,7 +16,7 @@ import Stepper from '@/components/ui/stepper';
 import { getMainContractAddress } from '@/utils/contractConfig';
 import EngagementRewardsCard from '@/components/cards/EngagementRewardsCard';
 import GlobeCoverage from '@/components/GlobeCoverage';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 
 // Helper function to determine campaign status
 const getCampaignStatus = (campaign: any): 'upcoming' | 'active' | 'ended' | 'paused' => {
@@ -209,45 +209,50 @@ export default function HomePage() {
           <div className="space-y-2 sm:space-y-4 lg:space-y-8">
             {/* Main Headline */}
             <div className="mt-0">
-              <span className="text-lg sm:text-2xl lg:text-4xl font-medium text-gray-600">
-                Running a <b>Funding</b> <b>Campaign</b> doesn't get <b>Better</b><br className="hidden sm:block" /> than this
+              <span className="text-lg sm:text-2xl lg:text-4xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                Running a <span className="border-[0.15em] border-[#050505] px-2 py-1 shadow-[0.2em_0.2em_0_#000000] bg-white inline-block">Funding</span> <span className="border-[0.15em] border-[#050505] px-2 py-1 shadow-[0.2em_0.2em_0_#000000] bg-white inline-block">Campaign</span> doesn't get <span className="border-[0.15em] border-[#050505] px-2 py-1 shadow-[0.2em_0.2em_0_#000000] bg-white inline-block">Better</span><br className="hidden sm:block" /> than this
               </span>
               
               {/* CTA Buttons - Side by side on mobile */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:gap-4 mt-4 sm:mt-6">
-                <Button 
+                <ButtonCool 
                   onClick={() => router.push('/app/project/start')}
-                  variant="secondary"
-                  size="default"
+                  text="Create Project"
+                  bgColor="#6b7280"
+                  hoverBgColor="#4b5563"
+                  borderColor="#050505"
+                  textColor="#ffffff"
+                  size="md"
                   className="flex items-center justify-center"
                 >
-                  Create Project
                   <ChevronRight className="ml-1 sm:ml-2 w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-                <Button 
+                </ButtonCool>
+                <ButtonCool 
                   onClick={() => router.push('/app/campaign/start')}
-                  variant="primary"
-                  size="default"
-                >
-                  Host a Campaign
-                </Button>
+                  text="Host a Campaign"
+                  bgColor="#2563eb"
+                  hoverBgColor="#1d4ed8"
+                  borderColor="#050505"
+                  textColor="#ffffff"
+                  size="md"
+                />
               </div>
 
               {/* Stats Words - Single line on mobile */}
               <div className="flex items-center justify-between sm:justify-start mt-4 sm:mt-8 space-x-2 sm:space-x-4 lg:space-x-6">
-                <div className="text-center">
-                  <div className="text-xs sm:text-sm lg:text-base font-medium text-gray-600">
-                    Campaigns <span className="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => router.push('/explorer/campaigns')}>{totalCampaigns}+</span>
+                <div className="text-center border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] bg-white px-3 py-2 hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all cursor-pointer" onClick={() => router.push('/explorer/campaigns')}>
+                  <div className="text-xs sm:text-sm lg:text-base font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                    Campaigns <span className="text-[#2563eb]">{totalCampaigns}+</span>
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs sm:text-sm lg:text-base font-medium text-gray-600">
-                    Projects <span className="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => router.push('/explorer/projects')}>{totalProjects}+</span>
+                <div className="text-center border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] bg-white px-3 py-2 hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all cursor-pointer" onClick={() => router.push('/explorer/projects')}>
+                  <div className="text-xs sm:text-sm lg:text-base font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                    Projects <span className="text-[#a855f7]">{totalProjects}+</span>
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs sm:text-sm lg:text-base font-medium text-gray-600">
-                    Celo <span className="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => router.push('/analytics')}>{(totalCeloWithCorrection / 1000).toFixed(1)}K</span>
+                <div className="text-center border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] bg-white px-3 py-2 hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all cursor-pointer" onClick={() => router.push('/analytics')}>
+                  <div className="text-xs sm:text-sm lg:text-base font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                    Celo <span className="text-[#10b981]">{(totalCeloWithCorrection / 1000).toFixed(1)}K</span>
                   </div>
                 </div>
               </div>
@@ -279,10 +284,10 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <button 
                 onClick={() => router.push('/explorer/campaigns')}
-                className="text-primary hover:text-primary/80 font-medium flex items-center group text-sm sm:text-base"
+                className="border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] bg-white hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all px-4 py-2 font-extrabold text-[#050505] uppercase tracking-[0.05em] flex items-center group text-sm sm:text-base"
               >
                 Explore
-                <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4 text-primary group-hover:translate-x-1 transition-transform duration-300" />
+                <ChevronRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4 text-[#050505] group-hover:translate-x-1 transition-transform duration-300" />
               </button>
             </div>
           </div>
@@ -321,6 +326,10 @@ export default function HomePage() {
                   status={status}
                   className="border-blue-300"
                   campaignId={campaign.id}
+                  startTime={Number(campaign.startTime)}
+                  endTime={Number(campaign.endTime)}
+                  totalFunds={campaign.totalFunds}
+                  maxWinners={campaign.maxWinners}
                 />
               );
             })}
@@ -401,6 +410,10 @@ export default function HomePage() {
                     status={status}
                     className="border-blue-300"
                     campaignId={campaign.id}
+                    startTime={Number(campaign.startTime)}
+                    endTime={Number(campaign.endTime)}
+                    totalFunds={campaign.totalFunds}
+                    maxWinners={campaign.maxWinners}
                   />
                 );
               })}
@@ -413,10 +426,10 @@ export default function HomePage() {
             <div className="flex justify-center mb-4">
               <button 
                 onClick={() => router.push('/explorer/projects')}
-                className="text-black hover:text-gray-700 font-medium flex items-center group text-sm"
+                className="border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] bg-white hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all px-4 py-2 font-extrabold text-[#050505] uppercase tracking-[0.05em] flex items-center group text-sm"
               >
                 View All Projects
-                <ChevronRight className="ml-1 h-3 w-3 text-black group-hover:translate-x-1 transition-transform duration-300" />
+                <ChevronRight className="ml-1 h-3 w-3 text-[#050505] group-hover:translate-x-1 transition-transform duration-300" />
               </button>
             </div>
             
@@ -466,18 +479,49 @@ export default function HomePage() {
 
       {/* Coverage Map Section */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Global Coverage</h2>
-          <p className="text-gray-600">See where our community spans across the globe</p>
+        <div className="mb-6 border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] bg-white p-6 relative">
+          {/* Pattern Grid Overlay */}
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          {/* Accent Corner */}
+          <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+          <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+          
+          <div className="relative z-[2]">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Global Coverage</h2>
+            <p className="text-[#050505] font-semibold">See where our community spans across the globe</p>
+          </div>
         </div>
-        <GlobeCoverage />
+        <div className="border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] bg-white p-4 relative">
+          <GlobeCoverage />
+        </div>
       </div>
 
       {/* How it Works Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
-    
-        <div className="max-w-5xl mx-auto">
-          <Stepper
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">How It Works</h2>
+        </div>
+        <div className="max-w-5xl mx-auto border-[0.35em] border-[#a855f7] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] bg-white p-6 relative">
+          {/* Pattern Grid Overlay */}
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+              backgroundSize: '0.5em 0.5em'
+            }}
+          />
+          {/* Accent Corner */}
+          <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+          <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+          
+          <div className="relative z-[2]">
+            <Stepper
             steps={[
               {
                 stepNumber: 1,
@@ -508,23 +552,24 @@ export default function HomePage() {
                 icon: "square"
               }
             ]}
-            currentStep={2}
-            orientation="horizontal"
-            style={{
-              background: "transparent",
-              borderRadius: "0px",
-              padding: "0px",
-              shadow: "none",
-              spacing: "32px",
-              connectorColor: "#3b82f6",
-              activeConnectorColor: "#3b82f6",
-              inactiveConnectorColor: "#9ca3af",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: "600",
-              titleColor: "#111827",
-              subtitleColor: "#6b7280"
-            }}
-          />
+              currentStep={2}
+              orientation="horizontal"
+              style={{
+                background: "transparent",
+                borderRadius: "0px",
+                padding: "0px",
+                shadow: "none",
+                spacing: "32px",
+                connectorColor: "#a855f7",
+                activeConnectorColor: "#a855f7",
+                inactiveConnectorColor: "#9ca3af",
+                fontFamily: "Inter, sans-serif",
+                fontWeight: "800",
+                titleColor: "#050505",
+                subtitleColor: "#050505"
+              }}
+            />
+          </div>
         </div>
 
       </div>

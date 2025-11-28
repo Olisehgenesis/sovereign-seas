@@ -355,24 +355,42 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-full sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden">
+              <Dialog.Panel className="w-full max-w-md bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] overflow-hidden relative">
+                {/* Pattern Grid Overlay */}
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                  style={{
+                    backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                    backgroundSize: '0.5em 0.5em'
+                  }}
+                />
+
+                {/* Accent Corner */}
+                <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+                <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
                 
                 {/* Header */}
-                <div className="bg-gray-500 px-6 py-4 text-white">
-                  <div className="flex items-center justify-between">
+                <div className="relative px-6 py-4 text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+                  style={{ 
+                    background: '#2563eb',
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                    backgroundBlendMode: 'overlay'
+                  }}
+                >
+                  <div className="flex items-center justify-between relative z-10">
                     {/* Wallet Icon */}
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-white/20 border-[0.15em] border-white/30 rounded-full flex items-center justify-center">
                       <Wallet className="w-5 h-5 text-white" />
                     </div>
 
                     {/* Wallet Address */}
                     <div className="flex items-center space-x-2">
-                      <p className="text-sm text-white font-mono">
+                      <p className="text-sm text-white font-mono font-extrabold">
                         {address ? abbreviateAddress(address) : 'Not connected'}
                       </p>
                       {address && (
-                        <button onClick={copyToClipboard} className="p-1 hover:bg-white/20 rounded">
-                          {copied ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white" />}
+                        <button onClick={copyToClipboard} className="p-1 hover:bg-white/20 border-[0.15em] border-white/30 rounded-[0.3em] transition-colors">
+                          {copied ? <CheckCircle className="w-4 h-4 text-[#10b981]" /> : <Copy className="w-4 h-4 text-white" />}
                         </button>
                       )}
                     </div>
@@ -380,7 +398,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                     {/* Close Button */}
                     <button
                       onClick={onClose}
-                      className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
+                      className="p-2 hover:bg-white/20 border-[0.15em] border-white/30 rounded-[0.3em] transition-colors text-white"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -388,7 +406,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                 </div>
 
                 {/* Main Content */}
-                <div className="px-6 py-6">
+                <div className="relative px-6 py-6 z-[2]">
                   {activeView === 'overview' && (
                     <>
                       {/* Network Selector and Action Buttons */}
@@ -397,24 +415,24 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                         <div className="relative">
                           <button
                             onClick={() => setShowNetworkDropdown(!showNetworkDropdown)}
-                            className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-full border border-gray-200 text-sm hover:bg-gray-200 text-gray-700"
+                            className="flex items-center space-x-2 px-3 py-2 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]"
                           >
-                            <div className={`w-2 h-2 rounded-full ${selectedNetwork.color.includes('green') ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                            <span className="font-medium">{selectedNetwork.shortName}</span>
+                            <div className={`w-2 h-2 rounded-full ${selectedNetwork.color.includes('green') ? 'bg-[#10b981]' : 'bg-[#f59e0b]'}`} />
+                            <span>{selectedNetwork.shortName}</span>
                             <ChevronDown className="w-3 h-3" />
                           </button>
                           
                           {showNetworkDropdown && (
-                            <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]">
+                            <div className="absolute top-full left-0 mt-1 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.3em_0.3em_0_#000000] py-1 z-50 min-w-[140px]">
                               {networks.map((network) => (
                                 <button
                                   key={network.id}
                                   onClick={() => switchNetwork(network)}
-                                  className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                  className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 font-extrabold text-[#050505] uppercase tracking-[0.05em] border-b-[0.15em] border-gray-300 last:border-b-0"
                                 >
-                                  <div className={`w-2 h-2 rounded-full mr-2 ${network.color.includes('green') ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${network.color.includes('green') ? 'bg-[#10b981]' : 'bg-[#f59e0b]'}`} />
                                   <span>{network.shortName}</span>
-                                  {selectedNetwork.id === network.id && <Check className="w-3 h-3 ml-auto text-blue-600" />}
+                                  {selectedNetwork.id === network.id && <Check className="w-3 h-3 ml-auto text-[#2563eb]" />}
                                 </button>
                               ))}
                             </div>
@@ -425,24 +443,24 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                         <div className="flex space-x-3">
                           <button
                             onClick={() => setActiveView('send')}
-                            className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors"
+                            className="p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
                             title="Send"
                           >
-                            <ArrowUpRight className="w-5 h-5 text-gray-600" />
+                            <ArrowUpRight className="w-5 h-5 text-[#050505]" />
                           </button>
                           <button
                             onClick={() => setActiveView('receive')}
-                            className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors"
+                            className="p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
                             title="Receive"
                           >
-                            <ArrowDownLeft className="w-5 h-5 text-gray-600" />
+                            <ArrowDownLeft className="w-5 h-5 text-[#050505]" />
                           </button>
                           <button
                             onClick={() => setActiveView('add')}
-                            className="p-3 bg-gray-50 rounded-full hover:bg-gray-100 transition-colors"
+                            className="p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
                             title="Add Funds"
                           >
-                            <Plus className="w-5 h-5 text-gray-600" />
+                            <Plus className="w-5 h-5 text-[#050505]" />
                           </button>
                         </div>
                       </div>
@@ -450,29 +468,29 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                       {/* Token List */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-gray-900">Assets</h3>
+                          <h3 className="text-lg font-extrabold text-[#050505] uppercase tracking-[0.05em]">Assets</h3>
                           <button
                             onClick={fetchTokenBalances}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            className="p-2 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] hover:-translate-x-[0.05em] hover:-translate-y-[0.05em] transition-all bg-white"
                             disabled={isLoading}
                           >
-                            <RefreshCw className={`w-4 h-4 text-gray-500 ${isLoading ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`w-4 h-4 text-[#050505] ${isLoading ? 'animate-spin' : ''}`} />
                           </button>
                         </div>
 
                         {isLoading ? (
                           <div className="flex justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-[0.2em] border-[#2563eb] border-t-transparent"></div>
                           </div>
                         ) : tokenBalances.length === 0 ? (
-                          <div className="text-center py-8">
+                          <div className="text-center py-8 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] bg-gray-50 p-6">
                             <Coins className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-500 text-sm">No tokens found</p>
+                            <p className="text-[#050505] text-sm font-extrabold uppercase tracking-[0.05em]">No tokens found</p>
                           </div>
                         ) : (
                           tokenBalances.map((token) => (
-                            <div key={token.address} className="flex items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center mr-3 overflow-hidden">
+                            <div key={token.address} className="flex items-center p-3 bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all">
+                              <div className="w-10 h-10 rounded-full bg-white border-[0.15em] border-[#050505] flex items-center justify-center mr-3 overflow-hidden">
                                 <img 
                                   src={getTokenLogo(token.symbol)} 
                                   alt={token.symbol}
@@ -489,11 +507,11 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                                 </div>
                               </div>
                               <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900">{token.symbol}</h4>
-                                <p className="text-sm text-gray-500">{token.name}</p>
+                                <h4 className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">{token.symbol}</h4>
+                                <p className="text-sm text-[#050505] font-semibold">{token.name}</p>
                               </div>
                               <div className="text-right">
-                                <p className="font-semibold text-gray-900">{token.formattedBalance}</p>
+                                <p className="font-extrabold text-[#050505]">{token.formattedBalance}</p>
                               </div>
                             </div>
                           ))
@@ -507,38 +525,38 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                       <div className="flex items-center space-x-3">
                         <button
                           onClick={() => setActiveView('overview')}
-                          className="p-2 hover:bg-gray-100 rounded-full"
+                          className="p-2 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] hover:-translate-x-[0.05em] hover:-translate-y-[0.05em] transition-all bg-white"
                         >
-                          <ArrowDownLeft className="w-5 h-5 transform rotate-180" />
+                          <ArrowDownLeft className="w-5 h-5 transform rotate-180 text-[#050505]" />
                         </button>
-                        <h3 className="text-xl font-bold text-gray-900">Send</h3>
+                        <h3 className="text-xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">Send</h3>
                       </div>
 
                       {sendError && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start">
-                          <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-red-700">{sendError}</p>
+                        <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3 flex items-start">
+                          <AlertCircle className="w-5 h-5 text-[#ef4444] mr-2 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-[#050505] font-extrabold uppercase tracking-[0.05em]">{sendError}</p>
                         </div>
                       )}
 
                       {sendSuccess && (
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-start">
-                          <CheckCircle className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-green-700">{sendSuccess}</p>
+                        <div className="bg-[#d1fae5] border-[0.2em] border-[#10b981] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3 flex items-start">
+                          <CheckCircle className="w-5 h-5 text-[#10b981] mr-2 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-[#050505] font-extrabold uppercase tracking-[0.05em]">{sendSuccess}</p>
                         </div>
                       )}
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Token</label>
+                        <label className="block text-sm font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Token</label>
                         <div className="grid grid-cols-2 gap-2">
                           {tokenBalances.map((token) => (
                             <button
                               key={token.address}
                               onClick={() => setSelectedToken(token.address)}
-                              className={`p-3 rounded-xl border-2 transition-all ${
+                              className={`p-3 border-[0.2em] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold ${
                                 selectedToken === token.address
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:border-gray-300'
+                                  ? 'border-[#2563eb] bg-[#dbeafe]'
+                                  : 'border-[#050505] bg-white'
                               }`}
                             >
                               <div className="flex items-center">
@@ -569,25 +587,25 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Recipient</label>
+                        <label className="block text-sm font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Recipient</label>
                         <input
                           type="text"
                           value={sendAddressInput}
                           onChange={(e) => setSendAddressInput(e.target.value)}
                           placeholder="0x..."
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-4 py-3 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none font-semibold"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                        <label className="block text-sm font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Amount</label>
                         <div className="relative">
                           <input
                             type="text"
                             value={sendAmountInput}
                             onChange={(e) => setSendAmountInput(e.target.value)}
                             placeholder="0.00"
-                            className="w-full px-4 py-3 pr-16 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-4 py-3 pr-16 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none font-semibold"
                           />
                           {selectedToken && (
                             <div className="absolute inset-y-0 right-0 flex items-center pr-4">
@@ -599,7 +617,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                         </div>
                         {selectedToken && (
                           <div className="flex justify-between items-center mt-2">
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-[#050505] font-semibold">
                               Balance: {tokenBalances.find(t => t.address === selectedToken)?.formattedBalance}
                             </span>
                             <button
@@ -607,7 +625,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                                 const token = tokenBalances.find(t => t.address === selectedToken);
                                 if (token) setSendAmountInput(token.formattedBalance || '0');
                               }}
-                              className="text-sm text-blue-600 font-medium hover:text-blue-700"
+                              className="text-sm text-[#2563eb] font-extrabold uppercase tracking-[0.05em] border-[0.15em] border-[#2563eb] px-2 py-1 rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] hover:-translate-x-[0.05em] hover:-translate-y-[0.05em] transition-all"
                             >
                               MAX
                             </button>
@@ -618,7 +636,7 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                       <button
                         onClick={handleSendTokens}
                         disabled={!selectedToken || !sendAddressInput || !sendAmountInput || isSending}
-                        className="w-full py-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="w-full py-4 bg-[#2563eb] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold uppercase tracking-[0.05em] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
                       >
                         {isSending ? (
                           <>
@@ -640,26 +658,26 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                       <div className="flex items-center space-x-3">
                         <button
                           onClick={() => setActiveView('overview')}
-                          className="p-2 hover:bg-gray-100 rounded-full"
+                          className="p-2 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] hover:-translate-x-[0.05em] hover:-translate-y-[0.05em] transition-all bg-white"
                         >
-                          <ArrowDownLeft className="w-5 h-5 transform rotate-180" />
+                          <ArrowDownLeft className="w-5 h-5 transform rotate-180 text-[#050505]" />
                         </button>
-                        <h3 className="text-xl font-bold text-gray-900">Receive</h3>
+                        <h3 className="text-xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">Receive</h3>
                       </div>
 
                       <div className="text-center">
                         {address && (
                           <>
-                            <div className="inline-block p-4 bg-white border-2 border-gray-200 rounded-2xl mb-4">
+                            <div className="inline-block p-4 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] mb-4">
                               <QRCodeSVG value={address} size={180} />
                             </div>
-                            <p className="text-sm text-gray-500 mb-2">Your wallet address</p>
-                            <div className="bg-gray-50 p-3 rounded-xl mb-4">
-                              <p className="text-sm font-mono break-all">{address}</p>
+                            <p className="text-sm text-[#050505] mb-2 font-extrabold uppercase tracking-[0.05em]">Your wallet address</p>
+                            <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3 mb-4">
+                              <p className="text-sm font-mono break-all text-[#050505] font-semibold">{address}</p>
                             </div>
                             <button
                               onClick={copyToClipboard}
-                              className="w-full py-3 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 flex items-center justify-center"
+                              className="w-full py-3 bg-[#2563eb] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold uppercase tracking-[0.05em] flex items-center justify-center"
                             >
                               {copied ? <CheckCircle className="w-5 h-5 mr-2" /> : <Copy className="w-5 h-5 mr-2" />}
                               {copied ? 'Copied!' : 'Copy Address'}
@@ -668,9 +686,9 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                         )}
                       </div>
 
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-                        <p className="text-sm text-yellow-800">
-                          <strong>Warning:</strong> Only send {selectedNetwork.shortName} tokens to this address.
+                      <div className="bg-[#fef3c7] border-[0.2em] border-[#f59e0b] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3">
+                        <p className="text-sm text-[#050505] font-extrabold uppercase tracking-[0.05em]">
+                          <span className="text-[#ef4444]">Warning:</span> Only send {selectedNetwork.shortName} tokens to this address.
                         </p>
                       </div>
                     </div>
@@ -681,62 +699,60 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                       <div className="flex items-center space-x-3">
                         <button
                           onClick={() => setActiveView('overview')}
-                          className="p-2 hover:bg-gray-100 rounded-full"
+                          className="p-2 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] hover:-translate-x-[0.05em] hover:-translate-y-[0.05em] transition-all bg-white"
                         >
-                          <ArrowDownLeft className="w-5 h-5 transform rotate-180" />
+                          <ArrowDownLeft className="w-5 h-5 transform rotate-180 text-[#050505]" />
                         </button>
-                        <h3 className="text-xl font-bold text-gray-900">Add Funds</h3>
+                        <h3 className="text-xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">Add Funds</h3>
                       </div>
 
                       <div className="space-y-3">
-                        <button className="w-full p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-left transition-colors">
+                        <button className="w-full p-4 bg-gray-50 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-left">
                           <div className="flex items-center">
-                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
-                              <CreditCard className="w-6 h-6 text-blue-600" />
+                            <div className="w-12 h-12 bg-[#dbeafe] border-[0.15em] border-[#2563eb] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] flex items-center justify-center mr-4">
+                              <CreditCard className="w-6 h-6 text-[#2563eb]" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-gray-900">Buy with Card</h4>
-                              <p className="text-sm text-gray-500">Purchase crypto with debit/credit card</p>
+                              <h4 className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">Buy with Card</h4>
+                              <p className="text-sm text-[#050505] font-semibold">Purchase crypto with debit/credit card</p>
                             </div>
-                            <ArrowUpRight className="w-5 h-5 text-gray-400 ml-auto" />
+                            <ArrowUpRight className="w-5 h-5 text-[#050505] ml-auto" />
                           </div>
                         </button>
                         <a 
-
-                        
                           href="https://fonbank.com"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block w-full p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-left transition-colors"
+                          className="block w-full p-4 bg-gray-50 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-left"
                         >
                           <div className="flex items-center">
-                            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4">
-                              <svg className="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="currentColor">
+                            <div className="w-12 h-12 bg-[#fef3c7] border-[0.15em] border-[#f59e0b] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] flex items-center justify-center mr-4">
+                              <svg className="w-6 h-6 text-[#f59e0b]" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M4 10h16v8H4zM4 6h16v2H4z" fillOpacity="0.3" />
                                 <path d="M6 14h10v1H6z" />
                               </svg>
                             </div>
                             <div>
-                              <h4 className="font-semibold text-gray-900">Fonbank</h4>
-                              <p className="text-sm text-gray-500">Easy crypto on-ramp</p>
+                              <h4 className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">Fonbank</h4>
+                              <p className="text-sm text-[#050505] font-semibold">Easy crypto on-ramp</p>
                             </div>
-                            <ExternalLink className="w-5 h-5 text-gray-400 ml-auto" />
+                            <ExternalLink className="w-5 h-5 text-[#050505] ml-auto" />
                           </div>
                         </a>
 
                         <button 
                           onClick={() => setActiveView('receive')}
-                          className="w-full p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-left transition-colors"
+                          className="w-full p-4 bg-gray-50 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-left"
                         >
                           <div className="flex items-center">
-                            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
-                              <QrCode className="w-6 h-6 text-green-600" />
+                            <div className="w-12 h-12 bg-[#d1fae5] border-[0.15em] border-[#10b981] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] flex items-center justify-center mr-4">
+                              <QrCode className="w-6 h-6 text-[#10b981]" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-gray-900">Receive Crypto</h4>
-                              <p className="text-sm text-gray-500">Transfer from another wallet</p>
+                              <h4 className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">Receive Crypto</h4>
+                              <p className="text-sm text-[#050505] font-semibold">Transfer from another wallet</p>
                             </div>
-                            <ArrowUpRight className="w-5 h-5 text-gray-400 ml-auto" />
+                            <ArrowUpRight className="w-5 h-5 text-[#050505] ml-auto" />
                           </div>
                         </button>
                       </div>
@@ -745,10 +761,10 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-100">
+                <div className="relative px-6 py-4 border-t-[0.35em] border-[#050505] z-[2]">
                   <button
                     onClick={handleLogout}
-                    className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl font-semibold transition-colors flex items-center justify-center"
+                    className="w-full py-3 bg-[#fee2e2] hover:bg-[#fecaca] text-[#050505] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold uppercase tracking-[0.05em] flex items-center justify-center"
                   >
                     <LogOut className="w-5 h-5 mr-2" />
                     Disconnect

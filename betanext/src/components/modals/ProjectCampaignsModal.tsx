@@ -174,11 +174,13 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onJoin, isLoading
   const timeRemaining = status === 'active' ? formatTimeRemaining(campaign.endTime) : null;
 
   return (
-    <div className={`group relative bg-white rounded-xl border hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 overflow-hidden ${
-      isJoined ? 'border-emerald-300 bg-gradient-to-br from-emerald-50/30 to-green-50/30' : 'border-gray-200 hover:border-gray-300'
-    }`}>
+    <div className={`group relative bg-white border-[0.35em] rounded-[0.6em] shadow-[0.5em_0.5em_0_#000000] transition-all duration-[400ms] hover:shadow-[0.7em_0.7em_0_#000000] hover:-translate-x-[0.2em] hover:-translate-y-[0.2em] overflow-hidden ${
+      isJoined ? 'border-[#10b981] bg-[#d1fae5]' : 'border-[#050505]'
+    }`}
+    style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+    >
       {/* Status Badge */}
-      <div className={`absolute top-3 right-3 px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 ${statusConfig.bgClass} ${statusConfig.textClass}`}>
+      <div className={`absolute top-3 right-3 px-2 py-1 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] text-xs font-extrabold flex items-center gap-1 uppercase tracking-[0.05em] ${statusConfig.bgClass} ${statusConfig.textClass}`}>
         <statusConfig.icon className="w-3 h-3" />
         {statusConfig.label}
       </div>
@@ -211,15 +213,15 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onJoin, isLoading
           </div>
           
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-base mb-1 group-hover:text-slate-800 transition-colors truncate">
+            <h3 className="font-extrabold text-[#050505] text-base mb-1 group-hover:text-[#050505] transition-colors truncate uppercase tracking-[0.05em]">
               {campaign.name}
             </h3>
-            <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-2">
+            <p className="text-[#050505] text-sm leading-relaxed line-clamp-2 mb-2 font-semibold">
               {campaign.description}
             </p>
             
             {timeRemaining && status === 'active' && (
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded text-xs font-medium">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#fee2e2] text-[#050505] border-[0.15em] border-[#ef4444] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] text-xs font-extrabold uppercase tracking-[0.05em]">
                 <Clock className="w-3 h-3" />
                 {timeRemaining} left
               </div>
@@ -229,22 +231,22 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onJoin, isLoading
         
         {/* Campaign Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-3 bg-slate-50 rounded-lg">
+          <div className="p-3 bg-gray-50 border-[0.15em] border-gray-300 rounded-[0.4em] shadow-[0.1em_0.1em_0_#000000]">
             <div className="flex items-center gap-1.5 mb-1">
-              <Coins className="w-3 h-3 text-slate-600" />
-              <span className="text-xs text-slate-600 font-medium">Prize Pool</span>
+              <Coins className="w-3 h-3 text-[#050505]" />
+              <span className="text-xs text-[#050505] font-extrabold uppercase tracking-[0.05em]">Prize Pool</span>
             </div>
-            <p className="font-semibold text-slate-800 text-sm">
+            <p className="font-extrabold text-[#050505] text-sm">
               {parseFloat(formatEther(campaign.totalFunds || 0n)).toFixed(1)} CELO
             </p>
           </div>
           
-          <div className="p-3 bg-slate-50 rounded-lg">
+          <div className="p-3 bg-gray-50 border-[0.15em] border-gray-300 rounded-[0.4em] shadow-[0.1em_0.1em_0_#000000]">
             <div className="flex items-center gap-1.5 mb-1">
-              <Trophy className="w-3 h-3 text-slate-600" />
-              <span className="text-xs text-slate-600 font-medium">Max Winners</span>
+              <Trophy className="w-3 h-3 text-[#050505]" />
+              <span className="text-xs text-[#050505] font-extrabold uppercase tracking-[0.05em]">Max Winners</span>
             </div>
-            <p className="font-semibold text-slate-800 text-sm">
+            <p className="font-extrabold text-[#050505] text-sm">
               {Number(campaign.maxWinners) || 'All'}
             </p>
           </div>
@@ -303,16 +305,16 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onJoin, isLoading
 };
 
 const FeeNotice: React.FC = () => (
-  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+  <div className="bg-[#fef3c7] border-[0.2em] border-[#f59e0b] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 mb-6">
     <div className="flex items-start gap-3">
-      <div className="p-1.5 bg-amber-100 rounded-lg">
-        <DollarSign className="w-4 h-4 text-amber-600" />
+      <div className="p-1.5 bg-[#fde68a] border-[0.15em] border-[#f59e0b] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000]">
+        <DollarSign className="w-4 h-4 text-[#050505]" />
       </div>
       <div className="flex-1">
-        <h4 className="font-semibold text-amber-900 text-sm mb-1">
+        <h4 className="font-extrabold text-[#050505] text-sm mb-1 uppercase tracking-[0.05em]">
           Participation Fee: {PARTICIPATION_FEE} CELO
         </h4>
-        <p className="text-amber-800 text-sm leading-relaxed">
+        <p className="text-[#050505] text-sm leading-relaxed font-semibold">
           Required to prevent spam and ensure serious participation. Fees contribute to prize pools.
         </p>
       </div>
@@ -483,28 +485,47 @@ const ProjectCampaignsModal: React.FC<ProjectCampaignsModalProps> = ({ isOpen, o
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-5xl transform overflow-hidden rounded-xl bg-white text-left align-middle shadow-xl transition-all max-h-[90vh] flex flex-col">
+              <Dialog.Panel className="w-full max-w-5xl transform overflow-hidden rounded-[0.6em] bg-white border-[0.35em] border-[#a855f7] shadow-[0.7em_0.7em_0_#000000] transition-all max-h-[90vh] flex flex-col relative">
+                {/* Pattern Grid Overlay */}
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                  style={{
+                    backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                    backgroundSize: '0.5em 0.5em'
+                  }}
+                />
+
+                {/* Accent Corner */}
+                <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
+                <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="relative flex items-center justify-between px-[1.5em] py-[1.4em] border-b-[0.35em] border-[#050505] z-[2]"
+                  style={{ 
+                    background: '#a855f7',
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+                    backgroundBlendMode: 'overlay'
+                  }}
+                >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 rounded-lg">
-                      <Crown className="h-5 w-5 text-slate-700" />
+                    <div className="p-2 bg-white/20 border-[0.15em] border-white/30 rounded-[0.3em]">
+                      <Crown className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900">Campaign Manager</h3>
-                      <p className="text-gray-600 text-sm">Manage your project's campaign participation</p>
+                      <h3 className="text-xl font-extrabold text-white uppercase tracking-[0.05em]">Campaign Manager</h3>
+                      <p className="text-white/90 text-sm font-semibold">Manage your project's campaign participation</p>
                     </div>
                   </div>
                   <button
                     onClick={onClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    className="text-white hover:text-white/80 transition-colors p-1 border-[0.15em] border-white/30 rounded-[0.3em] hover:bg-white/20"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-[1.5em] relative z-[2]">
                   {/* Fee Notice */}
                   <FeeNotice />
 
@@ -578,38 +599,38 @@ const ProjectCampaignsModal: React.FC<ProjectCampaignsModalProps> = ({ isOpen, o
  
                   {/* Error Message */}
                   {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 mb-6">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
+                        <AlertTriangle className="h-4 w-4 text-[#ef4444] mt-0.5" />
                         <div>
-                          <p className="font-medium text-red-900 text-sm mb-1">Transaction Failed</p>
-                          <p className="text-red-700 text-sm">{error}</p>
+                          <p className="font-extrabold text-[#050505] text-sm mb-1 uppercase tracking-[0.05em]">Transaction Failed</p>
+                          <p className="text-[#050505] text-sm font-semibold">{error}</p>
                         </div>
                       </div>
                     </div>
                   )}
- 
+
                   {/* Loading State */}
                   {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-slate-600 mb-4" />
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">Loading Campaigns</h4>
-                      <p className="text-gray-600">Discovering available opportunities...</p>
+                      <Loader2 className="h-8 w-8 animate-spin text-[#a855f7] mb-4" />
+                      <h4 className="text-lg font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Loading Campaigns</h4>
+                      <p className="text-[#050505] font-semibold">Discovering available opportunities...</p>
                     </div>
                   ) : availableCampaigns.length === 0 ? (
-                    <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-8 text-center">
                       <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                      <h4 className="text-lg font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">
                         {allCampaigns?.length === 0 ? 'No Campaigns Available' : 'All Campaigns Joined!'}
                       </h4>
-                      <p className="text-gray-600 mb-6">
+                      <p className="text-[#050505] mb-6 font-semibold">
                         {allCampaigns?.length === 0 
                           ? 'No campaigns are currently available. Be the first to create one!' 
                           : 'Congratulations! Your project is participating in all available campaigns.'}
                       </p>
                       <button
                         onClick={() => {/* TODO: Navigate to create campaign */}}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#1f2937] text-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold uppercase tracking-[0.05em]"
                       >
                         <Sparkles className="h-4 w-4" />
                         Create New Campaign
@@ -618,18 +639,18 @@ const ProjectCampaignsModal: React.FC<ProjectCampaignsModalProps> = ({ isOpen, o
                   ) : (
                     <div className="space-y-6">
                       {/* Search and Filters */}
-                      <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4">
                         <div className="flex flex-col lg:flex-row gap-3">
                           {/* Search */}
                           <div className="flex-1">
                             <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#050505]" />
                               <input
                                 type="text"
                                 placeholder="Search campaigns..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition-all text-sm"
+                                className="w-full pl-10 pr-4 py-2 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none text-sm font-semibold"
                               />
                             </div>
                           </div>
@@ -640,17 +661,17 @@ const ProjectCampaignsModal: React.FC<ProjectCampaignsModalProps> = ({ isOpen, o
                               <button
                                 key={option.id}
                                 onClick={() => setStatusFilter(option.id)}
-                                className={`px-3 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-1.5 ${
+                                className={`px-3 py-2 border-[0.2em] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold uppercase tracking-[0.05em] text-sm flex items-center gap-1.5 ${
                                   statusFilter === option.id
-                                    ? 'bg-slate-900 text-white'
-                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                    ? 'bg-[#1f2937] text-white border-[#050505]'
+                                    : 'bg-white text-[#050505] hover:bg-gray-100 border-[#050505]'
                                 }`}
                               >
                                 {option.label}
-                                <span className={`px-1.5 py-0.5 text-xs rounded ${
+                                <span className={`px-1.5 py-0.5 text-xs rounded-[0.3em] border-[0.1em] font-extrabold ${
                                   statusFilter === option.id
-                                    ? 'bg-white/20 text-white'
-                                    : 'bg-gray-100 text-gray-600'
+                                    ? 'bg-white/20 text-white border-white/30'
+                                    : 'bg-gray-100 text-[#050505] border-[#050505]'
                                 }`}>
                                   {option.count}
                                 </span>
@@ -663,7 +684,7 @@ const ProjectCampaignsModal: React.FC<ProjectCampaignsModalProps> = ({ isOpen, o
                             <select
                               value={sortBy}
                               onChange={(e) => setSortBy(e.target.value as SortOption['id'])}
-                              className="appearance-none pl-3 pr-8 py-2 rounded-lg border border-gray-200 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition-all text-sm bg-white"
+                              className="appearance-none pl-3 pr-8 py-2 border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none text-sm bg-white font-semibold"
                               >
                               {sortOptions.map((option) => (
                                 <option key={option.id} value={option.id}>

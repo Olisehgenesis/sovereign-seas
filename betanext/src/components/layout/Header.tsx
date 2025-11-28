@@ -21,6 +21,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 
 
 const explorerOptions = [
@@ -153,7 +154,7 @@ export default function Header() {
     <div className="relative z-20">
       <header className={`fixed w-full top-0 z-20 transition-all duration-300 ${
         isScrolled 
-          ? 'bg-white shadow-sm' 
+          ? 'bg-white border-b-[0.3em] border-[#050505] shadow-[0_0.4em_0_#000000]' 
           : 'bg-transparent'
       }`}>
         <div className="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8 relative z-10">
@@ -178,23 +179,23 @@ export default function Header() {
               {/* Explorer Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-gray-600 hover:text-black font-medium">
+                  <button className="flex items-center px-3 py-2 text-[#050505] hover:text-[#2563eb] font-extrabold bg-white border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all duration-200">
                     <Compass className="w-4 h-4 mr-2" />
                     Explorer
                     <ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48 bg-white/95 backdrop-blur-sm">
+                <DropdownMenuContent className="w-48 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.4em_0.4em_0_#000000] p-1">
                   {explorerOptions.map((option) => {
                     const OptionIcon = option.icon;
                     return (
                       <DropdownMenuItem key={option.name} asChild>
                         <Link 
                           href={option.href} 
-                          className="flex items-center w-full cursor-pointer"
+                          className="flex items-center w-full cursor-pointer px-3 py-2 rounded-[0.3em] hover:bg-[#2563eb] hover:text-white transition-colors font-semibold"
                         >
-                          <OptionIcon className="h-4 w-4 text-gray-500 mr-3" />
-                          <span className="font-medium">{option.name}</span>
+                          <OptionIcon className="h-4 w-4 mr-3" />
+                          <span>{option.name}</span>
                         </Link>
                       </DropdownMenuItem>
                     );
@@ -205,7 +206,7 @@ export default function Header() {
               {/* Tasks direct tab */}
               <Link 
                 href="/app/tasks" 
-                className="text-gray-600 hover:text-black font-medium flex items-center"
+                className="flex items-center px-3 py-2 text-[#050505] hover:text-[#2563eb] font-extrabold bg-white border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all duration-200"
               >
                 <Briefcase className="w-4 h-4 mr-2" />
                 Tasks
@@ -214,23 +215,23 @@ export default function Header() {
               {/* Create Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-gray-600 hover:text-black font-medium">
+                  <button className="flex items-center px-3 py-2 text-[#050505] hover:text-[#10b981] font-extrabold bg-white border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all duration-200">
                     <PlusCircle className="w-4 h-4 mr-2" />
                     Create
                     <ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-white/95 backdrop-blur-sm">
+                <DropdownMenuContent className="w-56 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.4em_0.4em_0_#000000] p-1">
                   {createOptions.map((option) => {
                     const OptionIcon = option.icon;
                     return (
                       <DropdownMenuItem key={option.name} asChild>
                         <Link 
                           href={option.href} 
-                          className="flex items-center w-full cursor-pointer"
+                          className="flex items-center w-full cursor-pointer px-3 py-2 rounded-[0.3em] hover:bg-[#10b981] hover:text-white transition-colors font-semibold"
                         >
-                          <OptionIcon className="h-4 w-4 text-gray-500 mr-3" />
-                          <span className="font-medium text-sm">{option.name}</span>
+                          <OptionIcon className="h-4 w-4 mr-3" />
+                          <span className="text-sm">{option.name}</span>
                         </Link>
                       </DropdownMenuItem>
                     );
@@ -243,22 +244,22 @@ export default function Header() {
               {authenticated && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="text-gray-600 hover:text-black font-medium">
+                    <button className="flex items-center px-3 py-2 text-[#050505] hover:text-[#a855f7] font-extrabold bg-white border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all duration-200">
                       <User className="w-4 h-4 mr-2" />
                       Profile
                       <ChevronDown className="w-3 h-3 ml-1" />
-                    </Button>
+                    </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-48 bg-white/95 backdrop-blur-sm">
+                  <DropdownMenuContent className="w-48 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.4em_0.4em_0_#000000] p-1">
                     <DropdownMenuItem asChild>
-                      <Link href="/app/me" className="flex items-center w-full cursor-pointer">
-                        <User className="mr-3 h-4 w-4 text-gray-500" />
+                      <Link href="/app/me" className="flex items-center w-full cursor-pointer px-3 py-2 rounded-[0.3em] hover:bg-[#a855f7] hover:text-white transition-colors font-semibold">
+                        <User className="mr-3 h-4 w-4" />
                         Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={logout}
-                      className="text-red-600 cursor-pointer"
+                      className="text-[#ef4444] cursor-pointer px-3 py-2 rounded-[0.3em] hover:bg-[#ef4444] hover:text-white transition-colors font-semibold"
                     >
                       <Settings className="mr-3 h-4 w-4" />
                       Logout
@@ -273,64 +274,76 @@ export default function Header() {
               
               {/* Tasks Button */}
               {authenticated && address && (
-                <Button
-                  variant="outline"
+                <button
                   onClick={() => navigate('/app/tasks')}
-                  className="hidden sm:flex border-gray-300 text-black hover:border-gray-400 rounded-full"
+                  className="hidden sm:flex items-center px-3 py-2 text-[#050505] hover:text-[#2563eb] font-extrabold bg-white border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all duration-200"
                 >
                   <ListChecks className="w-4 h-4 mr-2" />
                   <span>Tasks</span>
-                </Button>
+                </button>
               )}
 
               {/* Wallet Button */}
               {authenticated && address ? (
-                <Button
+                <ButtonCool
                   onClick={openWalletModal}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-4 py-2 rounded-full"
+                  text={address ? abbreviateAddress(address) : 'Wallet'}
+                  bgColor="#2563eb"
+                  hoverBgColor="#1d4ed8"
+                  borderColor="#050505"
+                  textColor="#ffffff"
+                  size="sm"
+                  className="hidden sm:flex"
                 >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">{abbreviateAddress(address)}</span>
-                </Button>
+                  <Wallet className="w-4 h-4" />
+                </ButtonCool>
               ) : !hideConnectBtn && (
-                <Button 
+                <ButtonCool 
                   onClick={() => {
                     console.log('[Header] Connect Wallet button clicked');
                     handleLogin();
                   }}
-                  disabled={!ready} 
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-3 sm:px-6 py-1.5 sm:py-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base"
+                  disabled={!ready}
+                  text="Connect Wallet"
+                  bgColor="#2563eb"
+                  hoverBgColor="#1d4ed8"
+                  borderColor="#050505"
+                  textColor="#ffffff"
+                  size="sm"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  <span>Connect Wallet</span>
-                </Button>
+                  <Wallet className="w-4 h-4" />
+                </ButtonCool>
               )}
 
               {/* Contact Us */}
-              <Button
-                variant="outline"
+              <ButtonCool
                 onClick={() => navigate('/contact')}
-                className="hidden md:flex border-gray-300 text-black hover:border-gray-400 rounded-full"
-              >
-                Contact Us
-              </Button>
+                text="Contact Us"
+                bgColor="#6b7280"
+                hoverBgColor="#4b5563"
+                borderColor="#050505"
+                textColor="#ffffff"
+                size="sm"
+                className="hidden md:flex"
+              />
 
               {/* Mobile Menu */}
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="md:hidden">
-                    <Menu className="w-5 h-5" />
-                  </Button>
+                  <button className="md:hidden flex items-center justify-center w-10 h-10 bg-white border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all duration-200">
+                    <Menu className="w-5 h-5 text-[#050505]" />
+                  </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 bg-white/95 backdrop-blur-sm">
+                <SheetContent side="right" className="w-80 bg-white border-l-[0.3em] border-[#050505] shadow-[-0.4em_0_0_#000000]">
                   <div className="py-6">
                     
                     {/* Mobile Logo */}
-                    <div className="flex items-center space-x-3 mb-8">
-                      <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
+                    <div className="flex items-center space-x-3 mb-8 p-3 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+                      <div className="w-8 h-8 bg-[#2563eb] border-[0.15em] border-[#050505] rounded-full flex items-center justify-center shadow-[0.15em_0.15em_0_#000000]">
                         <Circle className="w-4 h-4 text-white" />
                       </div>
-                      <span className="text-xl font-bold text-black">Sovereign Seas</span>
+                      <span className="text-xl font-extrabold text-[#050505] uppercase tracking-[0.05em]">Sovereign Seas</span>
                     </div>
 
                     {/* Mobile Navigation */}
@@ -338,7 +351,7 @@ export default function Header() {
                       
                       {/* Explorer Section */}
                       <div className="py-2">
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                        <h3 className="text-xs font-extrabold text-[#050505] uppercase tracking-[0.1em] mb-3 px-2">
                           Explorer
                         </h3>
                         {explorerOptions.map((item) => {
@@ -348,7 +361,7 @@ export default function Header() {
                               key={item.href}
                               href={item.href}
                               onClick={() => setMobileMenuOpen(false)}
-                              className="flex items-center px-3 py-2 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                              className="flex items-center px-3 py-2 mb-2 text-[#050505] hover:text-white hover:bg-[#2563eb] border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all duration-200 font-bold"
                             >
                               <Icon className="w-5 h-5 mr-3" />
                               {item.name}
@@ -358,8 +371,8 @@ export default function Header() {
                       </div>
 
                       {/* Create Section */}
-                      <div className="py-2 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                      <div className="py-2 border-t-[0.2em] border-[#050505] mt-4">
+                        <h3 className="text-xs font-extrabold text-[#050505] uppercase tracking-[0.1em] mb-3 px-2">
                           Create
                         </h3>
                         {createOptions.map((item) => {
@@ -369,22 +382,21 @@ export default function Header() {
                               key={item.href}
                               href={item.href}
                               onClick={() => setMobileMenuOpen(false)}
-                              className="flex items-center px-3 py-3 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                              className="flex items-center px-3 py-2 mb-2 text-[#050505] hover:text-white hover:bg-[#10b981] border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all duration-200 font-bold text-sm"
                             >
                               <Icon className="w-5 h-5 mr-3" />
-                              <span className="font-medium text-sm">{item.name}</span>
+                              {item.name}
                             </Link>
                           );
                         })}
                       </div>
 
                       {/* Other Links */}
-                      <div className="py-2 border-t border-gray-100">
-                        
+                      <div className="py-2 border-t-[0.2em] border-[#050505] mt-4">
                         <Link
                           href="/contact"
                           onClick={() => setMobileMenuOpen(false)}
-                          className="flex items-center px-3 py-2 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                          className="flex items-center px-3 py-2 text-[#050505] hover:text-white hover:bg-[#6b7280] border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all duration-200 font-bold"
                         >
                           Contact Us
                         </Link>
@@ -392,14 +404,14 @@ export default function Header() {
 
                       {/* User Actions */}
                       {authenticated && (
-                        <div className="py-2 border-t border-gray-100">
-                          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                        <div className="py-2 border-t-[0.2em] border-[#050505] mt-4">
+                          <h3 className="text-xs font-extrabold text-[#050505] uppercase tracking-[0.1em] mb-3 px-2">
                             Account
                           </h3>
                           <Link
                             href="/app/me"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                            className="flex items-center px-3 py-2 mb-2 text-[#050505] hover:text-white hover:bg-[#a855f7] border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all duration-200 font-bold"
                           >
                             <User className="w-5 h-5 mr-3" />
                             Profile
@@ -408,7 +420,7 @@ export default function Header() {
                           <Link
                             href="/app/tasks"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                            className="flex items-center px-3 py-2 mb-2 text-[#050505] hover:text-white hover:bg-[#2563eb] border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all duration-200 font-bold"
                           >
                             <ListChecks className="w-5 h-5 mr-3" />
                             Tasks
@@ -419,10 +431,10 @@ export default function Header() {
                               openWalletModal();
                               setMobileMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-gray-700 hover:text-black hover:bg-gray-50 rounded-lg"
+                            className="flex items-center w-full px-3 py-2 mb-2 text-[#050505] hover:text-white hover:bg-[#2563eb] border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all duration-200 font-bold"
                           >
                             <Wallet className="w-5 h-5 mr-3" />
-                            Wallet
+                            <span>{address ? abbreviateAddress(address) : 'Wallet'}</span>
                           </button>
                           
                           <button
@@ -430,7 +442,7 @@ export default function Header() {
                               logout();
                               setMobileMenuOpen(false);
                             }}
-                            className="flex items-center w-full px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                            className="flex items-center w-full px-3 py-2 text-white hover:text-white hover:bg-[#ef4444] bg-[#ef4444] border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all duration-200 font-bold"
                           >
                             <Settings className="w-5 h-5 mr-3" />
                             Logout
@@ -441,18 +453,23 @@ export default function Header() {
                       {/* Connect Wallet (Mobile) */}
                       {!authenticated && !hideConnectBtn && (
                         <div className="pt-4 border-t border-gray-100">
-                          <Button
+                          <ButtonCool
                             onClick={() => {
                               console.log('[Header] Mobile Connect Wallet button clicked');
                               handleLogin();
                               setMobileMenuOpen(false);
                             }}
                             disabled={!ready}
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 rounded-xl text-xs"
+                            text="Connect Wallet"
+                            bgColor="#2563eb"
+                            hoverBgColor="#1d4ed8"
+                            borderColor="#050505"
+                            textColor="#ffffff"
+                            size="sm"
+                            className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <Wallet className="w-4 h-4 mr-2" />
-                            Connect Wallet
-                          </Button>
+                            <Wallet className="w-4 h-4" />
+                          </ButtonCool>
                         </div>
                       )}
                     </div>

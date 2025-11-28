@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { 
   MobileDialog as Dialog,
   MobileDialogContent as DialogContent,
@@ -367,32 +367,33 @@ export default function FundMilestoneModal({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={onClose} 
-              className="h-11 w-full sm:w-auto" 
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t-[0.35em] border-[#050505]">
+            <ButtonCool
+              onClick={onClose}
+              text="Cancel"
+              bgColor="#ffffff"
+              hoverBgColor="#f3f4f6"
+              textColor="#050505"
+              borderColor="#050505"
+              size="md"
               disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleConfirm} 
-              disabled={!canConfirm || isPending} 
-              className="h-11 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+            />
+            <ButtonCool
+              onClick={handleConfirm}
+              text={isPending ? "Processing..." : "Fund Milestone"}
+              bgColor="#2563eb"
+              hoverBgColor="#1d4ed8"
+              textColor="#ffffff"
+              borderColor="#050505"
+              size="md"
+              disabled={!canConfirm || isPending}
             >
               {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <Wallet className="h-4 w-4 mr-2" />
-                  Fund Milestone
-                </>
+                <Wallet className="h-4 w-4" />
               )}
-            </Button>
+            </ButtonCool>
           </div>
         </div>
       </DialogContent>

@@ -8,28 +8,91 @@ import { getCode } from 'country-list';
 // Apply theme
 am4core.useTheme(am4themes_animated);
 
-// Fallback dummy countries
-const FALLBACK_COUNTRIES = {
-  africa: [
-    'Nigeria', 'South Africa', 'Kenya', 'Ghana', 'Ethiopia',
-    'Tanzania', 'Uganda', 'Morocco', 'Algeria', 'Egypt'
-  ],
-  europe: [
-    'United Kingdom', 'Germany', 'France', 'Italy', 'Spain',
-    'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden',
-    'Norway', 'Denmark', 'Finland', 'Poland', 'Portugal',
-    'Greece', 'Ireland', 'Czech Republic', 'Hungary', 'Romania'
-  ],
-  asia: [
-    'China', 'Japan', 'India'
-  ]
+// Comprehensive country list by continent with colors
+const CONTINENT_COUNTRIES = {
+  africa: {
+    countries: [
+      'Nigeria', 'South Africa', 'Kenya', 'Ghana', 'Ethiopia', 'Tanzania', 'Uganda',
+      'Morocco', 'Algeria', 'Egypt', 'Tunisia', 'Senegal', 'Cameroon', 'Ivory Coast',
+      'Madagascar', 'Mozambique', 'Angola', 'Sudan', 'Mali', 'Burkina Faso', 'Niger',
+      'Malawi', 'Zambia', 'Zimbabwe', 'Rwanda', 'Benin', 'Burundi', 'Guinea',
+      'Sierra Leone', 'Togo', 'Libya', 'Mauritania', 'Eritrea', 'Gambia', 'Botswana',
+      'Namibia', 'Gabon', 'Lesotho', 'Guinea-Bissau', 'Equatorial Guinea', 'Mauritius',
+      'Eswatini', 'Djibouti', 'Comoros', 'Cape Verde', 'Sao Tome and Principe', 'Seychelles'
+    ],
+    color: '#10b981' // Green
+  },
+  europe: {
+    countries: [
+      'United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Belgium',
+      'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland',
+      'Portugal', 'Greece', 'Ireland', 'Czech Republic', 'Hungary', 'Romania', 'Bulgaria',
+      'Croatia', 'Slovakia', 'Slovenia', 'Lithuania', 'Latvia', 'Estonia', 'Luxembourg',
+      'Malta', 'Cyprus', 'Iceland', 'Ukraine', 'Belarus', 'Serbia', 'Bosnia and Herzegovina',
+      'Albania', 'North Macedonia', 'Moldova', 'Montenegro', 'Kosovo'
+    ],
+    color: '#3b82f6' // Blue
+  },
+  asia: {
+    countries: [
+      'China', 'Japan', 'India', 'Indonesia', 'Pakistan', 'Bangladesh', 'Philippines',
+      'Vietnam', 'Thailand', 'Myanmar', 'South Korea', 'Malaysia', 'Afghanistan', 'Nepal',
+      'Sri Lanka', 'Kazakhstan', 'Uzbekistan', 'Iraq', 'Saudi Arabia', 'Yemen', 'North Korea',
+      'Taiwan', 'Syria', 'Cambodia', 'Laos', 'Mongolia', 'Armenia', 'Georgia', 'Azerbaijan',
+      'Kyrgyzstan', 'Tajikistan', 'Turkmenistan', 'Jordan', 'Lebanon', 'Kuwait', 'Oman',
+      'United Arab Emirates', 'Qatar', 'Bahrain', 'Israel', 'Palestine', 'Singapore', 'Brunei',
+      'Timor-Leste', 'Bhutan', 'Maldives'
+    ],
+    color: '#f59e0b' // Orange/Amber
+  },
+  americas: {
+    countries: [
+      'United States', 'Canada', 'Mexico', 'Brazil', 'Argentina', 'Chile', 'Colombia',
+      'Peru', 'Venezuela', 'Ecuador', 'Guatemala', 'Cuba', 'Haiti', 'Dominican Republic',
+      'Honduras', 'El Salvador', 'Nicaragua', 'Costa Rica', 'Panama', 'Jamaica', 'Trinidad and Tobago',
+      'Belize', 'Bahamas', 'Barbados', 'Guyana', 'Suriname', 'Uruguay', 'Paraguay',
+      'Bolivia', 'Grenada', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Antigua and Barbuda',
+      'Dominica', 'Saint Kitts and Nevis'
+    ],
+    color: '#ef4444' // Red
+  },
+  oceania: {
+    countries: [
+      'Australia', 'New Zealand', 'Papua New Guinea', 'Fiji', 'Solomon Islands', 'Vanuatu',
+      'New Caledonia', 'French Polynesia', 'Samoa', 'Guam', 'Micronesia', 'Kiribati',
+      'Marshall Islands', 'Palau', 'Tonga', 'Tuvalu', 'Nauru'
+    ],
+    color: '#8b5cf6' // Purple
+  }
 };
 
-const DUMMY_COUNTRIES = [
-  ...FALLBACK_COUNTRIES.africa,
-  ...FALLBACK_COUNTRIES.europe,
-  ...FALLBACK_COUNTRIES.asia
-];
+// Flatten all countries
+const DUMMY_COUNTRIES = Object.values(CONTINENT_COUNTRIES).flatMap(continent => continent.countries);
+
+// Helper to get continent color for a country
+const getCountryColor = (countryName: string): string => {
+  for (const [continent, data] of Object.entries(CONTINENT_COUNTRIES)) {
+    if (data.countries.includes(countryName)) {
+      return data.color;
+    }
+  }
+  return '#e5e7eb'; // Default gray for countries not in our list
+};
+
+// Helper to darken a hex color
+const darkenColor = (hex: string, amount: number): string => {
+  // Remove # if present
+  const color = hex.replace('#', '');
+  
+  // Convert to RGB
+  const num = parseInt(color, 16);
+  const r = Math.max(0, Math.min(255, (num >> 16) - amount));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) - amount));
+  const b = Math.max(0, Math.min(255, (num & 0x0000FF) - amount));
+  
+  // Convert back to hex
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+};
 
 interface CoverageResponse {
   countries: string[];
@@ -52,25 +115,45 @@ const GlobeCoverage = () => {
         setIsLoading(true);
         setError(null);
         
-        // Try to fetch from the coverage API
-        const response = await fetch('https://selfauth.vercel.app/api/coverage');
+        // Try to fetch from the coverage API with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch coverage data');
-        }
-        
-        const data: CoverageResponse = await response.json();
-        
-        if (data.countries && data.countries.length > 0) {
-          setCountries(data.countries);
-        } else {
-          // If no countries, use dummy data
+        try {
+          const response = await fetch('https://selfauth.vercel.app/api/coverage', {
+            signal: controller.signal,
+            headers: {
+              'Accept': 'application/json',
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            // Silently fall back to dummy data if API fails
+            setCountries(DUMMY_COUNTRIES);
+            return;
+          }
+          
+          const data: CoverageResponse = await response.json();
+          
+          if (data.countries && data.countries.length > 0) {
+            setCountries(data.countries);
+          } else {
+            // If no countries, use dummy data
+            setCountries(DUMMY_COUNTRIES);
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          // Silently fall back to dummy data on network errors
+          if (fetchError.name !== 'AbortError') {
+            // Only log non-timeout errors
+            console.warn('Coverage API unavailable, using fallback data');
+          }
           setCountries(DUMMY_COUNTRIES);
         }
       } catch (err) {
-        console.error('Error fetching coverage:', err);
-        setError('Failed to load coverage data');
-        // Use dummy countries as fallback
+        // Final fallback - use dummy countries
         setCountries(DUMMY_COUNTRIES);
       } finally {
         setIsLoading(false);
@@ -109,24 +192,42 @@ const GlobeCoverage = () => {
     // Configure series
     const polygonTemplate = polygonSeries.mapPolygons.template;
     polygonTemplate.tooltipText = '{name}';
-    polygonTemplate.fill = am4core.color('#3b82f6');
-    polygonTemplate.stroke = am4core.color('#1e40af');
     polygonTemplate.strokeWidth = 0.5;
     polygonTemplate.cursorOverStyle = am4core.MouseCursorStyle.pointer;
 
-    // Create hover state
+    // Create hover state - brighten on hover
     const hs = polygonTemplate.states.create('hover');
-    hs.properties.fill = am4core.color('#2563eb');
+    hs.properties.scale = 1.05;
 
-    // Color countries based on selection
+    // Color countries based on continent with multi-color scheme
     if (countryCodes.length > 0) {
+      // Create a map of country codes to country names for color lookup
+      const codeToNameMap: { [key: string]: string } = {};
+      countries.forEach(country => {
+        const code = getCode(country);
+        if (code) {
+          codeToNameMap[code.toUpperCase()] = country;
+        }
+      });
+
       polygonTemplate.adapter.add('fill', (_fill, target) => {
         const dataItem = target.dataItem;
         if (dataItem && dataItem.dataContext) {
           const context = dataItem.dataContext as any;
           const countryId = context.id || context.NAME;
-          if (countryId && typeof countryId === 'string' && countryCodes.includes(countryId.toUpperCase())) {
-            return am4core.color('#3b82f6');
+          if (countryId && typeof countryId === 'string') {
+            const upperId = countryId.toUpperCase();
+            if (countryCodes.includes(upperId)) {
+              // Get country name from code
+              const countryName = codeToNameMap[upperId];
+              if (countryName) {
+                // Get continent color
+                const color = getCountryColor(countryName);
+                return am4core.color(color);
+              }
+              // Fallback to blue if country name not found
+              return am4core.color('#3b82f6');
+            }
           }
         }
         return am4core.color('#e5e7eb');
@@ -137,8 +238,18 @@ const GlobeCoverage = () => {
         if (dataItem && dataItem.dataContext) {
           const context = dataItem.dataContext as any;
           const countryId = context.id || context.NAME;
-          if (countryId && typeof countryId === 'string' && countryCodes.includes(countryId.toUpperCase())) {
-            return am4core.color('#1e40af');
+          if (countryId && typeof countryId === 'string') {
+            const upperId = countryId.toUpperCase();
+            if (countryCodes.includes(upperId)) {
+              const countryName = codeToNameMap[upperId];
+              if (countryName) {
+                const color = getCountryColor(countryName);
+                // Darken the color for stroke (darker border)
+                const darkenedColor = darkenColor(color, 30);
+                return am4core.color(darkenedColor);
+              }
+              return am4core.color('#1e40af');
+            }
           }
         }
         return am4core.color('#9ca3af');
@@ -201,8 +312,24 @@ const GlobeCoverage = () => {
         style={{ backgroundColor: 'transparent' }}
       />
       {!isLoading && (
-        <div className="mt-2 text-center text-sm text-gray-600">
-          {countries.length} countries covered
+        <div className="mt-4 space-y-2">
+          <div className="text-center text-sm font-semibold text-gray-800 mb-3">
+            {countries.length} countries covered across {Object.keys(CONTINENT_COUNTRIES).length} continents
+          </div>
+          {/* Legend */}
+          <div className="flex flex-wrap justify-center gap-3 text-xs">
+            {Object.entries(CONTINENT_COUNTRIES).map(([continent, data]) => (
+              <div key={continent} className="flex items-center gap-1.5">
+                <div 
+                  className="w-3 h-3 rounded-sm border border-gray-300"
+                  style={{ backgroundColor: data.color }}
+                />
+                <span className="text-gray-700 capitalize font-medium">
+                  {continent} ({data.countries.length})
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
