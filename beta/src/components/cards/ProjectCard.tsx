@@ -139,7 +139,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           )}
 
           {/* Action Buttons in Bottom Right Corner */}
-          <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 flex gap-1 sm:gap-2">
+          <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 flex gap-2 sm:gap-3">
             {/* Tip Button */}
             {projectId && projectOwner && contractAddress && (
               <button 
@@ -147,7 +147,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                   e.stopPropagation();
                   setIsTipModalOpen(true);
                 }}
-                className="w-6 h-6 sm:w-8 sm:h-8 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
+                className="w-7 h-7 sm:w-9 sm:h-9 bg-green-600 hover:bg-green-700 text-white rounded-[0.4rem] border-[0.15em] border-black shadow-[0.18em_0.18em_0_#000000] flex items-center justify-center transition-all duration-200 hover:-translate-x-[0.05rem] hover:-translate-y-[0.05rem] active:translate-x-[0.05rem] active:translate-y-[0.05rem] active:shadow-[0.08em_0.08em_0_#000000]"
                 title="Tip this project"
               >
                 <Gift className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -160,7 +160,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 e.stopPropagation();
                 projectId && navigate(getProjectRoute(Number(projectId)));
               }}
-              className="w-6 h-6 sm:w-8 sm:h-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center transition-colors duration-200"
+              className="w-7 h-7 sm:w-9 sm:h-9 bg-primary hover:bg-primary/90 text-primary-foreground rounded-[0.4rem] border-[0.15em] border-black shadow-[0.18em_0.18em_0_#000000] flex items-center justify-center transition-all duration-200 hover:-translate-x-[0.05rem] hover:-translate-y-[0.05rem] active:translate-x-[0.05rem] active:translate-y-[0.05rem] active:shadow-[0.08em_0.08em_0_#000000]"
               title="View project details"
             >
               <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />

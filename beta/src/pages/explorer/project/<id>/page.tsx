@@ -22,7 +22,6 @@ import {
   MessageCircle,
  
   Send,
-  Terminal,
   X,
   Code,
   Video,
@@ -38,7 +37,6 @@ import {
   Activity,
  
   BarChart3,
-  Gauge,
   Clock,
   Rocket,
   Search,
@@ -53,6 +51,7 @@ import { Github, Award } from 'lucide-react';
 import { useProjectDetails, useProjectCampaigns, useUpdateProjectMetadata } from '@/hooks/useProjectMethods';
 import { getMainContractAddress } from '@/utils/contractConfig';
 import TipModal from '@/components/TipModal';
+import AdvancedTechnicalStatsRetro from '@/components/project/AdvancedTechnicalStatsRetro';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import ProjectCampaignsModal from '@/components/modals/ProjectCampaignsModal';
@@ -396,7 +395,8 @@ export default function ProjectView() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
-  const [showAdvancedStats, setShowAdvancedStats] = useState(false);
+  const [showAdvancedStats, setShowAdvancedStats] = useState(true);
+  
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
   const [showCreateMilestoneModal, setShowCreateMilestoneModal] = useState(false);
   
@@ -1419,131 +1419,10 @@ export default function ProjectView() {
                     )}.
                   </p>
 
-                  {/* Advanced Stats Section */}
+                  {/* Advanced Stats Section - Retro Card Component */}
                   {showAdvancedStats && (
-                    <div className="mt-4 sm:mt-8 p-3 sm:p-6 sm:bg-gray-50/50 sm:rounded-2xl sm:border sm:border-gray-200/50">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                        <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
-                          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                        </div>
-                        Advanced Technical Stats
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                        {/* Left Side - Tech Stack */}
-                        {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
-                          <div className="space-y-2 sm:space-y-3">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                              <Code className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-                              Technology Stack
-                            </h4>
-                            <div className="space-y-1 sm:space-y-2">
-                              {project.metadata.techStack.map((tech, idx) => (
-                                <div key={idx} className="flex items-center gap-2 p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                                  <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                                  <span className="text-xs sm:text-sm font-medium text-gray-700 flex-1">{tech}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Right Side - Combined Contracts */}
-                        {((project.metadata?.smartContracts && project.metadata.smartContracts.length > 0) || 
-                          (project.contracts && project.contracts.length > 0)) && (
-                          <div className="space-y-2 sm:space-y-3">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                              <Terminal className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                              Smart Contracts
-                            </h4>
-                            <div className="space-y-1 sm:space-y-2">
-                              {/* Combine and deduplicate contracts */}
-                              {(() => {
-                                const allContracts = [
-                                  ...(project.metadata?.smartContracts || []),
-                                  ...(project.contracts || [])
-                                ];
-                                const uniqueContracts = [...new Set(allContracts)];
-                                
-                                return uniqueContracts.map((contract, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                                    <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                                    <span className="text-xs sm:text-sm font-mono text-gray-700 break-all flex-1">{contract}</span>
-                                    <button
-                                      onClick={() => navigator.clipboard.writeText(contract)}
-                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
-                                      title="Copy address"
-                                    >
-                                      <Copy className="h-3 w-3 text-gray-500" />
-                                    </button>
-                                  </div>
-                                ));
-                              })()}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Audit Reports */}
-                        {project.metadata?.auditReports && project.metadata.auditReports.length > 0 && (
-                          <div className="space-y-2 sm:space-y-3">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
-                              Security Audit Reports
-                            </h4>
-                            <div className="space-y-1 sm:space-y-2">
-                              {project.metadata.auditReports.map((report, idx) => (
-                                <div key={idx} className="p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                                    <span className="text-xs sm:text-sm font-mono text-gray-700 break-all flex-1">{report}</span>
-                                    <button
-                                      onClick={() => navigator.clipboard.writeText(report)}
-                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
-                                      title="Copy report URL"
-                                    >
-                                      <Copy className="h-3 w-3 text-gray-500" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Technical Metrics */}
-                        <div className="space-y-2 sm:space-y-3">
-                          <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                            <Gauge className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600" />
-                            Technical Metrics
-                          </h4>
-                          <div className="space-y-1 sm:space-y-2">
-                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                              <span className="text-xs sm:text-sm text-gray-600">Total Contracts</span>
-                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
-                                {(() => {
-                                  const allContracts = [
-                                    ...(project.metadata?.smartContracts || []),
-                                    ...(project.contracts || [])
-                                  ];
-                                  return [...new Set(allContracts)].length;
-                                })()}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                              <span className="text-xs sm:text-sm text-gray-600">Security Audits</span>
-                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
-                                {project.metadata?.auditReports?.length || 0}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                              <span className="text-xs sm:text-sm text-gray-600">Compliance Items</span>
-                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
-                                {project.metadata?.regulatoryCompliance?.length || 0}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    <div className="mt-4 sm:mt-8">
+                      <AdvancedTechnicalStatsRetro project={project} />
                     </div>
                   )}
                 </div>
