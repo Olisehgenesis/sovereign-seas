@@ -410,160 +410,179 @@ export default function ProjectView() {
       {/* New Hero Section */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 items-start">
-          {/* Left Part */}
-          <div className="space-y-3 sm:space-y-6 mt-[2%] sm:mt-[15%] relative">
-            {/* Project Logo - Mobile Only */}
-            <div className="absolute top-0 right-0 sm:hidden">
-              <div className="border border-gray-300 rounded-full p-1">
-                <ProjectLogo 
-                  logo={project.metadata?.logo} 
-                  name={project.name} 
-                  verified={true}
-                  size="sm"
-                />
-              </div>
-            </div>
-
-            {/* Quick Links Row: GitHub and KarmaGAP */}
-            <div className="mt-2 sm:mt-4 flex items-center gap-2 sm:gap-3">
-              {normalizedGithub && (
-                <a
-                  href={normalizedGithub}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs sm:text-sm transition-colors"
-                  title="View GitHub"
-                >
-                  <Github className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">GitHub</span>
-                </a>
-              )}
-              {project.metadata?.karmaGapProfile && (
-                <a
-                  href={project.metadata.karmaGapProfile}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs sm:text-sm transition-colors"
-                  title="View Karma GAP"
-                >
-                  <Award className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Karma GAP</span>
-                </a>
-              )}
-            </div>
-
-            {/* Project Name and Creator */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mb-2">
-              <h1 className="text-sm sm:text-3xl font-bold text-gray-900 capitalize">
-                {project.name}
-              </h1>
-              <span className="text-sm sm:text-2xl text-gray-600 font-bold">
-                by {project.metadata?.teamMembers?.[0]?.name || 'Anonymous'}
-              </span>
-            </div>
-
-            {/* Project Tagline */}
-            <p className="text-xs sm:text-xl italic text-gray-800">
-              {project.metadata?.tagline || project.description}
-            </p>
-
-            {/* Mobile Stats - Hidden on Desktop */}
-            <div className="sm:hidden space-y-1">
-              {/* CELO Amount */}
-              <div className="flex justify-end">
-                <div className="text-xs text-blue-600 font-medium flex items-center gap-1">
-                  {projectCampaigns ? 
-                    projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
-                      .reduce((sum, c) => 
-                        sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
-                      ).toFixed(2) 
-                    : '0.00'} <img src="/images/celo.png" alt="CELO" width={12} height={12} className="inline-block" /> received
-                </div>
-              </div>
-
-              {/* Stats in one line */}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">
-                  Tips: <span className="font-bold text-black">
-                    {projectCampaigns ? 
-                      projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
-                        .reduce((sum, c) => 
-                          sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
-                        ).toFixed(1) 
-                      : '0.0'}
-                  </span>
-                </span>
-                <span className="text-gray-600">
-                  Campaigns: <span className="font-bold text-black">
-                    {project.campaignIds?.length || 0}
-                  </span>
-                </span>
-                <span className="text-gray-600">
-                  Votes: <span className="font-bold text-black">
-                    {projectCampaigns ? 
-                      projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
-                        .reduce((sum, c) => 
-                          sum + parseFloat(formatEther(c.participation?.voteCount || 0n)), 0
-                        ).toFixed(0) 
-                      : '0'}
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            {/* Project Description - Desktop Only */}
-            <div className="hidden sm:block">
-              <TruncatedText
-                text={project.description}
-                maxLength={200}
-                className="text-xs sm:text-lg text-gray-600 leading-relaxed"
-                showIcon={true}
-                expandText="Show more"
-                collapseText="Show less"
+          {/* Left Part - Retro hero card */}
+          <div className="mt-[2%] sm:mt-[15%]">
+            <div className="group relative w-full">
+              {/* Pattern Overlay */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+                  backgroundSize: '0.5em 0.5em'
+                }}
               />
-            </div>
+              {/* Accent Corner */}
+              <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+              <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-row gap-2 sm:gap-4">
-              <button 
-                onClick={() => setIsTipModalOpen(true)}
-                className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-2 sm:px-6 py-1.5 sm:py-3 border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none uppercase tracking-[0.05em]"
+              <div
+                className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-3 sm:p-6 space-y-3 sm:space-y-4 z-[2]"
+                style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
               >
-                <Coins className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Tip Project</span>
-                <span className="sm:hidden">Tip</span>
-              </button>
-              {(project.metadata?.website || project.metadata?.demoUrl) && (
-                <a
-                  href={project.metadata?.website || project.metadata?.demoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white hover:bg-gray-50 text-[#050505] px-2 sm:px-6 py-1.5 sm:py-3 border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none uppercase tracking-[0.05em]"
-                >
-                  {project.metadata?.website ? (
-                    <>
-                      <Globe className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Visit Project</span>
-                      <span className="sm:hidden">Visit</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Demo Project</span>
-                      <span className="sm:hidden">Demo</span>
-                    </>
-                  )}
-                </a>
-              )}
-            </div>
+                {/* Project Logo - Mobile Only */}
+                <div className="absolute top-3 right-3 sm:hidden">
+                  <div className="border border-gray-300 rounded-full p-1 bg-white">
+                    <ProjectLogo 
+                      logo={project.metadata?.logo} 
+                      name={project.name} 
+                      verified={true}
+                      size="sm"
+                    />
+                  </div>
+                </div>
 
-            {/* Created Date */}
-            <div className="mt-1 sm:mt-4">
-              <div className="flex items-center gap-1 sm:gap-2 text-gray-600">
-                <Calendar className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm font-medium">
-                  Created {formatDate(project.createdAt)}
-                </span>
+                {/* Quick Links Row: GitHub and KarmaGAP */}
+                <div className="mt-2 sm:mt-0 flex items-center gap-2 sm:gap-3">
+                  {normalizedGithub && (
+                    <a
+                      href={normalizedGithub}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs sm:text-sm transition-colors border-[0.15em] border-[#050505] shadow-[0.15em_0.15em_0_#000000]"
+                      title="View GitHub"
+                    >
+                      <Github className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">GitHub</span>
+                    </a>
+                  )}
+                  {project.metadata?.karmaGapProfile && (
+                    <a
+                      href={project.metadata.karmaGapProfile}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs sm:text-sm transition-colors border-[0.15em] border-[#050505] shadow-[0.15em_0.15em_0_#000000]"
+                      title="View Karma GAP"
+                    >
+                      <Award className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Karma GAP</span>
+                    </a>
+                  )}
+                </div>
+
+                {/* Project Name and Creator */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                  <h1 className="text-sm sm:text-3xl font-extrabold text-[#050505] capitalize">
+                    {project.name}
+                  </h1>
+                  <span className="text-xs sm:text-lg text-gray-700 font-semibold">
+                    by {project.metadata?.teamMembers?.[0]?.name || 'Anonymous'}
+                  </span>
+                </div>
+
+                {/* Project Tagline */}
+                <p className="text-xs sm:text-xl italic text-gray-800">
+                  {project.metadata?.tagline || project.description}
+                </p>
+
+                {/* Mobile Stats - Hidden on Desktop */}
+                <div className="sm:hidden space-y-1">
+                  {/* CELO Amount */}
+                  <div className="flex justify-end">
+                    <div className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                      {projectCampaigns ? 
+                        projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
+                          .reduce((sum, c) => 
+                            sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
+                          ).toFixed(2) 
+                        : '0.00'} <img src="/images/celo.png" alt="CELO" width={12} height={12} className="inline-block" /> received
+                    </div>
+                  </div>
+
+                  {/* Stats in one line */}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      Tips: <span className="font-bold text-black">
+                        {projectCampaigns ? 
+                          projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
+                            .reduce((sum, c) => 
+                              sum + parseFloat(formatEther(c.participation?.fundsReceived || 0n)), 0
+                            ).toFixed(1) 
+                          : '0.0'}
+                      </span>
+                    </span>
+                    <span className="text-gray-600">
+                      Campaigns: <span className="font-bold text-black">
+                        {project.campaignIds?.length || 0}
+                      </span>
+                    </span>
+                    <span className="text-gray-600">
+                      Votes: <span className="font-bold text-black">
+                        {projectCampaigns ? 
+                          projectCampaigns.filter((c): c is NonNullable<typeof c> => c !== null)
+                            .reduce((sum, c) => 
+                              sum + parseFloat(formatEther(c.participation?.voteCount || 0n)), 0
+                            ).toFixed(0) 
+                          : '0'}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Project Description - Desktop Only */}
+                <div className="hidden sm:block">
+                  <TruncatedText
+                    text={project.description}
+                    maxLength={200}
+                    className="text-xs sm:text-lg text-gray-600 leading-relaxed"
+                    showIcon={true}
+                    expandText="Show more"
+                    collapseText="Show less"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-row gap-2 sm:gap-4">
+                  <button 
+                    onClick={() => setIsTipModalOpen(true)}
+                    className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-2 sm:px-6 py-1.5 sm:py-3 border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none uppercase tracking-[0.05em]"
+                  >
+                    <Coins className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Tip Project</span>
+                    <span className="sm:hidden">Tip</span>
+                  </button>
+                  {(project.metadata?.website || project.metadata?.demoUrl) && (
+                    <a
+                      href={project.metadata?.website || project.metadata?.demoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white hover:bg-gray-50 text-[#050505] px-2 sm:px-6 py-1.5 sm:py-3 border-[0.2em] border-[#050505] rounded-[0.4em] font-extrabold shadow-[0.3em_0.3em_0_#000000] hover:shadow-[0.4em_0.4em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-xs sm:text-sm flex items-center justify-center flex-1 sm:flex-none uppercase tracking-[0.05em]"
+                    >
+                      {project.metadata?.website ? (
+                        <>
+                          <Globe className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Visit Project</span>
+                          <span className="sm:hidden">Visit</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">Demo Project</span>
+                          <span className="sm:hidden">Demo</span>
+                        </>
+                      )}
+                    </a>
+                  )}
+                </div>
+
+                {/* Created Date */}
+                <div className="mt-1 sm:mt-2">
+                  <div className="flex items-center gap-1 sm:gap-2 text-gray-600">
+                    <Calendar className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                    <span className="text-xs sm:text-sm font-medium">
+                      Created {formatDate(project.createdAt)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -683,10 +702,6 @@ export default function ProjectView() {
 
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Project Header */}
-        
-
-     
- 
         {/* Navigation Tabs - Hidden on Mobile */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabId)} className="mb-2 sm:mb-8">
           <TabsList className="hidden sm:flex bg-transparent p-0 w-full justify-start gap-3 mb-6">
@@ -901,79 +916,168 @@ export default function ProjectView() {
  
             {/* Technical Tab */}
             <TabsContent value="technical" className="space-y-4 sm:space-y-8">
-              {/* Mobile: No Card, Desktop: Card */}
-              <div className="sm:bg-white/30 sm:backdrop-blur-md sm:rounded-3xl sm:shadow-xl sm:border sm:border-white/20 sm:p-8 sm:p-12 relative">
-                {/* Advanced Stats Button */}
-                <div className="absolute top-2 right-2 sm:top-6 sm:right-6">
-                  <button
-                    onClick={() => setShowAdvancedStats(!showAdvancedStats)}
-                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 text-xs sm:text-sm font-medium"
-                  >
-                    <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">{showAdvancedStats ? 'Hide Advanced' : 'View Advanced Stats'}</span>
-                    <span className="sm:hidden">{showAdvancedStats ? 'Hide' : 'Advanced'}</span>
-                  </button>
+              <div className="group relative w-full">
+                {/* Retro pattern overlay */}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-25 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(to right, rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px)',
+                    backgroundSize: '0.6em 0.6em',
+                  }}
+                />
+
+                {/* Accent corner */}
+                <div className="absolute -top-[1.2em] -right-[1.2em] w-[4em] h-[4em] bg-[#111827] rotate-45 z-[2]" />
+                <div className="absolute top-[0.5em] right-[0.8em] text-white text-[0.9em] font-extrabold tracking-[0.12em] uppercase z-[3]">
+                  Tech
                 </div>
 
-                <div className="prose prose-sm sm:prose-lg prose-gray max-w-none">
-                  {/* Project Type Analysis */}
-                  {project.metadata?.projectType && (
-                    <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                      This is a <strong>{project.metadata.projectType}</strong> project
-                      {project.metadata?.category && <> in the <strong>{project.metadata.category}</strong> category</>}
-                      {project.metadata?.maturityLevel && <> with <strong>{project.metadata.maturityLevel}</strong> maturity level</>}.
-                    </p>
-                  )}
-                  
-                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                    We build on the <strong>{project.metadata?.blockchain || 'blockchain'}</strong> and are currently in the <strong>{project.metadata?.developmentStage || 'development'}</strong> stage. 
-                    {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
-                      <> We built with <strong>{project.metadata.techStack.join(', ')}</strong> technologies</>
+                <div className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.9em] shadow-[0.7em_0.7em_0_#000000] px-[1.4em] pt-[1.4em] pb-[1.7em] sm:px-[2em] sm:pt-[1.8em] sm:pb-[2em] overflow-hidden z-[4]">
+                  {/* Header strip */}
+                  <div className="mb-[1.3em] pb-[0.9em] border-b-[0.2em] border-[#050505] flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-[1.05em] sm:text-[1.25em] font-extrabold uppercase tracking-[0.1em] text-[#050505]">
+                        Technical Overview
+                      </h2>
+                      <p className="text-[0.75em] sm:text-[0.85em] text-[#4b5563]">
+                        Architecture, contracts, audits &amp; compliance
+                      </p>
+                    </div>
+
+                    {/* Advanced Stats Button */}
+                    <button
+                      onClick={() => setShowAdvancedStats(!showAdvancedStats)}
+                      className="inline-flex items-center gap-2 px-[0.9em] py-[0.55em] border-[0.18em] border-[#050505] rounded-[999px] bg-[#111827] text-white text-[0.7em] sm:text-[0.8em] font-semibold tracking-[0.08em] uppercase shadow-[0.35em_0.35em_0_#000000] hover:translate-x-[0.08em] hover:translate-y-[0.08em] hover:shadow-[0.25em_0.25em_0_#000000] transition-transform duration-150"
+                    >
+                      <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">
+                        {showAdvancedStats ? 'Hide Advanced' : 'View Advanced Stats'}
+                      </span>
+                      <span className="sm:hidden">{showAdvancedStats ? 'Hide' : 'Advanced'}</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 sm:space-y-4 text-[0.82em] sm:text-[0.96em] leading-relaxed text-[#111827]">
+                    {/* Project Type Analysis */}
+                    {project.metadata?.projectType && (
+                      <p>
+                        This is a <strong>{project.metadata.projectType}</strong> project
+                        {project.metadata?.category && (
+                          <>
+                            {' '}
+                            in the <strong>{project.metadata.category}</strong> category
+                          </>
+                        )}
+                        {project.metadata?.maturityLevel && (
+                          <>
+                            {' '}
+                            with <strong>{project.metadata.maturityLevel}</strong> maturity level
+                          </>
+                        )}
+                        .
+                      </p>
                     )}
-                    {project.metadata?.openSource !== undefined && (
-                      <> and we are <strong>{project.metadata.openSource ? 'open source' : 'proprietary'}</strong></>
-                    )}.
-                  </p>
-                  
-                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                    The project operates under a <strong>{project.metadata?.license || 'license'}</strong> and we have <strong>{project.metadata?.smartContracts?.length || project.contracts?.length || 0} smart contract{(project.metadata?.smartContracts?.length || project.contracts?.length || 0) === 1 ? '' : 's'}</strong>
-                    {project.metadata?.auditReports && project.metadata.auditReports.length > 0 ? (
-                      <> and have done <strong>{project.metadata.auditReports.length} security audit{project.metadata.auditReports.length === 1 ? '' : 's'}</strong></>
-                    ) : (
-                      <> and have <strong>not done security audits</strong></>
-                    )}.
-                  </p>
-                  
-                  <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                    The project is <strong>{project.metadata?.kycCompliant ? 'KYC compliant' : 'not KYC compliant'}</strong>
-                    {project.metadata?.regulatoryCompliance && project.metadata.regulatoryCompliance.length > 0 && (
-                      <> but it complies with <strong>{project.metadata.regulatoryCompliance.join(', ')}</strong> regulations</>
-                    )}.
-                  </p>
+
+                    <p>
+                      We build on the{' '}
+                      <strong>{project.metadata?.blockchain || 'blockchain'}</strong> and are
+                      currently in the{' '}
+                      <strong>{project.metadata?.developmentStage || 'development'}</strong> stage.
+                      {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
+                        <>
+                          {' '}
+                          We built with{' '}
+                          <strong>{project.metadata.techStack.join(', ')}</strong> technologies
+                        </>
+                      )}
+                      {project.metadata?.openSource !== undefined && (
+                        <>
+                          {' '}
+                          and we are{' '}
+                          <strong>{project.metadata.openSource ? 'open source' : 'proprietary'}</strong>
+                        </>
+                      )}
+                      .
+                    </p>
+
+                    <p>
+                      The project operates under a{' '}
+                      <strong>{project.metadata?.license || 'license'}</strong> and we have{' '}
+                      <strong>
+                        {project.metadata?.smartContracts?.length ||
+                          project.contracts?.length ||
+                          0}{' '}
+                        smart contract
+                        {(project.metadata?.smartContracts?.length ||
+                          project.contracts?.length ||
+                          0) === 1
+                          ? ''
+                          : 's'}
+                      </strong>
+                      {project.metadata?.auditReports && project.metadata.auditReports.length > 0 ? (
+                        <>
+                          {' '}
+                          and have done{' '}
+                          <strong>
+                            {project.metadata.auditReports.length} security audit
+                            {project.metadata.auditReports.length === 1 ? '' : 's'}
+                          </strong>
+                        </>
+                      ) : (
+                        <> and have <strong>not done security audits</strong></>
+                      )}
+                      .
+                    </p>
+
+                    <p>
+                      The project is{' '}
+                      <strong>
+                        {project.metadata?.kycCompliant ? 'KYC compliant' : 'not KYC compliant'}
+                      </strong>
+                      {project.metadata?.regulatoryCompliance &&
+                        project.metadata.regulatoryCompliance.length > 0 && (
+                          <>
+                            {' '}
+                            but it complies with{' '}
+                            <strong>{project.metadata.regulatoryCompliance.join(', ')}</strong>{' '}
+                            regulations
+                          </>
+                        )}
+                      .
+                    </p>
+                  </div>
 
                   {/* Advanced Stats Section */}
                   {showAdvancedStats && (
-                    <div className="mt-4 sm:mt-8 p-3 sm:p-6 sm:bg-gray-50/50 sm:rounded-2xl sm:border sm:border-gray-200/50">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                        <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
-                          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                        </div>
+                    <div className="mt-5 sm:mt-7 p-[1em] sm:p-[1.3em] bg-[#fef9c3] border-[0.25em] border-[#050505] rounded-[0.8em] shadow-[0.45em_0.45em_0_#000000] space-y-5 sm:space-y-6">
+                      <h3 className="text-[0.95em] sm:text-[1.1em] font-extrabold text-[#111827] flex items-center gap-3 uppercase tracking-[0.08em]">
+                        <span className="inline-flex items-center justify-center p-[0.4em] rounded-[0.6em] bg-[#111827] text-white border-[0.18em] border-[#050505] shadow-[0.25em_0.25em_0_#000000]">
+                          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </span>
                         Advanced Technical Stats
                       </h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                         {/* Left Side - Tech Stack */}
                         {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
                           <div className="space-y-2 sm:space-y-3">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                              <Code className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                            <h4 className="font-semibold text-[#111827] flex items-center gap-2 text-[0.8em] sm:text-[0.9em] uppercase tracking-[0.08em]">
+                              <Code className="h-3 w-3 sm:h-4 sm:w-4 text-[#2563eb]" />
                               Technology Stack
                             </h4>
-                            <div className="space-y-1 sm:space-y-2">
+                            <div className="space-y-1.5 sm:space-y-2">
                               {project.metadata.techStack.map((tech, idx) => (
-                                <div key={idx} className="flex items-center gap-2 p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                                  <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                                  <span className="text-xs sm:text-sm font-medium text-gray-700 flex-1">{tech}</span>
+                                <div
+                                  key={idx}
+                                  className="flex items-center gap-2 px-[0.9em] py-[0.55em] bg-white border-[0.18em] border-[#050505] rounded-[0.6em] shadow-[0.3em_0.3em_0_#000000]"
+                                >
+                                  <span className="text-[0.7em] text-[#6b7280] font-mono">
+                                    #{idx + 1}
+                                  </span>
+                                  <span className="text-[0.78em] sm:text-[0.86em] font-semibold text-[#111827] flex-1">
+                                    {tech}
+                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -981,32 +1085,40 @@ export default function ProjectView() {
                         )}
 
                         {/* Right Side - Combined Contracts */}
-                        {((project.metadata?.smartContracts && project.metadata.smartContracts.length > 0) || 
+                        {((project.metadata?.smartContracts &&
+                          project.metadata.smartContracts.length > 0) ||
                           (project.contracts && project.contracts.length > 0)) && (
                           <div className="space-y-2 sm:space-y-3">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                              <Terminal className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                            <h4 className="font-semibold text-[#111827] flex items-center gap-2 text-[0.8em] sm:text-[0.9em] uppercase tracking-[0.08em]">
+                              <Terminal className="h-3 w-3 sm:h-4 sm:w-4 text-[#16a34a]" />
                               Smart Contracts
                             </h4>
-                            <div className="space-y-1 sm:space-y-2">
+                            <div className="space-y-1.5 sm:space-y-2">
                               {/* Combine and deduplicate contracts */}
                               {(() => {
                                 const allContracts = [
                                   ...(project.metadata?.smartContracts || []),
-                                  ...(project.contracts || [])
+                                  ...(project.contracts || []),
                                 ];
                                 const uniqueContracts = [...new Set(allContracts)];
-                                
+
                                 return uniqueContracts.map((contract, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                                    <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                                    <span className="text-xs sm:text-sm font-mono text-gray-700 break-all flex-1">{contract}</span>
+                                  <div
+                                    key={idx}
+                                    className="flex items-center gap-2 px-[0.9em] py-[0.55em] bg-white border-[0.18em] border-[#050505] rounded-[0.6em] shadow-[0.3em_0.3em_0_#000000]"
+                                  >
+                                    <span className="text-[0.7em] text-[#6b7280] font-mono">
+                                      #{idx + 1}
+                                    </span>
+                                    <span className="text-[0.7em] sm:text-[0.8em] font-mono text-[#111827] break-all flex-1">
+                                      {contract}
+                                    </span>
                                     <button
                                       onClick={() => navigator.clipboard.writeText(contract)}
-                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      className="p-1.5 rounded-[0.5em] border-[0.15em] border-[#050505] bg-[#e5e7eb] hover:bg-[#d1d5db] shadow-[0.18em_0.18em_0_#000000] transition-colors"
                                       title="Copy address"
                                     >
-                                      <Copy className="h-3 w-3 text-gray-500" />
+                                      <Copy className="h-3 w-3 text-[#4b5563]" />
                                     </button>
                                   </div>
                                 ));
@@ -1018,22 +1130,29 @@ export default function ProjectView() {
                         {/* Audit Reports */}
                         {project.metadata?.auditReports && project.metadata.auditReports.length > 0 && (
                           <div className="space-y-2 sm:space-y-3">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
+                            <h4 className="font-semibold text-[#111827] flex items-center gap-2 text-[0.8em] sm:text-[0.9em] uppercase tracking-[0.08em]">
+                              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-[#7c3aed]" />
                               Security Audit Reports
                             </h4>
-                            <div className="space-y-1 sm:space-y-2">
+                            <div className="space-y-1.5 sm:space-y-2">
                               {project.metadata.auditReports.map((report, idx) => (
-                                <div key={idx} className="p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
+                                <div
+                                  key={idx}
+                                  className="px-[0.9em] py-[0.55em] bg-white border-[0.18em] border-[#050505] rounded-[0.6em] shadow-[0.3em_0.3em_0_#000000]"
+                                >
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>
-                                    <span className="text-xs sm:text-sm font-mono text-gray-700 break-all flex-1">{report}</span>
+                                    <span className="text-[0.7em] text-[#6b7280] font-mono">
+                                      #{idx + 1}
+                                    </span>
+                                    <span className="text-[0.7em] sm:text-[0.8em] font-mono text-[#111827] break-all flex-1">
+                                      {report}
+                                    </span>
                                     <button
                                       onClick={() => navigator.clipboard.writeText(report)}
-                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      className="p-1.5 rounded-[0.5em] border-[0.15em] border-[#050505] bg-[#e5e7eb] hover:bg-[#d1d5db] shadow-[0.18em_0.18em_0_#000000] transition-colors"
                                       title="Copy report URL"
                                     >
-                                      <Copy className="h-3 w-3 text-gray-500" />
+                                      <Copy className="h-3 w-3 text-[#4b5563]" />
                                     </button>
                                   </div>
                                 </div>
@@ -1044,32 +1163,32 @@ export default function ProjectView() {
 
                         {/* Technical Metrics */}
                         <div className="space-y-2 sm:space-y-3">
-                          <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
-                            <Gauge className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600" />
+                          <h4 className="font-semibold text-[#111827] flex items-center gap-2 text-[0.8em] sm:text-[0.9em] uppercase tracking-[0.08em]">
+                            <Gauge className="h-3 w-3 sm:h-4 sm:w-4 text-[#f59e0b]" />
                             Technical Metrics
                           </h4>
-                          <div className="space-y-1 sm:space-y-2">
-                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                              <span className="text-xs sm:text-sm text-gray-600">Total Contracts</span>
-                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                          <div className="space-y-1.5 sm:space-y-2">
+                            <div className="flex justify-between items-center px-[0.9em] py-[0.55em] bg-white border-[0.18em] border-[#050505] rounded-[0.6em] shadow-[0.3em_0.3em_0_#000000]">
+                              <span className="text-[0.75em] text-[#4b5563]">Total Contracts</span>
+                              <span className="font-extrabold text-[#050505] text-[0.8em]">
                                 {(() => {
                                   const allContracts = [
                                     ...(project.metadata?.smartContracts || []),
-                                    ...(project.contracts || [])
+                                    ...(project.contracts || []),
                                   ];
                                   return [...new Set(allContracts)].length;
                                 })()}
                               </span>
                             </div>
-                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                              <span className="text-xs sm:text-sm text-gray-600">Security Audits</span>
-                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                            <div className="flex justify-between items-center px-[0.9em] py-[0.55em] bg-white border-[0.18em] border-[#050505] rounded-[0.6em] shadow-[0.3em_0.3em_0_#000000]">
+                              <span className="text-[0.75em] text-[#4b5563]">Security Audits</span>
+                              <span className="font-extrabold text-[#050505] text-[0.8em]">
                                 {project.metadata?.auditReports?.length || 0}
                               </span>
                             </div>
-                            <div className="flex justify-between items-center p-2 sm:p-3 sm:bg-white/80 sm:rounded-lg sm:border sm:border-gray-200 border-b border-gray-200 sm:border-b-0">
-                              <span className="text-xs sm:text-sm text-gray-600">Compliance Items</span>
-                              <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                            <div className="flex justify-between items-center px-[0.9em] py-[0.55em] bg-white border-[0.18em] border-[#050505] rounded-[0.6em] shadow-[0.3em_0.3em_0_#000000]">
+                              <span className="text-[0.75em] text-[#4b5563]">Compliance Items</span>
+                              <span className="font-extrabold text-[#050505] text-[0.8em]">
                                 {project.metadata?.regulatoryCompliance?.length || 0}
                               </span>
                             </div>

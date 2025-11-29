@@ -17,8 +17,9 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAllProjects, useAddProjectToCampaign, formatProjectForDisplay } from '@/hooks/useProjectMethods';
@@ -105,24 +106,22 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onAdd, isLoading, is
                   <span className="text-sm font-semibold">Added</span>
                 </div>
               ) : (
-                <Button
+                <ButtonCool
                   onClick={() => onAdd(project.id.toString())}
-                  disabled={isLoading || disabled}
-                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  text={isLoading ? 'Adding...' : 'Add'}
+                  bgColor="#2563eb"
+                  hoverBgColor="#1d4ed8"
+                  textColor="#ffffff"
+                  borderColor="#050505"
                   size="sm"
+                  disabled={isLoading || disabled}
                 >
                   {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Adding...
-                    </>
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
                   ) : (
-                    <>
-                      <Zap className="w-4 h-4 mr-2" />
-                      Add
-                    </>
+                    <Zap className="w-4 h-4 mr-1" />
                   )}
-                </Button>
+                </ButtonCool>
               )}
             </div>
             
@@ -263,27 +262,49 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
  };
 
  return (
-   <Dialog open={isOpen} onOpenChange={onClose}>
-     <DialogContent className="max-w-[72rem] max-h-[90vh] overflow-hidden flex flex-col bg-gradient-to-br from-white to-gray-50/50 p-0">
-       <DialogHeader className="p-6 pb-4">
-         {/* Fee Information */}
-         <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl shadow-sm">
-           <div className="flex items-center gap-3">
-             <div className="p-2 bg-amber-100 rounded-lg">
-               <Coins className="h-5 w-5 text-amber-600" />
-             </div>
-             <div>
-               <p className="text-sm font-semibold text-amber-800">
-                 1 CELO fee required to prevent spam
-               </p>
-               <p className="text-xs text-amber-700 mt-1">
-                 This fee is added to the campaign's funding pool and helps maintain quality
-               </p>
-             </div>
-           </div>
-         </div>
-       </DialogHeader>
-       <div className="flex-1 overflow-y-auto px-6 pb-0">
+  <Dialog open={isOpen} onOpenChange={onClose}>
+    <DialogContent className="relative max-w-[72rem] max-h-[90vh] overflow-hidden flex flex-col bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden">
+      {/* Pattern Grid Overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+          backgroundSize: '0.5em 0.5em',
+        }}
+      />
+
+      {/* Accent Corner */}
+      <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+      <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">
+        ★
+      </div>
+
+      <DialogHeader
+        className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+        style={{
+          background: '#2563eb',
+          backgroundImage:
+            'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+          backgroundBlendMode: 'overlay',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 border-[0.15em] border-white/30 rounded-[0.3em]">
+            <Coins className="h-5 w-5 text-yellow-200" />
+          </div>
+          <div>
+            <DialogDescription className="text-white text-2xl font-extrabold uppercase tracking-[0.05em]">
+              Add Projects to Campaign
+            </DialogDescription>
+            <p className="text-white/90 text-sm font-semibold normal-case mt-1">
+              1 CELO fee is added to the campaign pool to prevent spam.
+            </p>
+          </div>
+        </div>
+      </DialogHeader>
+
+      <div className="flex-1 overflow-y-auto px-6 pb-0 pt-4 relative z-[2]">
          
          {/* Error Message */}
          {error && (
@@ -311,7 +332,7 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
              <p className="text-gray-500 text-sm">Please wait while we fetch your projects...</p>
            </div>
          ) : !isConnected ? (
-           <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-8 text-center border-2 border-amber-200 shadow-sm">
+           <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-[0.6em] p-8 text-center border-[0.2em] border-[#f59e0b] shadow-[0.4em_0.4em_0_#000000]">
              <div className="p-3 bg-amber-100 rounded-full w-fit mx-auto mb-4">
                <AlertTriangle className="h-6 w-6 text-amber-600" />
              </div>
@@ -321,12 +342,17 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
              <p className="text-amber-800 text-sm mb-4">
                Please connect your wallet to add your projects to this campaign.
              </p>
-             <Button className="bg-amber-600 hover:bg-amber-700 text-white">
-               Connect Wallet
-             </Button>
+             <ButtonCool
+               text="Connect Wallet"
+               bgColor="#f59e0b"
+               hoverBgColor="#d97706"
+               textColor="#ffffff"
+               borderColor="#050505"
+               size="md"
+             />
            </div>
          ) : availableProjectsFormatted.length === 0 ? (
-           <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-8 text-center border-2 border-gray-200 shadow-sm">
+           <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-[0.6em] p-8 text-center border-[0.2em] border-gray-300 shadow-[0.4em_0.4em_0_#000000]">
              <div className="p-3 bg-blue-100 rounded-full w-fit mx-auto mb-4">
                {campaignProjectsFormatted.length > 0 ? (
                  <CheckCircle className="h-6 w-6 text-blue-600" />
@@ -344,12 +370,18 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
                }
              </p>
              {campaignProjectsFormatted.length === 0 && (
-               <Button asChild className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg">
-                 <a href="/app/project/start">
+               <a href="/app/project/start">
+                 <ButtonCool
+                   text="Create Your First Project"
+                   bgColor="#2563eb"
+                   hoverBgColor="#1d4ed8"
+                   textColor="#ffffff"
+                   borderColor="#050505"
+                   size="md"
+                 >
                    <Plus className="w-4 h-4 mr-2" />
-                   Create Your First Project
-                 </a>
-               </Button>
+                 </ButtonCool>
+               </a>
              )}
            </div>
          ) : (
@@ -381,14 +413,16 @@ const AddProjectsToCampaignModal: React.FC<AddProjectsToCampaignModalProps> = ({
        </div>
        
        {/* Cancel Button */}
-       <div className="p-6 pt-4 flex justify-end">
-         <Button
-           variant="outline"
+       <div className="p-6 pt-4 flex justify-end border-t-[0.35em] border-[#050505]">
+         <ButtonCool
            onClick={onClose}
-           size="sm"
-         >
-           Cancel
-         </Button>
+           text="Close"
+           bgColor="#ffffff"
+           hoverBgColor="#f3f4f6"
+           textColor="#050505"
+           borderColor="#050505"
+           size="md"
+         />
        </div>
      </DialogContent>
    </Dialog>

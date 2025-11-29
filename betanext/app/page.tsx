@@ -203,7 +203,7 @@ export default function HomePage() {
   return (
     <div className="relative overflow-hidden">
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 pb-8 sm:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 pb-4 sm:pb-6">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
           {/* Left Column */}
           <div className="space-y-2 sm:space-y-4 lg:space-y-8">
@@ -270,15 +270,15 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Floating Engagement Rewards Card */}
-      <div className="fixed z-50 max-w-sm" style={{ bottom: '264px', right: '0%' }}>
+      {/* Floating Engagement Rewards Card - Hidden for now */}
+      {/* <div className="fixed z-50 max-w-sm" style={{ bottom: '264px', right: '0%' }}>
         <Suspense fallback={null}>
           <EngagementRewardsCard />
         </Suspense>
-      </div>
+      </div> */}
 
       {/* Campaigns & Projects Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8 sm:pb-16">
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">

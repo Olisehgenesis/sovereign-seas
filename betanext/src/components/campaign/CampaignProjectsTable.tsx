@@ -56,26 +56,39 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
   const navigate = useNavigate();
   const [viewMode, setViewMode] = React.useState<'table' | 'grid' | 'list'>('table');
 
+  // Helper to convert project ID to string (fixes BigInt serialization)
+  const getProjectIdString = (id: string | number | bigint): string => {
+    if (typeof id === 'bigint') return id.toString();
+    return String(id);
+  };
+
+  // Helper to convert project ID to number
+  const getProjectIdNumber = (id: string | number | bigint): number => {
+    if (typeof id === 'bigint') return Number(id);
+    return Number(id);
+  };
+
   // Separate approved and unapproved projects
   const approvedProjects = projects.filter(p => p.participation?.approved === true);
   const unapprovedProjects = projects.filter(p => p.participation?.approved !== true);
 
-  // Create position map for approved projects
-  const positionMap = new Map();
+  // Create position map for approved projects (using string IDs to avoid BigInt serialization)
+  const positionMap = new Map<string, number>();
   let currentPosition = 1;
   
   approvedProjects.forEach((project, index) => {
     const voteCount = Number(formatEther(project.voteCount || 0n));
+    const projectIdStr = getProjectIdString(project.id);
     
     if (index === 0) {
-      positionMap.set(project.id, 1);
+      positionMap.set(projectIdStr, 1);
       currentPosition = 1;
     } else {
       const prevVoteCount = Number(formatEther(approvedProjects[index - 1].voteCount || 0n));
       if (voteCount !== prevVoteCount) {
         currentPosition = index + 1;
       }
-      positionMap.set(project.id, currentPosition);
+      positionMap.set(projectIdStr, currentPosition);
     }
   });
 
@@ -193,7 +206,8 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                 const voteCount = Number(formatEther(project.voteCount || 0n));
                 const projectLogo = getProjectLogo(project);
                 const isApproved = project.participation?.approved === true;
-                const position = positionMap.get(project.id);
+                const projectIdStr = getProjectIdString(project.id);
+                const position = positionMap.get(projectIdStr);
                 
                 // Calculate percentage of total votes
                 const votePercentage = totalCampaignVotes > 0 ? (voteCount / totalCampaignVotes) * 100 : 0;
@@ -208,7 +222,7 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                 
                 return (
                   <tr 
-                    key={project.id} 
+                    key={projectIdStr} 
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                     onClick={() => isApproved && isActive ? onVoteClick(project) : null}
                   >
@@ -247,7 +261,7 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(getProjectRoute(Number(project.id)));
+                              navigate(getProjectRoute(getProjectIdNumber(project.id)));
                             }}
                             className="text-xs lg:text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors flex-1 text-left"
                           >
@@ -345,13 +359,14 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                 const voteCount = Number(formatEther(project.voteCount || 0n));
                 const projectLogo = getProjectLogo(project);
                 const isApproved = project.participation?.approved === true;
+                const projectIdStr = getProjectIdString(project.id);
                 
                 // Calculate percentage of total votes
                 const votePercentage = totalCampaignVotes > 0 ? (voteCount / totalCampaignVotes) * 100 : 0;
                 
                 return (
                   <tr 
-                    key={project.id}
+                    key={projectIdStr}
                     className="hover:bg-gray-50/50 transition-colors bg-gray-100/30 cursor-pointer"
                     onClick={() => isApproved && isActive ? onVoteClick(project) : null}
                   >
@@ -389,7 +404,7 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(getProjectRoute(Number(project.id)));
+                              navigate(getProjectRoute(getProjectIdNumber(project.id)));
                             }}
                             className="text-xs lg:text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors flex-1 text-left"
                           >
@@ -441,7 +456,7 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                         <ButtonCool
                           onClick={(e) => {
                             e.stopPropagation();
-                            onApproveProject(BigInt(Number(project.id)));
+                            onApproveProject(BigInt(getProjectIdNumber(project.id)));
                           }}
                           disabled={isApprovingProject}
                           text={isApprovingProject ? 'Approving...' : 'Approve'}
@@ -503,11 +518,12 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
             {approvedProjects.map((project) => {
               const voteCount = Number(formatEther(project.voteCount || 0n));
               const projectLogo = getProjectLogo(project);
-              const position = positionMap.get(project.id);
+              const projectIdStr = getProjectIdString(project.id);
+              const position = positionMap.get(projectIdStr);
               
               return (
                 <div
-                  key={project.id}
+                  key={projectIdStr}
                   className="group relative w-full cursor-pointer"
                   onClick={() => isActive && project.participation?.approved ? onVoteClick(project) : null}
                 >
@@ -612,7 +628,8 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
             {approvedProjects.map((project) => {
               const voteCount = Number(formatEther(project.voteCount || 0n));
               const projectLogo = getProjectLogo(project);
-              const position = positionMap.get(project.id);
+              const projectIdStr = getProjectIdString(project.id);
+              const position = positionMap.get(projectIdStr);
               const votePercentage = totalCampaignVotes > 0 ? (voteCount / totalCampaignVotes) * 100 : 0;
               const totalWeight = projects.reduce((sum, p) => 
                 sum + Math.sqrt(Number(formatEther(p.voteCount || 0n))), 0
@@ -623,31 +640,41 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
               
               return (
                 <div
-                  key={project.id}
+                  key={projectIdStr}
                   className="group relative w-full cursor-pointer"
                   onClick={() => isActive && project.participation?.approved ? onVoteClick(project) : null}
                 >
-                  {/* Pattern Overlays */}
+                  {/* Pattern Grid Overlay */}
                   <div 
-                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-50 transition-opacity duration-[400ms] z-[1]"
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-30 transition-opacity duration-[400ms] z-[1]"
                     style={{
                       backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
                       backgroundSize: '0.5em 0.5em'
                     }}
                   />
                   
+                  {/* Dots Overlay */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-[400ms] z-[1]"
+                    style={{
+                      backgroundImage: 'radial-gradient(#cfcfcf 1px, transparent 1px)',
+                      backgroundSize: '1em 1em',
+                      backgroundPosition: '-0.5em -0.5em'
+                    }}
+                  />
+                  
                   {/* Main Card - Horizontal */}
                   <div 
-                    className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em] group-hover:scale-[1.01]"
+                    className="relative bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] transition-all duration-[400ms] overflow-hidden origin-center z-[2] group-hover:shadow-[1em_1em_0_#000000] group-hover:-translate-x-[0.4em] group-hover:-translate-y-[0.4em] group-hover:scale-[1.01] active:translate-x-[0.1em] active:translate-y-[0.1em] active:scale-[0.99] active:shadow-[0.5em_0.5em_0_#000000]"
                     style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
                   >
                     {/* Accent Corner */}
                     <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#a855f7] rotate-45 z-[1]" />
                     <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
 
-                    <div className="flex flex-col lg:flex-row">
+                    <div className="flex flex-col lg:flex-row relative z-[2]">
                       {/* Left Side - Logo and Info */}
-                      <div className="flex items-center gap-4 p-4 flex-1">
+                      <div className="flex items-center gap-4 px-[1.5em] py-[1.2em] flex-1">
                         <div className="w-16 h-16 rounded-[0.4em] overflow-hidden border-[0.2em] border-[#050505] shadow-[0.3em_0.3em_0_#000000] relative bg-white flex-shrink-0">
                           {projectLogo ? (
                             <Image
@@ -666,22 +693,34 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-extrabold text-[#050505] mb-1">{project.name || 'Untitled Project'}</h3>
+                          <h3 className="text-lg font-extrabold text-[#050505] mb-1 uppercase tracking-[0.05em]">{project.name || 'Untitled Project'}</h3>
                           {project.description && (
-                            <p className="text-sm text-[#050505]/70 line-clamp-2">{project.description}</p>
+                            <p className="text-sm text-[#050505]/70 line-clamp-2 font-medium mb-2">{project.description}</p>
                           )}
+                          {/* Vote Percentage Bar */}
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 border-[0.1em] border-[#050505]">
+                              <div 
+                                className="bg-gradient-to-r from-[#a855f7] to-[#ec4899] h-full rounded-full transition-all duration-300 border-[0.05em] border-[#050505]"
+                                style={{ width: `${Math.min(votePercentage, 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                              {votePercentage.toFixed(1)}%
+                            </span>
+                          </div>
                         </div>
                       </div>
 
                       {/* Right Side - Stats and Actions */}
-                      <div className="flex items-center gap-4 p-4 border-t-[0.35em] lg:border-t-0 lg:border-l-[0.35em] border-[#050505] bg-[#f9fafb]">
+                      <div className="flex items-center gap-4 px-[1.5em] py-[1.2em] border-t-[0.35em] lg:border-t-0 lg:border-l-[0.35em] border-[#050505] bg-[#f9fafb]">
                         <div className="flex flex-col items-center gap-2">
-                          <span className="text-xs font-semibold text-[#050505] uppercase">Votes</span>
+                          <span className="text-xs font-extrabold text-[#050505] uppercase tracking-[0.1em]">Votes</span>
                           <span className="text-xl font-extrabold text-[#a855f7]">{voteCount.toFixed(1)}</span>
                         </div>
                         <div className="flex flex-col items-center gap-2">
-                          <span className="text-xs font-semibold text-[#050505] uppercase">Position</span>
-                          <span className={`px-3 py-1 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_#000000] text-sm font-extrabold uppercase ${
+                          <span className="text-xs font-extrabold text-[#050505] uppercase tracking-[0.1em]">Position</span>
+                          <span className={`px-3 py-1 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.2em_0.2em_0_#000000] text-sm font-extrabold uppercase tracking-[0.05em] ${
                             position === 1 ? 'bg-[#f59e0b] text-white' :
                             position === 2 ? 'bg-[#6b7280] text-white' :
                             position === 3 ? 'bg-[#f97316] text-white' :
@@ -709,7 +748,8 @@ export const CampaignProjectsTable: React.FC<CampaignProjectsTableProps> = ({
                       </div>
                     </div>
 
-                    {/* Corner Slice */}
+                    {/* Decorative Elements */}
+                    <div className="absolute w-[2.5em] h-[2.5em] bg-[#a855f7] border-[0.15em] border-[#050505] rounded-[0.3em] rotate-45 -bottom-[1.2em] right-[2em] z-0 transition-transform duration-300 group-hover:rotate-[55deg] group-hover:scale-110" />
                     <div className="absolute bottom-0 left-0 w-[1.5em] h-[1.5em] bg-white border-r-[0.25em] border-t-[0.25em] border-[#050505] rounded-tl-[0.5em] z-[1]" />
                   </div>
                 </div>

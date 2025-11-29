@@ -205,18 +205,38 @@ export default function FundMilestoneModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white p-0 [&>button]:hidden">
-        <DialogHeader className="p-6 pb-3 sticky top-0 bg-white z-10 border-b">
-          <div className="bg-gray-500 p-4 text-white relative overflow-hidden rounded-t-lg -m-6 mb-3">
-            <div className="relative z-10">
-              <DialogDescription className="text-white text-2xl">
-                Fund Milestone
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="relative max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden">
+        {/* Pattern Grid Overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em',
+          }}
+        />
+
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">
+          ★
+        </div>
+
+        <DialogHeader
+          className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{
+            background: '#2563eb',
+            backgroundImage:
+              'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay',
+          }}
+        >
+          <DialogDescription className="text-white text-2xl font-extrabold uppercase tracking-[0.05em]">
+            Fund Milestone
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-5">
+        <div className="relative px-[1.5em] pb-[1.5em] pt-4 space-y-4 sm:space-y-5 z-[2]">
           {errorMsg && (
             <div className="p-3 sm:p-4 rounded-lg border-2 border-red-300 bg-red-50 text-sm text-red-700 flex items-start gap-2">
               <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />

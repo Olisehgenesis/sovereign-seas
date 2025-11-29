@@ -259,12 +259,12 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Floating Engagement Rewards Card */}
-      <div className="fixed z-50 max-w-sm" style={{ bottom: '264px', right: '0%' }}>
+      {/* Floating Engagement Rewards Card - Hidden for now */}
+      {/* <div className="fixed z-50 max-w-sm" style={{ bottom: '264px', right: '0%' }}>
         <Suspense fallback={null}>
           <EngagementRewardsCard />
         </Suspense>
-      </div>
+      </div> */}
 
       {/* Campaigns & Projects Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">

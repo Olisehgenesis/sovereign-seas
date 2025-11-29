@@ -35,7 +35,8 @@ function MobileDialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="mobile-dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        // High z-index so mobile dialogs always sit above sticky headers / nav
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[80] bg-black/50",
         className
       )}
       {...props}
@@ -56,22 +57,32 @@ function MobileDialogContent({
       <MobileDialogOverlay />
       <DialogPrimitive.Content
         data-slot="mobile-dialog-content"
-        className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 fixed bottom-0 left-0 right-0 z-50 grid w-full gap-4 rounded-t-3xl border p-6 shadow-lg duration-200 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-lg sm:rounded-lg",
-          className
-        )}
+        className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed inset-0 z-[80] flex items-center justify-center px-4 py-6 duration-200"
         {...props}
       >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="mobile-dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-          >
-            <XIcon />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
+        <div
+          className={cn(
+            // Inner container that is centered inside the viewport.
+            // Individual modals can control width, max-height, scrolling, etc.
+            "w-full max-w-lg max-h-[90vh] overflow-hidden rounded-xl bg-background",
+            className
+          )}
+        >
+          {/* Accessible fallback title to satisfy Radix requirement */}
+          <DialogPrimitive.Title className="sr-only">
+            Dialog
+          </DialogPrimitive.Title>
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="mobile-dialog-close"
+              className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            >
+              <XIcon />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </div>
       </DialogPrimitive.Content>
     </MobileDialogPortal>
   )

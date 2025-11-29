@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { 
   MobileDialog as Dialog,
   MobileDialogContent as DialogContent,
@@ -110,37 +110,56 @@ export default function SubmitEvidenceModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white p-0 [&>button]:hidden">
-        <DialogHeader className="p-6 pb-3 sticky top-0 bg-white z-10 border-b">
-          <div className="bg-gray-500 p-4 text-white relative overflow-hidden rounded-t-lg -m-6 mb-3">
-            <div className="relative z-10">
-              <DialogDescription className="text-white text-2xl">
-                Submit Evidence
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="relative max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden">
+        {/* Pattern Grid Overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em',
+          }}
+        />
+
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">
+          ★
+        </div>
+
+        <DialogHeader
+          className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{
+            background: '#2563eb',
+            backgroundImage:
+              'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay',
+          }}
+        >
+          <DialogDescription className="text-white text-2xl font-extrabold uppercase tracking-[0.05em]">
+            Submit Evidence
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-5">
+        <div className="relative px-[1.5em] pb-[1.5em] pt-4 space-y-4 sm:space-y-5 z-[2]">
           {errorMsg && (
-            <div className="p-3 sm:p-4 rounded-lg border-2 border-red-300 bg-red-50 text-sm text-red-700 flex items-start gap-2">
-              <X className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-semibold mb-1">Error</p>
-                <p>{errorMsg}</p>
-              </div>
+            <div className="p-3 sm:p-4 border-[0.2em] border-[#ef4444] bg-[#fee2e2] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] text-sm text-[#050505] flex items-start gap-2">
+              <X className="h-5 w-5 text-[#ef4444] flex-shrink-0 mt-0.5" />
+              <p className="font-extrabold uppercase tracking-[0.05em]">{errorMsg}</p>
             </div>
           )}
 
           {/* File Upload Section */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-800">Upload File (Optional)</label>
-            <div className={`border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-colors ${
+            <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+              Upload File (Optional)
+            </label>
+            <div className={`border-[0.2em] border-dashed rounded-[0.6em] p-4 sm:p-6 text-center transition-colors shadow-[0.2em_0.2em_0_#000000] ${
               isUploading 
-                ? 'border-blue-400 bg-blue-50' 
+                ? 'border-[#2563eb] bg-[#dbeafe]' 
                 : file 
-                  ? 'border-green-300 bg-green-50' 
-                  : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                  ? 'border-[#10b981] bg-[#d1fae5]' 
+                  : 'border-[#050505] bg-white hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em]'
             }`}>
               <input
                 type="file"
@@ -177,7 +196,7 @@ export default function SubmitEvidenceModal({
               </label>
               
               {file && !isUploading && (
-                <div className="mt-4 flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                <div className="mt-4 flex items-center justify-between p-3 bg-white rounded-[0.4em] border-[0.15em] border-[#050505] shadow-[0.2em_0.2em_0_#000000]">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <File className="h-5 w-5 text-gray-600 flex-shrink-0" />
                     <span className="text-sm text-gray-700 truncate">{file.name}</span>
@@ -201,7 +220,7 @@ export default function SubmitEvidenceModal({
               
               {isUploading && uploadProgress > 0 && (
                 <div className="mt-4 space-y-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden border-[0.1em] border-[#050505] shadow-[0.1em_0.1em_0_#000000]">
                     <div
                       className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out"
                       style={{ width: `${uploadProgress}%` }}
@@ -215,38 +234,40 @@ export default function SubmitEvidenceModal({
 
           {/* Manual Hash Input */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-800">
+            <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
               IPFS Hash (CID) *
             </label>
             <Textarea
               value={evidenceHash}
               onChange={(e) => handleManualHash(e.target.value)}
               placeholder="QmXxxxxx... or paste IPFS URL"
-              className="min-h-[100px] font-mono text-sm"
+              className="min-h-[100px] font-mono text-sm border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] focus:outline-none"
               disabled={isUploading || isPending}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[#050505] font-semibold">
               Enter an IPFS hash (CID) directly, or upload a file above to generate one automatically.
             </p>
           </div>
 
           {/* Preview */}
           {evidenceUrl && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="p-4 bg-[#d1fae5] border-[0.2em] border-[#10b981] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <p className="text-xs font-semibold text-green-800">IPFS Upload Successful</p>
+                    <CheckCircle className="h-4 w-4 text-[#10b981] flex-shrink-0" />
+                    <p className="text-xs font-extrabold text-[#065f46] uppercase tracking-[0.05em]">
+                      IPFS Upload Successful
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-600 font-mono break-all mb-2">{evidenceUrl}</p>
-                  <p className="text-xs text-gray-500">CID: {evidenceHash}</p>
+                  <p className="text-xs text-[#065f46] font-mono break-all mb-2">{evidenceUrl}</p>
+                  <p className="text-xs text-[#047857] font-semibold">CID: {evidenceHash}</p>
                 </div>
                 <a
                   href={evidenceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                  className="p-2 text-[#2563eb] hover:text-[#1d4ed8] hover:bg-[#dbeafe] rounded-[0.4em] border-[0.15em] border-[#2563eb] shadow-[0.1em_0.1em_0_#000000] transition-colors flex-shrink-0"
                   title="View on IPFS"
                 >
                   <ExternalLink className="h-4 w-4" />
@@ -256,32 +277,28 @@ export default function SubmitEvidenceModal({
           )}
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={onClose} 
-              className="h-11 w-full sm:w-auto" 
-              disabled={isPending || isUploading}
-            >
-              Cancel
-            </Button>
-            <Button
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t-[0.35em] border-[#050505]">
+            <ButtonCool
+              onClick={onClose}
+              text="Cancel"
+              bgColor="#ffffff"
+              hoverBgColor="#f3f4f6"
+              textColor="#050505"
+              borderColor="#050505"
+              size="md"
+            />
+            <ButtonCool
               onClick={handleSubmit}
+              text={isPending ? 'Submitting...' : 'Submit Evidence'}
+              bgColor="#2563eb"
+              hoverBgColor="#1d4ed8"
+              textColor="#ffffff"
+              borderColor="#050505"
+              size="md"
               disabled={!evidenceHash.trim() || isPending || isUploading}
-              className="h-11 w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
             >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Submit Evidence
-                </>
-              )}
-            </Button>
+              {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            </ButtonCool>
           </div>
         </div>
       </DialogContent>

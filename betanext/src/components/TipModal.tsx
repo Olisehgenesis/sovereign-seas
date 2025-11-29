@@ -44,73 +44,88 @@ interface TokenSelectorProps {
   }>;
 }
 
-const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSelect, disabled, tokenBalances }) => {
+const TokenSelector: React.FC<TokenSelectorProps> = ({
+  selectedToken,
+  onTokenSelect,
+  disabled,
+  tokenBalances,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   
   // Token data - using supportedTokens from hook (same as wallet modal)
-  const tokens = supportedTokens.map(token => ({
+  const tokens = supportedTokens.map((token) => ({
     address: token.address,
     name: token.name,
     symbol: token.symbol,
-    logo: token.symbol === 'CELO' ? '/images/celo.png' : 
-          token.symbol === 'cUSD' ? '/images/cusd.png' : 
-          '/images/celo_logo.svg'
+    logo:
+      token.symbol === 'CELO'
+        ? '/images/celo.png'
+        : token.symbol === 'cUSD'
+          ? '/images/cusd.png'
+          : '/images/celo_logo.svg',
   }));
   
   const selectedTokenData = tokens.find(token => token.address === selectedToken);
   
   const getBalance = (tokenAddress: string) => {
-    const tokenBalance = tokenBalances.find(tb => tb.address.toLowerCase() === tokenAddress.toLowerCase());
+    const tokenBalance = tokenBalances.find(
+      (tb) => tb.address.toLowerCase() === tokenAddress.toLowerCase()
+    );
     return tokenBalance ? tokenBalance.formattedBalance : '0.00';
   };
 
   return (
     <>
-      {/* Token Button */}
       <button
         onClick={() => setIsOpen(true)}
         disabled={disabled}
-        className={`w-full h-12 rounded-[0.4em] border-[0.2em] border-[#050505] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all flex items-center justify-between px-4 bg-white font-extrabold ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        className={`w-full h-11 rounded-md border border-border bg-white px-3 flex items-center justify-between text-sm font-medium shadow-sm transition-colors ${
+          disabled
+            ? 'opacity-50 cursor-not-allowed'
+            : 'hover:bg-muted cursor-pointer'
         }`}
       >
         {selectedTokenData ? (
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2">
             <img 
               src={selectedTokenData.logo} 
               alt={selectedTokenData.symbol}
-              className="w-6 h-6 rounded-full"
+              className="w-5 h-5 rounded-full"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
               }}
             />
-            <span className="font-semibold text-gray-900">{selectedTokenData.symbol}</span>
+            <span className="font-medium text-foreground">{selectedTokenData.symbol}</span>
           </div>
         ) : (
-          <span className="font-semibold text-gray-500">Select token</span>
+          <span className="font-medium text-muted-foreground">Select token</span>
         )}
-        <ChevronDown className="h-5 w-5 text-gray-400" />
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
       </button>
 
-      {/* Token Modal */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-md bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 relative">
+        <DialogContent className="relative w-full max-w-sm max-h-[80vh] overflow-y-auto bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0">
+          {/* Accent Corner */}
           <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
-          <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
-          
-          <DialogHeader className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2]"
-            style={{ 
+          <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">
+            ★
+          </div>
+
+          <DialogHeader
+            className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+            style={{
               background: '#2563eb',
-              backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
-              backgroundBlendMode: 'overlay'
+              backgroundImage:
+                'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+              backgroundBlendMode: 'overlay',
             }}
           >
             <DialogDescription className="text-white text-xl font-extrabold uppercase tracking-[0.05em]">
               Select Token
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="relative px-[1.5em] py-[1.5em] space-y-2 z-[2]">
             {tokens.map((token) => (
               <button
@@ -119,13 +134,15 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
                   onTokenSelect(token.address);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between p-3 border-[0.2em] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all font-extrabold ${
-                  selectedToken === token.address ? 'bg-[#dbeafe] border-[#2563eb] text-[#050505]' : 'bg-white border-[#050505] text-[#050505]'
+                className={`w-full flex items-center justify-between p-3 border-[0.2em] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] transition-all font-extrabold ${
+                  selectedToken === token.address
+                    ? 'bg-[#dbeafe] border-[#2563eb] text-[#050505]'
+                    : 'bg-white border-[#050505] text-[#050505] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em]'
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <img 
-                    src={token.logo} 
+                  <img
+                    src={token.logo}
                     alt={token.symbol}
                     className="w-8 h-8 rounded-full"
                     onError={(e) => {
@@ -134,13 +151,19 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({ selectedToken, onTokenSel
                     }}
                   />
                   <div className="text-left">
-                    <div className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">{token.name}</div>
-                    <div className="text-sm text-[#050505] font-semibold">{token.symbol}</div>
+                    <div className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                      {token.name}
+                    </div>
+                    <div className="text-sm text-[#050505] font-semibold">
+                      {token.symbol}
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-[#050505] font-semibold">Balance</div>
-                  <div className="font-extrabold text-[#050505]">{getBalance(token.address)}</div>
+                  <div className="font-extrabold text-[#050505]">
+                    {getBalance(token.address)}
+                  </div>
                   {selectedToken === token.address && (
                     <Check className="h-4 w-4 text-[#2563eb] mt-1" />
                   )}
@@ -172,28 +195,37 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   const [txHash, setTxHash] = useState<string | null>(null);
   
   // Tipping hooks
-  const { tipProject, isPending: isTipPending, error: tipError } = useTipProject(tippingContractAddress);
-  const { tipProjectWithCelo, isPending: isCeloTipPending, error: celoTipError } = useTipProjectWithCelo(tippingContractAddress);
+  const { tipProject, isPending: isTipPending, error: tipError } =
+    useTipProject(tippingContractAddress);
+  const { tipProjectWithCelo, isPending: isCeloTipPending, error: celoTipError } =
+    useTipProjectWithCelo(tippingContractAddress);
   const { approveToken, isPending: isApprovePending, data: approveTxHash } = useApproveToken();
   
   // Wait for transaction receipts
-  const { isLoading: isTipConfirming, isSuccess: isTipConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash as `0x${string}` | undefined,
-    query: {
-      enabled: !!txHash
-    }
-  });
+  const { isLoading: isTipConfirming, isSuccess: isTipConfirmed } =
+    useWaitForTransactionReceipt({
+      hash: txHash as `0x${string}` | undefined,
+      query: {
+        enabled: !!txHash,
+      },
+    });
   
-  const { isLoading: isApproveConfirming, isSuccess: isApproveConfirmed } = useWaitForTransactionReceipt({
-    hash: approveTxHash,
-    query: {
-      enabled: !!approveTxHash
-    }
-  });
+  const { isLoading: isApproveConfirming, isSuccess: isApproveConfirmed } =
+    useWaitForTransactionReceipt({
+      hash: approveTxHash,
+      query: {
+        enabled: !!approveTxHash,
+      },
+    });
 
   // Compute isProcessing directly instead of using useEffect - moved after hook declarations
-  const isProcessing = useMemo(() => 
-    isTipPending || isCeloTipPending || isApprovePending || isTipConfirming || isApproveConfirming,
+  const isProcessing = useMemo(
+    () =>
+      isTipPending ||
+      isCeloTipPending ||
+      isApprovePending ||
+      isTipConfirming ||
+      isApproveConfirming,
     [isTipPending, isCeloTipPending, isApprovePending, isTipConfirming, isApproveConfirming]
   );
 
@@ -231,20 +263,22 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
             
             if (token.symbol === 'CELO') {
               balance = await publicClient.getBalance({
-                address: userAddress as `0x${string}`
+                address: userAddress as `0x${string}`,
               });
             } else {
               balance = await publicClient.readContract({
                 address: token.address as `0x${string}`,
-                abi: [{
-                  name: 'balanceOf',
-                  type: 'function',
-                  stateMutability: 'view',
-                  inputs: [{ name: 'account', type: 'address' }],
-                  outputs: [{ name: '', type: 'uint256' }]
-                }],
-    functionName: 'balanceOf',
-                args: [userAddress as `0x${string}`]
+                abi: [
+                  {
+                    name: 'balanceOf',
+                    type: 'function',
+                    stateMutability: 'view',
+                    inputs: [{ name: 'account', type: 'address' }],
+                    outputs: [{ name: '', type: 'uint256' }],
+                  },
+                ],
+                functionName: 'balanceOf',
+                args: [userAddress as `0x${string}`],
               });
             }
             
@@ -266,7 +300,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
               symbol: token.symbol,
               name: token.name,
               balance,
-              formattedBalance
+              formattedBalance,
             };
           } catch (error) {
             console.error(`Error fetching balance for ${token.symbol}:`, error);
@@ -275,7 +309,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
               symbol: token.symbol,
               name: token.name,
               balance: BigInt(0),
-              formattedBalance: '0'
+              formattedBalance: '0',
             };
           }
         });
@@ -299,19 +333,26 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
 
   // Utility functions
   const getSelectedBalance = () => {
-    const tokenBalance = tokenBalances.find(tb => tb.address.toLowerCase() === selectedToken?.address?.toLowerCase());
+    const tokenBalance = tokenBalances.find(
+      (tb) => tb.address.toLowerCase() === selectedToken?.address?.toLowerCase()
+    );
     return tokenBalance ? tokenBalance.formattedBalance : '0.00';
   };
 
   const getSelectedSymbol = () => {
-    const tokenBalance = tokenBalances.find(tb => tb.address.toLowerCase() === selectedToken?.address?.toLowerCase());
+    const tokenBalance = tokenBalances.find(
+      (tb) => tb.address.toLowerCase() === selectedToken?.address?.toLowerCase()
+    );
     return tokenBalance ? tokenBalance.symbol : '';
   };
 
   // Check if token is CELO
   const isCeloToken = useCallback(() => {
     if (!selectedToken) return false;
-    return selectedToken.address.toLowerCase() === celoTokenAddress.toLowerCase() || selectedToken.symbol === 'CELO';
+    return (
+      selectedToken.address.toLowerCase() === celoTokenAddress.toLowerCase() ||
+      selectedToken.symbol === 'CELO'
+    );
   }, [selectedToken, celoTokenAddress]);
 
   // Handle tip submission with actual contract calls
@@ -355,12 +396,12 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
         setTipStep('approving');
         
         // Check current allowance
-        const currentAllowance = await publicClient.readContract({
+        const currentAllowance = (await publicClient.readContract({
           address: selectedToken.address as Address,
           abi: erc20ABI,
           functionName: 'allowance',
-          args: [userAddress as Address, tippingContractAddress]
-        }) as bigint;
+          args: [userAddress as Address, tippingContractAddress],
+        })) as bigint;
 
         // If allowance is insufficient, approve
         if (currentAllowance < amount) {
@@ -432,7 +473,13 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
   // Handle approval confirmation and proceed with tip
   useEffect(() => {
     const proceedWithTip = async () => {
-      if (isApproveConfirmed && tipStep === 'approving' && !isCeloToken() && selectedToken && tipAmount) {
+      if (
+        isApproveConfirmed &&
+        tipStep === 'approving' &&
+        !isCeloToken() &&
+        selectedToken &&
+        tipAmount
+      ) {
         // Approval confirmed, now proceed with tip
         const amount = parseEther(tipAmount);
         setTipStep('tipping');
@@ -511,7 +558,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
       setTipStep('tipping');
     } else if (!isProcessing) {
       // Only reset to idle if not processing
-      setTipStep(prev => prev === 'done' ? 'done' : 'idle');
+      setTipStep((prev) => (prev === 'done' ? 'done' : 'idle'));
     }
   }, [isApprovePending, isApproveConfirming, isTipPending, isCeloTipPending, isTipConfirming, isProcessing]);
 
@@ -536,25 +583,30 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden relative">
+      <DialogContent className="relative w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col bg-white border-[0.35em] border-[#050505] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button[data-slot='mobile-dialog-close']]:hidden">
         {/* Pattern Grid Overlay */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
           style={{
-            backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
-            backgroundSize: '0.5em 0.5em'
+            backgroundImage:
+              'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em',
           }}
         />
 
         {/* Accent Corner */}
         <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
-        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">
+          ★
+        </div>
 
-        <DialogHeader className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
-          style={{ 
+        <DialogHeader
+          className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{
             background: '#2563eb',
-            backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
-            backgroundBlendMode: 'overlay'
+            backgroundImage:
+              'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay',
           }}
         >
           <DialogDescription className="text-white text-2xl font-extrabold uppercase tracking-[0.05em]">
@@ -562,9 +614,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-[1.5em] pb-0 relative z-[2]">
-          
-          {/* Success View */}
+        <div className="flex-1 overflow-y-auto px-[1.5em] pb-[1.5em] pt-4 relative z-[2] space-y-5">
           {currentView === 'success' && (
             <div className="text-center space-y-6 py-6">
               <div className="relative">
@@ -573,13 +623,15 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                 </div>
                 <div className="absolute -top-2 -right-2 text-2xl">🎉</div>
               </div>
-              
               <div>
                 <h4 className="text-2xl font-extrabold text-[#10b981] mb-2 uppercase tracking-[0.05em]">
                   Tip Sent Successfully!
                 </h4>
                 <p className="text-[#050505] mb-6 font-semibold">
-                  Your tip has been sent to <span className="font-extrabold text-[#2563eb]">{project.name}</span>
+                  Your tip has been sent to{' '}
+                  <span className="font-extrabold text-[#2563eb]">
+                    {project.name}
+                  </span>
                 </p>
               </div>
 
@@ -604,14 +656,14 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
             </div>
           )}
 
-          {/* Tip View */}
           {currentView === 'tip' && (
-            <div className="space-y-8">
-              
+            <div className="space-y-6">
               {error && (
                 <div className="bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-4 flex items-start">
                   <AlertCircle className="h-5 w-5 text-[#ef4444] mr-3 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">{error}</p>
+                  <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                    {error}
+                  </p>
                 </div>
               )}
 
@@ -620,9 +672,11 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                   <div className="flex items-center mb-3">
                     <Loader2 className="h-5 w-5 text-[#f59e0b] mr-3 animate-spin" />
                     <p className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
-                      {tipStep === 'approving' ? 'Approving token...' : 
-                       tipStep === 'tipping' ? 'Sending tip...' : 
-                       'Processing transaction...'}
+                      {tipStep === 'approving'
+                        ? 'Approving token...'
+                        : tipStep === 'tipping'
+                          ? 'Sending tip...'
+                          : 'Processing transaction...'}
                     </p>
                   </div>
                   {txHash && (
@@ -633,8 +687,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                 </div>
               )}
 
-              {/* Amount Input */}
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                     Tip Amount
@@ -642,7 +695,9 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                   {selectedToken && (
                     <div className="text-xs text-[#050505] flex items-center font-semibold">
                       <Wallet className="h-3 w-3 mr-1" />
-                      Available: {getSelectedBalance()} {getSelectedSymbol()}
+                      <span>
+                        Available: {getSelectedBalance()} {getSelectedSymbol()}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -662,11 +717,11 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                       min="0"
                     />
                   </div>
-                  <div className="w-48">
-                    <TokenSelector 
+                  <div className="w-40">
+                    <TokenSelector
                       selectedToken={selectedToken?.address || ''}
                       onTokenSelect={(address) => {
-                        const token = supportedTokens.find(t => t.address === address);
+                        const token = supportedTokens.find((t) => t.address === address);
                         setSelectedToken(token || null);
                       }}
                       disabled={isProcessing}
@@ -676,8 +731,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                 </div>
               </div>
 
-              {/* Message Input */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <label className="text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                   Message (Optional)
                 </label>
@@ -695,20 +749,20 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
                 </div>
               </div>
 
-              {/* Token Conversion Info */}
               {selectedToken && tipAmount && parseFloat(tipAmount) > 0 && (
                 <div className="bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] p-3">
                   <div className="text-sm text-[#050505] flex items-center font-semibold">
                     <TrendingUp className="h-4 w-4 mr-2" />
-                    <span>≈ {tipAmount} {selectedToken.symbol} tip</span>
+                    <span>
+                      ≈ {tipAmount} {selectedToken.symbol} tip
+                    </span>
                   </div>
                 </div>
               )}
-               </div>
-             )}
+            </div>
+          )}
         </div>
-        
-        {/* Action Buttons */}
+
         <div className="p-[1.5em] pt-6 flex justify-end gap-3 border-t-[0.35em] border-[#050505] relative z-[2]">
           <ButtonCool
             onClick={handleClose}
@@ -721,7 +775,13 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
           />
           <ButtonCool
             onClick={handleTip}
-            text={isProcessing ? (tipStep === 'approving' ? 'Approving...' : 'Sending...') : 'Send Tip'}
+            text={
+              isProcessing
+                ? tipStep === 'approving'
+                  ? 'Approving...'
+                  : 'Sending...'
+                : 'Send Tip'
+            }
             bgColor="#2563eb"
             hoverBgColor="#1d4ed8"
             textColor="#ffffff"
@@ -732,7 +792,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
               !tipAmount ||
               !selectedToken ||
               !userAddress ||
-              parseFloat(tipAmount) > parseFloat(getSelectedBalance()) || 
+              parseFloat(tipAmount) > parseFloat(getSelectedBalance()) ||
               parseFloat(tipAmount) <= 0
             }
           >
@@ -741,7 +801,7 @@ const TipModal: React.FC<TipModalProps> = ({ isOpen, onClose, project, onTipSucc
         </div>
       </DialogContent>
     </Dialog>
- );
+  );
 };
 
 export default TipModal;

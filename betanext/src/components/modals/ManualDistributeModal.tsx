@@ -7,6 +7,7 @@ import { useParticipation } from '@/hooks/useCampaignMethods';
 import { useSingleProject } from '@/hooks/useProjectMethods';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { ButtonCool } from '@/components/ui/button-cool';
 
 interface ManualDistributeModalProps {
   isOpen: boolean;
@@ -33,25 +34,28 @@ interface TokenInfo {
 
 // Custom fallback component for modal errors
 const ModalErrorFallback = ({ onClose }: { onClose: () => void }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-xl max-w-md w-full p-6">
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white border-[0.35em] border-[#ef4444] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] max-w-md w-full p-6 relative">
       <div className="text-center">
         <div className="flex justify-center mb-4">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Distribution Error</h2>
-        <p className="text-gray-600 mb-4 text-sm">
+        <h2 className="text-xl font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">Distribution Error</h2>
+        <p className="text-[#050505] mb-4 text-sm font-semibold">
           An error occurred while loading the distribution modal. Please try again or contact support if the issue persists.
         </p>
         <div className="space-y-2">
-          <button
+          <ButtonCool
             onClick={onClose}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 text-sm font-medium"
-          >
-            Close Modal
-          </button>
+            text="Close Modal"
+            bgColor="#2563eb"
+            hoverBgColor="#1d4ed8"
+            textColor="#ffffff"
+            borderColor="#050505"
+            size="md"
+          />
         </div>
       </div>
     </div>
@@ -298,22 +302,48 @@ function ManualDistributeModalContent({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-800">Manual Pool Distribution</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Pattern Grid Overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em',
+          }}
+        />
+
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">
+          ★
+        </div>
+
+        <div
+          className="relative flex items-center justify-between px-[1.5em] pt-[1.4em] pb-[1em] border-b-[0.35em] border-[#050505] z-[2]"
+          style={{
+            background: '#2563eb',
+            backgroundImage:
+              'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay',
+          }}
+        >
+          <h2 className="text-xl font-extrabold text-white uppercase tracking-[0.05em]">
+            Manual Pool Distribution
+          </h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-2 border-[0.15em] border-white/40 rounded-[0.3em] hover:bg-white/20 transition-colors"
           >
-            <X className="h-5 w-5 text-slate-500" />
+            <X className="h-5 w-5 text-white" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="relative p-6 space-y-6 z-[2]">
           {/* Token Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-extrabold text-[#050505] mb-2 uppercase tracking-[0.05em]">
               Select Token to Distribute
             </label>
             {isLoadingBalance ? (
@@ -338,15 +368,17 @@ function ManualDistributeModalContent({
                   <button
                     key={token.address}
                     onClick={() => setSelectedToken(token.address)}
-                    className={`p-3 rounded-lg border-2 transition-colors ${
+                    className={`p-3 rounded-[0.4em] border-[0.2em] shadow-[0.2em_0.2em_0_#000000] transition-all text-left ${
                       selectedToken === token.address
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-[#2563eb] bg-[#dbeafe]'
+                        : 'border-[#050505] bg-white hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em]'
                     }`}
                   >
                     <div className="text-left">
-                      <div className="font-medium text-slate-800">{token.symbol}</div>
-                      <div className="text-sm text-slate-600">
+                      <div className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                        {token.symbol}
+                      </div>
+                      <div className="text-sm text-[#050505] font-semibold">
                         Balance: {Number(formatEther(token.balance)).toFixed(6)}
                       </div>
                     </div>
@@ -360,48 +392,55 @@ function ManualDistributeModalContent({
           {selectedToken && distributions.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-slate-800">Distribution Configuration</h3>
-                <button
+                <h3 className="text-lg font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                  Distribution Configuration
+                </h3>
+                <ButtonCool
                   onClick={calculateVoteBasedDistribution}
                   disabled={isCalculating}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center space-x-2"
+                  text={isCalculating ? 'Calculating...' : 'Calculate by Votes'}
+                  bgColor="#2563eb"
+                  hoverBgColor="#1d4ed8"
+                  textColor="#ffffff"
+                  borderColor="#050505"
+                  size="sm"
                 >
-                  {isCalculating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Calculator className="h-4 w-4" />
-                  )}
-                  <span>Calculate by Votes</span>
-                </button>
+                  {isCalculating && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {!isCalculating && <Calculator className="h-4 w-4" />}
+                </ButtonCool>
               </div>
 
               {/* Distribution Table */}
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-slate-200 rounded-lg">
-                  <thead className="bg-slate-50">
+                <table className="w-full border-collapse border-[0.15em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700">
+                      <th className="border border-slate-200 px-4 py-3 text-left text-xs font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                         Project
                       </th>
-                      <th className="border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700">
+                      <th className="border border-slate-200 px-4 py-3 text-left text-xs font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                         Votes
                       </th>
-                      <th className="border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700">
+                      <th className="border border-slate-200 px-4 py-3 text-left text-xs font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                         Amount ({availableTokens.find((t: TokenInfo) => t.address === selectedToken)?.symbol})
                       </th>
-                      <th className="border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700">
+                      <th className="border border-slate-200 px-4 py-3 text-left text-xs font-extrabold text-[#050505] uppercase tracking-[0.05em]">
                         Percentage
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {distributions.map((dist, index) => (
-                      <tr key={dist.projectId.toString()} className="hover:bg-slate-50">
+                      <tr key={dist.projectId.toString()} className="hover:bg-gray-50">
                         <td className="border border-slate-200 px-4 py-3">
-                          <div className="font-medium text-slate-800">{dist.projectName}</div>
-                          <div className="text-xs text-slate-500">ID: {dist.projectId.toString()}</div>
+                          <div className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                            {dist.projectName}
+                          </div>
+                          <div className="text-xs text-gray-600 font-mono">
+                            ID: {dist.projectId.toString()}
+                          </div>
                         </td>
-                        <td className="border border-slate-200 px-4 py-3 text-sm text-slate-600">
+                        <td className="border border-slate-200 px-4 py-3 text-sm text-[#050505]">
                           {Number(formatEther(dist.voteCount)).toFixed(1)}
                         </td>
                         <td className="border border-slate-200 px-4 py-3">
@@ -410,11 +449,11 @@ function ManualDistributeModalContent({
                             step="0.000001"
                             value={dist.amount}
                             onChange={(e) => handleAmountChange(index, e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            className="w-full px-3 py-2 border-[0.15em] border-[#050505] rounded-[0.3em] shadow-[0.1em_0.1em_0_#000000] focus:outline-none text-sm font-semibold"
                             placeholder="0.000000"
                           />
                         </td>
-                        <td className="border border-slate-200 px-4 py-3 text-sm text-slate-600">
+                        <td className="border border-slate-200 px-4 py-3 text-sm text-[#050505] font-semibold">
                           {dist.percentage.toFixed(1)}%
                         </td>
                       </tr>
@@ -424,10 +463,12 @@ function ManualDistributeModalContent({
               </div>
 
               {/* Total Amount Display */}
-              <div className="p-4 bg-slate-50 rounded-lg">
+              <div className="p-4 bg-gray-50 border-[0.15em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-slate-800">Total Amount:</span>
-                  <span className="font-semibold text-slate-800">
+                  <span className="font-extrabold text-[#050505] uppercase tracking-[0.05em]">
+                    Total Amount:
+                  </span>
+                  <span className="font-extrabold text-[#050505]">
                     {totalAmount} {availableTokens.find((t: TokenInfo) => t.address === selectedToken)?.symbol}
                   </span>
                 </div>
@@ -437,37 +478,42 @@ function ManualDistributeModalContent({
 
           {/* Error/Success Messages */}
           {error && (
-            <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              <span className="text-red-700">{error}</span>
+            <div className="flex items-center space-x-2 p-3 bg-[#fee2e2] border-[0.2em] border-[#ef4444] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+              <AlertCircle className="h-5 w-5 text-[#ef4444]" />
+              <span className="text-[#050505] text-sm font-semibold">{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="text-green-700">{success}</span>
+            <div className="flex items-center space-x-2 p-3 bg-[#d1fae5] border-[0.2em] border-[#10b981] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000]">
+              <CheckCircle className="h-5 w-5 text-[#10b981]" />
+              <span className="text-[#065f46] text-sm font-semibold">{success}</span>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200">
-            <button
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t-[0.35em] border-[#050505]">
+            <ButtonCool
               onClick={handleClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
+              text="Cancel"
+              bgColor="#ffffff"
+              hoverBgColor="#f3f4f6"
+              textColor="#050505"
+              borderColor="#050505"
+              size="md"
+            />
+            <ButtonCool
               onClick={handleSubmit}
+              text={isPending ? 'Distributing...' : 'Distribute Manually'}
+              bgColor="#2563eb"
+              hoverBgColor="#1d4ed8"
+              textColor="#ffffff"
+              borderColor="#050505"
+              size="md"
               disabled={!selectedToken || distributions.length === 0 || isPending}
-              className="px-6 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg transition-colors flex items-center space-x-2"
             >
-              {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
-              <span>{isPending ? 'Distributing...' : 'Distribute Manually'}</span>
-            </button>
+              {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            </ButtonCool>
           </div>
         </div>
       </div>

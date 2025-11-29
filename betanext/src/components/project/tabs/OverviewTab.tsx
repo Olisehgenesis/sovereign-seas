@@ -18,15 +18,29 @@ export default function OverviewTab({ project, projectCampaigns }: OverviewTabPr
       {/* Overview Content */}
       <div className="group relative">
         <div 
-          className="hidden sm:block absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
           style={{
             backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
             backgroundSize: '0.5em 0.5em'
           }}
         />
-        <div className="hidden sm:block absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
-        <div className="hidden sm:block absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
-        <div className="relative bg-white sm:border-[0.35em] sm:border-[#2563eb] sm:rounded-[0.6em] sm:shadow-[0.5em_0.5em_0_#000000] sm:p-8 sm:p-12 z-[2]">
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">★</div>
+        <div className="relative bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-4 sm:p-8 z-[2]"
+          style={{ boxShadow: 'inset 0 0 0 0.15em rgba(0, 0, 0, 0.05)' }}
+        >
+          {/* Header strip */}
+          <div 
+            className="mb-4 -mx-4 sm:-mx-8 px-4 sm:px-8 py-3 text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em]"
+            style={{ 
+              background: '#2563eb',
+              backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+              backgroundBlendMode: 'overlay'
+            }}
+          >
+            <span className="text-sm sm:text-base">Project Overview</span>
+          </div>
+
           {/* Social Media Icons - Top Right Corner */}
           {(project.metadata?.twitter || project.metadata?.linkedin || project.metadata?.discord || 
             project.metadata?.telegram || project.metadata?.youtube || project.metadata?.instagram || 
@@ -127,69 +141,78 @@ export default function OverviewTab({ project, projectCampaigns }: OverviewTabPr
                   : '0.00'} <img src="/images/celo.png" alt="CELO" width={16} height={16} className="inline-block" />
               </strong> in total funding.
             </p>
-            
-            {project.metadata?.category && project.metadata?.projectType && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                It is a <strong>{project.metadata.projectType}</strong> under the <strong>{project.metadata.category}</strong> category.
-              </p>
-            )}
-            
-            {project.metadata?.maturityLevel && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                The project has reached a <strong>{project.metadata.maturityLevel}</strong> maturity level.
-              </p>
-            )}
-            
-            {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                Built with <strong>{project.metadata.techStack.join(', ')}</strong> technology stack.
-              </p>
-            )}
-            
-            {project.metadata?.keyFeatures && project.metadata.keyFeatures.length > 0 && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                <strong>The key features include but are not limited to </strong> {project.metadata.keyFeatures.join(', ')}.
-              </p>
-            )}
-            
-            {project.transferrable !== undefined && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                The project is <strong>{project.transferrable ? 'transferrable' : 'non-transferrable'}</strong> and is currently <strong>{project.active ? 'active' : 'inactive'}</strong>.
-              </p>
-            )}
-            
-            {project.metadata?.innovation && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                <strong>Innovation:</strong> {project.metadata.innovation}
-              </p>
-            )}
-            
-            {project.metadata?.targetAudience && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                <strong>Target Audience:</strong> {project.metadata.targetAudience}
-              </p>
-            )}
-            
-            {project.metadata?.useCases && project.metadata.useCases.length > 0 && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                <strong>Use Cases:</strong> {project.metadata.useCases.join(', ')}.
-              </p>
-            )}
-            
-            {project.metadata?.establishedDate && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                <strong>Established:</strong> {formatYear(project.metadata.establishedDate)}
-              </p>
-            )}
-            
-            {project.metadata?.milestones && project.metadata.milestones.length > 0 && (
-              <p className="text-gray-800 leading-relaxed text-sm sm:text-lg mb-3 sm:mb-6">
-                <strong>Current Milestones:</strong> {project.metadata.milestones.filter(m => m.status === 'in-progress').length > 0 ? 
-                  project.metadata.milestones.filter(m => m.status === 'in-progress').map(m => m.title).join(', ') + ' in progress' :
-                  'No active milestones at this time'
-                }.
-              </p>
-            )}
+
+            {/* Technical / metadata details in a retro info box */}
+            <div className="mt-4 p-4 sm:p-5 bg-[#f9fafb] border-[0.2em] border-[#050505] rounded-[0.5em] shadow-[0.3em_0.3em_0_#000000] space-y-3">
+              {project.metadata?.category && project.metadata?.projectType && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  It is a <strong>{project.metadata.projectType}</strong> under the{' '}
+                  <strong>{project.metadata.category}</strong> category.
+                </p>
+              )}
+              
+              {project.metadata?.maturityLevel && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  Maturity level: <strong>{project.metadata.maturityLevel}</strong>.
+                </p>
+              )}
+              
+              {project.metadata?.techStack && project.metadata.techStack.length > 0 && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  Built with <strong>{project.metadata.techStack.join(', ')}</strong> stack.
+                </p>
+              )}
+              
+              {project.metadata?.keyFeatures && project.metadata.keyFeatures.length > 0 && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  <strong>Key features:</strong> {project.metadata.keyFeatures.join(', ')}.
+                </p>
+              )}
+              
+              {project.transferrable !== undefined && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  The project is <strong>{project.transferrable ? 'transferrable' : 'non-transferrable'}</strong> and is currently{' '}
+                  <strong>{project.active ? 'active' : 'inactive'}</strong>.
+                </p>
+              )}
+              
+              {project.metadata?.innovation && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  <strong>Innovation:</strong> {project.metadata.innovation}
+                </p>
+              )}
+              
+              {project.metadata?.targetAudience && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  <strong>Target audience:</strong> {project.metadata.targetAudience}
+                </p>
+              )}
+              
+              {project.metadata?.useCases && project.metadata.useCases.length > 0 && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  <strong>Use cases:</strong> {project.metadata.useCases.join(', ')}.
+                </p>
+              )}
+              
+              {project.metadata?.establishedDate && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  <strong>Established:</strong> {formatYear(project.metadata.establishedDate)}
+                </p>
+              )}
+              
+              {project.metadata?.milestones && project.metadata.milestones.length > 0 && (
+                <p className="text-gray-800 leading-relaxed text-sm sm:text-base font-semibold">
+                  <strong>Current milestones:</strong>{' '}
+                  {project.metadata.milestones.filter(m => m.status === 'in-progress').length > 0
+                    ? project.metadata.milestones
+                        .filter(m => m.status === 'in-progress')
+                        .map(m => m.title)
+                        .join(', ') + ' in progress'
+                    : 'No active milestones at this time'}
+                  .
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

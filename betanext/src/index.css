@@ -119,7 +119,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Google Sans Code', 'Roboto Mono', 'Roboto', monospace, system-ui, -apple-system, 'Segoe UI', sans-serif !important;
-    zoom: 0.9; /* Reduce zoom by 10% */
   }
   button, input, textarea, select, span, div, p, h1, h2, h3, h4, h5, h6 {
     font-family: 'Google Sans Code', 'Roboto Mono', 'Roboto', monospace, system-ui, -apple-system, 'Segoe UI', sans-serif !important;

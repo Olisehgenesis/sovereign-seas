@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { ButtonCool } from '@/components/ui/button-cool';
 import { Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 
 const STORAGE_KEY = 'sovseas_whats_new_seen';
@@ -47,48 +47,80 @@ export default function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
-        <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Sparkles className="h-6 w-6 text-blue-600" />
+      <DialogContent className="relative max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-[0.35em] border-[#2563eb] rounded-[0.6em] shadow-[0.7em_0.7em_0_#000000] p-0 [&>button]:hidden">
+        {/* Pattern Grid Overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 z-[1]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)',
+            backgroundSize: '0.5em 0.5em',
+          }}
+        />
+
+        {/* Accent Corner */}
+        <div className="absolute -top-[1em] -right-[1em] w-[4em] h-[4em] bg-[#2563eb] rotate-45 z-[1]" />
+        <div className="absolute top-[0.4em] right-[0.4em] text-white text-[1.2em] font-bold z-[2]">
+          ★
+        </div>
+
+        <DialogHeader
+          className="relative px-[1.5em] pt-[1.4em] pb-[1em] text-white font-extrabold border-b-[0.35em] border-[#050505] uppercase tracking-[0.05em] z-[2] overflow-hidden"
+          style={{
+            background: '#2563eb',
+            backgroundImage:
+              'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 0.5em, transparent 0.5em, transparent 1em)',
+            backgroundBlendMode: 'overlay',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 border-[0.15em] border-white/30 rounded-[0.3em]">
+              <Sparkles className="h-6 w-6 text-yellow-200" />
             </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              What's New in SovSeas
-            </DialogTitle>
+            <div>
+              <DialogTitle className="text-2xl font-extrabold text-white tracking-[0.05em]">
+                What&apos;s New in SovSeas
+              </DialogTitle>
+              <DialogDescription className="text-white/90 text-sm font-semibold normal-case mt-1">
+                We&apos;ve been shipping upgrades. Here&apos;s what changed:
+              </DialogDescription>
+            </div>
           </div>
-          <DialogDescription className="text-gray-600">
-            We've been working hard to improve your experience. Here are the latest updates:
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-6">
+        <div className="relative px-[1.5em] pb-[1.5em] pt-4 space-y-4 z-[2]">
           {changes.map((change, index) => (
             <div
               key={index}
-              className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+              className="flex gap-4 p-4 bg-gray-50 border-[0.2em] border-gray-300 rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all"
             >
               <div className="flex-shrink-0 mt-1">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                <div className="w-[2.2em] h-[2.2em] flex items-center justify-center bg-[#dbeafe] border-[0.15em] border-[#2563eb] rounded-[999px] shadow-[0.15em_0.15em_0_#000000]">
+                  <CheckCircle2 className="h-4 w-4 text-[#2563eb]" />
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1">{change.title}</h3>
-                <p className="text-sm text-gray-600">{change.description}</p>
+                <h3 className="font-extrabold text-[#050505] mb-1 uppercase tracking-[0.05em]">
+                  {change.title}
+                </h3>
+                <p className="text-sm text-[#050505] font-semibold">{change.description}</p>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <Button
+        <div className="mt-4 pt-4 border-t-[0.35em] border-[#050505] flex justify-end">
+          <ButtonCool
             onClick={handleClose}
-            className="w-full bg-gray-900 hover:bg-gray-800 text-white"
+            text="Got it!"
+            bgColor="#050505"
+            hoverBgColor="#111827"
+            textColor="#ffffff"
+            borderColor="#050505"
+            size="md"
           >
-            Got it!
             <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+          </ButtonCool>
         </div>
       </DialogContent>
     </Dialog>
