@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { DuneClient } from '@duneanalytics/client-sdk'
 
 export interface DuneProjectAnalytics {
   project_id: number
@@ -16,12 +15,10 @@ export interface DuneAnalyticsResult {
   lastUpdated: Date | null
 }
 
-const DUNE_API_KEY = process.env.NEXT_PUBLIC_DUNE_API_KEY || 'RhOV8GB5STREkHcovMFrRmoklzOrQKTi'
-const DUNE_QUERY_ID = 6349526
-
 /**
  * Hook to fetch analytics data from Dune Analytics
  * Uses query ID 6349526 which provides top projects by votes
+ * Calls the server-side API route to avoid client-side Node.js dependencies
  */
 export function useDuneAnalytics() {
   const [result, setResult] = useState<DuneAnalyticsResult>({
@@ -36,23 +33,19 @@ export function useDuneAnalytics() {
       setResult(prev => ({ ...prev, isLoading: true, error: null }))
 
       try {
-        const dune = new DuneClient(DUNE_API_KEY)
-        const queryResult = await dune.getLatestResult({ queryId: DUNE_QUERY_ID })
-
-        // Handle different possible response structures
-        let rows: any[] = []
-        if (queryResult.result?.rows) {
-          rows = queryResult.result.rows
-        } else if (Array.isArray(queryResult.result)) {
-          rows = queryResult.result
-        } else if (queryResult.result?.rows) {
-          rows = queryResult.result.rows
+        const response = await fetch('/api/dune/analytics')
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `Failed to fetch: ${response.statusText}`)
         }
 
-        if (rows && rows.length > 0) {
-          const data = rows as DuneProjectAnalytics[]
+        const { data } = await response.json()
+
+        if (data && data.length > 0) {
+          const analyticsData = data as DuneProjectAnalytics[]
           setResult({
-            data,
+            data: analyticsData,
             isLoading: false,
             error: null,
             lastUpdated: new Date()

@@ -27,8 +27,9 @@ export interface TopProjectsAnalytics {
 /**
  * Hook to fetch unique voters from VoteCast events
  * This queries blockchain events to get accurate unique voter counts
+ * Only used as a fallback when Dune data is not available
  */
-function useUniqueVoters(projectIds: bigint[]) {
+function useUniqueVoters(projectIds: bigint[], enabled: boolean = true) {
   const contractAddress = getMainContractAddress()
   const publicClient = usePublicClient()
   const [uniqueVotersMap, setUniqueVotersMap] = useState<Map<string, Set<string>>>(new Map())
@@ -36,7 +37,7 @@ function useUniqueVoters(projectIds: bigint[]) {
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    if (!publicClient || projectIds.length === 0) return
+    if (!publicClient || projectIds.length === 0 || !enabled) return
 
     const fetchUniqueVoters = async () => {
       setIsLoading(true)
@@ -50,10 +51,14 @@ function useUniqueVoters(projectIds: bigint[]) {
           votersMap.set(projectId.toString(), new Set<string>())
         })
 
+        // Get current block number to limit range to last 10,000 blocks
+        // This avoids RPC errors on free tier providers
+        const currentBlock = await publicClient.getBlockNumber()
+        const fromBlock = currentBlock > 10000n ? currentBlock - 10000n : 0n
+
         // Fetch VoteCast events for all projects
-        // Note: This fetches all VoteCast events. For better performance with many events,
-        // consider: 1) Caching results, 2) Using a subgraph, or 3) Querying per project
-        // Since projectId is indexed, we could optimize by querying per project in batches
+        // Note: Limited to last 10,000 blocks to avoid RPC limits
+        // For better performance with many events, consider: 1) Caching results, 2) Using a subgraph, or 3) Querying per project
         const rawLogs = await publicClient.getLogs({
           address: contractAddress,
           event: {
@@ -68,7 +73,7 @@ function useUniqueVoters(projectIds: bigint[]) {
               { indexed: false, name: 'celoEquivalent', type: 'uint256' }
             ]
           },
-          fromBlock: 0n,
+          fromBlock,
           toBlock: 'latest'
         } as any)
 
@@ -101,7 +106,7 @@ function useUniqueVoters(projectIds: bigint[]) {
     }
 
     fetchUniqueVoters()
-  }, [publicClient, contractAddress, projectIds.join(',')])
+  }, [publicClient, contractAddress, projectIds.join(','), enabled])
 
   return { uniqueVotersMap, isLoading, error }
 }
@@ -130,8 +135,13 @@ export function useProjectAnalytics() {
     return allProjects?.map(p => p.project.id) || []
   }, [allProjects])
   
-  // Fetch unique voters from events (fallback if Dune fails)
-  const { uniqueVotersMap, isLoading: votersLoading, error: votersError } = useUniqueVoters(projectIds)
+  // Only fetch unique voters from events if Dune data is not available
+  // This avoids unnecessary RPC calls and potential errors
+  const shouldFetchUniqueVoters = !duneData || duneData.length === 0 || duneError !== null
+  const { uniqueVotersMap, isLoading: votersLoading, error: votersError } = useUniqueVoters(
+    projectIds,
+    shouldFetchUniqueVoters
+  )
   
   // Build contracts to fetch participation data for all project-campaign combinations
   const participationContracts = useMemo(() => {
