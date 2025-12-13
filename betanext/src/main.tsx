@@ -25,6 +25,7 @@ import CampaignEdit from '@/legacy-pages/app/campaign/<id>/edit'
 import ProfilePage from '@/legacy-pages/app/profile/page'
 import TasksPage from '@/legacy-pages/app/tasks/page'
 import BackofficePage from '@/legacy-pages/app/backoffice/page'
+import AnalyticsPage from '@/legacy-pages/analytics/page'
 import NotFound from '@/legacy-pages/404/page'
 
 
@@ -47,6 +48,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/explorer/grant/:id" element={<Layout><GrantView /></Layout>} />
           <Route path="/explorer/user/:address" element={<Layout><UserProfilePage /></Layout>} />
           <Route path="/explorer/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+          <Route path="/analytics" element={<Layout><AnalyticsPage /></Layout>} />
 
           {/* App */}
           <Route path="/app/project/start" element={<Layout><CreateProject /></Layout>} />

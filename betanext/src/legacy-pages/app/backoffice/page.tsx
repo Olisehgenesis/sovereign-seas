@@ -49,7 +49,16 @@ import {
   useGetDataStructureVersion
 } from '@/hooks/useSuperAdminMethods';
 
+import { 
+  useClaimContractAdminFees,
+  useContractAdminFees
+} from '@/hooks/usePools';
+
+import { useReadContract } from 'wagmi';
+import { poolsABI } from '@/abi/poolsABI';
 import { formatEther } from 'viem';
+import type { Address } from 'viem';
+import { getTokenSymbol, getTokenInfo } from '@/utils/tokenUtils';
 
 export default function BackofficePage() {
   const { address, isConnected } = useAccount();
@@ -84,14 +93,32 @@ export default function BackofficePage() {
   const [emergencyRecipient, setEmergencyRecipient] = useState('');
   const [emergencyAmount, setEmergencyAmount] = useState('');
   const [forceRecovery, setForceRecovery] = useState(false);
+  const [withdrawToken, setWithdrawToken] = useState('');
+  const [withdrawRecipient, setWithdrawRecipient] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [showWithdrawFeesModal, setShowWithdrawFeesModal] = useState(false);
+  const [showClaimPoolFeesModal, setShowClaimPoolFeesModal] = useState(false);
+  const [claimPoolToken, setClaimPoolToken] = useState('');
 
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;
+  const poolsContractAddress = process.env.NEXT_PUBLIC_POOLS_CONTRACT_ADDRESS as `0x${string}` | undefined;
   
-  // Super admin check
+  // Super admin check for seas4 contract
   const { isSuperAdmin, isLoading: superAdminLoading } = useIsSuperAdmin(
     contractAddress as `0x${string}`, 
     address as `0x${string}`
   );
+
+  // Super admin check for pools contract
+  const { data: isPoolSuperAdmin, isLoading: poolSuperAdminLoading } = useReadContract({
+    address: poolsContractAddress as Address,
+    abi: poolsABI,
+    functionName: 'superAdmins',
+    args: [address as Address],
+    query: {
+      enabled: !!address && !!poolsContractAddress
+    }
+  });
 
   // Data hooks
   const { broker, isLoading: brokerLoading } = useGetBroker(contractAddress as `0x${string}`);
@@ -108,6 +135,10 @@ export default function BackofficePage() {
   const { removeSupportedToken, isPending: removingToken } = useRemoveSupportedToken(contractAddress as `0x${string}`);
   const { setTokenExchangeProvider, isPending: settingProvider } = useSetTokenExchangeProvider(contractAddress as `0x${string}`);
   const { emergencyTokenRecovery, isPending: emergencyRecovery } = useEmergencyTokenRecovery(contractAddress as `0x${string}`);
+  const { withdrawFees, isPending: withdrawingFees } = useWithdrawFees(contractAddress as `0x${string}`);
+  
+  // Pool contract fee hooks
+  const { claim: claimPoolFees, isPending: claimingPoolFees } = useClaimContractAdminFees();
 
   useEffect(() => {
     setIsMounted(true);
@@ -262,9 +293,41 @@ export default function BackofficePage() {
     }
   };
 
+  const handleWithdrawFees = async () => {
+    if (!withdrawToken || !withdrawRecipient) return;
+    
+    try {
+      await withdrawFees(
+        withdrawToken as `0x${string}`,
+        withdrawRecipient as `0x${string}`,
+        withdrawAmount ? BigInt(parseFloat(withdrawAmount) * 1e18) : 0n
+      );
+      showStatusMessage('Fees withdrawn successfully!', 'success');
+      setShowWithdrawFeesModal(false);
+      setWithdrawToken('');
+      setWithdrawRecipient('');
+      setWithdrawAmount('');
+    } catch (error: any) {
+      showStatusMessage(`Failed to withdraw fees: ${error.message || 'Unknown error'}`, 'error');
+    }
+  };
+
+  const handleClaimPoolFees = async () => {
+    if (!claimPoolToken) return;
+    
+    try {
+      await claimPoolFees(claimPoolToken as `0x${string}`);
+      showStatusMessage('Pool admin fees claimed successfully!', 'success');
+      setShowClaimPoolFeesModal(false);
+      setClaimPoolToken('');
+    } catch (error: any) {
+      showStatusMessage(`Failed to claim pool fees: ${error.message || 'Unknown error'}`, 'error');
+    }
+  };
+
   if (!isMounted) return null;
 
-  if (superAdminLoading) {
+  if (superAdminLoading || poolSuperAdminLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-orange-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-6">
@@ -281,7 +344,7 @@ export default function BackofficePage() {
     );
   }
 
-  if (!isConnected || !isSuperAdmin) {
+  if (!isConnected || (!isSuperAdmin && !isPoolSuperAdmin)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-orange-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
@@ -504,13 +567,15 @@ export default function BackofficePage() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-semibold text-slate-800">Fee Management</h3>
-                  <button
-                    onClick={() => setShowUpdateFeesModal(true)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span>Update Fees</span>
-                  </button>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => setShowUpdateFeesModal(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span>Update Fees</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -534,9 +599,68 @@ export default function BackofficePage() {
 
                   <div className="bg-white rounded-xl border border-slate-200 p-6">
                     <h4 className="font-semibold text-slate-800 mb-4">Fee Collection</h4>
-                    <p className="text-slate-600 text-sm">Fee collection and withdrawal interface would go here.</p>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => setShowWithdrawFeesModal(true)}
+                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                      >
+                        <DollarSign className="h-4 w-4" />
+                        <span>Withdraw Fees</span>
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Collected Fees Display */}
+                {isSuperAdmin && (
+                  <div className="bg-white rounded-xl border border-slate-200 p-6">
+                    <h4 className="font-semibold text-slate-800 mb-4">Collected Fees (Seas4 Contract)</h4>
+                    <div className="space-y-2">
+                      {supportedTokens && supportedTokens.length > 0 ? (
+                        supportedTokens.map((token) => (
+                          <CollectedFeeRow 
+                            key={token} 
+                            token={token} 
+                            contractAddress={contractAddress as `0x${string}`}
+                          />
+                        ))
+                      ) : (
+                        <p className="text-slate-500 text-sm">No supported tokens found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pool Contract Admin Fees */}
+                {isPoolSuperAdmin && poolsContractAddress && (
+                  <div className="bg-white rounded-xl border border-slate-200 p-6">
+                    <h4 className="font-semibold text-slate-800 mb-4">Pool Contract Admin Fees</h4>
+                    <div className="space-y-2">
+                      {supportedTokens && supportedTokens.length > 0 ? (
+                        supportedTokens.map((token) => (
+                          <PoolFeeRow 
+                            key={token} 
+                            token={token} 
+                            poolsContractAddress={poolsContractAddress}
+                            onClaim={() => {
+                              setClaimPoolToken(token);
+                              setShowClaimPoolFeesModal(true);
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <p className="text-slate-500 text-sm">No supported tokens found</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setShowClaimPoolFeesModal(true)}
+                      className="mt-4 w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                    >
+                      <Coins className="h-4 w-4" />
+                      <span>Claim Pool Admin Fees</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -891,6 +1015,216 @@ export default function BackofficePage() {
             </div>
           </div>
         )}
+
+        {/* Withdraw Fees Modal */}
+        {showWithdrawFeesModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-slate-800">Withdraw Fees</h3>
+                <button
+                  onClick={() => setShowWithdrawFeesModal(false)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Token Address</label>
+                  <input
+                    type="text"
+                    value={withdrawToken}
+                    onChange={(e) => setWithdrawToken(e.target.value)}
+                    placeholder="0x..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Recipient Address</label>
+                  <input
+                    type="text"
+                    value={withdrawRecipient}
+                    onChange={(e) => setWithdrawRecipient(e.target.value)}
+                    placeholder="0x..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Amount (leave empty for all)</label>
+                  <input
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="0.0"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  />
+                </div>
+                
+                <div className="flex space-x-4">
+                  <button
+                    onClick={handleWithdrawFees}
+                    disabled={withdrawingFees || !withdrawToken || !withdrawRecipient}
+                    className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    {withdrawingFees ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <DollarSign className="h-4 w-4" />
+                    )}
+                    <span>Withdraw</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setShowWithdrawFeesModal(false);
+                      setWithdrawToken('');
+                      setWithdrawRecipient('');
+                      setWithdrawAmount('');
+                    }}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Claim Pool Fees Modal */}
+        {showClaimPoolFeesModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-slate-800">Claim Pool Admin Fees</h3>
+                <button
+                  onClick={() => setShowClaimPoolFeesModal(false)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Token Address</label>
+                  <input
+                    type="text"
+                    value={claimPoolToken}
+                    onChange={(e) => setClaimPoolToken(e.target.value)}
+                    placeholder="0x..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                
+                <div className="flex space-x-4">
+                  <button
+                    onClick={handleClaimPoolFees}
+                    disabled={claimingPoolFees || !claimPoolToken}
+                    className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    {claimingPoolFees ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Coins className="h-4 w-4" />
+                    )}
+                    <span>Claim Fees</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setShowClaimPoolFeesModal(false);
+                      setClaimPoolToken('');
+                    }}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Component to display collected fees row
+function CollectedFeeRow({ token, contractAddress }: { token: Address; contractAddress: Address }) {
+  const { collectedFees, isLoading } = useGetCollectedFees(contractAddress, token);
+  const tokenInfo = getTokenInfo(token);
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+        <span className="text-slate-600">Loading...</span>
+      </div>
+    );
+  }
+
+  if (!collectedFees || collectedFees === 0n) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+      <div>
+        <span className="font-medium text-slate-800">{tokenInfo.symbol}</span>
+        <span className="text-xs text-slate-500 ml-2 font-mono">{token.slice(0, 8)}...</span>
+      </div>
+      <span className="font-semibold text-green-600">
+        {Number(formatEther(collectedFees)).toFixed(6)} {tokenInfo.symbol}
+      </span>
+    </div>
+  );
+}
+
+// Component to display pool fees row
+function PoolFeeRow({ 
+  token, 
+  poolsContractAddress,
+  onClaim 
+}: { 
+  token: Address; 
+  poolsContractAddress: Address;
+  onClaim: () => void;
+}) {
+  const { amount, isLoading } = useContractAdminFees(token);
+  const tokenInfo = getTokenInfo(token);
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+        <span className="text-slate-600">Loading...</span>
+      </div>
+    );
+  }
+
+  if (!amount || amount === 0n) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+      <div>
+        <span className="font-medium text-slate-800">{tokenInfo.symbol}</span>
+        <span className="text-xs text-slate-500 ml-2 font-mono">{token.slice(0, 8)}...</span>
+      </div>
+      <div className="flex items-center space-x-3">
+        <span className="font-semibold text-purple-600">
+          {Number(formatEther(amount)).toFixed(6)} {tokenInfo.symbol}
+        </span>
+        <button
+          onClick={onClaim}
+          className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors duration-200"
+        >
+          Claim
+        </button>
       </div>
     </div>
   );

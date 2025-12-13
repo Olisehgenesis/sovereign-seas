@@ -12,10 +12,14 @@
     "deploy:milestone:ignition:celo-sepolia": "dotenvx run -- hardhat ignition deploy ignition/modules/Milestone.ts --network celoSepolia",
     "deploy:builder-rewards:celo": "dotenvx run -- hardhat run scripts/deploy-builder-rewards.ts --network celo",
     "deploy:builder-rewards:celo-sepolia": "dotenvx run -- hardhat run scripts/deploy-builder-rewards.ts --network celoSepolia",
+    "deploy:quizelo:celo": "dotenvx run -- hardhat run scripts/deploy-quizelo.ts --network celo",
+    "deploy:quizelo:celo-sepolia": "dotenvx run -- hardhat run scripts/deploy-quizelo.ts --network celoSepolia",
     "verify:milestone:celo": "dotenvx run -- hardhat run scripts/verify-milestone.ts --network celo",
     "verify:milestone:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-milestone.ts --network celoSepolia",
     "verify:builder-rewards:celo": "dotenvx run -- hardhat run scripts/verify-builder-rewards.ts --network celo",
-    "verify:builder-rewards:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-builder-rewards.ts --network celoSepolia"
+    "verify:builder-rewards:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-builder-rewards.ts --network celoSepolia",
+    "verify:quizelo:celo": "dotenvx run -- hardhat run scripts/verify-quizelo.ts --network celo",
+    "verify:quizelo:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-quizelo.ts --network celoSepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.5",
