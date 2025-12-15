@@ -26,7 +26,7 @@ import { useAllProjects, useAddProjectToCampaign, formatProjectForDisplay } from
 import type { Address } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import { useAccount } from 'wagmi';
-import { getCeloTokenAddress } from '@/utils/contractConfig';
+import { getCeloTokenAddress, getMainContractAddress } from '@/utils/contractConfig';
 import { isCeloToken } from '@/utils/tokenUtils';
 
 interface AddProjectsToCampaignModalProps {
@@ -46,7 +46,9 @@ interface ProjectCardProps {
   disabled?: boolean;
 }
 
-const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4 as Address;
+import { getMainContractAddress } from '@/utils/contractConfig';
+
+const contractAddress = getMainContractAddress();
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onAdd, isLoading, isInCampaign = false, status, disabled }) => {
   const getProjectLogo = (project: any) => {

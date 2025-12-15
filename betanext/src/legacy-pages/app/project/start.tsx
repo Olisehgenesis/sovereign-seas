@@ -51,6 +51,7 @@ import type { Address } from 'viem';
 import { useChainSwitch } from '@/hooks/useChainSwitch';
 import DynamicHelmet from '@/components/DynamicHelmet';
 import { contractABI as abi } from '@/abi/seas4ABI';
+import { getMainContractAddress } from '@/utils/contractConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -126,8 +127,7 @@ const Section = ({ title, icon: Icon, children, required = false, isVisible = tr
   );
 };
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
-const contractAddress = (process.env.NEXT_PUBLIC_CONTRACT_V4 ?? ZERO_ADDRESS) as Address;
+const contractAddress = getMainContractAddress();
 
 type Project = {
   name: string;

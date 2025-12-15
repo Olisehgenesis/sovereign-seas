@@ -27,6 +27,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
 import { usePublicClient } from 'wagmi';
 import { celo, celoAlfajores } from 'viem/chains';
+import { celoSepolia } from '@/utils/celoSepolia';
 import { QRCodeSVG } from 'qrcode.react';
 
 // Network configuration using viem chains
@@ -49,6 +50,16 @@ const networks = [
     chain: celoAlfajores,
     explorerUrl: celoAlfajores.blockExplorers?.default.url || 'https://alfajores.celoscan.io',
     color: 'from-yellow-400 to-orange-500',
+    isActive: false
+  },
+  {
+    id: celoSepolia.id.toString(),
+    name: celoSepolia.name,
+    shortName: 'Celo Sepolia',
+    icon: '/images/celo-logo.png',
+    chain: celoSepolia,
+    explorerUrl: celoSepolia.blockExplorers?.default.url || 'https://explorer.celo.org/sepolia',
+    color: 'from-blue-400 to-indigo-500',
     isActive: false
   }
 ];
@@ -417,7 +428,11 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                             onClick={() => setShowNetworkDropdown(!showNetworkDropdown)}
                             className="flex items-center space-x-2 px-3 py-2 bg-white border-[0.2em] border-[#050505] rounded-[0.4em] shadow-[0.2em_0.2em_0_#000000] hover:shadow-[0.3em_0.3em_0_#000000] hover:-translate-x-[0.1em] hover:-translate-y-[0.1em] transition-all text-sm font-extrabold text-[#050505] uppercase tracking-[0.05em]"
                           >
-                            <div className={`w-2 h-2 rounded-full ${selectedNetwork.color.includes('green') ? 'bg-[#10b981]' : 'bg-[#f59e0b]'}`} />
+                            <div className={`w-2 h-2 rounded-full ${
+                              selectedNetwork.color.includes('green') ? 'bg-[#10b981]' : 
+                              selectedNetwork.color.includes('blue') ? 'bg-[#3b82f6]' : 
+                              'bg-[#f59e0b]'
+                            }`} />
                             <span>{selectedNetwork.shortName}</span>
                             <ChevronDown className="w-3 h-3" />
                           </button>
@@ -430,7 +445,11 @@ const WalletModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                                   onClick={() => switchNetwork(network)}
                                   className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 font-extrabold text-[#050505] uppercase tracking-[0.05em] border-b-[0.15em] border-gray-300 last:border-b-0"
                                 >
-                                  <div className={`w-2 h-2 rounded-full mr-2 ${network.color.includes('green') ? 'bg-[#10b981]' : 'bg-[#f59e0b]'}`} />
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                                    network.color.includes('green') ? 'bg-[#10b981]' : 
+                                    network.color.includes('blue') ? 'bg-[#3b82f6]' : 
+                                    'bg-[#f59e0b]'
+                                  }`} />
                                   <span>{network.shortName}</span>
                                   {selectedNetwork.id === network.id && <Check className="w-3 h-3 ml-auto text-[#2563eb]" />}
                                 </button>

@@ -23,6 +23,7 @@ import { useAllProjects } from '@/hooks/useProjectMethods';
 import { useAllCampaigns } from '@/hooks/useCampaignMethods';
 import { useUserVoteHistory } from '@/hooks/useVotingMethods';
 import {type Address } from 'viem';
+import { getMainContractAddress } from '@/utils/contractConfig';
 import { formatEther } from 'viem';
 import { v4 as uuidv4 } from 'uuid';
 import { getGoodLink } from '@/utils/get-good-link';
@@ -117,8 +118,8 @@ const parseCampaignMetadata = (campaignDetails: any) => {
 
 import GoodDollarVerifyModal from '@/components/goodDollar';
 
-// Get contract address from environment
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_V4 as Address;
+// Get contract address using getMainContractAddress to support Celo Sepolia
+const CONTRACT_ADDRESS = getMainContractAddress();
 const CELO_TOKEN = process.env.NEXT_PUBLIC_CELO_TOKEN as Address;
   
 

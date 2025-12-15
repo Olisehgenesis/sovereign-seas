@@ -6,11 +6,13 @@ import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { useEffect } from 'react';
 // import Layout from '../components/Layout';
 import { config } from './config';
-import { celo } from 'wagmi/chains';
+import { celo, celoAlfajores } from 'wagmi/chains';
+import { celoSepolia } from '@/utils/celoSepolia';
 import { HelmetProvider } from 'react-helmet-async';
 
 const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID as string;
 const isTestnet = process.env.NEXT_PUBLIC_ENV === 'testnet';
+const isCeloSepolia = process.env.NEXT_PUBLIC_ENV === 'celo-sepolia' || process.env.NEXT_PUBLIC_NETWORK === 'celo-sepolia';
 
 console.log('Privy Environment Check:', {
   hasAppId: !!appId,
@@ -36,9 +38,12 @@ const queryClient = new QueryClient({
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const defaultChain = isCeloSepolia ? celoSepolia : (isTestnet ? celoAlfajores : celo);
+  const supportedChains = isCeloSepolia ? [celoSepolia] : (isTestnet ? [celoAlfajores] : [celo]);
+  
   console.log('AppProvider Rendering with config:', {
-    defaultChain: isTestnet ? 'celoAlfajores' : 'celo',
-    supportedChains: isTestnet ? ['celoAlfajores'] : ['celo'],
+    defaultChain: isCeloSepolia ? 'celoSepolia' : (isTestnet ? 'celoAlfajores' : 'celo'),
+    supportedChains: isCeloSepolia ? ['celoSepolia'] : (isTestnet ? ['celoAlfajores'] : ['celo']),
     // hasWalletConnectId: !!import.meta.env.VITE_WALLET_CONNECT_ID
   });
 
@@ -58,8 +63,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           embeddedWallets: {
             createOnLogin: 'users-without-wallets'
           },
-          defaultChain: isTestnet ? celo : celo,
-          supportedChains: isTestnet ? [celo] : [celo],
+          defaultChain: defaultChain,
+          supportedChains: supportedChains,
           walletConnectCloudProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_ID as string,
         }}
         >

@@ -9,12 +9,13 @@ import ProjectsEmptyState from '@/components/projects/ProjectsEmptyState';
 import ProjectsLoadingState from '@/components/projects/ProjectsLoadingState';
 import ProjectsErrorState from '@/components/projects/ProjectsErrorState';
 import ProjectsGrid from '@/components/projects/ProjectsGrid';
+import { getMainContractAddress } from '@/utils/contractConfig';
 
 const ProjectsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Contract address from environment variable
-  const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_V4 as Address;
+  // Contract address using getMainContractAddress to support Celo Sepolia
+  const CONTRACT_ADDRESS = getMainContractAddress();
   
   // Fetch all projects
   const { projects, isLoading, error } = useAllProjects(CONTRACT_ADDRESS);

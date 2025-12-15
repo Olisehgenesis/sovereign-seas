@@ -14,12 +14,22 @@
     "deploy:builder-rewards:celo-sepolia": "dotenvx run -- hardhat run scripts/deploy-builder-rewards.ts --network celoSepolia",
     "deploy:quizelo:celo": "dotenvx run -- hardhat run scripts/deploy-quizelo.ts --network celo",
     "deploy:quizelo:celo-sepolia": "dotenvx run -- hardhat run scripts/deploy-quizelo.ts --network celoSepolia",
+    "deploy:seas:celo": "dotenvx run -- hardhat run scripts/deploy-seas.ts --network celo",
+    "deploy:seas:celo-sepolia": "dotenvx run -- hardhat run scripts/deploy-seas.ts --network celoSepolia",
+    "deploy:tournament:celo": "dotenvx run -- hardhat run scripts/deploy-tournament.ts --network celo",
+    "deploy:tournament:celo-sepolia": "dotenvx run -- hardhat run scripts/deploy-tournament.ts --network celoSepolia",
     "verify:milestone:celo": "dotenvx run -- hardhat run scripts/verify-milestone.ts --network celo",
     "verify:milestone:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-milestone.ts --network celoSepolia",
     "verify:builder-rewards:celo": "dotenvx run -- hardhat run scripts/verify-builder-rewards.ts --network celo",
     "verify:builder-rewards:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-builder-rewards.ts --network celoSepolia",
     "verify:quizelo:celo": "dotenvx run -- hardhat run scripts/verify-quizelo.ts --network celo",
-    "verify:quizelo:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-quizelo.ts --network celoSepolia"
+    "verify:quizelo:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-quizelo.ts --network celoSepolia",
+    "verify:seas:celo": "dotenvx run -- hardhat run scripts/verify-seas.ts --network celo",
+    "verify:seas:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-seas.ts --network celoSepolia",
+    "verify:tournament:celo": "dotenvx run -- hardhat run scripts/verify-tournament.ts --network celo",
+    "verify:tournament:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-tournament.ts --network celoSepolia",
+    "generate:wallets": "dotenvx run -- hardhat run scripts/generate-test-wallets.ts",
+    "create:test-projects:celo-sepolia": "dotenvx run -- hardhat run scripts/create-test-projects-celo-sepolia.ts --network celoSepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.5",

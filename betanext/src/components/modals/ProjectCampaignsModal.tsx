@@ -38,6 +38,7 @@ import { formatEther } from 'viem';
 import type { Address } from 'viem';
 import { formatIpfsUrl } from '@/utils/imageUtils';
 import { useAccount } from 'wagmi';
+import { getMainContractAddress } from '@/utils/contractConfig';
 
 // ==================== TYPES ====================
 
@@ -70,7 +71,7 @@ interface SortOption {
 // ==================== CONSTANTS ====================
 
 const PARTICIPATION_FEE = '1.0'; // 1 CELO
-const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4 as Address;
+const contractAddress = getMainContractAddress();
 
 const campaignStatuses: Record<string, CampaignStatus> = {
   upcoming: {

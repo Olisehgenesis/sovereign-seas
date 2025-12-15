@@ -884,6 +884,10 @@ function getProject(uint256 _projectId) external view returns (uint256 id, addre
    return (project.id, project.owner, project.name, project.description, project.transferrable, project.active, project.createdAt, project.campaignIds);
 }
 
+function getProjectOwner(uint256 _projectId) external view returns (address) {
+   return projects[_projectId].owner;
+}
+
 function getProjectMetadata(uint256 _projectId) external view returns (string memory bio, string memory contractInfo, string memory additionalData, address[] memory contracts) {
    Project storage project = projects[_projectId];
    return (project.metadata.bio, project.metadata.contractInfo, project.metadata.additionalData, project.contracts);

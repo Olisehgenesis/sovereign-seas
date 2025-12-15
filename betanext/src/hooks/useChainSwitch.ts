@@ -1,5 +1,6 @@
 import { useSwitchChain, useAccount, useChainId } from 'wagmi';
 import { celo, celoAlfajores } from 'wagmi/chains';
+import { celoSepolia } from '@/utils/celoSepolia';
 import { getCurrentChainId, isTestnetEnvironment } from '@/utils/contractConfig';
 
 /**
@@ -12,7 +13,16 @@ export function useChainSwitch() {
   
   const isTestnet = isTestnetEnvironment();
   const targetChainId = getCurrentChainId();
-  const targetChain = isTestnet ? celoAlfajores : celo;
+  
+  // Determine target chain based on environment
+  const getTargetChain = () => {
+    if (targetChainId === celoSepolia.id) {
+      return celoSepolia;
+    }
+    return isTestnet ? celoAlfajores : celo;
+  };
+  
+  const targetChain = getTargetChain();
   
   /**
    * Check if the wallet is on the correct chain

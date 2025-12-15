@@ -24,7 +24,7 @@ const csp = [
   "frame-ancestors 'self' http://localhost:5173 http://localhost:3003 https://sovseas.xyz https://www.sovseas.xyz",
   "child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org",
   "frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com",
-  "connect-src 'self' https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://selfauth.vercel.app https://celo-alfajores.drpc.org https://celo.drpc.org",
+  "connect-src 'self' https://auth.privy.io wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://selfauth.vercel.app https://celo-alfajores.drpc.org https://celo.drpc.org https://forno.celo-sepolia.celo-testnet.org",
   "worker-src 'self'",
   "manifest-src 'self'",
 ].join('; ');

@@ -57,6 +57,7 @@ import FundDonateModal from '@/components/modals/FundDonateModal';
 import { useCampaignToPool, usePoolBalance, useDonateToPool, useCreatePoolUniversal } from '@/hooks/usePools';
 import { supportedTokens } from '@/hooks/useSupportedTokens';
 import { useAllProjects, formatProjectForDisplay, useCanBypassFees } from '@/hooks/useProjectMethods';
+import { getMainContractAddress } from '@/utils/contractConfig';
 import {
   useVote,
   useUserTotalVotesInCampaign,
@@ -191,7 +192,7 @@ export default function CampaignView() {
   const [campaignLogoSrc, setCampaignLogoSrc] = useState<string | null>(null);
   
 
-  const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_V4;
+  const contractAddress = getMainContractAddress();
   const parsedId = parseIdParam(id);
   const campaignId = parsedId ? BigInt(parsedId) : BigInt(0);
   

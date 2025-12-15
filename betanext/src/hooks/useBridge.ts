@@ -111,8 +111,17 @@ export function useCreateProject() {
         transferrable
       ]);
       
+      // Determine chain ID for Divvi referral
       const isTestnet = process.env.NEXT_PUBLIC_ENV === 'testnet';
-      const celoChainId = isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
+      const isCeloSepolia = process.env.NEXT_PUBLIC_ENV === 'celo-sepolia' || process.env.NEXT_PUBLIC_NETWORK === 'celo-sepolia';
+      let celoChainId: number;
+      if (isCeloSepolia) {
+        celoChainId = 11142220; // Celo Sepolia
+      } else if (isTestnet) {
+        celoChainId = 44787; // Alfajores testnet
+      } else {
+        celoChainId = 42220; // Celo mainnet
+      }
       
       // Generate referral tag with user address
       const referralTag = getReferralTag({

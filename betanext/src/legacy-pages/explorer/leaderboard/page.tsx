@@ -14,8 +14,10 @@ type TeamMember = {
   twitter?: string;
 };
 
+import { getMainContractAddress } from '@/utils/contractConfig';
+
 const LeaderboardPage = () => {
-  const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_V4 as Address;
+  const CONTRACT_ADDRESS = getMainContractAddress();
 
   const { projects, isLoading, error } = useAllProjects(CONTRACT_ADDRESS);
 
