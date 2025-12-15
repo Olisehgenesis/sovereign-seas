@@ -3,6 +3,7 @@
  */
 
 const isTestnet = process.env.NEXT_PUBLIC_ENV === 'testnet' || process.env.NEXT_PUBLIC_IS_TESTNET === 'true';
+const isCeloSepolia = process.env.NEXT_PUBLIC_ENV === 'celo-sepolia' || process.env.NEXT_PUBLIC_NETWORK === 'celo-sepolia';
 
 /**
  * Get the appropriate contract address based on the current environment
@@ -24,6 +25,16 @@ export function getContractAddress(
  * Get the main contract address (VITE_CONTRACT_V4) with testnet support
  */
 export function getMainContractAddress(): `0x${string}` {
+  // Celo Sepolia has its own contract address
+  if (isCeloSepolia) {
+    const celoSepoliaContract = process.env.NEXT_PUBLIC_CONTRACT_V4_CELO_SEPOLIA || '0x73Ac3CE3358a892f69238C7009CA4da4b0dd1470';
+    console.log('Contract Address Selection (Celo Sepolia):', {
+      isCeloSepolia,
+      celoSepoliaContract
+    });
+    return celoSepoliaContract as `0x${string}`;
+  }
+  
   const mainnetContract = process.env.NEXT_PUBLIC_CONTRACT_V4 as string;
   const testnetContract = process.env.NEXT_PUBLIC_CONTRACT_V4_TESTNET as string;
   
@@ -127,9 +138,22 @@ export function getBuilderRewardsContractAddress(): `0x${string}` {
 }
 
 /**
+ * Get the Tournament contract address with testnet support
+ */
+export function getTournamentContractAddress(): `0x${string}` {
+  const mainnetContract = process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS as string;
+  const testnetContract = process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS_TESTNET as string;
+  
+  return getContractAddress(mainnetContract, testnetContract);
+}
+
+/**
  * Get the current chain ID based on environment
  */
 export function getCurrentChainId(): number {
+  if (isCeloSepolia) {
+    return 11142220; // Celo Sepolia
+  }
   return isTestnet ? 44787 : 42220; // Alfajores testnet : Celo mainnet
 }
 
@@ -137,12 +161,15 @@ export function getCurrentChainId(): number {
  * Check if currently running on testnet
  */
 export function isTestnetEnvironment(): boolean {
-  return isTestnet;
+  return isTestnet || isCeloSepolia;
 }
 
 /**
  * Get environment name for logging/debugging
  */
 export function getEnvironmentName(): string {
+  if (isCeloSepolia) {
+    return 'celo-sepolia';
+  }
   return isTestnet ? 'testnet' : 'mainnet';
 }
