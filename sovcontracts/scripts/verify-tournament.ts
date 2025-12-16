@@ -14,16 +14,13 @@ async function main() {
     : "celo";
 
   // Get contract address from environment variable
-  let contractAddress = process.env.CONTRACT_ADDRESS || process.env.TOURNAMENT_CONTRACT_ADDRESS;
+  let contractAddress = "0xd60df531ada2a560075c167799d59bc03d7697a7" as string;
   
   // Also check for address in process.argv (in case it's passed differently)
-  if (!contractAddress) {
-    // Look for any argument that looks like an Ethereum address
-    contractAddress = process.argv.find((arg) => arg.startsWith("0x") && arg.length === 42);
-  }
+ 
 
   // Get Seas4 contract address
-  let seasAddress = process.env.SEAS_CONTRACT_ADDRESS;
+  let seasAddress = "0xd60df531ada2a560075c167799d59bc03d7697a7";
   if (!seasAddress) {
     console.error("Error: SEAS_CONTRACT_ADDRESS is required");
     console.error("\nUsage:");

@@ -27,7 +27,7 @@ const CELO_TOKEN_ADDRESSES: Record<string, string> = {
 // Tournament contract addresses
 const TOURNAMENT_CONTRACT_ADDRESSES: Record<string, string> = {
   celo: process.env.TOURNAMENT_CONTRACT_ADDRESS || "",
-  celoSepolia: process.env.TOURNAMENT_CONTRACT_ADDRESS || "0x00242eBD746962a79c9726e5B81c474bDc6091e0",
+  celoSepolia: process.env.TOURNAMENT_CONTRACT_ADDRESS || "0xd60df531ada2a560075c167799d59bc03d7697a7",
 };
 
 // SovereignSeasV4 contract addresses

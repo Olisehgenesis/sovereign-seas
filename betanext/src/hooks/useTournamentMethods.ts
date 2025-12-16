@@ -1528,8 +1528,30 @@ export function useCurrentStageNumber(contractAddress: Address, tournamentId: bi
     }
   });
 
+  // getCurrentStageNumber now returns array index (0-based), not stage number (1-based)
+  // Use getCurrentStageNumberDisplay for the actual stage number
   return {
-    currentStageNumber: data as bigint,
+    currentStageNumber: data as bigint, // This is now array index
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for getting current stage number (1-based) for display
+export function useCurrentStageNumberDisplay(contractAddress: Address, tournamentId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getCurrentStageNumberDisplay',
+    args: [tournamentId],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined
+    }
+  });
+
+  return {
+    currentStageNumber: data as bigint, // This is the 1-based stage number
     isLoading,
     error,
     refetch
@@ -2072,6 +2094,226 @@ export function usePaused(contractAddress: Address) {
   };
 }
 
+// Hook for getting stage total power (useful for checking if voting occurred)
+export function useStageTotalPower(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getStageTotalPower',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  return {
+    totalPower: data as bigint,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for getting all stage numbers for a tournament
+export function useTournamentStageNumbers(contractAddress: Address, tournamentId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getTournamentStageNumbers',
+    args: [tournamentId],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined
+    }
+  });
+
+  return {
+    stageNumbers: data as bigint[],
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for getting stage array index from stage number
+export function useStageArrayIndex(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getStageArrayIndex',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  return {
+    arrayIndex: data as bigint,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for getting all projects with their powers for a stage
+export function useStageProjectPowers(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getStageProjectPowers',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  return {
+    projectIds: data ? (data as any[])[0] as bigint[] : [],
+    powers: data ? (data as any[])[1] as bigint[] : [],
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for checking if a project has zero power
+export function useHasProjectZeroPower(contractAddress: Address, tournamentId: bigint, stageNumber: bigint, projectId: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'hasProjectZeroPower',
+    args: [tournamentId, stageNumber, projectId],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined && projectId !== undefined
+    }
+  });
+
+  return {
+    hasZeroPower: data as boolean,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for getting all projects with zero power in a stage
+export function useProjectsWithZeroPower(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getProjectsWithZeroPower',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  return {
+    projectIds: data as bigint[],
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for getting stage by stage number (1-based) instead of array index
+export function useStageByNumber(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getStageByNumber',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  const stage = data ? {
+    stageNumber: (data as any[])[0] as bigint,
+    start: (data as any[])[1] as bigint,
+    end: (data as any[])[2] as bigint,
+    scheduledStart: (data as any[])[3] as bigint,
+    rewardPool: (data as any[])[4] as bigint,
+    eliminationPercentage: (data as any[])[5] as bigint,
+    finalized: (data as any[])[6] as boolean,
+    started: (data as any[])[7] as boolean
+  } as Stage : null;
+
+  return {
+    stage,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for checking project ID 0 status and issues
+export function useCheckProjectZeroStatus(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'checkProjectZeroStatus',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  return {
+    exists: data ? (data as any[])[0] as boolean : false,
+    approved: data ? (data as any[])[1] as boolean : false,
+    eliminated: data ? (data as any[])[2] as boolean : false,
+    power: data ? (data as any[])[3] as bigint : 0n,
+    hasVotes: data ? (data as any[])[4] as boolean : false,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for previewing eliminations (what would be eliminated if stage is finalized now)
+export function usePreviewEliminations(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'previewEliminations',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  return {
+    projectIds: data ? (data as any[])[0] as bigint[] : [],
+    powers: data ? (data as any[])[1] as bigint[] : [],
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for getting stage voting activity statistics
+export function useStageVotingActivity(contractAddress: Address, tournamentId: bigint, stageNumber: bigint) {
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi,
+    functionName: 'getStageVotingActivity',
+    args: [tournamentId, stageNumber],
+    query: {
+      enabled: !!contractAddress && tournamentId !== undefined && stageNumber !== undefined
+    }
+  });
+
+  return {
+    totalVoters: data ? (data as any[])[0] as bigint : 0n,
+    totalVotes: data ? (data as any[])[1] as bigint : 0n,
+    totalPower: data ? (data as any[])[2] as bigint : 0n,
+    projectsWithVotes: data ? (data as any[])[3] as bigint : 0n,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
 // Hook for reading default constants
 export function useTournamentDefaults(contractAddress: Address) {
   const { data, isLoading, error, refetch } = useReadContracts({
@@ -2186,5 +2428,17 @@ export default {
   useVoterStats,
   useBaseToken,
   usePaused,
-  useTournamentDefaults
+  useTournamentDefaults,
+  // New hooks for updated contract functions
+  useCurrentStageNumberDisplay,
+  useStageTotalPower,
+  useTournamentStageNumbers,
+  useStageArrayIndex,
+  useStageProjectPowers,
+  useHasProjectZeroPower,
+  useProjectsWithZeroPower,
+  useStageByNumber,
+  useCheckProjectZeroStatus,
+  usePreviewEliminations,
+  useStageVotingActivity
 };

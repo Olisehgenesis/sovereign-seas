@@ -145,7 +145,7 @@ export function getTournamentContractAddress(): `0x${string}` {
   if (isCeloSepolia) {
     const celoSepoliaContract = process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS_TESTNET || 
                                  process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS || 
-                                 '0x00242eBD746962a79c9726e5B81c474bDc6091e0';
+                                 '0xd60df531ada2a560075c167799d59bc03d7697a7';
     console.log('Tournament Contract Address Selection (Celo Sepolia):', {
       isCeloSepolia,
       celoSepoliaContract
