@@ -141,6 +141,18 @@ export function getBuilderRewardsContractAddress(): `0x${string}` {
  * Get the Tournament contract address with testnet support
  */
 export function getTournamentContractAddress(): `0x${string}` {
+  // Celo Sepolia has its own contract address
+  if (isCeloSepolia) {
+    const celoSepoliaContract = process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS_TESTNET || 
+                                 process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS || 
+                                 '0x00242eBD746962a79c9726e5B81c474bDc6091e0';
+    console.log('Tournament Contract Address Selection (Celo Sepolia):', {
+      isCeloSepolia,
+      celoSepoliaContract
+    });
+    return celoSepoliaContract as `0x${string}`;
+  }
+  
   const mainnetContract = process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS as string;
   const testnetContract = process.env.NEXT_PUBLIC_TOURNAMENT_CONTRACT_ADDRESS_TESTNET as string;
   

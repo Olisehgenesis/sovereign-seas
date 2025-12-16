@@ -15,6 +15,8 @@ import LeaderboardPage from '@/legacy-pages/explorer/leaderboard/page'
 import CampaignsPage from '@/legacy-pages/explorer/campaigns/page'
 import GrantsPage from '@/legacy-pages/explorer/grants/page'
 import GrantView from '@/legacy-pages/explorer/grant/<id>/page'
+import TournamentsPage from '@/legacy-pages/explorer/tournaments/page'
+import TournamentView from '@/legacy-pages/explorer/tournament/<id>/page'
 import UserProfilePage from '@/legacy-pages/explorer/user/<address>/page'
 import CreateGrant from '@/legacy-pages/app/grant/create'
 import CreateProject from '@/legacy-pages/app/project/start'
@@ -46,6 +48,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/explorer/campaigns" element={<Layout><CampaignsPage /></Layout>} />
           <Route path="/explorer/grants" element={<Layout><GrantsPage /></Layout>} />
           <Route path="/explorer/grant/:id" element={<Layout><GrantView /></Layout>} />
+          <Route path="/explorer/tournaments" element={<Layout><TournamentsPage /></Layout>} />
+          <Route path="/explorer/tournament/:id" element={<Layout><TournamentView /></Layout>} />
           <Route path="/explorer/user/:address" element={<Layout><UserProfilePage /></Layout>} />
           <Route path="/explorer/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
           <Route path="/analytics" element={<Layout><AnalyticsPage /></Layout>} />

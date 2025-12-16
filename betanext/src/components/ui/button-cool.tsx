@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface ButtonCoolProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   borderColor?: string;
@@ -13,6 +14,7 @@ interface ButtonCoolProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   children?: React.ReactNode;
+  isLoading?: boolean;
 }
 
 const ButtonCool: React.FC<ButtonCoolProps> = ({
@@ -25,6 +27,8 @@ const ButtonCool: React.FC<ButtonCoolProps> = ({
   size = 'md',
   className,
   children,
+  isLoading = false,
+  disabled,
   ...props
 }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -39,45 +43,57 @@ const ButtonCool: React.FC<ButtonCoolProps> = ({
     lg: 'text-[1em] px-[1.5em] py-[0.9em]'
   };
 
+  const isDisabled = disabled || isLoading;
+  const displayText = isLoading ? 'Loading...' : text;
+
   return (
     <button
       className={cn(
-        'relative font-bold border-[0.2em] rounded-[0.4em] cursor-pointer transition-all duration-200 overflow-hidden uppercase tracking-[0.05em]',
-        'hover:-translate-x-[0.1em] hover:-translate-y-[0.1em]',
-        'active:translate-x-[0.1em] active:translate-y-[0.1em]',
+        'relative font-bold border-[0.2em] rounded-[0.4em] transition-all duration-200 overflow-hidden uppercase tracking-[0.05em]',
+        !isDisabled && 'cursor-pointer hover:-translate-x-[0.1em] hover:-translate-y-[0.1em]',
+        !isDisabled && 'active:translate-x-[0.1em] active:translate-y-[0.1em]',
+        isDisabled && 'cursor-not-allowed opacity-70',
         sizeClasses[size],
         className
       )}
       style={{
-        backgroundColor: isHovered ? defaultHoverBg : bgColor,
+        backgroundColor: isHovered && !isDisabled ? defaultHoverBg : bgColor,
         color: textColor,
         borderColor: borderColor,
-        boxShadow: isHovered 
+        boxShadow: isHovered && !isDisabled
           ? `0.4em 0.4em 0 ${shadowColor}` 
           : `0.3em 0.3em 0 ${shadowColor}`,
       }}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => !isDisabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseDown={(e) => {
-        e.currentTarget.style.boxShadow = `0.15em 0.15em 0 ${shadowColor}`;
+        if (!isDisabled) {
+          e.currentTarget.style.boxShadow = `0.15em 0.15em 0 ${shadowColor}`;
+        }
       }}
       onMouseUp={(e) => {
-        e.currentTarget.style.boxShadow = isHovered 
-          ? `0.4em 0.4em 0 ${shadowColor}` 
-          : `0.3em 0.3em 0 ${shadowColor}`;
+        if (!isDisabled) {
+          e.currentTarget.style.boxShadow = isHovered 
+            ? `0.4em 0.4em 0 ${shadowColor}` 
+            : `0.3em 0.3em 0 ${shadowColor}`;
+        }
       }}
+      disabled={isDisabled}
       {...props}
     >
       <span className="relative z-10 flex items-center justify-center gap-2">
-        {text}
-        {children}
+        {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+        {displayText}
+        {!isLoading && children}
       </span>
-      <div 
-        className={cn(
-          "absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-[left] duration-[600ms] pointer-events-none",
-          isHovered ? "left-full" : "-left-full"
-        )}
-      />
+      {!isDisabled && (
+        <div 
+          className={cn(
+            "absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-[left] duration-[600ms] pointer-events-none",
+            isHovered ? "left-full" : "-left-full"
+          )}
+        />
+      )}
     </button>
   );
 };

@@ -103,7 +103,7 @@ export interface VoterStats {
 // Hook for creating a tournament
 export function useCreateTournament(contractAddress: Address) {
   const { address: user } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync, isPending, isError, error, isSuccess } = useSendTransaction();
   const { ensureCorrectChain } = useChainSwitch();
 
   const createTournament = async ({
@@ -172,17 +172,17 @@ export function useCreateTournament(contractAddress: Address) {
 
   return {
     createTournament,
-    isPending: false,
-    isError: false,
-    error: null,
-    isSuccess: false
+    isPending,
+    isError,
+    error,
+    isSuccess
   };
 }
 
 // Hook for creating a tournament with advanced config
 export function useCreateTournamentAdvanced(contractAddress: Address) {
   const { address: user } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync, isPending, isError, error, isSuccess } = useSendTransaction();
   const { ensureCorrectChain } = useChainSwitch();
 
   const createTournamentAdvanced = async ({
@@ -275,10 +275,10 @@ export function useCreateTournamentAdvanced(contractAddress: Address) {
 
   return {
     createTournamentAdvanced,
-    isPending: false,
-    isError: false,
-    error: null,
-    isSuccess: false
+    isPending,
+    isError,
+    error,
+    isSuccess
   };
 }
 
@@ -701,7 +701,7 @@ export function useDisqualifyProject(contractAddress: Address) {
 // Hook for voting with CELO
 export function useVoteWithCelo(contractAddress: Address) {
   const { address: user } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync, isPending, isError, error, isSuccess } = useSendTransaction();
   const { ensureCorrectChain } = useChainSwitch();
 
   const voteWithCelo = async ({
@@ -762,17 +762,17 @@ export function useVoteWithCelo(contractAddress: Address) {
 
   return {
     voteWithCelo,
-    isPending: false,
-    isError: false,
-    error: null,
-    isSuccess: false
+    isPending,
+    isError,
+    error,
+    isSuccess
   };
 }
 
 // Hook for voting with token
 export function useVoteWithToken(contractAddress: Address) {
   const { address: user } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync, isPending, isError, error, isSuccess } = useSendTransaction();
   const { ensureCorrectChain } = useChainSwitch();
 
   const voteWithToken = async ({
@@ -838,17 +838,17 @@ export function useVoteWithToken(contractAddress: Address) {
 
   return {
     voteWithToken,
-    isPending: false,
-    isError: false,
-    error: null,
-    isSuccess: false
+    isPending,
+    isError,
+    error,
+    isSuccess
   };
 }
 
 // Hook for batch voting with CELO
 export function useBatchVoteWithCelo(contractAddress: Address) {
   const { address: user } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync, isPending, isError, error, isSuccess } = useSendTransaction();
   const { ensureCorrectChain } = useChainSwitch();
 
   const batchVoteWithCelo = async ({
@@ -909,17 +909,17 @@ export function useBatchVoteWithCelo(contractAddress: Address) {
 
   return {
     batchVoteWithCelo,
-    isPending: false,
-    isError: false,
-    error: null,
-    isSuccess: false
+    isPending,
+    isError,
+    error,
+    isSuccess
   };
 }
 
 // Hook for batch voting with token
 export function useBatchVoteWithToken(contractAddress: Address) {
   const { address: user } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync, isPending, isError, error, isSuccess } = useSendTransaction();
   const { ensureCorrectChain } = useChainSwitch();
 
   const batchVoteWithToken = async ({
@@ -985,16 +985,16 @@ export function useBatchVoteWithToken(contractAddress: Address) {
 
   return {
     batchVoteWithToken,
-    isPending: false,
-    isError: false,
-    error: null,
-    isSuccess: false
+    isPending,
+    isError,
+    error,
+    isSuccess
   };
 }
 
 // Hook for funding stage with CELO
 export function useFundStageWithCelo(contractAddress: Address) {
-  const { sendTransactionAsync } = useSendTransaction();
+  const { sendTransactionAsync, isPending, isError, error, isSuccess } = useSendTransaction();
   const { ensureCorrectChain } = useChainSwitch();
 
   const fundStageWithCelo = async ({
@@ -1028,10 +1028,10 @@ export function useFundStageWithCelo(contractAddress: Address) {
 
   return {
     fundStageWithCelo,
-    isPending: false,
-    isError: false,
-    error: null,
-    isSuccess: false
+    isPending,
+    isError,
+    error,
+    isSuccess
   };
 }
 
@@ -1331,6 +1331,65 @@ export function useTournament(contractAddress: Address, tournamentId: bigint) {
   return {
     tournament,
     isLoading,
+    error,
+    refetch
+  };
+}
+
+// Hook for reading all tournaments
+export function useAllTournaments(contractAddress: Address) {
+  const { nextTournamentId, isLoading: countLoading } = useNextTournamentId(contractAddress);
+
+  // Generate tournament IDs from 0 to nextTournamentId - 1
+  const tournamentIds = nextTournamentId !== undefined 
+    ? Array.from({ length: Number(nextTournamentId) }, (_, i) => BigInt(i))
+    : [];
+
+  // Create contracts for fetching all tournaments
+  const contracts = tournamentIds.map(tournamentId => ({
+    address: contractAddress,
+    abi,
+    functionName: 'tournaments' as const,
+    args: [tournamentId] as const
+  }));
+
+  const { data, isLoading: tournamentsLoading, error, refetch } = useReadContracts({
+    contracts: contracts as unknown as readonly {
+      address: Address;
+      abi: Abi;
+      functionName: string;
+      args: readonly [bigint];
+    }[],
+    query: {
+      enabled: !!contractAddress && tournamentIds.length > 0
+    }
+  });
+
+  const tournaments: Tournament[] = [];
+  
+  if (data && tournamentIds.length > 0) {
+    for (let i = 0; i < tournamentIds.length; i++) {
+      const result = data[i]?.result;
+      if (result) {
+        tournaments.push({
+          id: tournamentIds[i],
+          admin: (result as any[])[1] as Address,
+          sovseasCampaignId: (result as any[])[2] as bigint,
+          stageDuration: (result as any[])[3] as bigint,
+          payoutToken: (result as any[])[4] as Address,
+          autoProgress: (result as any[])[5] as boolean,
+          active: (result as any[])[6] as boolean,
+          disqualifyEnabled: (result as any[])[7] as boolean,
+          createdAt: (result as any[])[8] as bigint,
+          config: (result as any[])[9] as TournamentConfig
+        });
+      }
+    }
+  }
+
+  return {
+    tournaments,
+    isLoading: countLoading || tournamentsLoading,
     error,
     refetch
   };

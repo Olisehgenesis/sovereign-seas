@@ -136,7 +136,7 @@ contract TournamentCore is ReentrancyGuard, Pausable {
                                 STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    uint256 public nextTournamentId;
+    uint256 public nextTournamentId = 1; // Start from 1 instead of 0
     
     mapping(uint256 => Tournament) public tournaments;
     mapping(uint256 => uint256[]) public tournamentProjects;
@@ -359,9 +359,12 @@ contract TournamentCore is ReentrancyGuard, Pausable {
         require(_isProjectInTournament(_tournamentId, _projectId), "Project not in tournament");
         
         if (tournament.active) {
-            uint256 currentStage = getCurrentStageNumber(_tournamentId);
-            require(currentStage == 0, "Can only approve during stage 0");
-            require(!tournamentStages[_tournamentId][0].finalized, "Stage 0 already finalized");
+            uint256 currentStageArrayIndex = getCurrentStageNumber(_tournamentId);
+            if (currentStageArrayIndex != type(uint256).max) {
+                Stage storage currentStage = tournamentStages[_tournamentId][currentStageArrayIndex];
+                require(currentStage.stageNumber == 1, "Can only approve during stage 1");
+                require(!currentStage.finalized, "Stage 1 already finalized");
+            }
         }
 
         ProjectStatus storage status = projectStatus[_tournamentId][_projectId];
@@ -502,9 +505,12 @@ contract TournamentCore is ReentrancyGuard, Pausable {
         require(msg.sender == tournament.admin, "Only admin");
 
         if (tournament.active) {
-            uint256 currentStage = getCurrentStageNumber(_tournamentId);
-            require(currentStage == 0, "Can only approve during stage 0");
-            require(!tournamentStages[_tournamentId][0].finalized, "Stage 0 already finalized");
+            uint256 currentStageArrayIndex = getCurrentStageNumber(_tournamentId);
+            if (currentStageArrayIndex != type(uint256).max) {
+                Stage storage currentStage = tournamentStages[_tournamentId][currentStageArrayIndex];
+                require(currentStage.stageNumber == 1, "Can only approve during stage 1");
+                require(!currentStage.finalized, "Stage 1 already finalized");
+            }
         }
 
         uint256 approved = 0;
@@ -549,10 +555,11 @@ contract TournamentCore is ReentrancyGuard, Pausable {
 
     function _createAndStartStage(uint256 _tournamentId, uint256 _eliminationPercentage, bool _isAutoStart) internal {
         Tournament storage tournament = tournaments[_tournamentId];
-        uint256 stageNumber = tournamentStages[_tournamentId].length;
+        uint256 stageArrayIndex = tournamentStages[_tournamentId].length;
+        uint256 stageNumber = stageArrayIndex + 1; // Stages start from 1, not 0
         
         tournamentStages[_tournamentId].push();
-        Stage storage newStage = tournamentStages[_tournamentId][stageNumber];
+        Stage storage newStage = tournamentStages[_tournamentId][stageArrayIndex];
         
         newStage.stageNumber = stageNumber;
         newStage.start = block.timestamp;
@@ -571,34 +578,34 @@ contract TournamentCore is ReentrancyGuard, Pausable {
         require(msg.sender == tournament.admin, "Only admin");
         require(tournament.active, "Tournament not active");
         
-        uint256 currentStageNumber = getCurrentStageNumber(_tournamentId);
-        Stage storage currentStage = tournamentStages[_tournamentId][currentStageNumber];
-        require(currentStage.finalized, "Current stage not finalized");
+        // Allow scheduling even if current stage is not finalized (earlier creation)
+        // Just check that tournament is active
         require(_scheduledStart > block.timestamp, "Must be future time");
 
-        uint256 nextStageNumber = tournamentStages[_tournamentId].length;
+        uint256 stageArrayIndex = tournamentStages[_tournamentId].length;
+        uint256 stageNumber = stageArrayIndex + 1; // Stages start from 1
         tournamentStages[_tournamentId].push();
-        Stage storage nextStage = tournamentStages[_tournamentId][nextStageNumber];
+        Stage storage nextStage = tournamentStages[_tournamentId][stageArrayIndex];
         
-        nextStage.stageNumber = nextStageNumber;
+        nextStage.stageNumber = stageNumber;
         nextStage.scheduledStart = _scheduledStart;
         nextStage.start = 0;
         nextStage.end = 0;
         nextStage.eliminationPercentage = _eliminationPercentage;
         nextStage.started = false;
 
-        emit StageScheduled(_tournamentId, nextStageNumber, _scheduledStart);
+        emit StageScheduled(_tournamentId, stageNumber, _scheduledStart);
     }
 
     function startScheduledStage(uint256 _tournamentId) external {
         Tournament storage tournament = tournaments[_tournamentId];
         require(tournament.active, "Tournament not active");
         
-        uint256 currentStageNumber = getCurrentStageNumber(_tournamentId);
-        require(currentStageNumber < tournamentStages[_tournamentId].length - 1, "No scheduled stage");
+        uint256 currentStageArrayIndex = getCurrentStageNumber(_tournamentId);
+        require(currentStageArrayIndex < tournamentStages[_tournamentId].length - 1, "No scheduled stage");
         
-        uint256 nextStageNumber = currentStageNumber + 1;
-        Stage storage nextStage = tournamentStages[_tournamentId][nextStageNumber];
+        uint256 nextStageArrayIndex = currentStageArrayIndex + 1;
+        Stage storage nextStage = tournamentStages[_tournamentId][nextStageArrayIndex];
         
         require(!nextStage.started, "Already started");
         require(nextStage.scheduledStart > 0, "Not scheduled");
@@ -608,7 +615,7 @@ contract TournamentCore is ReentrancyGuard, Pausable {
         nextStage.end = block.timestamp + tournament.stageDuration;
         nextStage.started = true;
 
-        emit StageStarted(_tournamentId, nextStageNumber, nextStage.eliminationPercentage, false);
+        emit StageStarted(_tournamentId, nextStage.stageNumber, nextStage.eliminationPercentage, false);
     }
 
     function startNextStageManually(uint256 _tournamentId) external {
@@ -616,10 +623,8 @@ contract TournamentCore is ReentrancyGuard, Pausable {
         require(msg.sender == tournament.admin, "Only admin");
         require(tournament.active, "Tournament not active");
         
-        uint256 currentStageNumber = getCurrentStageNumber(_tournamentId);
-        Stage storage currentStage = tournamentStages[_tournamentId][currentStageNumber];
-        require(currentStage.finalized, "Current stage not finalized");
-
+        // Allow starting next stage even if current stage is not finalized (earlier creation)
+        // Just ensure we have enough projects
         uint256 approvedCount = _getApprovedProjectCount(_tournamentId);
         require(approvedCount >= 2, "Need at least 2 projects to continue");
 
@@ -734,8 +739,9 @@ contract TournamentCore is ReentrancyGuard, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     function getCurrentStageNumber(uint256 _tournamentId) public view returns (uint256) {
+        // Returns array index (0-based) of current stage, not stage number (1-based)
         uint256 stageCount = tournamentStages[_tournamentId].length;
-        if (stageCount == 0) return 0;
+        if (stageCount == 0) return type(uint256).max; // No stages yet
         
         for (uint256 i = stageCount - 1; i >= 0; i--) {
             if (tournamentStages[_tournamentId][i].started) {
@@ -743,7 +749,14 @@ contract TournamentCore is ReentrancyGuard, Pausable {
             }
             if (i == 0) break;
         }
-        return 0;
+        return type(uint256).max; // No started stage
+    }
+    
+    function getCurrentStageNumberDisplay(uint256 _tournamentId) public view returns (uint256) {
+        // Returns actual stage number (1-based) for display
+        uint256 arrayIndex = getCurrentStageNumber(_tournamentId);
+        if (arrayIndex == type(uint256).max) return 0;
+        return tournamentStages[_tournamentId][arrayIndex].stageNumber;
     }
 
     function getTournamentProjects(uint256 _tournamentId) external view returns (uint256[] memory) {
@@ -777,17 +790,39 @@ contract TournamentCore is ReentrancyGuard, Pausable {
         bool finalized,
         bool started
     ) {
-        Stage storage stage = tournamentStages[_tournamentId][_stageNumber];
-        return (
-            stage.stageNumber,
-            stage.start,
-            stage.end,
-            stage.scheduledStart,
-            stage.rewardPool,
-            stage.eliminationPercentage,
-            stage.finalized,
-            stage.started
-        );
+        // _stageNumber can be either array index (0-based) or stage number (1-based)
+        // Try as array index first
+        if (_stageNumber < tournamentStages[_tournamentId].length) {
+            Stage storage stage = tournamentStages[_tournamentId][_stageNumber];
+            return (
+                stage.stageNumber,
+                stage.start,
+                stage.end,
+                stage.scheduledStart,
+                stage.rewardPool,
+                stage.eliminationPercentage,
+                stage.finalized,
+                stage.started
+            );
+        }
+        // If not found, try as stage number (1-based)
+        uint256 stageCount = tournamentStages[_tournamentId].length;
+        for (uint256 i = 0; i < stageCount; i++) {
+            if (tournamentStages[_tournamentId][i].stageNumber == _stageNumber) {
+                Stage storage stage = tournamentStages[_tournamentId][i];
+                return (
+                    stage.stageNumber,
+                    stage.start,
+                    stage.end,
+                    stage.scheduledStart,
+                    stage.rewardPool,
+                    stage.eliminationPercentage,
+                    stage.finalized,
+                    stage.started
+                );
+            }
+        }
+        revert("Stage not found");
     }
 
     function getStageTokenAmount(uint256 _tournamentId, uint256 _stageNumber, address _token) external view returns (uint256) {
@@ -921,6 +956,127 @@ contract TournamentCore is ReentrancyGuard, Pausable {
         }
         
         return (projectIds, powers);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ADDITIONAL VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    // Get total power for a stage (useful for checking if voting occurred)
+    function getStageTotalPower(uint256 _tournamentId, uint256 _stageNumber) external view returns (uint256) {
+        uint256[] memory projects = tournamentProjects[_tournamentId];
+        uint256 totalPower = 0;
+        for (uint256 i = 0; i < projects.length; i++) {
+            totalPower += projectPowerPerStage[_tournamentId][_stageNumber][projects[i]];
+        }
+        return totalPower;
+    }
+
+    // Get all stage numbers for a tournament
+    function getTournamentStageNumbers(uint256 _tournamentId) external view returns (uint256[] memory) {
+        uint256 stageCount = tournamentStages[_tournamentId].length;
+        uint256[] memory stageNumbers = new uint256[](stageCount);
+        for (uint256 i = 0; i < stageCount; i++) {
+            stageNumbers[i] = tournamentStages[_tournamentId][i].stageNumber;
+        }
+        return stageNumbers;
+    }
+
+    // Get stage array index from stage number
+    function getStageArrayIndex(uint256 _tournamentId, uint256 _stageNumber) external view returns (uint256) {
+        uint256 stageCount = tournamentStages[_tournamentId].length;
+        for (uint256 i = 0; i < stageCount; i++) {
+            if (tournamentStages[_tournamentId][i].stageNumber == _stageNumber) {
+                return i;
+            }
+        }
+        revert("Stage not found");
+    }
+
+    // Get all projects with their powers for a stage
+    function getStageProjectPowers(uint256 _tournamentId, uint256 _stageNumber) external view returns (
+        uint256[] memory projectIds,
+        uint256[] memory powers
+    ) {
+        uint256[] memory allProjects = tournamentProjects[_tournamentId];
+        uint256 approvedCount = _getApprovedProjectCount(_tournamentId);
+        
+        projectIds = new uint256[](approvedCount);
+        powers = new uint256[](approvedCount);
+        
+        uint256 index = 0;
+        for (uint256 i = 0; i < allProjects.length; i++) {
+            uint256 projectId = allProjects[i];
+            ProjectStatus storage status = projectStatus[_tournamentId][projectId];
+            if (status.approved && !status.disqualified && !status.eliminated) {
+                projectIds[index] = projectId;
+                powers[index] = projectPowerPerStage[_tournamentId][_stageNumber][projectId];
+                index++;
+            }
+        }
+        
+        return (projectIds, powers);
+    }
+
+    // Check if a project has zero power in a stage (useful for debugging)
+    function hasProjectZeroPower(uint256 _tournamentId, uint256 _stageNumber, uint256 _projectId) external view returns (bool) {
+        return projectPowerPerStage[_tournamentId][_stageNumber][_projectId] == 0;
+    }
+
+    // Get all projects with zero power in a stage
+    function getProjectsWithZeroPower(uint256 _tournamentId, uint256 _stageNumber) external view returns (uint256[] memory) {
+        uint256[] memory allProjects = tournamentProjects[_tournamentId];
+        uint256[] memory zeroPowerProjects = new uint256[](allProjects.length);
+        uint256 count = 0;
+        
+        for (uint256 i = 0; i < allProjects.length; i++) {
+            uint256 projectId = allProjects[i];
+            ProjectStatus storage status = projectStatus[_tournamentId][projectId];
+            if (status.approved && !status.disqualified && !status.eliminated) {
+                if (projectPowerPerStage[_tournamentId][_stageNumber][projectId] == 0) {
+                    zeroPowerProjects[count] = projectId;
+                    count++;
+                }
+            }
+        }
+        
+        // Resize array
+        uint256[] memory result = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = zeroPowerProjects[i];
+        }
+        
+        return result;
+    }
+
+    // Get stage by stage number (1-based) instead of array index
+    function getStageByNumber(uint256 _tournamentId, uint256 _stageNumber) external view returns (
+        uint256 stageNumber,
+        uint256 start,
+        uint256 end,
+        uint256 scheduledStart,
+        uint256 rewardPool,
+        uint256 eliminationPercentage,
+        bool finalized,
+        bool started
+    ) {
+        uint256 stageCount = tournamentStages[_tournamentId].length;
+        for (uint256 i = 0; i < stageCount; i++) {
+            if (tournamentStages[_tournamentId][i].stageNumber == _stageNumber) {
+                Stage storage stage = tournamentStages[_tournamentId][i];
+                return (
+                    stage.stageNumber,
+                    stage.start,
+                    stage.end,
+                    stage.scheduledStart,
+                    stage.rewardPool,
+                    stage.eliminationPercentage,
+                    stage.finalized,
+                    stage.started
+                );
+            }
+        }
+        revert("Stage not found");
     }
 
     receive() external payable {}

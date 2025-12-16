@@ -29,7 +29,9 @@
     "verify:tournament:celo": "dotenvx run -- hardhat run scripts/verify-tournament.ts --network celo",
     "verify:tournament:celo-sepolia": "dotenvx run -- hardhat run scripts/verify-tournament.ts --network celoSepolia",
     "generate:wallets": "dotenvx run -- hardhat run scripts/generate-test-wallets.ts",
-    "create:test-projects:celo-sepolia": "dotenvx run -- hardhat run scripts/create-test-projects-celo-sepolia.ts --network celoSepolia"
+    "create:test-projects:celo-sepolia": "dotenvx run -- hardhat run scripts/create-test-projects-celo-sepolia.ts --network celoSepolia",
+    "create:tournament:with-projects:celo-sepolia": "dotenvx run -- hardhat run scripts/create-tournament-with-projects.ts --network celoSepolia",
+    "create:tournament:with-projects:celo": "dotenvx run -- hardhat run scripts/create-tournament-with-projects.ts --network celo"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.5",

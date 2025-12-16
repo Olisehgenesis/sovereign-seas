@@ -508,7 +508,7 @@ contract TournamentVoting is TournamentCore {
         uint256 eliminated = 0;
 
         for (uint256 e = 0; e < eliminateCount; e++) {
-            uint256 lowestProjectId = 0;
+            uint256 lowestProjectId = type(uint256).max; // Use sentinel value instead of 0 to handle project ID 0
             uint256 lowestPower = type(uint256).max;
             bool found = false;
 
@@ -518,7 +518,8 @@ contract TournamentVoting is TournamentCore {
                 
                 if (status.approved && !status.disqualified && !status.eliminated) {
                     uint256 power = projectPowerPerStage[_tournamentId][_stageNumber][projectId];
-                    if (power < lowestPower) {
+                    // Handle tie-breaking: if powers are equal, prefer higher project ID (deterministic)
+                    if (power < lowestPower || (power == lowestPower && projectId > lowestProjectId)) {
                         lowestPower = power;
                         lowestProjectId = projectId;
                         found = true;
@@ -526,7 +527,7 @@ contract TournamentVoting is TournamentCore {
                 }
             }
 
-            if (found) {
+            if (found && lowestProjectId != type(uint256).max) {
                 ProjectStatus storage status = projectStatus[_tournamentId][lowestProjectId];
                 status.approved = false;
                 status.eliminated = true;
@@ -816,6 +817,168 @@ contract TournamentVoting is TournamentCore {
 
     function hasVotedInStage(uint256 _tournamentId, uint256 _stageNumber, address _voter) external view returns (bool) {
         return voterVoteCount[_tournamentId][_stageNumber][_voter] > 0;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    ADDITIONAL VIEW FUNCTIONS FOR DEBUGGING
+    //////////////////////////////////////////////////////////////*/
+
+    // Check if project ID 0 exists and has issues in a stage
+    function checkProjectZeroStatus(uint256 _tournamentId, uint256 _stageNumber) external view returns (
+        bool exists,
+        bool approved,
+        bool eliminated,
+        uint256 power,
+        bool hasVotes
+    ) {
+        uint256[] memory projects = tournamentProjects[_tournamentId];
+        exists = false;
+        
+        for (uint256 i = 0; i < projects.length; i++) {
+            if (projects[i] == 0) {
+                exists = true;
+                break;
+            }
+        }
+        
+        if (!exists) {
+            return (false, false, false, 0, false);
+        }
+        
+        ProjectStatus storage status = projectStatus[_tournamentId][0];
+        approved = status.approved;
+        eliminated = status.eliminated;
+        power = projectPowerPerStage[_tournamentId][_stageNumber][0];
+        
+        // Check if any votes exist for project 0
+        hasVotes = false;
+        address[] memory voters = stageVoters[_tournamentId][_stageNumber];
+        for (uint256 i = 0; i < voters.length; i++) {
+            uint256[] memory votedProjects = voterToProjectIds[_tournamentId][_stageNumber][voters[i]];
+            for (uint256 j = 0; j < votedProjects.length; j++) {
+                if (votedProjects[j] == 0) {
+                    hasVotes = true;
+                    break;
+                }
+            }
+            if (hasVotes) break;
+        }
+        
+        return (exists, approved, eliminated, power, hasVotes);
+    }
+
+    // Get all projects that would be eliminated if stage is finalized now (preview)
+    function previewEliminations(uint256 _tournamentId, uint256 _stageNumber) external view returns (
+        uint256[] memory projectIds,
+        uint256[] memory powers
+    ) {
+        Stage storage stage = tournamentStages[_tournamentId][_stageNumber];
+        uint256[] memory projects = tournamentProjects[_tournamentId];
+        
+        uint256 approvedCount = 0;
+        for (uint256 i = 0; i < projects.length; i++) {
+            ProjectStatus storage status = projectStatus[_tournamentId][projects[i]];
+            if (status.approved && !status.disqualified && !status.eliminated) {
+                approvedCount++;
+            }
+        }
+
+        if (approvedCount <= 1) {
+            return (new uint256[](0), new uint256[](0));
+        }
+
+        uint256 eliminateCount = (approvedCount * stage.eliminationPercentage) / 100;
+        if (eliminateCount == 0) eliminateCount = 1;
+        
+        if (approvedCount - eliminateCount < 1) {
+            eliminateCount = approvedCount - 1;
+        }
+
+        projectIds = new uint256[](eliminateCount);
+        powers = new uint256[](eliminateCount);
+        
+        // Track which projects are already marked for elimination in preview
+        uint256[] memory eliminatedProjectIds = new uint256[](projects.length);
+        uint256 eliminatedCount = 0;
+
+        for (uint256 e = 0; e < eliminateCount; e++) {
+            uint256 lowestProjectId = type(uint256).max;
+            uint256 lowestPower = type(uint256).max;
+            bool found = false;
+
+            for (uint256 i = 0; i < projects.length; i++) {
+                uint256 projectId = projects[i];
+                ProjectStatus storage status = projectStatus[_tournamentId][projectId];
+                
+                // Check if already marked for elimination
+                bool alreadyEliminated = false;
+                for (uint256 j = 0; j < eliminatedCount; j++) {
+                    if (eliminatedProjectIds[j] == projectId) {
+                        alreadyEliminated = true;
+                        break;
+                    }
+                }
+                
+                if (status.approved && !status.disqualified && !status.eliminated && !alreadyEliminated) {
+                    uint256 power = projectPowerPerStage[_tournamentId][_stageNumber][projectId];
+                    if (power < lowestPower || (power == lowestPower && projectId > lowestProjectId)) {
+                        lowestPower = power;
+                        lowestProjectId = projectId;
+                        found = true;
+                    }
+                }
+            }
+
+            if (found && lowestProjectId != type(uint256).max) {
+                projectIds[e] = lowestProjectId;
+                powers[e] = lowestPower;
+                eliminatedProjectIds[eliminatedCount] = lowestProjectId;
+                eliminatedCount++;
+            }
+        }
+
+        // Resize arrays if needed
+        if (eliminatedCount < eliminateCount) {
+            uint256[] memory resizedIds = new uint256[](eliminatedCount);
+            uint256[] memory resizedPowers = new uint256[](eliminatedCount);
+            for (uint256 i = 0; i < eliminatedCount; i++) {
+                resizedIds[i] = projectIds[i];
+                resizedPowers[i] = powers[i];
+            }
+            return (resizedIds, resizedPowers);
+        }
+
+        return (projectIds, powers);
+    }
+
+    // Get total voting activity for a stage
+    function getStageVotingActivity(uint256 _tournamentId, uint256 _stageNumber) external view returns (
+        uint256 totalVoters,
+        uint256 totalVotes,
+        uint256 totalPower,
+        uint256 projectsWithVotes
+    ) {
+        address[] memory voters = stageVoters[_tournamentId][_stageNumber];
+        totalVoters = voters.length;
+        
+        uint256[] memory projects = tournamentProjects[_tournamentId];
+        uint256 projectsVoted = 0;
+        
+        for (uint256 i = 0; i < voters.length; i++) {
+            totalVotes += voterVoteCount[_tournamentId][_stageNumber][voters[i]];
+        }
+        
+        for (uint256 i = 0; i < projects.length; i++) {
+            uint256 power = projectPowerPerStage[_tournamentId][_stageNumber][projects[i]];
+            totalPower += power;
+            if (power > 0) {
+                projectsVoted++;
+            }
+        }
+        
+        projectsWithVotes = projectsVoted;
+        
+        return (totalVoters, totalVotes, totalPower, projectsWithVotes);
     }
 }
 

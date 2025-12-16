@@ -195,6 +195,7 @@ export default function ProjectView() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   const [showAdvancedStats, setShowAdvancedStats] = useState(false);
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
@@ -471,9 +472,28 @@ export default function ProjectView() {
 
                 {/* Project Name and Creator */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                  <h1 className="text-sm sm:text-3xl font-extrabold text-[#050505] capitalize">
-                    {project.name}
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-sm sm:text-3xl font-extrabold text-[#050505] capitalize">
+                      {project.name}
+                    </h1>
+                    {project.owner && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(project.owner);
+                          setCopiedAddress(true);
+                          setTimeout(() => setCopiedAddress(false), 2000);
+                        }}
+                        className="p-1.5 rounded-[0.3em] border-[0.15em] border-[#050505] bg-white hover:bg-gray-50 shadow-[0.15em_0.15em_0_#000000] hover:shadow-[0.2em_0.2em_0_#000000] transition-all flex items-center justify-center"
+                        title="Copy project address"
+                      >
+                        {copiedAddress ? (
+                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-[#050505]" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <span className="text-xs sm:text-lg text-gray-700 font-semibold">
                     by {project.metadata?.teamMembers?.[0]?.name || 'Anonymous'}
                   </span>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useConnect, injected } from 'wagmi';
-import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User, Briefcase, Award, ListChecks } from 'lucide-react';
+import { Menu, ChevronDown, Globe, Settings, PlusCircle,  Circle, Wallet, Compass, Ship, User, Briefcase, Award, ListChecks, Trophy } from 'lucide-react';
 import { usePrivy, useConnectOrCreateWallet } from '@privy-io/react-auth';
 import { useActiveWallet } from '@/hooks/useActiveWallet';
 import WalletModal from '@/components/modals/walletModal';
@@ -27,6 +27,7 @@ import { ButtonCool } from '@/components/ui/button-cool';
 const explorerOptions = [
   { name: 'Projects', href: '/explorer/projects', icon: Ship },
   { name: 'Campaigns', href: '/explorer/campaigns', icon: Globe },
+  { name: 'Tournaments', href: '/explorer/tournaments', icon: Trophy },
   { name: 'Grants', href: '/explorer/grants', icon: Award },
   { name: 'Leaderboard', href: '/explorer/leaderboard', icon: Compass },
 ];
