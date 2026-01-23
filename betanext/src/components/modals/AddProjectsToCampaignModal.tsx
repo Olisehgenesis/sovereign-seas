@@ -46,8 +46,6 @@ interface ProjectCardProps {
   disabled?: boolean;
 }
 
-import { getMainContractAddress } from '@/utils/contractConfig';
-
 const contractAddress = getMainContractAddress();
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onAdd, isLoading, isInCampaign = false, status, disabled }) => {
