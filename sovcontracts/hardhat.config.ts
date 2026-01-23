@@ -94,11 +94,41 @@ export default defineConfig({
       ),
       accounts: getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY") ? [getPrivateKey("CELO_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY")!] : [],
     },
+    base: {
+      type: "http",
+      chainType: "l1",
+      url: getRpcUrl(
+        "BASE_RPC_URL",
+        "https://mainnet.base.org",
+        [
+          "https://mainnet.base.org",
+          "https://base-mainnet.g.alchemy.com/v2/demo",
+          "https://base.publicnode.com",
+        ]
+      ),
+      accounts: getPrivateKey("BASE_PRIVATE_KEY", "PRIVATE_KEY") ? [getPrivateKey("BASE_PRIVATE_KEY", "PRIVATE_KEY")!] : [],
+    },
+    baseSepolia: {
+      type: "http",
+      chainType: "l1",
+      url: getRpcUrl(
+        "BASE_SEPOLIA_RPC_URL",
+        "https://sepolia.base.org",
+        [
+          "https://sepolia.base.org",
+          "https://base-sepolia.g.alchemy.com/v2/demo",
+          "https://base-sepolia.publicnode.com",
+        ]
+      ),
+      accounts: getPrivateKey("BASE_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY") ? [getPrivateKey("BASE_SEPOLIA_PRIVATE_KEY", "PRIVATE_KEY")!] : [],
+    },
   },
   etherscan: {
     apiKey: {
       celo: process.env.CELOSCAN_API_KEY || "",
       celoSepolia: process.env.CELOSCAN_API_KEY || "",
+      base: process.env.BASESCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
+      baseSepolia: process.env.BASESCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
     },
     customChains: [
       {
@@ -115,6 +145,22 @@ export default defineConfig({
         urls: {
           apiURL: "https://api-sepolia.celoscan.io/api",
           browserURL: "https://sepolia.celoscan.io",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
         },
       },
     ],

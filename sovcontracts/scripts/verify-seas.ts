@@ -1,14 +1,18 @@
 import { execSync } from "child_process";
 
-// Celo token and broker addresses for different networks
-const CELO_TOKEN_ADDRESSES: Record<string, string> = {
+// Base token and broker addresses for different networks
+const BASE_TOKEN_ADDRESSES: Record<string, string> = {
   celo: "0x471EcE3750Da237f93B8E339c536989b8978a438",
   celoSepolia: "0x471EcE3750Da237f93B8E339c536989b8978a438",
+  base: "0x4200000000000000000000000000000000000006",
+  baseSepolia: "0x4200000000000000000000000000000000000006",
 };
 
 const BROKER_ADDRESSES: Record<string, string> = {
   celo: "0xB9Ae2065142EB79b6c5EB1E8778F883fad6B07Ba",
   celoSepolia: "0xB9Ae2065142EB79b6c5EB1E8778F883fad6B07Ba",
+  base: process.env.BASE_BROKER_ADDRESS || "",
+  baseSepolia: process.env.BASE_BROKER_ADDRESS || "",
 };
 
 async function main() {
@@ -41,14 +45,19 @@ async function main() {
   }
 
   // Get addresses for the network
-  const celoTokenAddress = CELO_TOKEN_ADDRESSES[networkName] || CELO_TOKEN_ADDRESSES.celo;
+  const baseTokenAddress = BASE_TOKEN_ADDRESSES[networkName] || BASE_TOKEN_ADDRESSES.celo;
   const brokerAddress = BROKER_ADDRESSES[networkName] || BROKER_ADDRESSES.celo;
+
+  if (!brokerAddress && (networkName === "base" || networkName === "baseSepolia")) {
+    console.error("❌ Error: BASE_BROKER_ADDRESS must be set for Base networks");
+    process.exit(1);
+  }
 
   console.log("Verifying SovereignSeasV4 contract...");
   console.log("Network:", networkName);
   console.log("Contract Address:", contractAddress);
   console.log("Constructor Arguments:");
-  console.log(`  Celo Token: ${celoTokenAddress}`);
+  console.log(`  Base Token: ${baseTokenAddress}`);
   console.log(`  Broker: ${brokerAddress}`);
 
   try {
@@ -57,7 +66,7 @@ async function main() {
       console.log("\n[1/2] Verifying on CeloScan...");
       try {
         execSync(
-          `npx hardhat verify --network ${networkName} ${contractAddress} ${celoTokenAddress} ${brokerAddress}`,
+          `npx hardhat verify --network ${networkName} ${contractAddress} ${baseTokenAddress} ${brokerAddress}`,
           { stdio: "inherit" }
         );
         console.log("✓ CeloScan verification successful!");
@@ -89,7 +98,7 @@ async function main() {
     let sourcifyVerified = false;
     try {
       const result = execSync(
-        `npx hardhat verify --network ${networkName} ${contractAddress} ${celoTokenAddress} ${brokerAddress} 2>&1`,
+        `npx hardhat verify --network ${networkName} ${contractAddress} ${baseTokenAddress} ${brokerAddress} 2>&1`,
         { stdio: "pipe", encoding: "utf-8", env: { ...process.env } }
       );
       
@@ -149,15 +158,23 @@ async function main() {
     } else if (networkName === "celoSepolia") {
       console.log(`  https://repo.sourcify.dev/contracts/full_match/44787/${contractAddress}/`);
       console.log(`  https://sourcify.dev/server/repo-ui/44787/${contractAddress}`);
+    } else if (networkName === "base") {
+      console.log(`  https://repo.sourcify.dev/contracts/full_match/8453/${contractAddress}/`);
+      console.log(`  https://sourcify.dev/server/repo-ui/8453/${contractAddress}`);
+    } else if (networkName === "baseSepolia") {
+      console.log(`  https://repo.sourcify.dev/contracts/full_match/84532/${contractAddress}/`);
+      console.log(`  https://sourcify.dev/server/repo-ui/84532/${contractAddress}`);
     }
     
-    console.log("\nCeloScan (Manual verification if needed):");
+    console.log("\nExplorer (Manual verification if needed):");
     if (networkName === "celo") {
       console.log(`  https://celoscan.io/address/${contractAddress}#code`);
-      console.log(`  Click "Verify and Publish" to verify manually`);
     } else if (networkName === "celoSepolia") {
       console.log(`  https://sepolia.celoscan.io/address/${contractAddress}#code`);
-      console.log(`  Click "Verify and Publish" to verify manually`);
+    } else if (networkName === "base") {
+      console.log(`  https://basescan.org/address/${contractAddress}#code`);
+    } else if (networkName === "baseSepolia") {
+      console.log(`  https://sepolia.basescan.org/address/${contractAddress}#code`);
     }
   } catch (error: any) {
     console.error("✗ Verification failed:", error.message || error);

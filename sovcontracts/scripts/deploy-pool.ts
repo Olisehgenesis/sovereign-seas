@@ -27,12 +27,18 @@ async function main() {
   // Get Seas4 contract address for the current network
   const seas4Address = SEAS4_CONTRACT_ADDRESSES[networkName] || SEAS4_MAINNET_ADDRESS;
   
+  if (!seas4Address) {
+    console.error("❌ Error: SEAS_CONTRACT_ADDRESS must be set for this network");
+    console.error("   Set SEAS_CONTRACT_ADDRESS=<address> and run this script again");
+    process.exit(1);
+  }
+  
   const isUsingMainnetAddress = networkName === "celoSepolia" && seas4Address === SEAS4_MAINNET_ADDRESS;
   if (isUsingMainnetAddress) {
     console.log("ℹ Using mainnet Seas4 address on testnet (for testing purposes)");
   }
 
-  console.log("Deploying MilestoneBasedFunding contract...");
+  console.log("Deploying SeasPrizePool contract...");
   console.log("Network:", networkName);
   console.log("Deployer:", deployer.account.address);
   console.log("Seas4 Contract:", seas4Address);
@@ -41,7 +47,6 @@ async function main() {
   }
 
   // Verify Seas4 contract exists and is accessible
-  // Note: If using mainnet address on testnet, this check will fail but we'll continue anyway
   try {
     const code = await publicClient.getBytecode({
       address: getAddress(seas4Address),
@@ -68,24 +73,27 @@ async function main() {
     }
   }
 
-  const milestone = await viem.deployContract("MilestoneBasedFunding", [
+  const pool = await viem.deployContract("SeasPrizePool", [
     getAddress(seas4Address),
   ]);
 
   console.log("\n=== Deployment Successful ===");
-  console.log("MilestoneBasedFunding deployed to:", milestone.address);
+  console.log("SeasPrizePool deployed to:", pool.address);
   console.log("\nYou can verify the contract:");
   if (networkName === "celo") {
-    console.log(`https://celoscan.io/address/${milestone.address}#code`);
+    console.log(`https://celoscan.io/address/${pool.address}#code`);
   } else if (networkName === "celoSepolia") {
-    console.log(`https://sepolia.celoscan.io/address/${milestone.address}#code`);
+    console.log(`https://sepolia.celoscan.io/address/${pool.address}#code`);
   } else if (networkName === "base") {
-    console.log(`https://basescan.org/address/${milestone.address}#code`);
+    console.log(`https://basescan.org/address/${pool.address}#code`);
   } else if (networkName === "baseSepolia") {
-    console.log(`https://sepolia.basescan.org/address/${milestone.address}#code`);
+    console.log(`https://sepolia.basescan.org/address/${pool.address}#code`);
   }
   console.log("\nConstructor Arguments:");
   console.log(`  Seas4 Contract: ${seas4Address}`);
+  console.log("\n📝 Next Steps:");
+  console.log("1. Verify the contract:");
+  console.log(`   CONTRACT_ADDRESS=${pool.address} SEAS_CONTRACT_ADDRESS=${seas4Address} pnpm run verify:pool:${networkName}`);
 }
 
 main()
@@ -94,4 +102,3 @@ main()
     console.error(error);
     process.exit(1);
   });
-

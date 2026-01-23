@@ -77,11 +77,15 @@ async function main() {
 
   console.log("\n=== Deployment Successful ===");
   console.log("QuizeloV2 deployed to:", quizelo.address);
-  console.log("\nYou can verify the contract on CeloScan:");
+  console.log("\nYou can verify the contract:");
   if (networkName === "celo") {
     console.log(`https://celoscan.io/address/${quizelo.address}#code`);
   } else if (networkName === "celoSepolia") {
     console.log(`https://sepolia.celoscan.io/address/${quizelo.address}#code`);
+  } else if (networkName === "base") {
+    console.log(`https://basescan.org/address/${quizelo.address}#code`);
+  } else if (networkName === "baseSepolia") {
+    console.log(`https://sepolia.basescan.org/address/${quizelo.address}#code`);
   }
   console.log("\nConstructor Arguments:");
   console.log("  Supported Tokens:");

@@ -1,9 +1,11 @@
 import { execSync } from "child_process";
 
-// Celo token addresses for different networks
-const CELO_TOKEN_ADDRESSES: Record<string, string> = {
+// Base token addresses for different networks
+const BASE_TOKEN_ADDRESSES: Record<string, string> = {
   celo: "0x471EcE3750Da237f93B8E339c536989b8978a438",
   celoSepolia: "0x471EcE3750Da237f93B8E339c536989b8978a438",
+  base: "0x4200000000000000000000000000000000000006",
+  baseSepolia: "0x4200000000000000000000000000000000000006",
 };
 
 async function main() {
@@ -20,7 +22,7 @@ async function main() {
  
 
   // Get Seas4 contract address
-  let seasAddress = "0xd60df531ada2a560075c167799d59bc03d7697a7";
+  let seasAddress = process.env.SEAS_CONTRACT_ADDRESS;
   if (!seasAddress) {
     console.error("Error: SEAS_CONTRACT_ADDRESS is required");
     console.error("\nUsage:");
@@ -41,14 +43,14 @@ async function main() {
   }
 
   // Get addresses for the network
-  const celoTokenAddress = CELO_TOKEN_ADDRESSES[networkName] || CELO_TOKEN_ADDRESSES.celo;
+  const baseTokenAddress = BASE_TOKEN_ADDRESSES[networkName] || BASE_TOKEN_ADDRESSES.celo;
 
   console.log("Verifying SovereignTournament contract...");
   console.log("Network:", networkName);
   console.log("Contract Address:", contractAddress);
   console.log("Constructor Arguments:");
   console.log(`  Seas4 Contract: ${seasAddress}`);
-  console.log(`  Celo Token: ${celoTokenAddress}`);
+  console.log(`  Base Token: ${baseTokenAddress}`);
 
   try {
     // Verify on CeloScan (if API key is configured)
@@ -56,7 +58,7 @@ async function main() {
       console.log("\n[1/2] Verifying on CeloScan...");
       try {
         execSync(
-          `npx hardhat verify --network ${networkName} ${contractAddress} ${seasAddress} ${celoTokenAddress}`,
+          `npx hardhat verify --network ${networkName} ${contractAddress} ${seasAddress} ${baseTokenAddress}`,
           { stdio: "inherit" }
         );
         console.log("✓ CeloScan verification successful!");
@@ -88,7 +90,7 @@ async function main() {
     let sourcifyVerified = false;
     try {
       const result = execSync(
-        `npx hardhat verify --network ${networkName} ${contractAddress} ${seasAddress} ${celoTokenAddress} 2>&1`,
+        `npx hardhat verify --network ${networkName} ${contractAddress} ${seasAddress} ${baseTokenAddress} 2>&1`,
         { stdio: "pipe", encoding: "utf-8", env: { ...process.env } }
       );
       
@@ -148,15 +150,23 @@ async function main() {
     } else if (networkName === "celoSepolia") {
       console.log(`  https://repo.sourcify.dev/contracts/full_match/44787/${contractAddress}/`);
       console.log(`  https://sourcify.dev/server/repo-ui/44787/${contractAddress}`);
+    } else if (networkName === "base") {
+      console.log(`  https://repo.sourcify.dev/contracts/full_match/8453/${contractAddress}/`);
+      console.log(`  https://sourcify.dev/server/repo-ui/8453/${contractAddress}`);
+    } else if (networkName === "baseSepolia") {
+      console.log(`  https://repo.sourcify.dev/contracts/full_match/84532/${contractAddress}/`);
+      console.log(`  https://sourcify.dev/server/repo-ui/84532/${contractAddress}`);
     }
     
-    console.log("\nCeloScan (Manual verification if needed):");
+    console.log("\nExplorer (Manual verification if needed):");
     if (networkName === "celo") {
       console.log(`  https://celoscan.io/address/${contractAddress}#code`);
-      console.log(`  Click "Verify and Publish" to verify manually`);
     } else if (networkName === "celoSepolia") {
       console.log(`  https://sepolia.celoscan.io/address/${contractAddress}#code`);
-      console.log(`  Click "Verify and Publish" to verify manually`);
+    } else if (networkName === "base") {
+      console.log(`  https://basescan.org/address/${contractAddress}#code`);
+    } else if (networkName === "baseSepolia") {
+      console.log(`  https://sepolia.basescan.org/address/${contractAddress}#code`);
     }
   } catch (error: any) {
     console.error("✗ Verification failed:", error.message || error);
@@ -170,5 +180,6 @@ main()
     console.error(error);
     process.exit(1);
   });
+
 
 
